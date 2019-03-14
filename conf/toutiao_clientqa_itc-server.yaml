@@ -1,0 +1,25 @@
+Develop:
+  ServicePort: "6789"
+  DebugPort: "6790"
+  EnablePprof: true
+  LogLevel: "debug"
+  LogInterval: "hour"
+  EnableMetrics: false
+  ConsoleLog: true
+  DatabusLog: false
+  FileLog: true
+  Mode: "debug"
+  ServiceVersion: "0.1.0"
+
+Product:
+  ServicePort: "6789"
+  DebugPort: "6790"
+  EnablePprof: true
+  LogLevel: "info"
+  LogInterval: "hour"
+  EnableMetrics: true
+  ConsoleLog: false
+  DatabusLog: true
+  FileLog: true
+  Mode: "release"
+  ServiceVersion: "0.1.0"
