@@ -20,6 +20,7 @@ type ItemStruct struct {
 	RegulationUrl string	`json:"regulationUrl"`
 	IsGG int				`json:"isGg"`
 	AppId int				`json:"appId"`
+	Platform int			`json:"platform"`
 	Status int				`json:"status"`
 }
 type ConfirmCheck struct {

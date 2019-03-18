@@ -24,13 +24,6 @@ func AddDetectItem(c *gin.Context){
 	platform := c.GetInt("platform")
 	appId := c.DefaultQuery("appId", "")
 	var itemModel dal.ItemStruct
-	itemModel.QuestionType = questionType
-	itemModel.KeyWord = keyWord
-	itemModel.FixWay = fixWay
-	itemModel.CheckContent = checkContent
-	itemModel.Resolution = resolution
-	itemModel.Regulation = regulation
-	itemModel.RegulationUrl = regulationUrl
 	//platform
 	if platform != 0 && platform != 1 {
 		logs.Error("platform参数不合法！")
@@ -64,6 +57,19 @@ func AddDetectItem(c *gin.Context){
 		})
 		return
 	}
+	itemModel.QuestionType = questionType
+	itemModel.KeyWord = keyWord
+	itemModel.FixWay = fixWay
+	itemModel.CheckContent = checkContent
+	itemModel.Resolution = resolution
+	itemModel.Regulation = regulation
+	itemModel.RegulationUrl = regulationUrl
+	itemModel.Platform = platform
+	itemModel.IsGG = ggFlag
+	if appId != "" {
+		itemModel.AppId, _ = strconv.Atoi(appId)
+	}
+	itemModel.Status = 0
 	itemModelId := dal.InsertItemModel(itemModel)
 	if itemModelId == 0 {
 		logs.Error("新增检查项失败")
@@ -188,3 +194,4 @@ func ConfirmCheck(c *gin.Context){
 		"data" : "success",
 	})
 }
+//更新自查项
