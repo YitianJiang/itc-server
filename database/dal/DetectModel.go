@@ -40,6 +40,7 @@ type DetectContent struct {
 	ToolId int				`json:"toolId"`
 	HtmlContent string		`json:"htmlContent"`
 	JsonContent string		`json:"jsonContent"`
+	Status int				`json:"status"`//是否确认
 }
 func (DetectStruct) TableName() string {
 	return "tb_binary_detect"
@@ -171,4 +172,36 @@ func QueryTaskBinaryCheckContent(condition string) *[]DetectContent{
 		return nil
 	}
 	return &detect
+}
+
+func ConfirmBinaryResult(data map[string]string) bool {
+	taskId := data["task_id"]
+	toolId := data["tool_id"]
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return false
+	}
+	defer connection.Close()
+	//var dc DetectContent
+	//db := connection.Table(DetectContent{}.TableName()).Begin()
+	db := connection.Table(DetectContent{}.TableName())
+	condition := "task_id=" + taskId + " and tool_id=" + toolId
+	/*condition := "task_id=" + taskId + " and tool_id=" + toolId + " for update"
+	if err := db.Where(condition).Find(&dc).Error; err != nil {
+		logs.Error("query db tb_detect_content failed: %v", err)
+		db.Rollback()
+		return false
+	}
+	if dc.Status == 1{
+		db.Rollback()
+		return false
+	}*/
+	if err := db.Where(condition).Update("status", 1).Error; err != nil {
+		logs.Error("update db tb_detect_content failed: %v", err)
+		//db.Rollback()
+		return false
+	}
+	//db.Commit()
+	return true
 }

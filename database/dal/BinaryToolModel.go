@@ -8,9 +8,9 @@ import (
 
 type BinaryDetectTool struct {
 	gorm.Model
-	name string 		`json:"name"`
-	desc string 		`json:"desc"`
-	platform int 		`json:"platform"`
+	Name string 		`json:"name"`
+	Desc string 		`json:"desc"`
+	Platform int 		`json:"platform"`
 }
 func (BinaryDetectTool) TableName() string {
 	return "tb_binary_detect_tool"
@@ -24,9 +24,23 @@ func QueryBinaryToolsByCondition(condition string) *[]BinaryDetectTool{
 	}
 	defer connection.Close()
 	var detect []BinaryDetectTool
-	if err := connection.Where(condition).Find(&detect).Error; err != nil {
+	if err := connection.Table(BinaryDetectTool{}.TableName()).Where(condition).Find(&detect).Error; err != nil {
 		logs.Error("%v", err)
 		return nil
 	}
 	return &detect
+}
+//insert data
+func InsertBinaryTool(binaryTool BinaryDetectTool) bool {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return false
+	}
+	defer connection.Close()
+	if err := connection.Table(BinaryDetectTool{}.TableName()).Create(binaryTool).Error; err != nil {
+		logs.Error("insert binary tool failed, %v", err)
+		return false
+	}
+	return true
 }

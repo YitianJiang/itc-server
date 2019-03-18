@@ -25,4 +25,14 @@ func InitRouter(r *ginex.Engine){
 	r.GET("/task/queryTools", detect.QueryTaskQueryTools)
 	//获取当前任务的二进制工具检测内容
 	r.GET("/task/queryBinaryContent", detect.QueryTaskBinaryCheckContent)
+	//新增二进制检测工具
+	r.POST("/tool/insert", detect.InsertBinaryTool)
+	//查询二进制检测工具列表
+	r.GET("/tool/queryTools", detect.QueryBinaryTools)
+	//新增lark消息提醒配置
+	r.POST("/config/larkMsgCall", detect.InsertLarkMsgCall)
+	//查询lark消息提醒配置
+	r.GET("/config/queryLarkMsgCall", detect.QueryLarkMsgCall)
+	//确认二进制包检测信息
+	r.POST("/detect/confirmResult", detect.ConfirmBinaryResult)
 }

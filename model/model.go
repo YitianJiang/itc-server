@@ -1,12 +1,17 @@
 package model
 
-type Struct_User struct {
+/*
+lark返回的user结构提
+*/
+type LarkUserStruct struct {
+	Ok      bool   `json:"ok"`
+	User_id string `json:"user_id"`
+}
+type IMStruct struct {
+	Channel IMChannelStruct `json:"channel"`
+	Ok      bool            `json:"ok"`
+}
 
-	Name           string
-	Email          string
-	Avatar         string
-	Employeenumber uint
-	Role_id        int
-	Groupid        int
-	Full_name      string
+type IMChannelStruct struct {
+	Id string `json:"id"`
 }

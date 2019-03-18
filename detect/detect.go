@@ -3,6 +3,7 @@ package detect
 import (
 	"bytes"
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 	"code.byted.org/gopkg/tos"
 	"context"
@@ -23,6 +24,7 @@ const(
 	DETECT_URL_DEV = "10.2.209.202:9527"
 	DETECT_URL_PRO = "10.2.9.226:9527"
 )
+var LARK_MSG_CALL_MAP map[string]interface{} = make(map[string]interface{})
 func UploadFile(c *gin.Context){
 
 	url := ""
@@ -68,14 +70,14 @@ func UploadFile(c *gin.Context){
 			errorFormatFile(c)
 			return
 		}
-		url = "http://" + DETECT_URL_DEV + "/apk_post"
+		url = "http://" + DETECT_URL_PRO + "/apk_post"
 	} else if platform == "1"{
 		flag := strings.HasSuffix(filename, ".ipa")
 		if !flag{
 			errorFormatFile(c)
 			return
 		}
-		url = "http://" + DETECT_URL_DEV + "/ipa_post/v2"
+		url = "http://" + DETECT_URL_PRO + "/ipa_post/v2"
 	} else {
 		c.JSON(http.StatusOK, gin.H{
 			"message":"platform参数不合法！",
@@ -111,15 +113,15 @@ func UploadFile(c *gin.Context){
 	var recipients = "ttqaall@bytedance.com,tt_ios@bytedance.com,"
 	recipients += name + "@bytedance.com"
 	filepath := _tmpDir + "/" + filename
-	//1、上传至tos
-	tosUrl, err := upload2Tos(filepath)
+	//1、上传至tos,测试暂时注释
+	//tosUrl, err := upload2Tos(filepath)
 	//2、将相关信息保存至数据库
 	var dbDetectModel dal.DetectStruct
 	dbDetectModel.Creator = name
 	dbDetectModel.SelfCheckStatus = 0
 	dbDetectModel.CreatedAt = time.Now()
 	dbDetectModel.UpdatedAt = time.Now()
-	dbDetectModel.TosUrl = tosUrl
+	//dbDetectModel.TosUrl = tosUrl
 	dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
 	callBackUrl := "http://itc.byted.org/updateDetectInfos" + "?taskID=" + string(dbDetectModelId)
@@ -184,9 +186,17 @@ func UpdateDetectInfos(c *gin.Context){
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id" : taskId,
 	})
+	if (*detect) == nil {
+		logs.Error("未查询到该taskid对应的检测任务，%v", taskId)
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "未查询到该taskid对应的检测任务",
+			"errorCode" : -2,
+			"data" : "未查询到该taskid对应的检测任务",
+		})
+		return
+	}
 	(*detect)[0].AppName = appName
 	(*detect)[0].AppVersion = appVersion
-	//(*detect)[0].CheckContent = htmlContent
 	(*detect)[0].UpdatedAt = time.Now()
 	if err := dal.UpdateDetectModel((*detect)[0], detectContent); err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -196,6 +206,89 @@ func UpdateDetectInfos(c *gin.Context){
 		})
 		return
 	}
+	//进行lark消息提醒
+	var message string
+	creator := (*detect)[0].Creator
+	message = creator + "你好，" + (*detect)[0].AppName + " " + (*detect)[0].AppVersion
+	platform := (*detect)[0].Platform
+	if platform == 0 {
+		message += "安卓包"
+	} else {
+		message += "iOS包"
+	}
+	message += "完成二进制检测，请及时进行确认！"
+	appId := (*detect)[0].AppId
+	appIdInt, _ := strconv.Atoi(appId)
+	var config *dal.LarkMsgTimer
+	config = dal.QueryLarkMsgTimerByAppId(appIdInt)
+	alterType := 0
+	var interval int
+	if config == nil {//如果未进行消息提醒设置，则默认10分钟提醒一次
+		alterType = 1
+		interval = 10
+	} else {
+		alterType = config.Type
+		interval = config.Interval
+	}
+	var ticker *time.Ticker
+	var duration time.Duration
+	switch alterType {
+	case 0:
+		duration = time.Duration(interval) * time.Second
+	case 1:
+		duration = time.Duration(interval) * time.Minute
+	case 2:
+		duration = time.Duration(interval) * time.Hour
+	case 3:
+		duration = time.Duration(interval) * time.Duration(24) * time.Hour
+	default:
+		duration = 10 * time.Minute
+	}
+	ticker = time.NewTicker(duration)
+	var key string
+	key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
+	LARK_MSG_CALL_MAP[key] = ticker
+	utils.LarkDingOneInnerV2(creator, message)
+	go alertLarkMsgCron(*ticker, creator, message)
+}
+func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string){
+	for _ = range ticker.C {
+		utils.LarkDingOneInnerV2(receiver, msg)
+	}
+}
+//确认二进制包检测结果，更新数据库，并停止lark消息
+func ConfirmBinaryResult(c *gin.Context){
+	taskId := c.DefaultQuery("taskId", "")
+	toolId := c.DefaultQuery("toolId", "")
+	var data map[string]string
+	data["task_id"] = taskId
+	data["tool_id"] = toolId
+	flag := dal.ConfirmBinaryResult(data)
+	if !flag {
+		logs.Error("二进制检测内容确认失败")
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "二进制检测内容确认失败！",
+			"errorCode" : -1,
+			"data" : "二进制检测内容确认失败！",
+		})
+		return
+	}
+	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
+		"id" : taskId,
+	})
+	appId := (*detect)[0].AppId
+	appVersion := (*detect)[0].AppVersion
+	key := taskId + "_" + appId + "_" + appVersion + "_" + toolId
+	ticker := LARK_MSG_CALL_MAP[key]
+	if ticker != nil {
+		(ticker.(time.Ticker)).Stop()
+		delete(LARK_MSG_CALL_MAP, key)
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message" : "success",
+		"errorCode" : 0,
+		"data" : "success",
+	})
 }
 //将安装包上传至tos
 func upload2Tos(path string) (string, error){
@@ -253,16 +346,16 @@ func QueryDetectTasks(c *gin.Context){
 	appId := c.DefaultQuery("appId", "")
 	version := c.DefaultQuery("version", "")
 	creator := c.DefaultQuery("creator", "")
-	pageNo := c.DefaultQuery("pageNo", "")
+	pageNo := c.DefaultQuery("page", "")
 	//如果缺少pageSize参数，则选用默认每页显示10条数据
 	pageSize := c.DefaultQuery("pageSize", "10")
 	//参数校验
 	if pageNo == "" {
-		logs.Error("缺少pageNo参数！")
+		logs.Error("缺少page参数！")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少pageNo参数！",
+			"message" : "缺少page参数！",
 			"errorCode" : -1,
-			"data" : "缺少pageNo参数！",
+			"data" : "缺少page参数！",
 		})
 		return
 	}
@@ -304,22 +397,6 @@ func QueryDetectTasks(c *gin.Context){
 }
 func QueryDetectTools(c *gin.Context){
 
-	/*var tool1 *dal.DetectTool = new(dal.DetectTool)
-	tool1.Id = 1
-	tool1.Platform = 0
-	tool1.Name = "Android GooglePlay及图片检测"
-	tool1.Desc = "进行GooglePlay及图片信息的检测，是否影响上架"
-	var tool2 *dal.DetectTool = new(dal.DetectTool)
-	tool2.Id = 2
-	tool2.Platform = 0
-	tool2.Name = "Android隐私检测"
-	tool2.Desc = "进行隐私信息的检测"
-	data := []dal.DetectTool{*tool1, *tool2}
-	c.JSON(http.StatusOK, gin.H{
-		"message" : "success",
-		"errorCode" : 0,
-		"data" : data,
-	})*/
 	platform := c.DefaultQuery("platform", "")
 	if platform == "" {
 		c.JSON(http.StatusOK, gin.H{
