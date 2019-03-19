@@ -8,7 +8,7 @@ import (
 
 func InitRouter(r *ginex.Engine){
 
-	api := r.Group("/api")
+	api := r.GroupEX("/api")
 	api.Use(middleware.JWTCheck())
 	{
 		//上传ipa和apk

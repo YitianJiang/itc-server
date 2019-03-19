@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"code.byted.org/clientQA/itc-server/const"
-	"fmt"
+	"code.byted.org/gopkg/logs"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -34,7 +34,7 @@ func ParseToken(token string) (*Claims, error) {
 	tokenClaims, err := jwt.ParseWithClaims(token, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		return jwtSecret, nil
 	})
-	fmt.Println("jwtSecret: ", jwtSecret)
+	logs.Info("jwtSecret: ", jwtSecret)
 	if tokenClaims != nil {
 		if claims, ok := tokenClaims.Claims.(*Claims); ok && tokenClaims.Valid {
 			return claims, nil
