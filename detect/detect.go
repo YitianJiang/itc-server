@@ -151,6 +151,7 @@ func UploadFile(c *gin.Context){
 	resBody := &bytes.Buffer{}
 	_, err = resBody.ReadFrom(response.Body)
 	var data map[string]interface{}
+	data = make(map[string]interface{})
 	json.Unmarshal(resBody.Bytes(), &data)
 	//删掉临时文件
 	os.Remove(filepath)
@@ -263,6 +264,7 @@ func ConfirmBinaryResult(c *gin.Context){
 	taskId := c.DefaultQuery("taskId", "")
 	toolId := c.DefaultQuery("toolId", "")
 	var data map[string]string
+	data = make(map[string]string)
 	data["task_id"] = taskId
 	data["tool_id"] = toolId
 	flag := dal.ConfirmBinaryResult(data)
@@ -283,8 +285,7 @@ func ConfirmBinaryResult(c *gin.Context){
 	key := taskId + "_" + appId + "_" + appVersion + "_" + toolId
 	ticker := LARK_MSG_CALL_MAP[key]
 	if ticker != nil {
-		//ticker.Stop()
-		ticker.(time.Ticker).Stop()
+		ticker.(*time.Ticker).Stop()
 		delete(LARK_MSG_CALL_MAP, key)
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -373,6 +374,7 @@ func QueryDetectTasks(c *gin.Context){
 		condition += " and creator=" + creator
 	}
 	var param map[string]interface{}
+	param = make(map[string]interface{})
 	if condition != "" {
 		param["condition"] = condition
 	}

@@ -91,6 +91,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 	idArray := data.([]string)
 	for i:=0; i<len(idArray); i++ {
 		var dat map[string]interface{}
+		dat = make(map[string]interface{})
 		str := idArray[i]
 		err := json.Unmarshal([]byte(str), &dat); if err == nil {
 			var check ConfirmCheck
@@ -129,6 +130,7 @@ func GetSelfCheckByTaskId(condition string) map[uint]int{
 		return nil
 	}
 	var item map[uint]int
+	item = make(map[uint]int)
 	for i := 0; i < len(items); i++ {
 		it := items[i]
 		itemId := it.ItemId

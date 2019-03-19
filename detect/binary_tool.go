@@ -63,7 +63,7 @@ func InsertBinaryTool(c *gin.Context) {
 	}
 	var tool dal.BinaryDetectTool
 	tool.Name = name
-	tool.Desc = desc
+	tool.Description = desc
 	tool.Platform, _ = strconv.Atoi(platform)
 	bool := dal.InsertBinaryTool(tool)
 	if !bool {
