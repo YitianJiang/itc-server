@@ -110,7 +110,9 @@ func UploadFile(c *gin.Context){
 		logs.Fatal("临时文件保存失败")
 		return
 	}
-	var recipients = "ttqaall@bytedance.com,tt_ios@bytedance.com,"
+	//调试，暂时注释
+	//var recipients = "ttqaall@bytedance.com,tt_ios@bytedance.com,"
+	var recipients = ""
 	recipients += name + "@bytedance.com"
 	filepath := _tmpDir + "/" + filename
 	//1、上传至tos,测试暂时注释
@@ -228,7 +230,7 @@ func UpdateDetectInfos(c *gin.Context){
 		interval = 10
 	} else {
 		alterType = config.Type
-		interval = config.Interval
+		interval = config.MsgInterval
 	}
 	var ticker *time.Ticker
 	var duration time.Duration
@@ -281,7 +283,8 @@ func ConfirmBinaryResult(c *gin.Context){
 	key := taskId + "_" + appId + "_" + appVersion + "_" + toolId
 	ticker := LARK_MSG_CALL_MAP[key]
 	if ticker != nil {
-		(ticker.(time.Ticker)).Stop()
+		//ticker.Stop()
+		ticker.(time.Ticker).Stop()
 		delete(LARK_MSG_CALL_MAP, key)
 	}
 	c.JSON(http.StatusOK, gin.H{

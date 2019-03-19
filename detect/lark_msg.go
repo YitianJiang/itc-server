@@ -63,7 +63,7 @@ func InsertLarkMsgCall(c *gin.Context) {
 	var config dal.LarkMsgTimer
 	config.AppId, _ = strconv.Atoi(appId)
 	config.Type, _ = strconv.Atoi(intervalType)
-	config.Interval = intervalInt
+	config.MsgInterval = intervalInt
 	flag := dal.InsertLarkMsgTimer(config)
 	if !flag {
 		logs.Error("Lark提醒配置新增失败！")
