@@ -105,8 +105,8 @@ func QueryConfigs(c *gin.Context) {
 	data[1] = config1
 	data[2] = config2
 	c.JSON(http.StatusOK, gin.H{
-		"message" : "未查询到配置信息！",
-		"errorCode" : -1,
+		"message" : "success",
+		"errorCode" : 0,
 		"data" : data,
 	})
 }
