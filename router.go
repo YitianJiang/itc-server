@@ -44,6 +44,6 @@ func InitRouter(r *ginex.Engine){
 		//增加配置项
 		r.POST("/config/addConfig", detect.AddConfig)
 		//查询配置项
-		r.GET("/config/queryConfigs", detect.QueryConfigs)
+		api.GET("/config/queryConfigs", detect.QueryConfigs)
 	}
 }
