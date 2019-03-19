@@ -26,12 +26,12 @@ type RetDetectTasks struct {
 	NowPage uint
 	Tasks []DetectStruct
 }
-//安卓包检测工具
+//包检测工具
 type DetectTool struct {
 	gorm.Model
-	Name string 		`json:"name"`
-	Desc string 		`json:"desc"`
-	Platform int 		`json:"platform"`
+	Name string 			`json:"name"`
+	Description string 		`json:"description"`
+	Platform int 			`json:"platform"`
 }
 //二进制包检测内容
 type DetectContent struct {
@@ -47,6 +47,9 @@ func (DetectStruct) TableName() string {
 }
 func (DetectContent) TableName() string {
 	return "tb_detect_content"
+}
+func (DetectTool) TableName() string {
+	return "tb_detect_tool"
 }
 //insert data
 func InsertDetectModel(detectModel DetectStruct) uint {

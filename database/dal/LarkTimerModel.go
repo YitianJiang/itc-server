@@ -10,7 +10,7 @@ type LarkMsgTimer struct {
 	gorm.Model
 	AppId	int			`json:"appId"`
 	Type	int			`json:"type"` //0-秒，1-分钟，2-小时，3-天
-	Interval	int		`json:"interval"`
+	MsgInterval	int		`json:"msgInterval"`
 }
 
 func (LarkMsgTimer) TableName() string {
