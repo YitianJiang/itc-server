@@ -22,7 +22,7 @@ func main() {
 	// add your handlers here
 	//init
 	conf.InitConfiguration()
-	r.Use(casInitAndVerify())
+	//r.Use(casInitAndVerify())
 	database.InitDB()
 	InitRouter(r)
 	r.Run()
