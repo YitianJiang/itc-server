@@ -109,6 +109,8 @@ func GetSelfCheckItems(c *gin.Context){
 	}
 	var param map[string]interface{}
 	var data map[string]interface{}
+	param = make(map[string]interface{})
+	data = make(map[string]interface{})
 	itemCondition := ""
 	if bool {
 		tasks, _ := dal.QueryTasksByCondition(param)
