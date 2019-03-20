@@ -95,6 +95,7 @@ func QueryConfigs(c *gin.Context) {
 		}
 	}
 	var data map[int]interface{}
+	data = make(map[int]interface{})
 	data[0] = config0
 	data[1] = config1
 	data[2] = config2
