@@ -10,7 +10,7 @@ import (
 )
 
 func InsertLarkMsgCall(c *gin.Context) {
-	appId := c.DefaultQuery("appId", "")
+	appId := c.DefaultPostForm("appId", "")
 	if appId == "" {
 		logs.Error("缺少appId参数！")
 		c.JSON(http.StatusOK, gin.H{
@@ -20,7 +20,7 @@ func InsertLarkMsgCall(c *gin.Context) {
 		})
 		return
 	}
-	intervalType := c.DefaultQuery("type", "")
+	intervalType := c.DefaultPostForm("type", "")
 	if intervalType == "" {
 		logs.Error("缺少type参数！")
 		c.JSON(http.StatusOK, gin.H{
@@ -30,7 +30,7 @@ func InsertLarkMsgCall(c *gin.Context) {
 		})
 		return
 	}
-	interval := c.DefaultQuery("interval", "")
+	interval := c.DefaultPostForm("msgInterval", "")
 	if interval == "" {
 		logs.Error("缺少interval参数！")
 		c.JSON(http.StatusOK, gin.H{

@@ -6,7 +6,6 @@ import (
 	dbconf "code.byted.org/gopkg/dbutil/conf"
 	"code.byted.org/gopkg/dbutil/gormdb"
 	"code.byted.org/gopkg/gorm"
-	"code.byted.org/gopkg/logs"
 	"fmt"
 )
 
@@ -21,7 +20,6 @@ func InitDB(){
 
 func GetConneection()(*gorm.DB, error){
 	handler := gormdb.NewDBHandler()
-	logs.Info("dboptional: ", dboptional.GenerateConfig())
 	err := handler.ConnectDB(&dboptional)
 	if err != nil{
 		return nil, fmt.Errorf("Connect DB failed: %v", err)

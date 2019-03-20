@@ -13,19 +13,19 @@ import (
 //增加检查项
 func AddDetectItem(c *gin.Context){
 
-	questionType := c.GetInt("questionType")
-	keyWord := c.GetInt("keyWord")
-	fixWay := c.GetInt("fixWay")
-	checkContent := c.DefaultQuery("checkContent", "")
-	resolution := c.DefaultQuery("resolution", "")
-	regulation := c.DefaultQuery("regulation", "")
-	regulationUrl := c.DefaultQuery("regulationUrl", "")
-	ggFlag := c.GetInt("isGg")
-	platform := c.GetInt("platform")
-	appId := c.DefaultQuery("appId", "")
+	questionType := c.DefaultPostForm("questionType", "")
+	keyWord := c.DefaultPostForm("keyWord", "")
+	fixWay := c.DefaultPostForm("fixWay", "")
+	checkContent := c.DefaultPostForm("checkContent", "")
+	resolution := c.DefaultPostForm("resolution", "")
+	regulation := c.DefaultPostForm("regulation", "")
+	regulationUrl := c.DefaultPostForm("regulationUrl", "")
+	ggFlag := c.DefaultPostForm("isGg", "")
+	platform := c.DefaultPostForm("platform", "")
+	appId := c.DefaultPostForm("appId", "")
 	var itemModel dal.ItemStruct
 	//platform
-	if platform != 0 && platform != 1 {
+	if platform != "0" && platform != "1" {
 		logs.Error("platform参数不合法！")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "platform参数不合法！",
@@ -35,10 +35,10 @@ func AddDetectItem(c *gin.Context){
 		return
 	}
 	//是否公共,0-否；1-是
-	if ggFlag != 0 && ggFlag != 1 {
-		ggFlag = 1
+	if ggFlag != "0" && ggFlag != "1" {
+		ggFlag = "1"
 	}
-	if ggFlag == 0 && appId == "" {
+	if ggFlag == "0" && appId == "" {
 		logs.Error("缺失参数appId！")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺失参数appId！",
@@ -57,15 +57,15 @@ func AddDetectItem(c *gin.Context){
 		})
 		return
 	}
-	itemModel.QuestionType = questionType
-	itemModel.KeyWord = keyWord
-	itemModel.FixWay = fixWay
+	itemModel.QuestionType, _ = strconv.Atoi(questionType)
+	itemModel.KeyWord, _ = strconv.Atoi(keyWord)
+	itemModel.FixWay, _ = strconv.Atoi(fixWay)
 	itemModel.CheckContent = checkContent
 	itemModel.Resolution = resolution
 	itemModel.Regulation = regulation
 	itemModel.RegulationUrl = regulationUrl
-	itemModel.Platform = platform
-	itemModel.IsGG = ggFlag
+	itemModel.Platform, _ = strconv.Atoi(platform)
+	itemModel.IsGG, _ = strconv.Atoi(ggFlag)
 	if appId != "" {
 		itemModel.AppId, _ = strconv.Atoi(appId)
 	}

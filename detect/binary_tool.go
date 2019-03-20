@@ -9,7 +9,7 @@ import (
 )
 
 func InsertBinaryTool(c *gin.Context) {
-	platform := c.PostForm("platform")
+	platform := c.DefaultPostForm("platform", "")
 	if platform == "" {
 		logs.Error("缺少platform参数")
 		c.JSON(http.StatusOK, gin.H{
@@ -28,7 +28,7 @@ func InsertBinaryTool(c *gin.Context) {
 		})
 		return
 	}
-	name := c.PostForm("name")
+	name := c.DefaultPostForm("name", "")
 	if name == "" {
 		logs.Error("缺少检测工具name参数")
 		c.JSON(http.StatusOK, gin.H{
@@ -38,7 +38,7 @@ func InsertBinaryTool(c *gin.Context) {
 		})
 		return
 	}
-	desc := c.PostForm("desc")
+	desc := c.DefaultPostForm("desc", "")
 	if desc == "" {
 		logs.Error("缺少检测工具desc参数")
 		c.JSON(http.StatusOK, gin.H{
