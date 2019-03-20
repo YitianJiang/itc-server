@@ -24,7 +24,7 @@ func QueryBinaryToolsByCondition(condition string) *[]BinaryDetectTool{
 	}
 	defer connection.Close()
 	var detect []BinaryDetectTool
-	if err := connection.Table(BinaryDetectTool{}.TableName()).Where(condition).Find(&detect).Error; err != nil {
+	if err := connection.Table(BinaryDetectTool{}.TableName()).Debug().Where(condition).Find(&detect).Error; err != nil {
 		logs.Error("%v", err)
 		return nil
 	}
@@ -38,7 +38,7 @@ func InsertBinaryTool(binaryTool BinaryDetectTool) bool {
 		return false
 	}
 	defer connection.Close()
-	if err := connection.Table(BinaryDetectTool{}.TableName()).Create(&binaryTool).Error; err != nil {
+	if err := connection.Table(BinaryDetectTool{}.TableName()).Debug().Create(&binaryTool).Error; err != nil {
 		logs.Error("insert binary tool failed, %v", err)
 		return false
 	}
