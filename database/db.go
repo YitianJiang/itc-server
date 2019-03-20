@@ -16,7 +16,7 @@ var(
 
 func InitDB(){
 	ssConf, _ := ssconf.LoadSsConfFile(conf.Configuration.MysqlConfigPath)
-	dboptional = dbconf.GetDbConf(ssConf, "itcserver_db", dbconf.Write)
+	dboptional = dbconf.GetDbConf(ssConf, "itcserver", dbconf.Write)
 }
 
 func GetConneection()(*gorm.DB, error){
