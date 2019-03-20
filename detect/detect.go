@@ -412,7 +412,7 @@ func QueryDetectTasks(c *gin.Context){
 }
 func QueryDetectTools(c *gin.Context){
 
-	platform := c.DefaultQuery("platform", "")
+	/*platform := c.DefaultQuery("platform", "")
 	if platform == "" {
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少platform参数",
@@ -429,7 +429,8 @@ func QueryDetectTools(c *gin.Context){
 		})
 		return
 	}
-	condition := "platform='" + platform + "'"
+	condition := "platform='" + platform + "'"*/
+	condition := "1=1"
 	tools := dal.QueryBinaryToolsByCondition(condition)
 	c.JSON(http.StatusOK, gin.H{
 		"message" : "success",
