@@ -55,7 +55,7 @@ func UpdateConfigByCondition(condition string, config ItemConfig) bool {
 		return false
 	}
 	defer connection.Close()
-	err = connection.Table(ItemConfig{}.TableName()).LogMode(_const.DB_LOG_MODE).Update(config).Where(condition).Error
+	err = connection.Table(ItemConfig{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).Update(config).Error
 	if err != nil {
 		logs.Error("配置项更新失败", err)
 		return false
