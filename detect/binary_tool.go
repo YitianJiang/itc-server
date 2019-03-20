@@ -10,45 +10,6 @@ import (
 )
 
 func InsertBinaryTool(c *gin.Context) {
-	/*platform := c.DefaultPostForm("platform", "")
-	if platform == "" {
-		logs.Error("缺少platform参数")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少platform参数",
-			"errorCode" : -1,
-			"data" : "缺少platform参数",
-		})
-		return
-	}
-	if platform != "0" && platform != "1" {
-		logs.Error("platform参数不合法")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "platform参数不合法",
-			"errorCode" : -2,
-			"data" : "platform参数不合法",
-		})
-		return
-	}
-	name := c.DefaultPostForm("name", "")
-	if name == "" {
-		logs.Error("缺少检测工具name参数")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少检测工具name参数",
-			"errorCode" : -3,
-			"data" : "缺少检测工具name参数",
-		})
-		return
-	}
-	desc := c.DefaultPostForm("desc", "")
-	if desc == "" {
-		logs.Error("缺少检测工具desc参数")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少检测工具desc参数",
-			"errorCode" : -4,
-			"data" : "缺少检测工具desc参数",
-		})
-		return
-	}*/
 	param, _ := ioutil.ReadAll(c.Request.Body)
 	var t dal.BinaryDetectTool
 	err := json.Unmarshal(param, &t)

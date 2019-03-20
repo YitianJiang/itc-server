@@ -3,8 +3,10 @@ package detect
 import (
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/gopkg/logs"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/cas.v2"
+	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -13,19 +15,31 @@ import (
 //增加检查项
 func AddDetectItem(c *gin.Context){
 
-	questionType := c.DefaultPostForm("questionType", "")
-	keyWord := c.DefaultPostForm("keyWord", "")
-	fixWay := c.DefaultPostForm("fixWay", "")
-	checkContent := c.DefaultPostForm("checkContent", "")
-	resolution := c.DefaultPostForm("resolution", "")
-	regulation := c.DefaultPostForm("regulation", "")
-	regulationUrl := c.DefaultPostForm("regulationUrl", "")
-	ggFlag := c.DefaultPostForm("isGg", "")
-	platform := c.DefaultPostForm("platform", "")
-	appId := c.DefaultPostForm("appId", "")
-	var itemModel dal.ItemStruct
+	param, _ := ioutil.ReadAll(c.Request.Body)
+	var t dal.ItemStruct
+	err := json.Unmarshal(param, &t)
+	if err != nil {
+		logs.Error("json unmarshal failed!, ", err)
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "json unmarshal failed",
+			"errorCode" : -5,
+			"data" : "json unmarshal failed",
+		})
+		return
+	}
+	/*questionType := t.QuestionType
+	keyWord := t.KeyWord
+	fixWay := t.FixWay
+	checkContent := t.CheckContent
+	resolution := t.Resolution
+	regulation := t.Regulation*/
+	regulationUrl := t.RegulationUrl
+	ggFlag := t.IsGG
+	platform := t.Platform
+	appId := t.AppId
+	//var itemModel dal.ItemStruct
 	//platform
-	if platform != "0" && platform != "1" {
+	if platform != 0 && platform != 1 {
 		logs.Error("platform参数不合法！")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "platform参数不合法！",
@@ -35,10 +49,10 @@ func AddDetectItem(c *gin.Context){
 		return
 	}
 	//是否公共,0-否；1-是
-	if ggFlag != "0" && ggFlag != "1" {
-		ggFlag = "1"
+	if ggFlag != 0 && ggFlag != 1 {
+		ggFlag = 1
 	}
-	if ggFlag == "0" && appId == "" {
+	if ggFlag == 0 && appId == 0 {
 		logs.Error("缺失参数appId！")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺失参数appId！",
@@ -57,7 +71,7 @@ func AddDetectItem(c *gin.Context){
 		})
 		return
 	}
-	itemModel.QuestionType, _ = strconv.Atoi(questionType)
+	/*itemModel.QuestionType, _ = strconv.Atoi(questionType)
 	itemModel.KeyWord, _ = strconv.Atoi(keyWord)
 	itemModel.FixWay, _ = strconv.Atoi(fixWay)
 	itemModel.CheckContent = checkContent
@@ -69,8 +83,9 @@ func AddDetectItem(c *gin.Context){
 	if appId != "" {
 		itemModel.AppId, _ = strconv.Atoi(appId)
 	}
-	itemModel.Status = 0
-	itemModelId := dal.InsertItemModel(itemModel)
+	itemModel.Status = 0*/
+	t.Status = 0
+	itemModelId := dal.InsertItemModel(t)
 	if itemModelId == 0 {
 		logs.Error("新增检查项失败")
 		c.JSON(http.StatusOK, gin.H{

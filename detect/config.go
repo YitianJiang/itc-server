@@ -2,37 +2,34 @@ package detect
 
 import (
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/gopkg/logs"
+	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"io/ioutil"
 	"net/http"
-	"strconv"
 )
 
 func AddConfig(c *gin.Context) {
-	configType := c.DefaultQuery("configType", "")
-	if configType == "" {
+	param, _ := ioutil.ReadAll(c.Request.Body)
+	var t dal.ItemConfig
+	err := json.Unmarshal(param, &t)
+	if err != nil {
+		logs.Error("json unmarshal failed!, ", err)
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少configType参数",
-			"errorCode" : -1,
-			"data" : "缺少configType参数",
+			"message" : "json unmarshal failed",
+			"errorCode" : -5,
+			"data" : "json unmarshal failed",
 		})
 		return
 	}
-	name := c.DefaultQuery("name", "")
-	if name == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少name参数",
-			"errorCode" : -2,
-			"data" : "缺少name参数",
-		})
-		return
-	}
-	id := c.DefaultQuery("id", "")
-	if id != "" {
-		condition := "id='" + id + "'"
+	id := t.ID
+	if id != 0 {
+		condition := "id='" + fmt.Sprint(id) + "'"
 		var config *[]dal.ItemConfig
 		config = dal.QueryConfigByCondition(condition)
 		var item = (*config)[0]
-		item.Name = name
+		item.Name = t.Name
 		flag := dal.UpdateConfigByCondition(condition, item)
 		if !flag {
 			c.JSON(http.StatusOK, gin.H{
@@ -43,7 +40,7 @@ func AddConfig(c *gin.Context) {
 			return
 		}
 	} else {
-		condition := "config_type='" + configType + "' and name='" + name + "'"
+		condition := "config_type='" + fmt.Sprint(t.ConfigType) + "' and name='" + t.Name + "'"
 		var config *[]dal.ItemConfig
 		config = dal.QueryConfigByCondition(condition)
 		if config != nil && len(*config)>0 {
@@ -54,10 +51,7 @@ func AddConfig(c *gin.Context) {
 			})
 			return
 		}
-		var configItem dal.ItemConfig
-		configItem.ConfigType, _ = strconv.Atoi(configType)
-		configItem.Name = name
-		flag := dal.InsertItemConfig(configItem)
+		flag := dal.InsertItemConfig(t)
 		if !flag {
 			c.JSON(http.StatusOK, gin.H{
 				"message" : "新增配置失败！",

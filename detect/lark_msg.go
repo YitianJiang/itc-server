@@ -3,45 +3,59 @@ package detect
 import (
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/gopkg/logs"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
+	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strconv"
 )
 
 func InsertLarkMsgCall(c *gin.Context) {
-	appId := c.DefaultPostForm("appId", "")
-	if appId == "" {
-		logs.Error("缺少appId参数！")
+	param, _ := ioutil.ReadAll(c.Request.Body)
+	var t dal.LarkMsgTimer
+	err := json.Unmarshal(param, &t)
+	if err != nil {
+		logs.Error("json unmarshal failed!, ", err)
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少appId参数！",
+			"message" : "json unmarshal failed",
+			"errorCode" : -5,
+			"data" : "json unmarshal failed",
+		})
+		return
+	}
+	appId := t.AppId
+	if appId == 0 {
+		logs.Error("缺少appId参数或者不合法！")
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "缺少appId参数或者不合法！",
 			"errorCode" : -1,
-			"data" : "缺少appId参数！",
+			"data" : "缺少appId参数或者不合法！",
 		})
 		return
 	}
-	intervalType := c.DefaultPostForm("type", "")
-	if intervalType == "" {
-		logs.Error("缺少type参数！")
+	intervalType := t.Type
+	if intervalType == 0 {
+		logs.Error("缺少type参数或者不合法！")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少type参数！",
+			"message" : "缺少type参数或者不合法！",
 			"errorCode" : -2,
-			"data" : "缺少type参数！",
+			"data" : "缺少type参数或者不合法！",
 		})
 		return
 	}
-	interval := c.DefaultPostForm("msgInterval", "")
-	if interval == "" {
-		logs.Error("缺少interval参数！")
+	interval := t.MsgInterval
+	if interval == 0 {
+		logs.Error("缺少msgInterval参数或者不合法！")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少interval参数！",
+			"message" : "缺少msgInterval参数或者不合法！",
 			"errorCode" : -3,
-			"data" : "缺少interval参数！",
+			"data" : "缺少msgInterval参数或者不合法！",
 		})
 		return
 	}
 	//校验
-	if f, _ := regexp.MatchString("^\\d+$", interval); !f {
+	if f, _ := regexp.MatchString("^\\d+$", strconv.Itoa(interval)); !f {
 		logs.Error("时间间隔参数不合法！")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "请填写正确的时间间隔！",
@@ -50,21 +64,7 @@ func InsertLarkMsgCall(c *gin.Context) {
 		})
 		return
 	}
-	intervalInt, _ := strconv.Atoi(interval)
-	if intervalInt == 0 {
-		logs.Error("时间间隔应该大于0！")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "时间间隔应该大于0！",
-			"errorCode" : -5,
-			"data" : "时间间隔应该大于0！",
-		})
-		return
-	}
-	var config dal.LarkMsgTimer
-	config.AppId, _ = strconv.Atoi(appId)
-	config.Type, _ = strconv.Atoi(intervalType)
-	config.MsgInterval = intervalInt
-	flag := dal.InsertLarkMsgTimer(config)
+	flag := dal.InsertLarkMsgTimer(t)
 	if !flag {
 		logs.Error("Lark提醒配置新增失败！")
 		c.JSON(http.StatusOK, gin.H{
