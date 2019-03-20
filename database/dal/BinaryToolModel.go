@@ -38,7 +38,7 @@ func InsertBinaryTool(binaryTool BinaryDetectTool) bool {
 		return false
 	}
 	defer connection.Close()
-	if err := connection.Table(BinaryDetectTool{}.TableName()).Create(binaryTool).Error; err != nil {
+	if err := connection.Table(BinaryDetectTool{}.TableName()).Create(&binaryTool).Error; err != nil {
 		logs.Error("insert binary tool failed, %v", err)
 		return false
 	}
