@@ -9,7 +9,7 @@ import (
 )
 
 func InsertBinaryTool(c *gin.Context) {
-	platform := c.DefaultQuery("platform", "")
+	platform := c.Query("platform")
 	if platform == "" {
 		logs.Error("缺少platform参数")
 		c.JSON(http.StatusOK, gin.H{

@@ -430,8 +430,21 @@ func QueryDetectTools(c *gin.Context){
 		return
 	}
 	condition := "platform='" + platform + "'"*/
+	name := c.DefaultQuery("name", "")
 	condition := "1=1"
+	if name != "" {
+		condition += " and name like '%" + name + "%'"
+	}
 	tools := dal.QueryBinaryToolsByCondition(condition)
+	if tools == nil {
+		logs.Error("二进制检测工具列表查询失败")
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "二进制检测工具列表查询失败",
+			"errorCode" : -1,
+			"data" : "二进制检测工具列表查询失败",
+		})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"message" : "success",
 		"errorCode" : 0,
