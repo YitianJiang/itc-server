@@ -364,8 +364,18 @@ func QueryDetectTasks(c *gin.Context){
 		return
 	}
 	condition := "1=1"
+	_, err := strconv.Atoi(appId)
+	if err != nil {
+		logs.Error("appId参数不合法！")
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "appId参数不合法！",
+			"errorCode" : -2,
+			"data" : "appId参数不合法！",
+		})
+		return
+	}
 	if appId != "" {
-		condition += " and appId=" + appId
+		condition += " and appId='" + appId + "'"
 	}
 	if version != "" {
 		condition += " and version='" + version + "'"
@@ -419,7 +429,7 @@ func QueryDetectTools(c *gin.Context){
 		})
 		return
 	}
-	condition := "platform=" + platform
+	condition := "platform='" + platform + "'"
 	tools := dal.QueryBinaryToolsByCondition(condition)
 	c.JSON(http.StatusOK, gin.H{
 		"message" : "success",
@@ -451,7 +461,7 @@ func QueryTaskQueryTools(c *gin.Context){
 		return
 	}
 	platform := (*task)[0].Platform
-	condition := "task_id=" + taskId + " and platform=" + strconv.Itoa(platform)
+	condition := "task_id='" + taskId + "' and platform='" + strconv.Itoa(platform) + "'"
 	tools := dal.QueryBinaryToolsByCondition(condition)
 	c.JSON(http.StatusOK, gin.H{
 		"message" : "success",
@@ -481,7 +491,7 @@ func QueryTaskBinaryCheckContent(c *gin.Context){
 		})
 		return
 	}
-	condition := "task_id=" + taskId + " and tool_id=" + toolId
+	condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
 	content := dal.QueryTaskBinaryCheckContent(condition)
 	if content == nil || len(*content)==0{
 		logs.Info("未查询到检测内容")

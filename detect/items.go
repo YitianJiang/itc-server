@@ -102,7 +102,7 @@ func GetSelfCheckItems(c *gin.Context){
 		})
 		return
 	}
-	condition := " id=" + taskId
+	condition := " id='" + taskId + "'"
 	var param map[string]interface{}
 	if condition != "" {
 		param["condition"] = condition
@@ -119,7 +119,7 @@ func GetSelfCheckItems(c *gin.Context){
 	}
 	appId := (*tasks)[0].AppId
 	platform := (*tasks)[0].Platform
-	itemCondition := "(platform=" + strconv.Itoa(platform) + " and is_gg=1) or (is_gg=0 and app_id=)" + appId
+	itemCondition := "(platform=" + strconv.Itoa(platform) + " and is_gg=1) or (is_gg=0 and app_id='" + appId + "')"
 	var data map[string]interface{}
 	data["condition"] = itemCondition
 	items := dal.QueryItemsByCondition(data)
@@ -132,7 +132,7 @@ func GetSelfCheckItems(c *gin.Context){
 		})
 		return
 	}
-	tj := "task_id=" + taskId
+	tj := "task_id='" + taskId + "'"
 	itemMap := dal.GetSelfCheckByTaskId(tj)
 	if itemMap == nil {
 		c.JSON(http.StatusOK, gin.H{

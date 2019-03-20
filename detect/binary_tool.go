@@ -87,7 +87,7 @@ func QueryBinaryTools(c *gin.Context) {
 	platform := c.DefaultQuery("platform", "")
 	condition := ""
 	if platform != "" {
-		condition = "platform=" + platform
+		condition = "platform='" + platform + "'"
 	}
 	var tools *[]dal.BinaryDetectTool
 	tools = dal.QueryBinaryToolsByCondition(condition)
