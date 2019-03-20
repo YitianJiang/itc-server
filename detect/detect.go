@@ -378,7 +378,7 @@ func QueryDetectTasks(c *gin.Context){
 		condition += " and app_id='" + appId + "'"
 	}
 	if version != "" {
-		condition += " and version='" + version + "'"
+		condition += " and app_version='" + version + "'"
 	}
 	if creator != "" {
 		condition += " and creator='" + creator + "'"
