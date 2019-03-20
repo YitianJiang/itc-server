@@ -5,6 +5,7 @@ import (
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
+	"strconv"
 )
 
 type LarkMsgTimer struct {
@@ -39,7 +40,8 @@ func QueryLarkMsgTimerByAppId(appId int) *LarkMsgTimer {
 	}
 	defer connection.Close()
 	var larkTimer LarkMsgTimer
-	if err := connection.Table(LarkMsgTimer{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("app_id=", appId).Find(&larkTimer).Error; err != nil {
+	condition := "app_id='" + strconv.Itoa(appId) + "'"
+	if err := connection.Table(LarkMsgTimer{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).Find(&larkTimer).Error; err != nil {
 		logs.Error("query lark message timer failed, %v", err)
 		return nil
 	}

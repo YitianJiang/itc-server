@@ -92,35 +92,34 @@ func AddDetectItem(c *gin.Context){
 //查询检查项
 func GetSelfCheckItems(c *gin.Context){
 
-	taskId, bool := c.GetQuery("taskId")
-	if !bool {
-		logs.Error("缺少taskId参数")
+	appIdParam, ok := c.GetQuery("appId")
+	if !ok {
+		logs.Error("缺少appId参数！")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少taskId参数！",
+			"message" : "缺少appId参数！",
 			"errorCode" : -1,
-			"data" : "缺少taskId参数！",
+			"data" : "缺少appId参数！",
 		})
 		return
 	}
-	condition := " id='" + taskId + "'"
+	taskId, bool := c.GetQuery("taskId")
+	condition := "1=1"
+	if bool {
+		condition += " id='" + taskId + "'"
+	}
 	var param map[string]interface{}
-	if condition != "" {
-		param["condition"] = condition
-	}
-	tasks, _ := dal.QueryTasksByCondition(param)
-	if len(*tasks) == 0 {
-		logs.Error("未查询到该检测任务信息！")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "未查询到该检测任务信息！",
-			"errorCode" : -2,
-			"data" : "未查询到该检测任务信息！",
-		})
-		return
-	}
-	appId := (*tasks)[0].AppId
-	platform := (*tasks)[0].Platform
-	itemCondition := "(platform=" + strconv.Itoa(platform) + " and is_gg=1) or (is_gg=0 and app_id='" + appId + "')"
 	var data map[string]interface{}
+	itemCondition := ""
+	if bool {
+		tasks, _ := dal.QueryTasksByCondition(param)
+		if len(*tasks) > 0 {
+			appId := (*tasks)[0].AppId
+			platform := (*tasks)[0].Platform
+			itemCondition = "(platform='" + strconv.Itoa(platform) + "')" + "and ((is_gg='1') or (is_gg='0' and app_id='" + appId + "'))"
+		}
+	} else {
+		itemCondition = "((is_gg='1') or (is_gg='0' and app_id='" + appIdParam + "'))"
+	}
 	data["condition"] = itemCondition
 	items := dal.QueryItemsByCondition(data)
 	if items==nil || len(*items)==0 {
@@ -129,6 +128,14 @@ func GetSelfCheckItems(c *gin.Context){
 			"message" : "未查询到自查项信息！",
 			"errorCode" : -3,
 			"data" : "未查询到自查项信息！",
+		})
+		return
+	}
+	if !bool {
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "success",
+			"errorCode" : 0,
+			"data" : *items,
 		})
 		return
 	}
