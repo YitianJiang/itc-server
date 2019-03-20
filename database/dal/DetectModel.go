@@ -75,7 +75,7 @@ func UpdateDetectModel(detectModel DetectStruct, content DetectContent) error {
 	}
 	defer connection.Close()
 	db := connection.Begin()
-	if err := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Save(detectModel).Error; err != nil {
+	if err := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Update(&detectModel).Error; err != nil {
 		logs.Error("update binary cheeck failed, %v", err)
 		db.Rollback()
 		return err
@@ -150,7 +150,8 @@ func QueryTasksByCondition(data map[string]interface{}) (*[]DetectStruct, uint) 
 	if condition == "" {
 		condition = " 1=1 "
 	}
-	if err := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Select("count(id) as total").Where(condition).Find(&total).Error; err != nil{
+	if err := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Select("count(id) as total").
+		Where(condition).Find(&total).Error; err != nil{
 		logs.Error("query total record failed! %v", err)
 		return &items, 0
 	}
