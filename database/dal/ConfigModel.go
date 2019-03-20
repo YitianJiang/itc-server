@@ -24,7 +24,7 @@ func InsertItemConfig(config ItemConfig) bool {
 		return false
 	}
 	defer connection.Close()
-	err = connection.Table(ItemConfig{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(config).Error
+	err = connection.Table(ItemConfig{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&config).Error
 	if err != nil {
 		logs.Error("新增检查项配置失败！", err)
 		return false

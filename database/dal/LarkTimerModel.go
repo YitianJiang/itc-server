@@ -27,7 +27,7 @@ func InsertLarkMsgTimer(timer LarkMsgTimer) bool {
 	}
 	defer connection.Close()
 	if err := connection.Table(LarkMsgTimer{}.TableName()).LogMode(_const.DB_LOG_MODE).
-		Create(timer).Error; err != nil {
+		Create(&timer).Error; err != nil {
 		logs.Error("insert lark message timer failed, %v", err)
 		return false
 	}
