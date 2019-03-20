@@ -368,10 +368,10 @@ func QueryDetectTasks(c *gin.Context){
 		condition += " and appId=" + appId
 	}
 	if version != "" {
-		condition += " and version=" + version
+		condition += " and version='" + version + "'"
 	}
 	if creator != "" {
-		condition += " and creator=" + creator
+		condition += " and creator='" + creator + "'"
 	}
 	var param map[string]interface{}
 	param = make(map[string]interface{})

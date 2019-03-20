@@ -43,7 +43,7 @@ func AddConfig(c *gin.Context) {
 			return
 		}
 	} else {
-		condition := "config_type=" + configType + " and name=" + name
+		condition := "config_type=" + configType + " and name='" + name + "'"
 		var config *[]dal.ItemConfig
 		config = dal.QueryConfigByCondition(condition)
 		if config != nil && len(*config)>0 {

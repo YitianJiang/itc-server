@@ -1,6 +1,7 @@
 package dal
 
 import (
+	"code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
@@ -59,7 +60,7 @@ func InsertDetectModel(detectModel DetectStruct) uint {
 		return 0
 	}
 	defer connection.Close()
-	db := connection.Table(DetectStruct{}.TableName())
+	db := connection.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	if err := db.Create(&detectModel).Error; err != nil{
 		return 0
 	}
@@ -74,13 +75,8 @@ func UpdateDetectModel(detectModel DetectStruct, content DetectContent) error {
 	}
 	defer connection.Close()
 	db := connection.Begin()
-	if err := db.Table(DetectStruct{}.TableName()).Save(detectModel).Error; err != nil {
+	if err := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Save(detectModel).Error; err != nil {
 		logs.Error("update binary cheeck failed, %v", err)
-		db.Rollback()
-		return err
-	}
-	if err = db.Table(DetectContent{}.TableName()).Create(content).Error; err != nil {
-		logs.Error("insert binary content failed, %v", err)
 		db.Rollback()
 		return err
 	}
@@ -96,7 +92,7 @@ func DeleteDetectModel(detectModeId string) error {
 	}
 	defer connection.Close()
 	db := connection.Table(DetectStruct{}.TableName())
-	if err := db.Where("id = ?", detectModeId).Delete(&DetectStruct{}).Error; err != nil{
+	if err := db.Where("id = ?", detectModeId).LogMode(_const.DB_LOG_MODE).Delete(&DetectStruct{}).Error; err != nil{
 		logs.Error("%v", err)
 		return err
 	}
@@ -111,7 +107,7 @@ func QueryDetectModelsByMap(param map[string]interface{}) *[]DetectStruct{
 	}
 	defer connection.Close()
 	var detect []DetectStruct
-	db := connection.Table(DetectStruct{}.TableName())
+	db := connection.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	if err := db.Where(param).Find(&detect).Error; err != nil {
 		logs.Error("%v", err)
 		return nil
@@ -126,7 +122,7 @@ func QueryTasksByCondition(data map[string]interface{}) (*[]DetectStruct, uint) 
 		return nil, 0
 	}
 	defer connection.Close()
-	db := connection.Table(DetectStruct{}.TableName())
+	db := connection.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	condition := data["condition"]
 	logs.Info("query tasks condition: %s", condition)
 	if condition != "" {
@@ -154,7 +150,7 @@ func QueryTasksByCondition(data map[string]interface{}) (*[]DetectStruct, uint) 
 	if condition == "" {
 		condition = " 1=1 "
 	}
-	if err := db.Table(DetectStruct{}.TableName()).Select("count(id) as total").Where(condition).Find(&total).Error; err != nil{
+	if err := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Select("count(id) as total").Where(condition).Find(&total).Error; err != nil{
 		logs.Error("query total record failed! %v", err)
 		return &items, 0
 	}
@@ -169,7 +165,7 @@ func QueryTaskBinaryCheckContent(condition string) *[]DetectContent{
 	}
 	defer connection.Close()
 	var detect []DetectContent
-	db := connection.Table(DetectStruct{}.TableName())
+	db := connection.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	if err := db.Where(condition).Find(&detect).Error; err != nil {
 		logs.Error("%v", err)
 		return nil
@@ -188,7 +184,7 @@ func ConfirmBinaryResult(data map[string]string) bool {
 	defer connection.Close()
 	//var dc DetectContent
 	//db := connection.Table(DetectContent{}.TableName()).Begin()
-	db := connection.Table(DetectContent{}.TableName())
+	db := connection.Table(DetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	condition := "task_id=" + taskId + " and tool_id=" + toolId
 	/*condition := "task_id=" + taskId + " and tool_id=" + toolId + " for update"
 	if err := db.Where(condition).Find(&dc).Error; err != nil {
@@ -200,7 +196,7 @@ func ConfirmBinaryResult(data map[string]string) bool {
 		db.Rollback()
 		return false
 	}*/
-	if err := db.Where(condition).Update("status", 1).Error; err != nil {
+	if err := db.Where(condition).LogMode(_const.DB_LOG_MODE).Update("status", 1).Error; err != nil {
 		logs.Error("update db tb_detect_content failed: %v", err)
 		//db.Rollback()
 		return false

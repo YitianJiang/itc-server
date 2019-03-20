@@ -1,6 +1,7 @@
 package dal
 
 import (
+	"code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
@@ -44,7 +45,7 @@ func InsertItemModel(itemModel ItemStruct) uint {
 		return 0
 	}
 	defer connection.Close()
-	if err := connection.Create(&itemModel).Error; err != nil{
+	if err := connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&itemModel).Error; err != nil{
 		return 0
 	}
 	return itemModel.ID
@@ -57,7 +58,7 @@ func QueryItemsByCondition(data map[string]interface{}) *[]ItemStruct {
 		return nil
 	}
 	defer connection.Close()
-	db := connection.Table(ItemStruct{}.TableName())
+	db := connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	condition := data["condition"]
 	logs.Info("query items condition: %s", condition)
 	if condition != "" {
@@ -83,7 +84,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 	data := param["data"]
 	db := connection.Begin()
 	//先更新检测任务的自查状态
-	if err = db.Table(DetectStruct{}.TableName()).Where("id=?", taskId).Update("SelfCheckStatus", 1).Error; err != nil{
+	if err = db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("id=?", taskId).Update("SelfCheckStatus", 1).Error; err != nil{
 		logs.Error("%v", err)
 		db.Rollback()
 		return false
@@ -101,7 +102,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 			check.Operator = operator.(string)
 			check.CreatedAt = time.Now()
 			check.UpdatedAt = time.Now()
-			if err = db.Table(ConfirmCheck{}.TableName()).Create(&check).Error; err != nil {
+			if err = db.Table(ConfirmCheck{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&check).Error; err != nil {
 				logs.Error("insert tb_confirm_check failed, %v", err)
 				db.Rollback()
 				return false
@@ -119,7 +120,7 @@ func GetSelfCheckByTaskId(condition string) map[uint]int{
 		return nil
 	}
 	defer connection.Close()
-	db := connection.Table(ConfirmCheck{}.TableName())
+	db := connection.Table(ConfirmCheck{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var items []ConfirmCheck
 	if err = db.Where(condition).Find(&items).Error; err != nil {
 		logs.Error("query self check item failed, %v", err)

@@ -49,10 +49,9 @@ func InsertBinaryTool(c *gin.Context) {
 		return
 	}
 	//按name进行检索，是否已经存在
-	condition := "name=" + name
+	condition := "name='" + name + "'"
 	var exist *[]dal.BinaryDetectTool
 	exist = dal.QueryBinaryToolsByCondition(condition)
-	logs.Info("exist: ", *exist)
 	if exist!=nil && len(*exist)>0 {
 		logs.Error("二进制检测工具新增失败，名称已经存在")
 		c.JSON(http.StatusOK, gin.H{

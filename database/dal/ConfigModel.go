@@ -1,6 +1,7 @@
 package dal
 
 import (
+	"code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
@@ -23,7 +24,7 @@ func InsertItemConfig(config ItemConfig) bool {
 		return false
 	}
 	defer connection.Close()
-	err = connection.Table(ItemConfig{}.TableName()).Create(config).Error
+	err = connection.Table(ItemConfig{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(config).Error
 	if err != nil {
 		logs.Error("新增检查项配置失败！", err)
 		return false
@@ -39,7 +40,7 @@ func QueryConfigByCondition(condition string) *[]ItemConfig {
 	}
 	defer connection.Close()
 	var configs []ItemConfig
-	err = connection.Table(ItemConfig{}.TableName()).Where(condition).Find(&configs).Error
+	err = connection.Table(ItemConfig{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).Find(&configs).Error
 	if err != nil {
 		logs.Error("查询检查配置项失败！", err)
 		return nil
@@ -54,7 +55,7 @@ func UpdateConfigByCondition(condition string, config ItemConfig) bool {
 		return false
 	}
 	defer connection.Close()
-	err = connection.Table(ItemConfig{}.TableName()).Update(config).Where(condition).Error
+	err = connection.Table(ItemConfig{}.TableName()).LogMode(_const.DB_LOG_MODE).Update(config).Where(condition).Error
 	if err != nil {
 		logs.Error("配置项更新失败", err)
 		return false

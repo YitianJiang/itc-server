@@ -1,6 +1,7 @@
 package dal
 
 import (
+	"code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
@@ -24,7 +25,7 @@ func InsertLarkMsgTimer(timer LarkMsgTimer) bool {
 		return false
 	}
 	defer connection.Close()
-	if err := connection.Table(LarkMsgTimer{}.TableName()).Create(timer).Error; err != nil {
+	if err := connection.Table(LarkMsgTimer{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(timer).Error; err != nil {
 		logs.Error("insert lark message timer failed, %v", err)
 		return false
 	}
@@ -38,7 +39,7 @@ func QueryLarkMsgTimerByAppId(appId int) *LarkMsgTimer {
 	}
 	defer connection.Close()
 	var larkTimer LarkMsgTimer
-	if err := connection.Table(LarkMsgTimer{}.TableName()).Where("app_id=", appId).Find(&larkTimer).Error; err != nil {
+	if err := connection.Table(LarkMsgTimer{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("app_id=", appId).Find(&larkTimer).Error; err != nil {
 		logs.Error("query lark message timer failed, %v", err)
 		return nil
 	}
