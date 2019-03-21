@@ -188,6 +188,8 @@ func UpdateDetectInfos(c *gin.Context){
 	detectContent.ToolId, _ = strconv.Atoi(toolId)
 	detectContent.HtmlContent = htmlContent
 	detectContent.JsonContent = jsonContent
+	detectContent.CreatedAt = time.Now()
+	detectContent.UpdatedAt = time.Now()
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id" : taskId,
 	})
