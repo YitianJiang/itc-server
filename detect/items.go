@@ -167,16 +167,6 @@ func ConfirmCheck(c *gin.Context){
 		TaskId int		`json:"taskId"`
 		Data []self		`json:"data"`
 	}
-	/*taskId, bool := c.GetQuery("taskId")
-	if !bool {
-		logs.Error("缺少taskId参数")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少taskId参数！",
-			"errorCode" : -1,
-			"data" : "缺少taskId参数！",
-		})
-		return
-	}*/
 	p, _ := ioutil.ReadAll(c.Request.Body)
 	var t confirm
 	err := json.Unmarshal(p, &t)
@@ -190,8 +180,8 @@ func ConfirmCheck(c *gin.Context){
 		return
 	}
 	name := "kanghuaisong"
-	//data := c.PostFormArray("data")
 	var param map[string]interface{}
+	param = make(map[string]interface{})
 	param["taskId"] = t.TaskId
 	param["data"] = t.Data
 	param["operator"] = name
