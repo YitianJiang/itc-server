@@ -137,7 +137,7 @@ func QueryTasksByCondition(data map[string]interface{}) (*[]DetectStruct, uint) 
 	condition := data["condition"]
 	logs.Info("query tasks condition: %s", condition)
 	if condition != "" {
-		db.Where(condition)
+		db = db.Where(condition)
 	}
 	pageNo, okpn := data["pageNo"]
 	pageSize, okps := data["pageSize"]
@@ -147,9 +147,9 @@ func QueryTasksByCondition(data map[string]interface{}) (*[]DetectStruct, uint) 
 		}
 		page := pageNo.(int)
 		size := pageSize.(int)
-		db.Limit(pageSize)
+		db = db.Limit(pageSize)
 		if page > 0 {
-			db.Offset((page - 1) * size)
+			db = db.Offset((page - 1) * size)
 		}
 	}
 	var items []DetectStruct
