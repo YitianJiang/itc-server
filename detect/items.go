@@ -5,7 +5,6 @@ import (
 	"code.byted.org/gopkg/logs"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
-	"gopkg.in/cas.v2"
 	"io/ioutil"
 	"net/http"
 	"regexp"
@@ -170,15 +169,7 @@ func ConfirmCheck(c *gin.Context){
 		})
 		return
 	}
-	name := cas.Username(c.Request)
-	if name == ""{
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "用户未登录！",
-			"errorCode" : -2,
-			"data" : "用户未登录！",
-		})
-		return
-	}
+	name := "kanghuaisong"
 	data := c.PostFormArray("data")
 	var param map[string]interface{}
 	param["taskId"] = taskId

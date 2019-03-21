@@ -53,11 +53,20 @@ func UploadFile(c *gin.Context){
 	filename := header.Filename
 	platform := c.DefaultPostForm("platform", "")
 	if platform == ""{
+		logs.Error("缺少platform参数！")
 		c.JSON(http.StatusOK, gin.H{
 			"message":"缺少platform参数！",
 			"errorCode":-3,
 		})
-		logs.Error("缺少platform参数！")
+		return
+	}
+	appId := c.DefaultPostForm("appId", "")
+	if appId == ""{
+		logs.Error("缺少appId参数！")
+		c.JSON(http.StatusOK, gin.H{
+			"message":"缺少appId参数！",
+			"errorCode":-4,
+		})
 		return
 	}
 	//检验文件格式是否是apk或者ipa
@@ -127,6 +136,7 @@ func UploadFile(c *gin.Context){
 	dbDetectModel.CreatedAt = time.Now()
 	dbDetectModel.UpdatedAt = time.Now()
 	dbDetectModel.Platform, _ = strconv.Atoi(platform)
+	dbDetectModel.AppId = appId
 	//dbDetectModel.TosUrl = tosUrl
 	dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
