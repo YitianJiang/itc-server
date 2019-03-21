@@ -8,12 +8,12 @@ import (
 func InitRouter(r *ginex.Engine){
 
 	api := r.GroupEX("/api")
+	//二进制包检测回调接口
+	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
 	//api.Use(middleware.JWTCheck())
 	{
 		//上传ipa和apk
 		api.POST("/uploadFile", detect.UploadFile)
-		//二进制包检测回调接口
-		api.POST("/updateDetectInfos", detect.UpdateDetectInfos)
 		//增加检查项
 		api.POST("/addDetectItem", detect.AddDetectItem)
 		//二进制任务查询
