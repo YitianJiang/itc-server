@@ -5,6 +5,7 @@ import (
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
+	"fmt"
 )
 //二进制包检测任务
 type DetectStruct struct {
@@ -75,8 +76,16 @@ func UpdateDetectModel(detectModel DetectStruct, content DetectContent) error {
 	}
 	defer connection.Close()
 	db := connection.Begin()
-	if err := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Update(&detectModel).Error; err != nil {
-		logs.Error("update binary cheeck failed, %v", err)
+	taskId := detectModel.ID
+	condition := "id=" + fmt.Sprint(taskId)
+	if err := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).Update(&detectModel).Error; err != nil {
+		logs.Error("update binary check failed, %v", err)
+		db.Rollback()
+		return err
+	}
+	//insert detectcontent
+	if err := db.Table(DetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&content).Error; err != nil {
+		logs.Error("insert binary check content failed, %v", err)
 		db.Rollback()
 		return err
 	}
