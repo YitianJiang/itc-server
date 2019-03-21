@@ -503,9 +503,9 @@ func QueryTaskQueryTools(c *gin.Context){
 	for i:=0; i<len(*toolsContent); i++ {
 		content := (*toolsContent)[i]
 		if i==len(*toolsContent)-1 {
-			toolCondition += "'" + fmt.Sprint(content.ID) + "')"
+			toolCondition += "'" + fmt.Sprint(content.ToolId) + "')"
 		} else {
-			toolCondition += "'" + fmt.Sprint(content.ID) + "',"
+			toolCondition += "'" + fmt.Sprint(content.ToolId) + "',"
 		}
 	}
 	toolCondition += " and platform ='" + strconv.Itoa(platform) + "'"
