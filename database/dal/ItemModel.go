@@ -166,7 +166,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 				return false
 			}
 		}else{
-			condition := "task_id='" + taskId.(string) + "' and item_id='" + strconv.Itoa(dat.Id) + "'"
+			condition := "task_id='" + strconv.Itoa(taskId.(int)) + "' and item_id='" + strconv.Itoa(dat.Id) + "'"
 			check.UpdatedAt = time.Now()
 			if err = db.Table(ConfirmCheck{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).
 				Update(map[string]interface{}{"status":dat.Status, "updated_at":time.Now()}).Error; err != nil {
