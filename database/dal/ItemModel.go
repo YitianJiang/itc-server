@@ -132,7 +132,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 	data := param["data"]
 	db := connection.Begin()
 	//先更新检测任务的自查状态
-	if err = db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("id=?", taskId).Update("SelfCheckStatus", 1).Error; err != nil{
+	if err = db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("id=?", taskId).Update("self_check_status", 1).Error; err != nil{
 		logs.Error("%v", err)
 		db.Rollback()
 		return false
