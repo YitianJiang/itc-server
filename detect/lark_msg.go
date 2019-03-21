@@ -16,45 +16,15 @@ func InsertLarkMsgCall(c *gin.Context) {
 	var t dal.LarkMsgTimer
 	err := json.Unmarshal(param, &t)
 	if err != nil {
-		logs.Error("json unmarshal failed!, ", err)
+		logs.Error("参数不合法!, ", err)
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "json unmarshal failed",
+			"message" : "json 参数不合法",
 			"errorCode" : -5,
-			"data" : "json unmarshal failed",
-		})
-		return
-	}
-	appId := t.AppId
-	if appId == 0 {
-		logs.Error("缺少appId参数或者不合法！")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少appId参数或者不合法！",
-			"errorCode" : -1,
-			"data" : "缺少appId参数或者不合法！",
-		})
-		return
-	}
-	intervalType := t.Type
-	if intervalType == 0 {
-		logs.Error("缺少type参数或者不合法！")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少type参数或者不合法！",
-			"errorCode" : -2,
-			"data" : "缺少type参数或者不合法！",
+			"data" : "json 参数不合法",
 		})
 		return
 	}
 	interval := t.MsgInterval
-	if interval == 0 {
-		logs.Error("缺少msgInterval参数或者不合法！")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少msgInterval参数或者不合法！",
-			"errorCode" : -3,
-			"data" : "缺少msgInterval参数或者不合法！",
-		})
-		return
-	}
-	//校验
 	if f, _ := regexp.MatchString("^\\d+$", strconv.Itoa(interval)); !f {
 		logs.Error("时间间隔参数不合法！")
 		c.JSON(http.StatusOK, gin.H{
