@@ -488,7 +488,7 @@ func QueryTaskQueryTools(c *gin.Context){
 		return
 	}
 	platform := (*task)[0].Platform
-	condition := "task_id='" + taskId
+	condition := "task_id='" + taskId + "'"
 	toolsContent := dal.QueryTaskBinaryCheckContent(condition)
 	if toolsContent == nil || len(*toolsContent) == 0 {
 		logs.Info("未查询到该检测任务对应的自查工具")
