@@ -159,7 +159,15 @@ func GetSelfCheckItems(c *gin.Context){
 }
 //完成自查
 func ConfirmCheck(c *gin.Context){
-	taskId, bool := c.GetQuery("taskId")
+	type self struct {
+		Status int		`json:"status"`
+		Id int			`json:"id"`
+	}
+	type confirm struct {
+		TaskId int		`json:"taskId"`
+		Data []self		`json:"data"`
+	}
+	/*taskId, bool := c.GetQuery("taskId")
 	if !bool {
 		logs.Error("缺少taskId参数")
 		c.JSON(http.StatusOK, gin.H{
@@ -168,14 +176,26 @@ func ConfirmCheck(c *gin.Context){
 			"data" : "缺少taskId参数！",
 		})
 		return
+	}*/
+	p, _ := ioutil.ReadAll(c.Request.Body)
+	var t confirm
+	err := json.Unmarshal(p, &t)
+	if err != nil {
+		logs.Error("参数不合法!, ", err)
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "参数不合法",
+			"errorCode" : -5,
+			"data" : "参数不合法",
+		})
+		return
 	}
 	name := "kanghuaisong"
-	data := c.PostFormArray("data")
+	//data := c.PostFormArray("data")
 	var param map[string]interface{}
-	param["taskId"] = taskId
-	param["data"] = data
+	param["taskId"] = t.TaskId
+	param["data"] = t.Data
 	param["operator"] = name
-	bool = dal.ConfirmSelfCheck(param)
+	bool := dal.ConfirmSelfCheck(param)
 	if !bool {
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "自查确认失败，请联系相关人员！",
