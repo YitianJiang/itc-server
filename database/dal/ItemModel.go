@@ -35,7 +35,7 @@ type QueryItemStruct struct {
 	IsGG int						`json:"isGg"`
 	AppId int						`json:"appId"`
 	Platform int					`json:"platform"`
-	QuestionTypeName string			`json:"questionTypeName`
+	QuestionTypeName string			`json:"questionTypeName"`
 	KeyWordName string				`json:"keyWordName"`
 	FixWayName string				`json:"fixWayName"`
 	Status int						`json:"status"`

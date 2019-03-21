@@ -27,12 +27,6 @@ func AddDetectItem(c *gin.Context){
 		})
 		return
 	}
-	/*questionType := t.QuestionType
-	keyWord := t.KeyWord
-	fixWay := t.FixWay
-	checkContent := t.CheckContent
-	resolution := t.Resolution
-	regulation := t.Regulation*/
 	regulationUrl := t.RegulationUrl
 	ggFlag := t.IsGG
 	platform := t.Platform
