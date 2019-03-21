@@ -152,6 +152,7 @@ func GetSelfCheckItems(c *gin.Context){
 			item := (*items)[i]
 			status := itemMap[item.ID]
 			item.Status = status
+			(*items)[i] = item
 			logs.Error("item.Status : " + fmt.Sprint(status))
 		}
 		for j:=0; j<len(*items); j++{
