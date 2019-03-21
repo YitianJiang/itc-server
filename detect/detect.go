@@ -277,7 +277,7 @@ func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string){
 func ConfirmBinaryResult(c *gin.Context){
 	type confirm struct {
 		TaskId  int		`json:"taskId"`
-		toolId	int		`json:"toolId"`
+		ToolId	int		`json:"toolId"`
 	}
 	param, _ := ioutil.ReadAll(c.Request.Body)
 	var t confirm
@@ -293,7 +293,7 @@ func ConfirmBinaryResult(c *gin.Context){
 	var data map[string]string
 	data = make(map[string]string)
 	data["task_id"] = strconv.Itoa(t.TaskId)
-	data["tool_id"] = strconv.Itoa(t.toolId)
+	data["tool_id"] = strconv.Itoa(t.ToolId)
 	flag := dal.ConfirmBinaryResult(data)
 	if !flag {
 		logs.Error("二进制检测内容确认失败")
@@ -309,7 +309,7 @@ func ConfirmBinaryResult(c *gin.Context){
 	})
 	appId := (*detect)[0].AppId
 	appVersion := (*detect)[0].AppVersion
-	key := strconv.Itoa(t.TaskId) + "_" + appId + "_" + appVersion + "_" + strconv.Itoa(t.toolId)
+	key := strconv.Itoa(t.TaskId) + "_" + appId + "_" + appVersion + "_" + strconv.Itoa(t.ToolId)
 	ticker := LARK_MSG_CALL_MAP[key]
 	if ticker != nil {
 		ticker.(*time.Ticker).Stop()
