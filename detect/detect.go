@@ -69,6 +69,17 @@ func UploadFile(c *gin.Context){
 		})
 		return
 	}
+	checkItem := c.DefaultPostForm("checkItem", "")
+	if checkItem == "" {
+		logs.Error("没有选择二进制检测工具！")
+		c.JSON(http.StatusOK, gin.H{
+			"message":"没有选择二进制检测工具！",
+			"errorCode":-5,
+			"data":"没有选择二进制检测工具!",
+		})
+		return
+	}
+	logs.Info("checkItem: ", checkItem)
 	//检验文件格式是否是apk或者ipa
 	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".ipa")
 	if !flag{
@@ -147,6 +158,7 @@ func UploadFile(c *gin.Context){
 		bodyWriter.WriteField("recipients", recipients)
 		bodyWriter.WriteField("callback", callBackUrl)
 		bodyWriter.WriteField("taskID", fmt.Sprint(dbDetectModelId))
+		bodyWriter.WriteField("toolIds", checkItem)
 		fileWriter, err := bodyWriter.CreateFormFile("file", filepath)
 		if err != nil {
 			logs.Error("%s", "error writing to buffer: " + err.Error())
