@@ -163,6 +163,15 @@ func UploadFile(c *gin.Context){
 		contentType := bodyWriter.FormDataContentType()
 		bodyWriter.Close()
 		response, err := http.Post(url, contentType, bodyBuffer)
+		if response == nil {
+			logs.Error("二进制包检测服务器无响应")
+			c.JSON(http.StatusOK, gin.H{
+				"message" : "二进制包检测服务器无响应",
+				"errorCode" : -1,
+				"data" : "二进制包检测服务器无响应",
+			})
+			return
+		}
 		defer response.Body.Close()
 		resBody := &bytes.Buffer{}
 		_, err = resBody.ReadFrom(response.Body)
