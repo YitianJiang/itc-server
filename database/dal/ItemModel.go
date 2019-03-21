@@ -5,7 +5,6 @@ import (
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
-	"encoding/json"
 	"time"
 )
 
@@ -121,6 +120,10 @@ func QueryItemsByCondition(data map[string]interface{}) *[]QueryItemStruct {
 }
 //confirm check
 func ConfirmSelfCheck(param map[string]interface{}) bool {
+	type self struct {
+		Status int		`json:"status"`
+		Id int			`json:"id"`
+	}
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
@@ -132,29 +135,26 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 	data := param["data"]
 	db := connection.Begin()
 	//先更新检测任务的自查状态
-	if err = db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("id=?", taskId).Update("self_check_status", 1).Error; err != nil{
+	if err = db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
+		Where("id=?", taskId).Update("self_check_status", 1).Error; err != nil{
 		logs.Error("%v", err)
 		db.Rollback()
 		return false
 	}
-	idArray := data.([]string)
+	idArray := data.([]self)
 	for i:=0; i<len(idArray); i++ {
-		var dat map[string]interface{}
-		dat = make(map[string]interface{})
-		str := idArray[i]
-		err := json.Unmarshal([]byte(str), &dat); if err == nil {
-			var check ConfirmCheck
-			check.ItemId = dat["id"].(int)
-			check.Status = dat["status"].(int)
-			check.TaskId = taskId.(int)
-			check.Operator = operator.(string)
-			check.CreatedAt = time.Now()
-			check.UpdatedAt = time.Now()
-			if err = db.Table(ConfirmCheck{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&check).Error; err != nil {
-				logs.Error("insert tb_confirm_check failed, %v", err)
-				db.Rollback()
-				return false
-			}
+		dat := idArray[i]
+		var check ConfirmCheck
+		check.ItemId = dat.Id
+		check.Status = dat.Status
+		check.TaskId = taskId.(int)
+		check.Operator = operator.(string)
+		check.CreatedAt = time.Now()
+		check.UpdatedAt = time.Now()
+		if err = db.Table(ConfirmCheck{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&check).Error; err != nil {
+			logs.Error("insert tb_confirm_check failed, %v", err)
+			db.Rollback()
+			return false
 		}
 	}
 	db.Commit()
