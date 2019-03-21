@@ -5,6 +5,7 @@ import (
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
+	"strconv"
 	"time"
 )
 
@@ -145,6 +146,9 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 		db.Rollback()
 		return false
 	}
+	//查询之前是否已经做过自查
+	condition := " task_id='" + strconv.Itoa(taskId.(int)) + "'"
+	dataMap := GetSelfCheckByTaskId(condition)
 	idArray := data.([]Self)
 	for i:=0; i<len(idArray); i++ {
 		dat := idArray[i]
@@ -153,9 +157,11 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 		check.Status = dat.Status
 		check.TaskId = taskId.(int)
 		check.Operator = operator.(string)
-		check.CreatedAt = time.Now()
+		if dataMap == nil {
+			check.CreatedAt = time.Now()
+		}
 		check.UpdatedAt = time.Now()
-		if err = db.Table(ConfirmCheck{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&check).Error; err != nil {
+		if err = db.Table(ConfirmCheck{}.TableName()).LogMode(_const.DB_LOG_MODE).Save(&check).Error; err != nil {
 			logs.Error("insert tb_confirm_check failed, %v", err)
 			db.Rollback()
 			return false
