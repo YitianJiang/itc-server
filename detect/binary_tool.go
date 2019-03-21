@@ -35,10 +35,6 @@ func InsertBinaryTool(c *gin.Context) {
 		})
 		return
 	}
-	/*var tool dal.BinaryDetectTool
-	tool.Name = name
-	tool.Description = desc
-	tool.Platform, _ = strconv.Atoi(platform)*/
 	bool := dal.InsertBinaryTool(t)
 	if !bool {
 		logs.Error("二进制检测工具新增失败")

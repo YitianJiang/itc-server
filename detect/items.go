@@ -71,19 +71,6 @@ func AddDetectItem(c *gin.Context){
 		})
 		return
 	}
-	/*itemModel.QuestionType, _ = strconv.Atoi(questionType)
-	itemModel.KeyWord, _ = strconv.Atoi(keyWord)
-	itemModel.FixWay, _ = strconv.Atoi(fixWay)
-	itemModel.CheckContent = checkContent
-	itemModel.Resolution = resolution
-	itemModel.Regulation = regulation
-	itemModel.RegulationUrl = regulationUrl
-	itemModel.Platform, _ = strconv.Atoi(platform)
-	itemModel.IsGG, _ = strconv.Atoi(ggFlag)
-	if appId != "" {
-		itemModel.AppId, _ = strconv.Atoi(appId)
-	}
-	itemModel.Status = 0*/
 	t.Status = 0
 	itemModelId := dal.InsertItemModel(t)
 	if itemModelId == 0 {

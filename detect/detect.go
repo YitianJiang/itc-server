@@ -126,6 +126,7 @@ func UploadFile(c *gin.Context){
 	dbDetectModel.SelfCheckStatus = 0
 	dbDetectModel.CreatedAt = time.Now()
 	dbDetectModel.UpdatedAt = time.Now()
+	dbDetectModel.Platform, _ = strconv.Atoi(platform)
 	//dbDetectModel.TosUrl = tosUrl
 	dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件

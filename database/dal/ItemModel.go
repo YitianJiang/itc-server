@@ -23,6 +23,22 @@ type ItemStruct struct {
 	Platform int			`json:"platform"`
 	Status int				`json:"status"`
 }
+type QueryItemStruct struct {
+	ID	uint						`json:ID`
+	QuestionType int				`json:"questionType"`
+	KeyWord int						`json:"keyWord"`
+	FixWay int						`json:"fixWay"`
+	CheckContent string				`json:"checkContent"`
+	Resolution string				`json:"resolution"`
+	Regulation string				`json:"regulation"`
+	RegulationUrl string			`json:"regulationUrl"`
+	IsGG int						`json:"isGg"`
+	AppId int						`json:"appId"`
+	Platform int					`json:"platform"`
+	QuestionTypeName string			`json:"questionTypeName`
+	KeyWordName string				`json:"keyWordName"`
+	FixWayName string				`json:"fixWayName"`
+}
 type ConfirmCheck struct {
 	gorm.Model
 	TaskId int				`json:"taskId"`
@@ -51,7 +67,7 @@ func InsertItemModel(itemModel ItemStruct) uint {
 	return itemModel.ID
 }
 //query data
-func QueryItemsByCondition(data map[string]interface{}) *[]ItemStruct {
+func QueryItemsByCondition(data map[string]interface{}) *[]QueryItemStruct {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
@@ -69,7 +85,38 @@ func QueryItemsByCondition(data map[string]interface{}) *[]ItemStruct {
 		logs.Error("%v", err)
 		return nil
 	}
-	return &items
+	var configMap map[uint]string
+	configMap = make(map[uint]string)
+	configs := QueryConfigByCondition("1=1")
+	if configs != nil && len(*configs)>0 {
+		for i:=0; i<len(*configs); i++ {
+			config := (*configs)[i]
+			configMap[config.ID] = config.Name
+		}
+	}
+	var qis []QueryItemStruct
+	if items!=nil && len(items)>0 {
+		for j:=0; j<len(items); j++ {
+			item := items[j]
+			var qisItem QueryItemStruct
+			qisItem.ID = item.ID
+			qisItem.Platform = item.Platform
+			qisItem.AppId = item.AppId
+			qisItem.IsGG = item.IsGG
+			qisItem.RegulationUrl = item.RegulationUrl
+			qisItem.Regulation = item.Regulation
+			qisItem.Resolution = item.Resolution
+			qisItem.FixWay = item.FixWay
+			qisItem.CheckContent = item.CheckContent
+			qisItem.KeyWord = item.KeyWord
+			qisItem.QuestionType = item.QuestionType
+			qisItem.FixWayName = configMap[uint(item.FixWay)]
+			qisItem.QuestionTypeName = configMap[uint(item.QuestionType)]
+			qisItem.KeyWordName = configMap[uint(item.KeyWord)]
+			qis = append(qis, qisItem)
+		}
+	}
+	return &qis
 }
 //confirm check
 func ConfirmSelfCheck(param map[string]interface{}) bool {

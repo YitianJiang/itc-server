@@ -177,7 +177,7 @@ func QueryTaskBinaryCheckContent(condition string) *[]DetectContent{
 	}
 	defer connection.Close()
 	var detect []DetectContent
-	db := connection.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	db := connection.Table(DetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	if err := db.Where(condition).Find(&detect).Error; err != nil {
 		logs.Error("%v", err)
 		return nil
