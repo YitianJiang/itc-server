@@ -189,7 +189,6 @@ func GetSelfCheckByTaskId(condition string) map[uint]int{
 		it := items[i]
 		itemId := it.ItemId
 		item[uint(itemId)] = it.Status
-		logs.Error("itemId: " + fmt.Sprint(itemId) + ", status: " + fmt.Sprint(it.Status))
 	}
 	return item
 }

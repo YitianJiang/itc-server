@@ -4,7 +4,6 @@ import (
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/gopkg/logs"
 	"encoding/json"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
@@ -147,17 +146,11 @@ func GetSelfCheckItems(c *gin.Context){
 			"data" : *items,
 		})
 	} else {
-		logs.Error("itemMap is not nil")
 		for i := 0; i < len(*items); i++ {
 			item := (*items)[i]
 			status := itemMap[item.ID]
 			item.Status = status
 			(*items)[i] = item
-			logs.Error("item.Status : " + fmt.Sprint(status))
-		}
-		for j:=0; j<len(*items); j++{
-			ite := (*items)[j]
-			logs.Error("item.Status : " + fmt.Sprint(ite.Status))
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "success",
