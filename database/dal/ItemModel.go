@@ -3,6 +3,7 @@ package dal
 import (
 	"code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
+	"code.byted.org/clientQA/itc-server/detect"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"time"
@@ -120,10 +121,6 @@ func QueryItemsByCondition(data map[string]interface{}) *[]QueryItemStruct {
 }
 //confirm check
 func ConfirmSelfCheck(param map[string]interface{}) bool {
-	type S struct {
-		Status int		`json:"status"`
-		Id int			`json:"id"`
-	}
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
@@ -141,7 +138,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 		db.Rollback()
 		return false
 	}
-	idArray := data.([]S)
+	idArray := data.([]detect.Self)
 	for i:=0; i<len(idArray); i++ {
 		dat := idArray[i]
 		var check ConfirmCheck
