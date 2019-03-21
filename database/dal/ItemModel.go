@@ -38,6 +38,7 @@ type QueryItemStruct struct {
 	QuestionTypeName string			`json:"questionTypeName`
 	KeyWordName string				`json:"keyWordName"`
 	FixWayName string				`json:"fixWayName"`
+	Status int						`json:"status"`
 }
 type ConfirmCheck struct {
 	gorm.Model
