@@ -153,7 +153,7 @@ func QueryTasksByCondition(data map[string]interface{}) (*[]DetectStruct, uint) 
 		}
 	}
 	var items []DetectStruct
-	if err := db.Find(&items).Error; err != nil{
+	if err := db.Find(&items).Order("created_at desc").Error; err != nil{
 		logs.Error("%v", err)
 		return nil, 0
 	}
@@ -161,7 +161,14 @@ func QueryTasksByCondition(data map[string]interface{}) (*[]DetectStruct, uint) 
 	if condition == "" {
 		condition = " 1=1 "
 	}
-	if err := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Select("count(id) as total").
+	connect, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return nil, 0
+	}
+	defer connect.Close()
+	dbCount := connect.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	if err := dbCount.Select("count(id) as total").
 		Where(condition).Find(&total).Error; err != nil{
 		logs.Error("query total record failed! %v", err)
 		return &items, 0
