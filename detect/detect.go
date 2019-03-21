@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
-	"gopkg.in/cas.v2"
 	"io"
 	"math/rand"
 	"mime/multipart"
@@ -22,14 +21,17 @@ import (
 
 const(
 	DETECT_URL_DEV = "10.2.209.202:9527"
-	DETECT_URL_PRO = "10.2.9.226:9527"
+	//DETECT_URL_PRO = "10.2.9.226:9527"
+	//调试，暂时换成本机的ip地址和端口
+	DETECT_URL_PRO = "10.2.196.119:9527"
 )
 var LARK_MSG_CALL_MAP map[string]interface{} = make(map[string]interface{})
 func UploadFile(c *gin.Context){
 
 	url := ""
 	//get user info from cas
-	name := cas.Username(c.Request)
+	//name := cas.Username(c.Request)
+	name := "kanghuaisong"
 	if name == ""{
 		c.JSON(http.StatusOK, gin.H{
 			"message":"用户未登录！",
@@ -112,8 +114,8 @@ func UploadFile(c *gin.Context){
 	}
 	//调试，暂时注释
 	//var recipients = "ttqaall@bytedance.com,tt_ios@bytedance.com,"
-	var recipients = ""
-	recipients += name + "@bytedance.com"
+	var recipients = "kanghuaisong@bytedance.com"
+	//recipients += name + "@bytedance.com"
 	filepath := _tmpDir + "/" + filename
 	//1、上传至tos,测试暂时注释
 	//tosUrl, err := upload2Tos(filepath)
@@ -126,7 +128,7 @@ func UploadFile(c *gin.Context){
 	//dbDetectModel.TosUrl = tosUrl
 	dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
-	callBackUrl := "http://itc.byted.org/updateDetectInfos" + "?taskID=" + string(dbDetectModelId)
+	callBackUrl := "http://10.224.10.61:6789/updateDetectInfos" + "?taskID=" + string(dbDetectModelId)
 	bodyBuffer := &bytes.Buffer{}
 	bodyWriter := multipart.NewWriter(bodyBuffer)
 	bodyWriter.WriteField("recipients", recipients)
