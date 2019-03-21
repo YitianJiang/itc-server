@@ -159,12 +159,21 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 		check.Operator = operator.(string)
 		if dataMap == nil {
 			check.CreatedAt = time.Now()
-		}
-		check.UpdatedAt = time.Now()
-		if err = db.Table(ConfirmCheck{}.TableName()).LogMode(_const.DB_LOG_MODE).Save(&check).Error; err != nil {
-			logs.Error("insert tb_confirm_check failed, %v", err)
-			db.Rollback()
-			return false
+			check.UpdatedAt = time.Now()
+			if err = db.Table(ConfirmCheck{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&check).Error; err != nil {
+				logs.Error("insert tb_confirm_check failed, %v", err)
+				db.Rollback()
+				return false
+			}
+		}else{
+			condition := "task_id='" + taskId.(string) + "' and item_id='" + strconv.Itoa(dat.Id) + "'"
+			check.UpdatedAt = time.Now()
+			if err = db.Table(ConfirmCheck{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).
+				Update(map[string]interface{}{"status":dat.Status, "updated_at":time.Now()}).Error; err != nil {
+				logs.Error("insert tb_confirm_check failed, %v", err)
+				db.Rollback()
+				return false
+			}
 		}
 	}
 	db.Commit()
