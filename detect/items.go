@@ -139,7 +139,6 @@ func GetSelfCheckItems(c *gin.Context){
 	tj := "task_id='" + taskId + "'"
 	itemMap := dal.GetSelfCheckByTaskId(tj)
 	if itemMap == nil {
-		logs.Error("itemMap is nil")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "success",
 			"errorCode" : 0,
