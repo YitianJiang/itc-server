@@ -4,6 +4,7 @@ import (
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/gopkg/logs"
 	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
@@ -151,6 +152,7 @@ func GetSelfCheckItems(c *gin.Context){
 			item := (*items)[i]
 			status := itemMap[item.ID]
 			item.Status = status
+			logs.Error("item.Status : " + fmt.Sprint(status))
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "success",
