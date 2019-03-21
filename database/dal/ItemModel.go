@@ -5,7 +5,6 @@ import (
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
-	"fmt"
 	"time"
 )
 
