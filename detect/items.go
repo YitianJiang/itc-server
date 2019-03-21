@@ -99,7 +99,7 @@ func GetSelfCheckItems(c *gin.Context){
 	taskId, bool := c.GetQuery("taskId")
 	condition := "1=1"
 	if bool {
-		condition += " id='" + taskId + "'"
+		condition += " and id='" + taskId + "'"
 	}
 	var param map[string]interface{}
 	var data map[string]interface{}
