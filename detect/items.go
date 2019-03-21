@@ -154,6 +154,10 @@ func GetSelfCheckItems(c *gin.Context){
 			item.Status = status
 			logs.Error("item.Status : " + fmt.Sprint(status))
 		}
+		for j:=0; j<len(*items); j++{
+			ite := (*items)[j]
+			logs.Error("item.Status : " + fmt.Sprint(ite.Status))
+		}
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "success",
 			"errorCode" : 0,
