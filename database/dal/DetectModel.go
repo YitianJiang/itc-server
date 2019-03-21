@@ -78,13 +78,15 @@ func UpdateDetectModel(detectModel DetectStruct, content DetectContent) error {
 	db := connection.Begin()
 	taskId := detectModel.ID
 	condition := "id=" + fmt.Sprint(taskId)
-	if err := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).Update(&detectModel).Error; err != nil {
+	if err := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
+		Where(condition).Update(&detectModel).Error; err != nil {
 		logs.Error("update binary check failed, %v", err)
 		db.Rollback()
 		return err
 	}
-	//insert detectcontent
-	if err := db.Table(DetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&content).Error; err != nil {
+	//insert detect content
+	if err := db.Table(DetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).
+		Create(&content).Error; err != nil {
 		logs.Error("insert binary check content failed, %v", err)
 		db.Rollback()
 		return err

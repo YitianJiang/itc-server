@@ -8,6 +8,7 @@ import (
 	"code.byted.org/gopkg/tos"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"io"
 	"math/rand"
@@ -128,41 +129,48 @@ func UploadFile(c *gin.Context){
 	//dbDetectModel.TosUrl = tosUrl
 	dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
-	callBackUrl := "http://10.224.10.61:6789/updateDetectInfos" + "?taskID=" + string(dbDetectModelId)
-	bodyBuffer := &bytes.Buffer{}
-	bodyWriter := multipart.NewWriter(bodyBuffer)
-	bodyWriter.WriteField("recipients", recipients)
-	bodyWriter.WriteField("callback", callBackUrl)
-	fileWriter, err := bodyWriter.CreateFormFile("file", filepath)
-	if err != nil {
-		logs.Error("%s", "error writing to buffer: " + err.Error())
+	go func() {
+		callBackUrl := "http://10.224.10.61:6789/updateDetectInfos"
+		bodyBuffer := &bytes.Buffer{}
+		bodyWriter := multipart.NewWriter(bodyBuffer)
+		bodyWriter.WriteField("recipients", recipients)
+		bodyWriter.WriteField("callback", callBackUrl)
+		bodyWriter.WriteField("taskID", fmt.Sprint(dbDetectModelId))
+		fileWriter, err := bodyWriter.CreateFormFile("file", filepath)
+		if err != nil {
+			logs.Error("%s", "error writing to buffer: " + err.Error())
+			c.JSON(http.StatusOK, gin.H{
+				"message" : "二进制包处理错误，请联系相关人员！",
+				"errorCode" : -1,
+				"data" : "二进制包处理错误，请联系相关人员！",
+			})
+			return
+		}
+		filehandler, err := os.Open(filepath)
+		defer filehandler.Close()
+		_, err = io.Copy(fileWriter, filehandler)
+		contentType := bodyWriter.FormDataContentType()
+		bodyWriter.Close()
+		response, err := http.Post(url, contentType, bodyBuffer)
+		defer response.Body.Close()
+		resBody := &bytes.Buffer{}
+		_, err = resBody.ReadFrom(response.Body)
+		var data map[string]interface{}
+		data = make(map[string]interface{})
+		json.Unmarshal(resBody.Bytes(), &data)
+		//删掉临时文件
+		os.Remove(filepath)
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "二进制包处理错误，请联系相关人员！",
-			"errorCode" : -1,
-			"data" : "二进制包处理错误，请联系相关人员！",
+			"message" : data["msg"],
+			"errorCode" : data["success"],
+			"data" : data["msg"],
 		})
-		return
-	}
-	filehandler, err := os.Open(filepath)
-	defer filehandler.Close()
-	_, err = io.Copy(fileWriter, filehandler)
-	contentType := bodyWriter.FormDataContentType()
-	bodyWriter.Close()
-	response, err := http.Post(url, contentType, bodyBuffer)
-	defer response.Body.Close()
-	resBody := &bytes.Buffer{}
-	_, err = resBody.ReadFrom(response.Body)
-	var data map[string]interface{}
-	data = make(map[string]interface{})
-	json.Unmarshal(resBody.Bytes(), &data)
-	//删掉临时文件
-	os.Remove(filepath)
+	}()
 	c.JSON(http.StatusOK, gin.H{
-		"message" : data["msg"],
-		"errorCode" : data["success"],
-		"data" : data["msg"],
+		"message" : "文件上传成功，请等待检测结果通知",
+		"errorCode" : 0,
+		"data" : "文件上传成功，请等待检测结果通知",
 	})
-	return
 }
 
 //更新检测包的检测信息
@@ -480,11 +488,39 @@ func QueryTaskQueryTools(c *gin.Context){
 	}
 	platform := (*task)[0].Platform
 	condition := "task_id='" + taskId + "' and platform='" + strconv.Itoa(platform) + "'"
-	tools := dal.QueryBinaryToolsByCondition(condition)
+	toolsContent := dal.QueryTaskBinaryCheckContent(condition)
+	if toolsContent == nil || len(*toolsContent) == 0 {
+		logs.Info("未查询到该检测任务对应的自查工具")
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "未查询到该检测任务对应的自查工具",
+			"errorCode" : -3,
+			"data" : "未查询到该检测任务对应的自查工具",
+		})
+		return
+	}
+	toolCondition := "id in("
+	for i:=0; i<len(*toolsContent); i++ {
+		content := (*toolsContent)[i]
+		if i==len(*toolsContent)-1 {
+			toolCondition += "'" + fmt.Sprint(content.ID) + "')"
+		} else {
+			toolCondition += "'" + fmt.Sprint(content.ID) + "',"
+		}
+	}
+	toolCondition += " and platform ='" + strconv.Itoa(platform) + "'"
+	selected := dal.QueryBinaryToolsByCondition(toolCondition)
+	if selected==nil || len(*selected)==0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "未查询到该检测任务对应的自查工具",
+			"errorCode" : -3,
+			"data" : "未查询到该检测任务对应的自查工具",
+		})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"message" : "success",
 		"errorCode" : 0,
-		"data" : tools,
+		"data" : *selected,
 	})
 }
 

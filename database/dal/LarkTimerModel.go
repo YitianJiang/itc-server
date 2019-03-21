@@ -7,6 +7,7 @@ import (
 	"code.byted.org/gopkg/logs"
 	"fmt"
 	"strconv"
+	"time"
 )
 
 type LarkMsgTimer struct {
@@ -39,7 +40,7 @@ func InsertLarkMsgTimer(timer LarkMsgTimer) bool {
 		return true
 	}
 	if err = connection.Table(LarkMsgTimer{}.TableName()).LogMode(_const.DB_LOG_MODE).
-		Where(condition).Update("msg_interval", timer.MsgInterval).Error; err != nil {
+		Where(condition).Update(map[string]interface{}{"msg_interval":timer.MsgInterval, "updated_at":time.Now()}).Error; err != nil {
 		logs.Error("update lark message timer failed, %v", err)
 		return false
 	}

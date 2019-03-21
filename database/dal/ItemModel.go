@@ -12,7 +12,6 @@ import (
 type ItemStruct struct {
 	gorm.Model
 	QuestionType int		`json:"questionType"`
-	QuestionTypeName string	`json:"questionTypeName"`
 	KeyWord int				`json:"keyWord"`
 	FixWay int				`json:"fixWay"`
 	CheckContent string		`json:"checkContent"`
@@ -46,6 +45,7 @@ func InsertItemModel(itemModel ItemStruct) uint {
 	}
 	defer connection.Close()
 	if err := connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&itemModel).Error; err != nil{
+		logs.Error("insert self check item failed, %v", err)
 		return 0
 	}
 	return itemModel.ID
