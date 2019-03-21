@@ -120,7 +120,7 @@ func QueryItemsByCondition(data map[string]interface{}) *[]QueryItemStruct {
 }
 //confirm check
 func ConfirmSelfCheck(param map[string]interface{}) bool {
-	type self struct {
+	type S struct {
 		Status int		`json:"status"`
 		Id int			`json:"id"`
 	}
@@ -141,7 +141,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 		db.Rollback()
 		return false
 	}
-	idArray := data.([]self)
+	idArray := data.([]S)
 	for i:=0; i<len(idArray); i++ {
 		dat := idArray[i]
 		var check ConfirmCheck
