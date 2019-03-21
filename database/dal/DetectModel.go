@@ -137,7 +137,7 @@ func QueryTasksByCondition(data map[string]interface{}) (*[]DetectStruct, uint) 
 	condition := data["condition"]
 	logs.Info("query tasks condition: %s", condition)
 	if condition != "" {
-		db = db.Where(condition)
+		db = db.Where(condition).Order("created_at desc")
 	}
 	pageNo, okpn := data["pageNo"]
 	pageSize, okps := data["pageSize"]
@@ -153,7 +153,7 @@ func QueryTasksByCondition(data map[string]interface{}) (*[]DetectStruct, uint) 
 		}
 	}
 	var items []DetectStruct
-	if err := db.Find(&items).Order("created_at desc").Error; err != nil{
+	if err := db.Find(&items).Error; err != nil{
 		logs.Error("%v", err)
 		return nil, 0
 	}
@@ -201,20 +201,8 @@ func ConfirmBinaryResult(data map[string]string) bool {
 		return false
 	}
 	defer connection.Close()
-	//var dc DetectContent
-	//db := connection.Table(DetectContent{}.TableName()).Begin()
 	db := connection.Table(DetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	condition := "task_id=" + taskId + " and tool_id=" + toolId
-	/*condition := "task_id=" + taskId + " and tool_id=" + toolId + " for update"
-	if err := db.Where(condition).Find(&dc).Error; err != nil {
-		logs.Error("query db tb_detect_content failed: %v", err)
-		db.Rollback()
-		return false
-	}
-	if dc.Status == 1{
-		db.Rollback()
-		return false
-	}*/
 	if err := db.Where(condition).LogMode(_const.DB_LOG_MODE).Update("status", 1).Error; err != nil {
 		logs.Error("update db tb_detect_content failed: %v", err)
 		//db.Rollback()

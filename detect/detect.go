@@ -3,7 +3,6 @@ package detect
 import (
 	"bytes"
 	"code.byted.org/clientQA/itc-server/database/dal"
-	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 	"code.byted.org/gopkg/tos"
 	"context"
@@ -11,6 +10,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"mime/multipart"
 	"net/http"
@@ -264,22 +264,36 @@ func UpdateDetectInfos(c *gin.Context){
 	var key string
 	key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
 	LARK_MSG_CALL_MAP[key] = ticker
-	utils.LarkDingOneInnerV2(creator, message)
+	//utils.LarkDingOneInnerV2(creator, message)
 	go alertLarkMsgCron(*ticker, creator, message)
 }
 func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string){
 	for _ = range ticker.C {
-		utils.LarkDingOneInnerV2(receiver, msg)
+		//utils.LarkDingOneInnerV2(receiver, msg)
+		logs.Info("调试，先以打印输出代替lark通知 ")
 	}
 }
 //确认二进制包检测结果，更新数据库，并停止lark消息
 func ConfirmBinaryResult(c *gin.Context){
-	taskId := c.DefaultQuery("taskId", "")
-	toolId := c.DefaultQuery("toolId", "")
+	type confirm struct {
+		TaskId  int		`json:"taskId"`
+		toolId	int		`json:"toolId"`
+	}
+	param, _ := ioutil.ReadAll(c.Request.Body)
+	var t confirm
+	err := json.Unmarshal(param, &t)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "参数不合法！",
+			"errorCode" : -1,
+			"data" : "参数不合法！",
+		})
+		return
+	}
 	var data map[string]string
 	data = make(map[string]string)
-	data["task_id"] = taskId
-	data["tool_id"] = toolId
+	data["task_id"] = strconv.Itoa(t.TaskId)
+	data["tool_id"] = strconv.Itoa(t.toolId)
 	flag := dal.ConfirmBinaryResult(data)
 	if !flag {
 		logs.Error("二进制检测内容确认失败")
@@ -291,11 +305,11 @@ func ConfirmBinaryResult(c *gin.Context){
 		return
 	}
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id" : taskId,
+		"id" : t.TaskId,
 	})
 	appId := (*detect)[0].AppId
 	appVersion := (*detect)[0].AppVersion
-	key := taskId + "_" + appId + "_" + appVersion + "_" + toolId
+	key := strconv.Itoa(t.TaskId) + "_" + appId + "_" + appVersion + "_" + strconv.Itoa(t.toolId)
 	ticker := LARK_MSG_CALL_MAP[key]
 	if ticker != nil {
 		ticker.(*time.Ticker).Stop()
