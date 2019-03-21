@@ -10,14 +10,6 @@ import (
 	"regexp"
 	"strconv"
 )
-type Self struct {
-	Status int		`json:"status"`
-	Id int			`json:"id"`
-}
-type Confirm struct {
-	TaskId int		`json:"taskId"`
-	Data []Self		`json:"data"`
-}
 //增加检查项
 func AddDetectItem(c *gin.Context){
 
@@ -167,7 +159,7 @@ func GetSelfCheckItems(c *gin.Context){
 //完成自查
 func ConfirmCheck(c *gin.Context){
 	p, _ := ioutil.ReadAll(c.Request.Body)
-	var t Confirm
+	var t dal.Confirm
 	err := json.Unmarshal(p, &t)
 	if err != nil {
 		logs.Error("参数不合法!, ", err)

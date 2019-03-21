@@ -3,7 +3,6 @@ package dal
 import (
 	"code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
-	"code.byted.org/clientQA/itc-server/detect"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"time"
@@ -46,6 +45,14 @@ type ConfirmCheck struct {
 	ItemId int				`json:"itemId"`
 	Status int				`json:"status"`
 	Operator string			`json:"operator"`
+}
+type Self struct {
+	Status int		`json:"status"`
+	Id int			`json:"id"`
+}
+type Confirm struct {
+	TaskId int		`json:"taskId"`
+	Data []Self		`json:"data"`
 }
 func (ConfirmCheck) TableName() string {
 	return "tb_confirm_check"
@@ -138,7 +145,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 		db.Rollback()
 		return false
 	}
-	idArray := data.([]detect.Self)
+	idArray := data.([]Self)
 	for i:=0; i<len(idArray); i++ {
 		dat := idArray[i]
 		var check ConfirmCheck
