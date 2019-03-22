@@ -3,6 +3,7 @@ package detect
 import (
 	"bytes"
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 	"code.byted.org/gopkg/tos"
 	"context"
@@ -607,4 +608,21 @@ func QueryTaskBinaryCheckContent(c *gin.Context){
 		"errorCode" : 0,
 		"data" : (*content)[0],
 	})
+}
+func LarkMsg(c *gin.Context){
+	msg := c.DefaultQuery("msg", "")
+	if msg == "" {
+		msg = "测试jwt，请忽略！"
+	}
+	username, flag := c.Get("username")
+	if !flag {
+		logs.Error("未获取到username")
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "未获取到username",
+			"errorCode" : -3,
+			"data" : "未获取到username",
+		})
+		return
+	}
+	utils.LarkDingOneInner(username.(string), msg)
 }

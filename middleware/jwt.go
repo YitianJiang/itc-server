@@ -9,26 +9,9 @@ import (
 )
 var jwtSecret = []byte("itc_jwt_secret")
 type Claims struct {
-	/*Username string `json:"itc"`
-	Password string `json:"itc"`*/
+	Username string `json:"username"`
 	jwt.StandardClaims
 }
-
-/*unc GenerateToken(username, password string) (string, error) {
-	nowTime := time.Now()
-	expireTime := nowTime.Add(3 * time.Hour)
-	claims := Claims{
-		username,
-		password,
-		jwt.StandardClaims {
-			ExpiresAt : expireTime.Unix(),
-			Issuer : "gin-blog",
-		},
-	}
-	tokenClaims := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	token, err := tokenClaims.SignedString(jwtSecret)
-	return token, err
-}*/
 
 func ParseToken(token string) (*Claims, error) {
 	tokenClaims, err := jwt.ParseWithClaims(token, &Claims{}, func(token *jwt.Token) (interface{}, error) {
@@ -51,7 +34,7 @@ func JWTCheck() gin.HandlerFunc {
 		if token == "" {
 			code = _const.INVALID_PARAMS
 		} else {
-			_, err := ParseToken(token)
+			claim, err := ParseToken(token)
 			if err != nil {
 				switch err.(*jwt.ValidationError).Errors {
 				case jwt.ValidationErrorExpired:
@@ -59,6 +42,8 @@ func JWTCheck() gin.HandlerFunc {
 				default:
 					code = _const.ERROR_AUTH_CHECK_TOKEN_FAIL
 				}
+			} else {
+				c.Set("username", claim.Username)
 			}
 		}
 		if code != _const.SUCCESS {
@@ -67,7 +52,6 @@ func JWTCheck() gin.HandlerFunc {
 				"message":  _const.GetMsg(code),
 				"data": data,
 			})
-
 			c.Abort()
 			return
 		}
