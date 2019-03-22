@@ -3,6 +3,7 @@ package detect
 import (
 	"bytes"
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 	"code.byted.org/gopkg/tos"
 	"context"
@@ -295,12 +296,12 @@ func UpdateDetectInfos(c *gin.Context){
 	var key string
 	key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
 	LARK_MSG_CALL_MAP[key] = ticker
-	//utils.LarkDingOneInnerV2(creator, message)
+	//utils.LarkDingOneInner(creator, message)
 	go alertLarkMsgCron(*ticker, creator, message)
 }
 func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string){
 	for _ = range ticker.C {
-		//utils.LarkDingOneInnerV2(receiver, msg)
+		//utils.LarkDingOneInner(creator, message)
 		logs.Info("调试，先以打印输出代替lark通知 ")
 	}
 }
@@ -606,5 +607,17 @@ func QueryTaskBinaryCheckContent(c *gin.Context){
 		"message" : "success",
 		"errorCode" : 0,
 		"data" : (*content)[0],
+	})
+}
+func LarkMsg(c *gin.Context) {
+	msg := c.DefaultQuery("msg", "")
+	if msg == "" {
+		msg = "test lark message"
+	}
+	utils.LarkDingOneInner("kanghuaisong", msg)
+	c.JSON(http.StatusOK, gin.H{
+		"message" : "success",
+		"errorCode" : 0,
+		"data" : "success",
 	})
 }

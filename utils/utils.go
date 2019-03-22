@@ -3,36 +3,30 @@ package utils
 import (
 	"bytes"
 	"code.byted.org/gopkg/logs"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
+	"time"
 )
 
 //发送http post请求，其中rbody是一个json串
-func PostJsonHttp(url string, rbody []byte) (error, []byte) {
+func PostJsonHttp(url string,rbody []byte ) (int, []byte) {
+	http.DefaultClient.Timeout = 3 * time.Second
 	bodyBuffer := bytes.NewBuffer([]byte(rbody))
-
-	client := &http.Client{}
-	req, err := http.NewRequest("POST", url, bodyBuffer)
+	resp, err := http.Post(url, "application/json;charset=utf-8",bodyBuffer)
 	if err != nil {
-		return err, nil
+		return -1, nil;
 	}
-
-	req.Header.Set("Content-Type", "application/json;charset=utf-8")
-	resp, err := client.Do(req)
-	if err != nil {
-		return err, nil
-	}
-
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err, nil
+		return -2, nil;
 	}
-	//logs.Warn("%s", string(body))
-	return nil, body
+	fmt.Println(string(body))
+	return 0, body
 }
 func PostLocalFileWithParams(params map[string]string, postfilename string, fileName string, api_url string) (string, error) {
 	currentpath, _ := os.Getwd()

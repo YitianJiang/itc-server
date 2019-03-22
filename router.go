@@ -44,5 +44,7 @@ func InitRouter(r *ginex.Engine){
 		api.POST("/config/addConfig", detect.AddConfig)
 		//查询配置项
 		api.GET("/config/queryConfigs", detect.QueryConfigs)
+		//发送lark消息
+		api.GET("/lark", detect.LarkMsg)
 	}
 }
