@@ -32,8 +32,8 @@ var LARK_MSG_CALL_MAP = make(map[string]interface{})
 func UploadFile(c *gin.Context){
 
 	url := ""
-	name, flag := c.Get("username")
-	if !flag {
+	name, f := c.Get("username")
+	if !f {
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "未获取到用户信息！",
 			"errorCode" : -1,
@@ -146,7 +146,7 @@ func UploadFile(c *gin.Context){
 	//tosUrl, err := upload2Tos(filepath)
 	//2、将相关信息保存至数据库
 	var dbDetectModel dal.DetectStruct
-	dbDetectModel.Creator = name
+	dbDetectModel.Creator = name.(string)
 	dbDetectModel.SelfCheckStatus = 0
 	dbDetectModel.CreatedAt = time.Now()
 	dbDetectModel.UpdatedAt = time.Now()
