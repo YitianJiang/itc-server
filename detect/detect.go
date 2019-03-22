@@ -479,24 +479,6 @@ func QueryDetectTasks(c *gin.Context){
 }
 func QueryDetectTools(c *gin.Context){
 
-	/*platform := c.DefaultQuery("platform", "")
-	if platform == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少platform参数",
-			"errorCode" : -1,
-			"data" : "缺少platform参数",
-		})
-		return
-	}
-	if platform != "0" && platform != "1" {
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "platform参数不合法",
-			"errorCode" : -2,
-			"data" : "platform参数不合法",
-		})
-		return
-	}
-	condition := "platform='" + platform + "'"*/
 	name := c.DefaultQuery("name", "")
 	condition := "1=1"
 	if name != "" {
@@ -545,11 +527,12 @@ func QueryTaskQueryTools(c *gin.Context){
 	condition := "task_id='" + taskId + "'"
 	toolsContent := dal.QueryTaskBinaryCheckContent(condition)
 	if toolsContent == nil || len(*toolsContent) == 0 {
-		logs.Info("未查询到该检测任务对应的二进制检测结果")
+		logs.Error("未查询到该检测任务对应的二进制检测结果")
+		var res [0]dal.DetectContent
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "未查询到该检测任务对应的二进制检测结果",
-			"errorCode" : -3,
-			"data" : "未查询到该检测任务对应的二进制检测结果",
+			"message" : "success",
+			"errorCode" : 0,
+			"data" : res,
 		})
 		return
 	}
@@ -564,14 +547,6 @@ func QueryTaskQueryTools(c *gin.Context){
 	}
 	toolCondition += " and platform ='" + strconv.Itoa(platform) + "'"
 	selected := dal.QueryBinaryToolsByCondition(toolCondition)
-	if selected==nil || len(*selected)==0 {
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "未查询到该检测任务对应的自查工具",
-			"errorCode" : -3,
-			"data" : "未查询到该检测任务对应的自查工具",
-		})
-		return
-	}
 	c.JSON(http.StatusOK, gin.H{
 		"message" : "success",
 		"errorCode" : 0,

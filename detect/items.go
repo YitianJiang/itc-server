@@ -17,11 +17,11 @@ func AddDetectItem(c *gin.Context){
 	var t dal.ItemStruct
 	err := json.Unmarshal(param, &t)
 	if err != nil {
-		logs.Error("json unmarshal failed!, ", err)
+		logs.Error("参数格式错误!, ", err)
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "json unmarshal failed",
+			"message" : "参数格式错误",
 			"errorCode" : -5,
-			"data" : "json unmarshal failed",
+			"data" : "参数格式错误",
 		})
 		return
 	}
@@ -29,7 +29,6 @@ func AddDetectItem(c *gin.Context){
 	ggFlag := t.IsGG
 	platform := t.Platform
 	appId := t.AppId
-	//var itemModel dal.ItemStruct
 	//platform
 	if platform != 0 && platform != 1 {
 		logs.Error("platform参数不合法！")
@@ -120,11 +119,12 @@ func GetSelfCheckItems(c *gin.Context){
 	data["condition"] = itemCondition
 	items := dal.QueryItemsByCondition(data)
 	if items==nil || len(*items)==0 {
-		logs.Info("未查询到自查项信息！")
+		logs.Error("未查询到自查项信息！")
+		var res [0]dal.QueryItemStruct
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "未查询到自查项信息！",
-			"errorCode" : -3,
-			"data" : "未查询到自查项信息！",
+			"message" : "success！",
+			"errorCode" : 0,
+			"data" : res,
 		})
 		return
 	}
