@@ -25,18 +25,9 @@ func InsertLarkMsgCall(c *gin.Context) {
 		return
 	}
 	name, f := c.Get("username")
-	if !f {
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "未获取到用户信息！",
-			"errorCode" : -1,
-			"data" : "未获取到用户信息！",
-		})
-		return
-	}
 	if name == "" {
 		name = "kanghuaisong"
 	}
-
 	interval := t.MsgInterval
 	if f, _ := regexp.MatchString("^\\d+$", strconv.Itoa(interval)); !f {
 		logs.Error("时间间隔参数不合法！")
@@ -87,7 +78,7 @@ func QueryLarkMsgCall(c *gin.Context) {
 	}
 	var larkMsgConfig *dal.LarkMsgTimer
 	larkMsgConfig = dal.QueryLarkMsgTimerByAppId(appIdInt)
-	if larkMsgConfig == nil {
+	/*if larkMsgConfig == nil {
 		logs.Error("未查询到配置信息！")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "未查询到配置信息！",
@@ -95,7 +86,7 @@ func QueryLarkMsgCall(c *gin.Context) {
 			"data" : "未查询到配置信息！",
 		})
 		return
-	}
+	}*/
 	c.JSON(http.StatusOK, gin.H{
 		"message" : "success",
 		"errorCode" : 0,
