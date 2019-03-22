@@ -3,7 +3,6 @@ package detect
 import (
 	"bytes"
 	"code.byted.org/clientQA/itc-server/database/dal"
-	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 	"code.byted.org/gopkg/tos"
 	"context"
@@ -607,17 +606,5 @@ func QueryTaskBinaryCheckContent(c *gin.Context){
 		"message" : "success",
 		"errorCode" : 0,
 		"data" : (*content)[0],
-	})
-}
-func LarkMsg(c *gin.Context) {
-	msg := c.DefaultQuery("msg", "")
-	if msg == "" {
-		msg = "test lark message"
-	}
-	utils.LarkDingOneInner("kanghuaisong", msg)
-	c.JSON(http.StatusOK, gin.H{
-		"message" : "success",
-		"errorCode" : 0,
-		"data" : "success",
 	})
 }
