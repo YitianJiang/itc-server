@@ -30,7 +30,13 @@ func JWTCheck() gin.HandlerFunc {
 		var code int
 		var data interface{}
 		code = _const.SUCCESS
-		token := c.Query("token")
+		header := c.Request.Header
+		if header == nil {
+			c.Abort()
+			return
+		}
+		//token := c.Query("token")
+		token := header.Get("Authorization")
 		if token == "" {
 			code = _const.INVALID_PARAMS
 		} else {
