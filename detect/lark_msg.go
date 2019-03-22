@@ -35,6 +35,7 @@ func InsertLarkMsgCall(c *gin.Context) {
 		})
 		return
 	}
+	logs.Info("%+v", t)
 	flag := dal.InsertLarkMsgTimer(t)
 	if !flag {
 		logs.Error("Lark提醒配置新增失败！")
