@@ -2,7 +2,6 @@ package main
 
 import (
 	"code.byted.org/clientQA/itc-server/detect"
-	"code.byted.org/clientQA/itc-server/middleware"
 	"code.byted.org/gin/ginex"
 )
 
@@ -11,7 +10,7 @@ func InitRouter(r *ginex.Engine){
 	api := r.GroupEX("/api")
 	//二进制包检测回调接口
 	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
-	api.Use(middleware.JWTCheck())
+	//api.Use(middleware.JWTCheck())
 	{
 		//上传ipa和apk
 		api.POST("/uploadFile", detect.UploadFile)
