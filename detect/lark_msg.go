@@ -24,6 +24,19 @@ func InsertLarkMsgCall(c *gin.Context) {
 		})
 		return
 	}
+	name, f := c.Get("username")
+	if !f {
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "未获取到用户信息！",
+			"errorCode" : -1,
+			"data" : "未获取到用户信息！",
+		})
+		return
+	}
+	if name == "" {
+		name = "kanghuaisong"
+	}
+
 	interval := t.MsgInterval
 	if f, _ := regexp.MatchString("^\\d+$", strconv.Itoa(interval)); !f {
 		logs.Error("时间间隔参数不合法！")

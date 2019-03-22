@@ -40,12 +40,17 @@ func JWTCheck() gin.HandlerFunc {
 		code = _const.SUCCESS
 		header := c.Request.Header
 		if header == nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"errorCode": _const.ERROR_AUTH_CHECK_TOKEN_FAIL,
+				"message":  _const.GetMsg(code),
+				"data": _const.GetMsg(code),
+			})
 			c.Abort()
 			return
 		}
 		token := header.Get("Authorization")
 		if token == "" {
-			code = _const.INVALID_PARAMS
+			code = _const.ERROR_AUTH_CHECK_TOKEN_FAIL
 		} else {
 			claim, flag := ParseTokenString(token)
 			if !flag {

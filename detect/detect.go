@@ -27,19 +27,22 @@ const(
 	//调试，暂时换成本机的ip地址和端口
 	DETECT_URL_PRO = "10.2.196.119:9527"
 )
-var LARK_MSG_CALL_MAP map[string]interface{} = make(map[string]interface{})
+var LARK_MSG_CALL_MAP = make(map[string]interface{})
+
 func UploadFile(c *gin.Context){
 
 	url := ""
-	//get user info from cas
-	//name := cas.Username(c.Request)
-	name := "kanghuaisong"
-	if name == ""{
+	name, flag := c.Get("username")
+	if !flag {
 		c.JSON(http.StatusOK, gin.H{
-			"message":"用户未登录！",
-			"errorCode":-1,
+			"message" : "未获取到用户信息！",
+			"errorCode" : -1,
+			"data" : "未获取到用户信息！",
 		})
 		return
+	}
+	if name == "" {
+		name = "kanghuaisong"
 	}
 	file, header, err := c.Request.FormFile("uploadFile")
 	if file == nil {
@@ -408,7 +411,7 @@ func QueryDetectTasks(c *gin.Context){
 
 	appId := c.DefaultQuery("appId", "")
 	version := c.DefaultQuery("version", "")
-	creator := c.DefaultQuery("creator", "")
+	creator := c.DefaultQuery("user", "")
 	pageNo := c.DefaultQuery("page", "")
 	//如果缺少pageSize参数，则选用默认每页显示10条数据
 	pageSize := c.DefaultQuery("pageSize", "10")

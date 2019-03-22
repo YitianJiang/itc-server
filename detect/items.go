@@ -172,7 +172,18 @@ func ConfirmCheck(c *gin.Context){
 		})
 		return
 	}
-	name := "kanghuaisong"
+	name, flag := c.Get("username")
+	if !flag {
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "未获取到用户信息！",
+			"errorCode" : -1,
+			"data" : "未获取到用户信息！",
+		})
+		return
+	}
+	if name == "" {
+		name = "kanghuaisong"
+	}
 	var param map[string]interface{}
 	param = make(map[string]interface{})
 	param["taskId"] = t.TaskId
