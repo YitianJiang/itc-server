@@ -25,12 +25,13 @@ func ParseToken(token string) (*Claims, error) {
 	}
 	return nil, err
 }
-func ParseTokenString(token string) (string, error) {
-	t, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+func ParseTokenString(token string) (jwt.MapClaims, bool) {
+	t, _ := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		return jwtSecret, nil
 	})
-	logs.Error("%v", t)
-	return t.Raw, err
+	valid := t.Valid
+	claim, _ := t.Claims.(jwt.MapClaims)
+	return claim, valid
 }
 func JWTCheck() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -46,19 +47,12 @@ func JWTCheck() gin.HandlerFunc {
 		if token == "" {
 			code = _const.INVALID_PARAMS
 		} else {
-			claim, err := ParseTokenString(token)
-			logs.Error("print claim")
-			logs.Error("%+v", claim)
-			if err != nil {
-				switch err.(*jwt.ValidationError).Errors {
-				case jwt.ValidationErrorExpired:
-					code = _const.ERROR_AUTH_CHECK_TOKEN_TIMEOUT
-				default:
-					code = _const.ERROR_AUTH_CHECK_TOKEN_FAIL
-				}
+			claim, flag := ParseTokenString(token)
+			if !flag {
+				code = _const.ERROR_AUTH_CHECK_TOKEN_FAIL
 			} else {
-				logs.Error("username: ", claim)
-				c.Set("username", claim)
+				username := claim["name"].(string)
+				c.Set("username", username)
 			}
 		}
 		if code != _const.SUCCESS {
