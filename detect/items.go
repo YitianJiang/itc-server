@@ -173,10 +173,6 @@ func ConfirmCheck(c *gin.Context){
 		return
 	}
 	name, flag := c.Get("username")
-	//测试，暂时添加
-	if name == "" {
-		name = "kanghuaisong"
-	}
 	if !flag {
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "未获取到用户信息！",

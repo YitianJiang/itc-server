@@ -33,10 +33,6 @@ func UploadFile(c *gin.Context){
 
 	url := ""
 	name, f := c.Get("username")
-	//测试，暂时添加
-	if name == "" {
-		name = "kanghuaisong"
-	}
 	if !f {
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "未获取到用户信息！",
@@ -75,7 +71,7 @@ func UploadFile(c *gin.Context){
 		return
 	}
 	checkItem := c.DefaultPostForm("checkItem", "")
-	if checkItem == "" {
+	/*if checkItem == "" {
 		logs.Error("没有选择二进制检测工具！")
 		c.JSON(http.StatusOK, gin.H{
 			"message":"没有选择二进制检测工具！",
@@ -83,7 +79,7 @@ func UploadFile(c *gin.Context){
 			"data":"没有选择二进制检测工具!",
 		})
 		return
-	}
+	}*/
 	logs.Info("checkItem: ", checkItem)
 	//检验文件格式是否是apk或者ipa
 	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".ipa")
@@ -141,7 +137,7 @@ func UploadFile(c *gin.Context){
 	//调试，暂时注释
 	//var recipients = "ttqaall@bytedance.com,tt_ios@bytedance.com,"
 	var recipients = "kanghuaisong@bytedance.com"
-	//recipients += name + "@bytedance.com"
+	recipients += name.(string) + "@bytedance.com"
 	filepath := _tmpDir + "/" + filename
 	//1、上传至tos,测试暂时注释
 	//tosUrl, err := upload2Tos(filepath)
@@ -156,6 +152,14 @@ func UploadFile(c *gin.Context){
 	//dbDetectModel.TosUrl = tosUrl
 	dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
+	if checkItem == ""{
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "未选择二进制检测工具，请直接进行自查",
+			"errorCode" : 0,
+			"data" : "未选择二进制检测工具，请直接进行自查",
+		})
+		return
+	}
 	go func() {
 		callBackUrl := "http://10.224.10.61:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
