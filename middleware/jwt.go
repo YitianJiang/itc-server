@@ -41,6 +41,8 @@ func JWTCheck() gin.HandlerFunc {
 			code = _const.INVALID_PARAMS
 		} else {
 			claim, err := ParseToken(token)
+			logs.Error("print claim")
+			logs.Error("%+v", claim)
 			if err != nil {
 				switch err.(*jwt.ValidationError).Errors {
 				case jwt.ValidationErrorExpired:
@@ -49,6 +51,7 @@ func JWTCheck() gin.HandlerFunc {
 					code = _const.ERROR_AUTH_CHECK_TOKEN_FAIL
 				}
 			} else {
+				logs.Error("username: ", claim.Username)
 				c.Set("username", claim.Username)
 			}
 		}
