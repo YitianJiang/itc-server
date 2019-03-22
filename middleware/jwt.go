@@ -25,6 +25,13 @@ func ParseToken(token string) (*Claims, error) {
 	}
 	return nil, err
 }
+func ParseTokenString(token string) (string, error) {
+	t, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		return jwtSecret, nil
+	})
+	logs.Error("%v", t)
+	return t.Raw, err
+}
 func JWTCheck() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var code int
@@ -35,12 +42,11 @@ func JWTCheck() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		//token := c.Query("token")
 		token := header.Get("Authorization")
 		if token == "" {
 			code = _const.INVALID_PARAMS
 		} else {
-			claim, err := ParseToken(token)
+			claim, err := ParseTokenString(token)
 			logs.Error("print claim")
 			logs.Error("%+v", claim)
 			if err != nil {
@@ -51,8 +57,8 @@ func JWTCheck() gin.HandlerFunc {
 					code = _const.ERROR_AUTH_CHECK_TOKEN_FAIL
 				}
 			} else {
-				logs.Error("username: ", claim.Username)
-				c.Set("username", claim.Username)
+				logs.Error("username: ", claim)
+				c.Set("username", claim)
 			}
 		}
 		if code != _const.SUCCESS {
