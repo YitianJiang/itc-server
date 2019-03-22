@@ -173,6 +173,10 @@ func ConfirmCheck(c *gin.Context){
 		return
 	}
 	name, flag := c.Get("username")
+	//测试，暂时添加
+	if name == "" {
+		name = "kanghuaisong"
+	}
 	if !flag {
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "未获取到用户信息！",
@@ -180,9 +184,6 @@ func ConfirmCheck(c *gin.Context){
 			"data" : "未获取到用户信息！",
 		})
 		return
-	}
-	if name == "" {
-		name = "kanghuaisong"
 	}
 	var param map[string]interface{}
 	param = make(map[string]interface{})

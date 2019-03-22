@@ -33,6 +33,10 @@ func UploadFile(c *gin.Context){
 
 	url := ""
 	name, f := c.Get("username")
+	//测试，暂时添加
+	if name == "" {
+		name = "kanghuaisong"
+	}
 	if !f {
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "未获取到用户信息！",
@@ -40,9 +44,6 @@ func UploadFile(c *gin.Context){
 			"data" : "未获取到用户信息！",
 		})
 		return
-	}
-	if name == "" {
-		name = "kanghuaisong"
 	}
 	file, header, err := c.Request.FormFile("uploadFile")
 	if file == nil {
@@ -540,11 +541,11 @@ func QueryTaskQueryTools(c *gin.Context){
 	condition := "task_id='" + taskId + "'"
 	toolsContent := dal.QueryTaskBinaryCheckContent(condition)
 	if toolsContent == nil || len(*toolsContent) == 0 {
-		logs.Info("未查询到该检测任务对应的自查工具")
+		logs.Info("未查询到该检测任务对应的二进制检测结果")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "未查询到该检测任务对应的自查工具",
+			"message" : "未查询到该检测任务对应的二进制检测结果",
 			"errorCode" : -3,
-			"data" : "未查询到该检测任务对应的自查工具",
+			"data" : "未查询到该检测任务对应的二进制检测结果",
 		})
 		return
 	}
