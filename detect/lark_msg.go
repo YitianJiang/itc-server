@@ -24,10 +24,7 @@ func InsertLarkMsgCall(c *gin.Context) {
 		})
 		return
 	}
-	name, f := c.Get("username")
-	if name == "" {
-		name = "kanghuaisong"
-	}
+	//name, f := c.Get("username")
 	interval := t.MsgInterval
 	if f, _ := regexp.MatchString("^\\d+$", strconv.Itoa(interval)); !f {
 		logs.Error("时间间隔参数不合法！")
