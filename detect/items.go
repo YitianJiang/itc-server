@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
-	"regexp"
 	"strconv"
 )
 //增加检查项
@@ -25,7 +24,7 @@ func AddDetectItem(c *gin.Context){
 		})
 		return
 	}
-	regulationUrl := t.RegulationUrl
+	//regulationUrl := t.RegulationUrl
 	ggFlag := t.IsGG
 	platform := t.Platform
 	appId := t.AppId
@@ -53,7 +52,8 @@ func AddDetectItem(c *gin.Context){
 		return
 	}
 	//校验
-	if f, _ := regexp.MatchString("^http(s?)://*", regulationUrl); !f {
+	//暂时注释掉对链接的正则检测
+	/*if f, _ := regexp.MatchString("^http(s?)://*", regulationUrl); !f {
 		logs.Error("条例链接格式不正确！")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "条例链接格式不正确！",
@@ -61,7 +61,7 @@ func AddDetectItem(c *gin.Context){
 			"data" : "条例链接格式不正确！",
 		})
 		return
-	}
+	}*/
 	t.Status = 0
 	itemModelId := dal.InsertItemModel(t)
 	if itemModelId == 0 {

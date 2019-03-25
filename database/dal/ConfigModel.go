@@ -11,6 +11,7 @@ type ItemConfig struct {
 	gorm.Model
 	ConfigType int		`json:"configType"` //0-问题类型；1-关键词；2-修复方式
 	Name string			`json:"name"`
+	Platform	int		`json:"platform"`	//所属平台，0-安卓；1-iOS
 }
 
 func (ItemConfig) TableName() string{

@@ -5,6 +5,7 @@ import (
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
+	"fmt"
 	"strconv"
 	"time"
 )
@@ -46,6 +47,7 @@ type ConfirmCheck struct {
 	ItemId int				`json:"itemId"`
 	Status int				`json:"status"`
 	Operator string			`json:"operator"`
+	Remark string			`json:"remark"`
 }
 type Self struct {
 	Status int		`json:"status"`
@@ -69,8 +71,22 @@ func InsertItemModel(itemModel ItemStruct) uint {
 		return 0
 	}
 	defer connection.Close()
-	if err := connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&itemModel).Error; err != nil{
-		logs.Error("insert self check item failed, %v", err)
+	id := itemModel.ID
+	condition := "id='" + fmt.Sprint(id) + "'"
+	var is ItemStruct
+	if err := connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).Find(&is).Error; err != nil{
+		if err == gorm.ErrRecordNotFound {
+			if err := connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&itemModel).Error; err != nil{
+				logs.Error("insert self check item failed, %v", err)
+				return 0
+			}
+		} else {
+			logs.Error("query self check item failed, %v", err)
+			return 0
+		}
+	}
+	if err = connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Save(itemModel).Error; err != nil {
+		logs.Error("update self check item failed, %v", err)
 		return 0
 	}
 	return itemModel.ID
