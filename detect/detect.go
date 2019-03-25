@@ -280,9 +280,11 @@ func UpdateDetectInfos(c *gin.Context){
 	alterType := 0
 	var interval int
 	if config == nil {//如果未进行消息提醒设置，则默认10分钟提醒一次
+		logs.Info("采用默认10分钟频率进行提醒")
 		alterType = 1
 		interval = 10
 	} else {
+		logs.Info("采用设置的频率进行提醒")
 		alterType = config.Type
 		interval = config.MsgInterval
 	}
@@ -290,14 +292,19 @@ func UpdateDetectInfos(c *gin.Context){
 	var duration time.Duration
 	switch alterType {
 	case 0:
+		logs.Info("提醒方式为秒")
 		duration = time.Duration(interval) * time.Second
 	case 1:
+		logs.Info("提醒方式为分钟")
 		duration = time.Duration(interval) * time.Minute
 	case 2:
+		logs.Info("提醒方式为小时")
 		duration = time.Duration(interval) * time.Hour
 	case 3:
+		logs.Info("提醒方式为天")
 		duration = time.Duration(interval) * time.Duration(24) * time.Hour
 	default:
+		logs.Info("提醒方式为分钟")
 		duration = 10 * time.Minute
 	}
 	ticker = time.NewTicker(duration)
@@ -315,6 +322,7 @@ func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string, taskId st
 	for _ = range ticker.C {
 		condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
 		binaryTool := dal.QueryTaskBinaryCheckContent(condition)
+		logs.Info("每次提醒前进行提醒检查")
 		if *binaryTool != nil && len(*binaryTool) > 0{
 			dc := (*binaryTool)[0]
 			status := dc.Status
