@@ -85,7 +85,7 @@ func InsertItemModel(itemModel ItemStruct) uint {
 			return 0
 		}
 	}
-	if err = connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Save(itemModel).Error; err != nil {
+	if err = connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Save(&itemModel).Error; err != nil {
 		logs.Error("update self check item failed, %v", err)
 		return 0
 	}
