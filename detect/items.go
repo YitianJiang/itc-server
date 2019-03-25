@@ -159,7 +159,7 @@ func GetSelfCheckItems(c *gin.Context){
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "success",
 			"errorCode" : 0,
-			"data" : *items,
+			"data" : filterItem,
 		})
 	}
 }
