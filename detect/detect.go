@@ -304,13 +304,28 @@ func UpdateDetectInfos(c *gin.Context){
 	var key string
 	key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
 	LARK_MSG_CALL_MAP[key] = ticker
-	//utils.LarkDingOneInner(creator, message)
-	go alertLarkMsgCron(*ticker, creator, message)
+	utils.LarkDingOneInner(creator, message)
+	go alertLarkMsgCron(*ticker, creator, message, taskId, toolId)
 }
-func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string){
+func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string, taskId string, toolId string){
+	flag := false
 	for _ = range ticker.C {
-		//utils.LarkDingOneInner(creator, message)
-		logs.Info("调试，先以打印输出代替lark通知 ")
+		condition := "task_id=" + taskId + " and tool_id=" + toolId
+		binaryTool := dal.QueryTaskBinaryCheckContent(condition)
+		if *binaryTool != nil && len(*binaryTool) > 0{
+			dc := (*binaryTool)[0]
+			status := dc.Status
+			if status == 0 {
+				utils.LarkDingOneInner(receiver, msg)
+				logs.Info("调试，先以打印输出代替lark通知 ")
+			} else {
+				flag = true
+			}
+		}
+	}
+	if flag {
+		logs.Info("stop interval lark call")
+		ticker.Stop()
 	}
 }
 //确认二进制包检测结果，更新数据库，并停止lark消息
