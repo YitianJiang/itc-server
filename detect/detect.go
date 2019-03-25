@@ -161,7 +161,8 @@ func UploadFile(c *gin.Context){
 		return
 	}
 	go func() {
-		callBackUrl := "http://10.224.10.61:6789/updateDetectInfos"
+		//callBackUrl := "http://10.224.10.61:6789/updateDetectInfos"
+		callBackUrl := "http://itc.bytedance.net/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
