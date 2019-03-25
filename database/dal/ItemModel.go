@@ -39,6 +39,7 @@ type QueryItemStruct struct {
 	QuestionTypeName string			`json:"questionTypeName"`
 	KeyWordName string				`json:"keyWordName"`
 	FixWayName string				`json:"fixWayName"`
+	Remark string					`json:"remark"`
 	Status int						`json:"status"`
 }
 type ConfirmCheck struct {
@@ -52,6 +53,7 @@ type ConfirmCheck struct {
 type Self struct {
 	Status int		`json:"status"`
 	Id int			`json:"id"`
+	Remark string	`json:"remark"`
 }
 type Confirm struct {
 	TaskId int		`json:"taskId"`
@@ -173,6 +175,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 		check.Status = dat.Status
 		check.TaskId = taskId.(int)
 		check.Operator = operator.(string)
+		check.Remark = dat.Remark
 		if dataMap == nil {
 			check.CreatedAt = time.Now()
 			check.UpdatedAt = time.Now()
@@ -185,7 +188,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 			condition := "task_id='" + strconv.Itoa(taskId.(int)) + "' and item_id='" + strconv.Itoa(dat.Id) + "'"
 			check.UpdatedAt = time.Now()
 			if err = db.Table(ConfirmCheck{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).
-				Update(map[string]interface{}{"status":dat.Status, "updated_at":time.Now()}).Error; err != nil {
+				Update(map[string]interface{}{"status":dat.Status, "updated_at":time.Now(), "remark":dat.Remark}).Error; err != nil {
 				logs.Error("insert tb_confirm_check failed, %v", err)
 				db.Rollback()
 				return false
@@ -196,29 +199,31 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 	return true
 }
 //根据任务id拿到对应的自查信息
-func GetSelfCheckByTaskId(condition string) map[uint]int{
+func GetSelfCheckByTaskId(condition string) (map[uint]int, map[uint]string){
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
-		return nil
+		return nil, nil
 	}
 	defer connection.Close()
 	db := connection.Table(ConfirmCheck{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var items []ConfirmCheck
 	if err = db.Where(condition).Find(&items).Error; err != nil {
 		logs.Error("query self check item failed, %v", err)
-		return nil
+		return nil, nil
 	}
 	if len(items) == 0 {
 		logs.Info("query self check item empty")
-		return nil
+		return nil, nil
 	}
 	var item map[uint]int
 	item = make(map[uint]int)
+	var remark = make(map[uint]string)
 	for i := 0; i < len(items); i++ {
 		it := items[i]
 		itemId := it.ItemId
 		item[uint(itemId)] = it.Status
+		remark[uint(itemId)] = it.Remark
 	}
-	return item
+	return item, remark
 }

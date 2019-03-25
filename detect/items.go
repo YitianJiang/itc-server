@@ -137,7 +137,7 @@ func GetSelfCheckItems(c *gin.Context){
 		return
 	}
 	tj := "task_id='" + taskId + "'"
-	itemMap := dal.GetSelfCheckByTaskId(tj)
+	itemMap, remarkMap := dal.GetSelfCheckByTaskId(tj)
 	if itemMap == nil {
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "success",
@@ -149,6 +149,7 @@ func GetSelfCheckItems(c *gin.Context){
 			item := (*items)[i]
 			status := itemMap[item.ID]
 			item.Status = status
+			item.Remark = remarkMap[item.ID]
 			(*items)[i] = item
 		}
 		c.JSON(http.StatusOK, gin.H{
