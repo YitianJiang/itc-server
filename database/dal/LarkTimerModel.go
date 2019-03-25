@@ -34,8 +34,6 @@ func InsertLarkMsgTimer(timer LarkMsgTimer) bool {
 	if err = connection.Table(LarkMsgTimer{}.TableName()).LogMode(_const.DB_LOG_MODE).
 		Where(condition).Find(&larkTimer).Error; err != nil {
 		logs.Error("query lark message timer failed")
-	}
-	if &larkTimer == nil {
 		if err := connection.Table(LarkMsgTimer{}.TableName()).LogMode(_const.DB_LOG_MODE).
 			Create(&timer).Error; err != nil {
 			logs.Error("insert lark message timer failed, %v", err)
@@ -44,7 +42,9 @@ func InsertLarkMsgTimer(timer LarkMsgTimer) bool {
 		return true
 	}
 	if err = connection.Table(LarkMsgTimer{}.TableName()).LogMode(_const.DB_LOG_MODE).
-		Where(condition).Update(map[string]interface{}{"msg_interval":timer.MsgInterval, "updated_at":time.Now()}).Error; err != nil {
+		Where(condition).
+		Update(map[string]interface{}{"msg_interval":timer.MsgInterval, "updated_at":time.Now(), "type":timer.Type}).
+		Error; err != nil {
 		logs.Error("update lark message timer failed, %v", err)
 		return false
 	}
