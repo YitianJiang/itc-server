@@ -23,9 +23,9 @@ import (
 
 const(
 	DETECT_URL_DEV = "10.2.209.202:9527"
-	//DETECT_URL_PRO = "10.2.9.226:9527"
+	DETECT_URL_PRO = "10.2.9.226:9527"
 	//调试，暂时换成本机的ip地址和端口
-	DETECT_URL_PRO = "10.2.196.119:9527"
+	//DETECT_URL_PRO = "10.2.196.119:9527"
 )
 var LARK_MSG_CALL_MAP = make(map[string]interface{})
 
