@@ -28,13 +28,14 @@ func InsertLarkMsgTimer(timer LarkMsgTimer) bool {
 		return false
 	}
 	defer connection.Close()
-	var larkTimer *LarkMsgTimer
+	var larkTimer *[]LarkMsgTimer
 	condition := "id='" + fmt.Sprint(timer.ID) + "'"
+	logs.Info(condition)
 	if err = connection.Table(LarkMsgTimer{}.TableName()).LogMode(_const.DB_LOG_MODE).
 		Where(condition).Find(&larkTimer).Error; err != nil {
 		logs.Error("query lark message timer failed")
 	}
-	if larkTimer == nil {
+	if larkTimer == nil || len(*larkTimer)==0{
 		if err := connection.Table(LarkMsgTimer{}.TableName()).LogMode(_const.DB_LOG_MODE).
 			Create(&timer).Error; err != nil {
 			logs.Error("insert lark message timer failed, %v", err)

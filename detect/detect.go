@@ -309,8 +309,11 @@ func UpdateDetectInfos(c *gin.Context){
 }
 func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string, taskId string, toolId string){
 	flag := false
+	if taskId=="" || toolId=="" {
+		return
+	}
 	for _ = range ticker.C {
-		condition := "task_id=" + taskId + " and tool_id=" + toolId
+		condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
 		binaryTool := dal.QueryTaskBinaryCheckContent(condition)
 		if *binaryTool != nil && len(*binaryTool) > 0{
 			dc := (*binaryTool)[0]
