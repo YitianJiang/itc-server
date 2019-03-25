@@ -166,7 +166,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 	}
 	//查询之前是否已经做过自查
 	condition := " task_id='" + strconv.Itoa(taskId.(int)) + "'"
-	dataMap := GetSelfCheckByTaskId(condition)
+	dataMap, _ := GetSelfCheckByTaskId(condition)
 	idArray := data.([]Self)
 	for i:=0; i<len(idArray); i++ {
 		dat := idArray[i]
