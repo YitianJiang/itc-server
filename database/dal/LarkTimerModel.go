@@ -29,7 +29,7 @@ func InsertLarkMsgTimer(timer LarkMsgTimer) bool {
 	}
 	defer connection.Close()
 	var larkTimer *[]LarkMsgTimer
-	condition := "id='" + fmt.Sprint(timer.ID) + "'"
+	condition := "app_id='" + fmt.Sprint(timer.AppId) + "'"
 	logs.Info(condition)
 	if err = connection.Table(LarkMsgTimer{}.TableName()).LogMode(_const.DB_LOG_MODE).
 		Where(condition).Find(&larkTimer).Error; err != nil {
