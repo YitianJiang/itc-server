@@ -10,6 +10,16 @@ import (
 )
 
 func InsertBinaryTool(c *gin.Context) {
+	username, _ := c.Get("username")
+	if username != "kanghuaisong"{
+		logs.Error("暂无权限新增检测工具，请联系相关人员！")
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "暂无权限新增检测工具，请联系相关人员！",
+			"errorCode" : -5,
+			"data" : "暂无权限新增检测工具，请联系相关人员！",
+		})
+		return
+	}
 	param, _ := ioutil.ReadAll(c.Request.Body)
 	var t dal.BinaryDetectTool
 	err := json.Unmarshal(param, &t)
