@@ -316,6 +316,7 @@ func UpdateDetectInfos(c *gin.Context){
 }
 func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string, taskId string, toolId string){
 	flag := false
+	logs.Info("taskId: " + taskId + ", toolId: " + toolId)
 	if taskId=="" || toolId=="" {
 		return
 	}
