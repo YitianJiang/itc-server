@@ -148,16 +148,18 @@ func GetSelfCheckItems(c *gin.Context){
 	} else {
 		for i := 0; i < len(*items); i++ {
 			item := (*items)[i]
-			status := itemMap[item.ID]
-			item.Status = status
-			item.Remark = remarkMap[item.ID]
-			(*items)[i] = item
-			filterItem[i] = item
+			if _, ok := itemMap[item.ID]; ok {
+				status := itemMap[item.ID]
+				item.Status = status
+				item.Remark = remarkMap[item.ID]
+				(*items)[i] = item
+				filterItem = append(filterItem, item)
+			}
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "success",
 			"errorCode" : 0,
-			"data" : filterItem,
+			"data" : *items,
 		})
 	}
 }
