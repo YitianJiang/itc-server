@@ -162,7 +162,7 @@ func UploadFile(c *gin.Context){
 	}
 	go func() {
 		//callBackUrl := "http://10.224.10.61:6789/updateDetectInfos"
-		callBackUrl := "http://itc.bytedance.net/updateDetectInfos"
+		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -184,6 +184,7 @@ func UploadFile(c *gin.Context){
 		_, err = io.Copy(fileWriter, filehandler)
 		contentType := bodyWriter.FormDataContentType()
 		bodyWriter.Close()
+		logs.Info("url: ", url)
 		response, err := http.Post(url, contentType, bodyBuffer)
 		if err != nil {
 			logs.Error("二进制包检测服务器无响应: ", err)
