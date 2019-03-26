@@ -185,28 +185,30 @@ func UploadFile(c *gin.Context){
 		contentType := bodyWriter.FormDataContentType()
 		bodyWriter.Close()
 		response, err := http.Post(url, contentType, bodyBuffer)
-		if response == nil {
+		if err != nil {
 			logs.Error("二进制包检测服务器无响应: ", err)
-			c.JSON(http.StatusOK, gin.H{
+			/*c.JSON(http.StatusOK, gin.H{
 				"message" : "二进制包检测服务器无响应",
 				"errorCode" : -1,
 				"data" : "二进制包检测服务器无响应",
 			})
-			return
+			return*/
 		}
 		defer response.Body.Close()
 		resBody := &bytes.Buffer{}
-		_, err = resBody.ReadFrom(response.Body)
-		var data map[string]interface{}
-		data = make(map[string]interface{})
-		json.Unmarshal(resBody.Bytes(), &data)
-		//删掉临时文件
-		os.Remove(filepath)
-		c.JSON(http.StatusOK, gin.H{
+		if response != nil {
+			_, err = resBody.ReadFrom(response.Body)
+			var data map[string]interface{}
+			data = make(map[string]interface{})
+			json.Unmarshal(resBody.Bytes(), &data)
+			//删掉临时文件
+			os.Remove(filepath)
+		}
+		/*c.JSON(http.StatusOK, gin.H{
 			"message" : data["msg"],
 			"errorCode" : data["success"],
 			"data" : data["msg"],
-		})
+		})*/
 	}()
 	c.JSON(http.StatusOK, gin.H{
 		"message" : "文件上传成功，请等待检测结果通知",
