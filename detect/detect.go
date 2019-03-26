@@ -186,7 +186,7 @@ func UploadFile(c *gin.Context){
 		bodyWriter.Close()
 		response, err := http.Post(url, contentType, bodyBuffer)
 		if response == nil {
-			logs.Error("二进制包检测服务器无响应")
+			logs.Error("二进制包检测服务器无响应: ", err)
 			c.JSON(http.StatusOK, gin.H{
 				"message" : "二进制包检测服务器无响应",
 				"errorCode" : -1,
