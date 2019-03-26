@@ -105,7 +105,7 @@ func QueryItemsByCondition(data map[string]interface{}) *[]QueryItemStruct {
 	condition := data["condition"]
 	logs.Info("query items condition: %s", condition)
 	if condition != "" {
-		db.Where(condition)
+		db = db.Where(condition)
 	}
 	var items []ItemStruct
 	if err := db.Find(&items).Error; err != nil{
