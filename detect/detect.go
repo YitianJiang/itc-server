@@ -202,6 +202,7 @@ func UploadFile(c *gin.Context){
 			var data map[string]interface{}
 			data = make(map[string]interface{})
 			json.Unmarshal(resBody.Bytes(), &data)
+			logs.Info("upload detect url's response: %+v", data)
 			//删掉临时文件
 			os.Remove(filepath)
 		}
