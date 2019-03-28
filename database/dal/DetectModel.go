@@ -6,6 +6,7 @@ import (
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"fmt"
+	"time"
 )
 //二进制包检测任务
 type DetectStruct struct {
@@ -203,7 +204,7 @@ func ConfirmBinaryResult(data map[string]string) bool {
 	defer connection.Close()
 	db := connection.Table(DetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	condition := "task_id=" + taskId + " and tool_id=" + toolId
-	if err := db.Where(condition).LogMode(_const.DB_LOG_MODE).Update("status", 1).Error; err != nil {
+	if err := db.Where(condition).LogMode(_const.DB_LOG_MODE).Update(map[string]interface{}{"status":1, "updated_at":time.Now()}).Error; err != nil {
 		logs.Error("update db tb_detect_content failed: %v", err)
 		//db.Rollback()
 		return false
