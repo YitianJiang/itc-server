@@ -277,7 +277,7 @@ func UpdateDetectInfos(c *gin.Context){
 	} else {
 		message += "iOS包"
 	}
-	message += "完成二进制检测，请及时进行确认！"
+	message += "完成二进制检测，请及时进行确认！可在结果展示页面底部进行确认，确认后不会再有消息提醒！"
 	appId := (*detect)[0].AppId
 	appIdInt, _ := strconv.Atoi(appId)
 	var config *dal.LarkMsgTimer
@@ -337,6 +337,7 @@ func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string, taskId st
 				logs.Info("调试，先以打印输出代替lark通知 ")
 			} else {
 				flag = true
+				break
 			}
 		}
 	}
@@ -547,7 +548,7 @@ func QueryTaskQueryTools(c *gin.Context){
 	task := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id" : taskId,
 	})
-	if task == nil {
+	if task == nil || len(*task) == 0{
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "未查询到该taskId对应的检测任务",
 			"errorCode" : -2,
