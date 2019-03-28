@@ -11,6 +11,8 @@ func InitRouter(r *ginex.Engine){
 	api := r.GroupEX("/api")
 	//二进制包检测回调接口
 	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
+	//获取鉴权接口
+	r.GET("/t/generateToken", detect.GetToken)
 	api.Use(middleware.JWTCheck())
 	{
 		//上传ipa和apk

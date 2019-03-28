@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"io"
 	"io/ioutil"
@@ -641,4 +642,42 @@ func LarkMsg(c *gin.Context){
 		return
 	}
 	utils.LarkDingOneInner(username.(string), msg)
+}
+/**
+获取token接口
+input: username
+output: token
+ */
+func GetToken(c *gin.Context){
+	var jwtSecret = []byte("itc_jwt_secret")
+	username := c.DefaultQuery("username", "")
+	if username == "" {
+		logs.Error("未获取到username")
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "未获取到username",
+			"errorCode" : -1,
+			"data" : "未获取到username",
+		})
+		return
+	}
+	claim := jwt.MapClaims{
+		"name" : username,
+	}
+	tokenClaims := jwt.NewWithClaims(jwt.SigningMethodHS256, claim)
+	token, err := tokenClaims.SignedString(jwtSecret)
+	if err != nil {
+		logs.Error("生成token失败")
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "生成token失败",
+			"errorCode" : -2,
+			"data" : "生成token失败",
+		})
+	} else {
+		logs.Error("生成token成功")
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "success",
+			"errorCode" : 0,
+			"data" : token,
+		})
+	}
 }
