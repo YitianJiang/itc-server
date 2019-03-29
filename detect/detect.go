@@ -177,9 +177,16 @@ func UploadFile(c *gin.Context){
 		contentType := bodyWriter.FormDataContentType()
 		err = bodyWriter.Close()
 		logs.Info("url: ", url)
-		response, err := http.Post(url, contentType, bodyBuffer)
+		toolHttp := &http.Client{
+			Timeout: 60 * time.Second,
+		}
+		response, err := toolHttp.Post(url, contentType, bodyBuffer)
 		if err != nil {
-			logs.Error("上传二进制包出错: ", err)
+			logs.Error("上传二进制包出错，将重试一次: ", err)
+			response, err = toolHttp.Post(url, contentType, bodyBuffer)
+		}
+		if err != nil {
+			logs.Error("上传二进制包出错，重试一次也失败", err)
 		}
 		resBody := &bytes.Buffer{}
 		if response != nil {
