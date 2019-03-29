@@ -72,15 +72,6 @@ func UploadFile(c *gin.Context){
 		return
 	}
 	checkItem := c.DefaultPostForm("checkItem", "")
-	/*if checkItem == "" {
-		logs.Error("没有选择二进制检测工具！")
-		c.JSON(http.StatusOK, gin.H{
-			"message":"没有选择二进制检测工具！",
-			"errorCode":-5,
-			"data":"没有选择二进制检测工具!",
-		})
-		return
-	}*/
 	logs.Info("checkItem: ", checkItem)
 	//检验文件格式是否是apk或者ipa
 	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".ipa")
@@ -180,25 +171,19 @@ func UploadFile(c *gin.Context){
 			})
 			return
 		}
-		filehandler, err := os.Open(filepath)
-		defer filehandler.Close()
-		_, err = io.Copy(fileWriter, filehandler)
+		fileHandler, err := os.Open(filepath)
+		defer fileHandler.Close()
+		_, err = io.Copy(fileWriter, fileHandler)
 		contentType := bodyWriter.FormDataContentType()
-		bodyWriter.Close()
+		err = bodyWriter.Close()
 		logs.Info("url: ", url)
 		response, err := http.Post(url, contentType, bodyBuffer)
 		if err != nil {
-			logs.Error("二进制包检测服务器无响应: ", err)
-			/*c.JSON(http.StatusOK, gin.H{
-				"message" : "二进制包检测服务器无响应",
-				"errorCode" : -1,
-				"data" : "二进制包检测服务器无响应",
-			})
-			return*/
+			logs.Error("上传二进制包出错: ", err)
 		}
-		defer response.Body.Close()
 		resBody := &bytes.Buffer{}
 		if response != nil {
+			defer response.Body.Close()
 			_, err = resBody.ReadFrom(response.Body)
 			var data map[string]interface{}
 			data = make(map[string]interface{})
@@ -207,11 +192,6 @@ func UploadFile(c *gin.Context){
 			//删掉临时文件
 			os.Remove(filepath)
 		}
-		/*c.JSON(http.StatusOK, gin.H{
-			"message" : data["msg"],
-			"errorCode" : data["success"],
-			"data" : data["msg"],
-		})*/
 	}()
 	c.JSON(http.StatusOK, gin.H{
 		"message" : "文件上传成功，请等待检测结果通知",
