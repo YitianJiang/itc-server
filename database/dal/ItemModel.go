@@ -56,7 +56,7 @@ type Self struct {
 	Remark string	`json:"remark"`
 }
 type Confirm struct {
-	TaskId string		`json:"taskId"`
+	TaskId int		`json:"taskId"`
 	Data []Self		`json:"data"`
 }
 func (ConfirmCheck) TableName() string {
@@ -165,7 +165,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 		return false
 	}
 	//查询之前是否已经做过自查
-	condition := " task_id='" + taskId.(string) + "'"
+	condition := " task_id='" + strconv.Itoa(taskId.(int)) + "'"
 	dataMap, _ := GetSelfCheckByTaskId(condition)
 	idArray := data.([]Self)
 	for i:=0; i<len(idArray); i++ {
@@ -173,7 +173,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 		var check ConfirmCheck
 		check.ItemId = dat.Id
 		check.Status = dat.Status
-		check.TaskId, _ = strconv.Atoi(taskId.(string))
+		check.TaskId = taskId.(int)
 		check.Operator = operator.(string)
 		check.Remark = dat.Remark
 		if dataMap == nil {
@@ -185,7 +185,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 				return false
 			}
 		}else{
-			condition := "task_id='" + taskId.(string) + "' and item_id='" + strconv.Itoa(dat.Id) + "'"
+			condition := "task_id='" + strconv.Itoa(taskId.(int)) + "' and item_id='" + strconv.Itoa(dat.Id) + "'"
 			check.UpdatedAt = time.Now()
 			if err = db.Table(ConfirmCheck{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).
 				Update(map[string]interface{}{"status":dat.Status, "updated_at":time.Now(), "remark":dat.Remark}).Error; err != nil {
