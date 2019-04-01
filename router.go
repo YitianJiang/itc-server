@@ -49,5 +49,7 @@ func InitRouter(r *ginex.Engine){
 		api.GET("/config/queryConfigs", detect.QueryConfigs)
 		//lark消息提醒
 		api.GET("/lark", detect.LarkMsg)
+		//新建ios源码隐私检测任务
+		api.POST("/ios/scNewTask", detect.ScNewTask)
 	}
 }

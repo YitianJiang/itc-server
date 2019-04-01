@@ -58,7 +58,7 @@ func LarkDingOneInner(member string, msg string) {
 	go DoLark(msg, larkAPI, channelID, robotToken)
 }
 /*
-发送lark消息
+发送lark消息，chatId为个人id或者群组id
 */
 func DoLark(msg string, api string, chatId string, token string) {
 
