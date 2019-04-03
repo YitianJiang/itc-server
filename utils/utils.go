@@ -65,7 +65,7 @@ func PostLocalFileWithParams(params map[string]string, postfilename string, file
 
 	resp, err := http.Post(api_url, contentType, bodyBuf)
 
-	//////结束发送文件部分
+	//结束发送文件部分
 	if err != nil {
 		return err.Error(), err
 	}

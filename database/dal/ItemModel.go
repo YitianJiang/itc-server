@@ -12,52 +12,52 @@ import (
 
 type ItemStruct struct {
 	gorm.Model
-	QuestionType int		`json:"questionType"`
-	KeyWord int				`json:"keyWord"`
-	FixWay int				`json:"fixWay"`
-	CheckContent string		`json:"checkContent"`
-	Resolution string		`json:"resolution"`
-	Regulation string		`json:"regulation"`
-	RegulationUrl string	`json:"regulationUrl"`
-	IsGG int				`json:"isGg"`
-	AppId int				`json:"appId"`
-	Platform int			`json:"platform"`
-	Status int				`json:"status"`
+	QuestionType 			int				`json:"questionType"`
+	KeyWord 				int				`json:"keyWord"`
+	FixWay 					int				`json:"fixWay"`
+	CheckContent 			string			`json:"checkContent"`
+	Resolution 				string			`json:"resolution"`
+	Regulation 				string			`json:"regulation"`
+	RegulationUrl 			string			`json:"regulationUrl"`
+	IsGG 					int				`json:"isGg"`
+	AppId 					int				`json:"appId"`
+	Platform 				int				`json:"platform"`
+	Status 					int				`json:"status"`
 }
 type QueryItemStruct struct {
-	ID	uint						`json:ID`
-	QuestionType int				`json:"questionType"`
-	KeyWord int						`json:"keyWord"`
-	FixWay int						`json:"fixWay"`
-	CheckContent string				`json:"checkContent"`
-	Resolution string				`json:"resolution"`
-	Regulation string				`json:"regulation"`
-	RegulationUrl string			`json:"regulationUrl"`
-	IsGG int						`json:"isGg"`
-	AppId int						`json:"appId"`
-	Platform int					`json:"platform"`
-	QuestionTypeName string			`json:"questionTypeName"`
-	KeyWordName string				`json:"keyWordName"`
-	FixWayName string				`json:"fixWayName"`
-	Remark string					`json:"remark"`
-	Status int						`json:"status"`
+	ID						uint			`json:ID`
+	QuestionType 			int				`json:"questionType"`
+	KeyWord 				int				`json:"keyWord"`
+	FixWay 					int				`json:"fixWay"`
+	CheckContent 			string			`json:"checkContent"`
+	Resolution 				string			`json:"resolution"`
+	Regulation 				string			`json:"regulation"`
+	RegulationUrl 			string			`json:"regulationUrl"`
+	IsGG 					int				`json:"isGg"`
+	AppId 					int				`json:"appId"`
+	Platform 				int				`json:"platform"`
+	QuestionTypeName 		string			`json:"questionTypeName"`
+	KeyWordName 			string			`json:"keyWordName"`
+	FixWayName 				string			`json:"fixWayName"`
+	Remark 					string			`json:"remark"`
+	Status 					int				`json:"status"`
 }
 type ConfirmCheck struct {
 	gorm.Model
-	TaskId int				`json:"taskId"`
-	ItemId int				`json:"itemId"`
-	Status int				`json:"status"`
-	Operator string			`json:"operator"`
-	Remark string			`json:"remark"`
+	TaskId 					int				`json:"taskId"`
+	ItemId 					int				`json:"itemId"`
+	Status 					int				`json:"status"`
+	Operator 				string			`json:"operator"`
+	Remark 					string			`json:"remark"`
 }
 type Self struct {
-	Status int		`json:"status"`
-	Id int			`json:"id"`
-	Remark string	`json:"remark"`
+	Status 					int				`json:"status"`
+	Id 						int				`json:"id"`
+	Remark 					string			`json:"remark"`
 }
 type Confirm struct {
-	TaskId int		`json:"taskId"`
-	Data []Self		`json:"data"`
+	TaskId 					int				`json:"taskId"`
+	Data 					[]Self			`json:"data"`
 }
 func (ConfirmCheck) TableName() string {
 	return "tb_confirm_check"

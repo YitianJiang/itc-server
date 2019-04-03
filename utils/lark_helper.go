@@ -25,7 +25,7 @@ type IMChannel struct {
 	Id string `json:"id"`
 }
 /*
-获取用户的id，不然不知道给谁发消息，如果出了问题，肯定返回的是空串了
+ *获取用户的id，不然不知道给谁发消息，如果出了问题，肯定返回的是空串了
  */
 func GetUserIDinLark(token string, emailPrefix string) string {
 	//其实这里需要判断下有没有加上后缀。。。
@@ -49,7 +49,7 @@ func GetUserIDinLark(token string, emailPrefix string) string {
 	return retstr
 }
 /*
-lark机器人发消息给个人，内部调用
+ *lark机器人发消息给个人，内部调用
  */
 func LarkDingOneInner(member string, msg string) {
 	// 获取user的larkID和会话ID
@@ -58,8 +58,8 @@ func LarkDingOneInner(member string, msg string) {
 	go DoLark(msg, larkAPI, channelID, robotToken)
 }
 /*
-发送lark消息，chatId为个人id或者群组id
-*/
+ *发送lark消息，chatId为个人id或者群组id
+ */
 func DoLark(msg string, api string, chatId string, token string) {
 
 	body := map[string]interface{}{"msg_type": "text"}
@@ -69,8 +69,20 @@ func DoLark(msg string, api string, chatId string, token string) {
 	bodyByte, _ := json.Marshal(body)
 	PostJsonHttp(api, bodyByte)
 }
+/**
+ *发送lark富文本消息
+ */
+func DoRichLark(chatId string, token string, msg string, title string) {
+
+	body := map[string]interface{}{"msg_type": "rich_text"}
+	body["token"] = token
+	body["chat_id"] = chatId
+	body["content"] = map[string]string{"text": msg, "title": title}
+	bodyByte, _ := json.Marshal(body)
+	PostJsonHttp(larkAPI, bodyByte)
+}
 /*
-获取和用户会话的channel id
+ *获取和用户会话的channel id
  */
 func GetUserChannelID(token string, userid string) string {
 	var retstr string

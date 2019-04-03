@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"strconv"
 )
-//增加检查项
+/*
+ *增加检查项
+ */
 func AddDetectItem(c *gin.Context){
 
 	param, _ := ioutil.ReadAll(c.Request.Body)
@@ -82,7 +84,9 @@ func AddDetectItem(c *gin.Context){
 		return
 	}
 }
-//查询检查项
+/*
+ *查询检查项
+ */
 func GetSelfCheckItems(c *gin.Context){
 
 	appIdParam, ok := c.GetQuery("appId")
@@ -163,7 +167,9 @@ func GetSelfCheckItems(c *gin.Context){
 		})
 	}
 }
-//完成自查
+/*
+ *完成自查
+ */
 func ConfirmCheck(c *gin.Context){
 	p, _ := ioutil.ReadAll(c.Request.Body)
 	var t dal.Confirm
@@ -206,4 +212,3 @@ func ConfirmCheck(c *gin.Context){
 		"data" : "success",
 	})
 }
-//更新自查项

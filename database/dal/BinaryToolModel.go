@@ -9,9 +9,9 @@ import (
 
 type BinaryDetectTool struct {
 	gorm.Model
-	Name string 			`json:"name"`
-	Description string 		`json:"description"`
-	Platform int 			`json:"platform"`
+	Name 			string 			`json:"name"`
+	Description 	string 			`json:"description"`
+	Platform 		int 			`json:"platform"`
 }
 func (BinaryDetectTool) TableName() string {
 	return "tb_binary_detect_tool"

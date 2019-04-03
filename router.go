@@ -51,5 +51,7 @@ func InitRouter(r *ginex.Engine){
 		api.GET("/lark", detect.LarkMsg)
 		//新建ios源码隐私检测任务
 		api.POST("/ios/scNewTask", detect.ScNewTask)
+		//增加lark群配置
+		api.POST("/lark/addGroup", detect.AddLarkGroup)
 	}
 }

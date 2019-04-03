@@ -29,7 +29,9 @@ const(
 	//DETECT_URL_PRO = "10.2.196.119:9527"
 )
 var LARK_MSG_CALL_MAP = make(map[string]interface{})
-
+/**
+ *新建检测任务
+ */
 func UploadFile(c *gin.Context){
 
 	url := ""
@@ -207,7 +209,9 @@ func UploadFile(c *gin.Context){
 	})
 }
 
-//更新检测包的检测信息
+/**
+ *更新检测包的检测信息
+ */
 func UpdateDetectInfos(c *gin.Context){
 
 	taskId := c.Request.FormValue("task_ID")
@@ -307,6 +311,9 @@ func UpdateDetectInfos(c *gin.Context){
 	utils.LarkDingOneInner(creator, message)
 	go alertLarkMsgCron(*ticker, creator, message, taskId, toolId)
 }
+/**
+ *lark消息定时提醒
+ */
 func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string, taskId string, toolId string){
 	flag := false
 	logs.Info("taskId: " + taskId + ", toolId: " + toolId)
@@ -334,7 +341,9 @@ func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string, taskId st
 		ticker.Stop()
 	}
 }
-//确认二进制包检测结果，更新数据库，并停止lark消息
+/**
+ *确认二进制包检测结果，更新数据库，并停止lark消息
+ */
 func ConfirmBinaryResult(c *gin.Context){
 	type confirm struct {
 		TaskId  int		`json:"taskId"`
@@ -351,10 +360,13 @@ func ConfirmBinaryResult(c *gin.Context){
 		})
 		return
 	}
+	//获取确认人信息
+	username, _ := c.Get("username")
 	var data map[string]string
 	data = make(map[string]string)
 	data["task_id"] = strconv.Itoa(t.TaskId)
 	data["tool_id"] = strconv.Itoa(t.ToolId)
+	data["confirmer"] = username.(string)
 	flag := dal.ConfirmBinaryResult(data)
 	if !flag {
 		logs.Error("二进制检测内容确认失败")
@@ -382,7 +394,9 @@ func ConfirmBinaryResult(c *gin.Context){
 		"data" : "success",
 	})
 }
-//将安装包上传至tos
+/**
+ *将安装包上传至tos
+ */
 func upload2Tos(path string) (string, error){
 
 	var tosBucket = tos.WithAuth("", "")
@@ -412,7 +426,9 @@ func upload2Tos(path string) (string, error){
 	returnUrl = "https://" + domain + "/" + path
 	return returnUrl, nil
 }
-
+/**
+ *判断路径是否存在
+ */
 func PathExists(path string)(bool, error){
 	_, err := os.Stat(path)
 	if err == nil {
@@ -423,7 +439,9 @@ func PathExists(path string)(bool, error){
 	}
 	return false, nil
 }
-
+/*
+ *错误格式化信息
+ */
 func errorFormatFile(c *gin.Context){
 	logs.Infof("文件格式不正确，请上传正确的文件！")
 	c.JSON(http.StatusOK, gin.H{
@@ -432,7 +450,9 @@ func errorFormatFile(c *gin.Context){
 		"data" : "文件格式不正确，请上传正确的文件！",
 	})
 }
-//查询检测任务列表
+/*
+ *查询检测任务列表
+ */
 func QueryDetectTasks(c *gin.Context){
 
 	appId := c.DefaultQuery("appId", "")
@@ -498,6 +518,9 @@ func QueryDetectTasks(c *gin.Context){
 		"data" : data,
 	})
 }
+/**
+ *根据二进制工具列表
+ */
 func QueryDetectTools(c *gin.Context){
 
 	name := c.DefaultQuery("name", "")
@@ -521,7 +544,9 @@ func QueryDetectTools(c *gin.Context){
 		"data" : tools,
 	})
 }
-
+/**
+ *查询检测任务选择的二进制检查工具
+ */
 func QueryTaskQueryTools(c *gin.Context){
 
 	taskId := c.DefaultQuery("taskId", "")
@@ -574,7 +599,9 @@ func QueryTaskQueryTools(c *gin.Context){
 		"data" : *selected,
 	})
 }
-
+/**
+ *查询二进制检查结果信息
+ */
 func QueryTaskBinaryCheckContent(c *gin.Context){
 	taskId := c.DefaultQuery("taskId", "")
 	if taskId == "" {
@@ -631,9 +658,7 @@ func LarkMsg(c *gin.Context){
 	utils.LarkDingOneInner(username.(string), msg)
 }
 /**
-获取token接口
-input: username
-output: token
+ *获取token接口
  */
 func GetToken(c *gin.Context){
 	var jwtSecret = []byte("itc_jwt_secret")

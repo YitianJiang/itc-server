@@ -3,7 +3,6 @@ package detect
 import (
 	"bytes"
 	"code.byted.org/clientQA/itc-server/database/dal"
-	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 	"encoding/json"
 	"fmt"
@@ -13,7 +12,9 @@ import (
 	"strconv"
 	"time"
 )
-//新建任务
+/*
+ *新建任务
+ */
 func ScNewTask(c *gin.Context){
 	username, exist := c.Get("username")
 	if !exist {
@@ -106,7 +107,9 @@ func ScNewTask(c *gin.Context){
 		"data" : "success",
 	})
 }
-//分页查询任务列表
+/*
+ *分页查询任务列表
+ */
 func QueryICTTasks(c *gin.Context){
 	appId := c.DefaultQuery("appId", "")
 	pageNo := c.DefaultQuery("page", "")
@@ -163,7 +166,9 @@ func QueryICTTasks(c *gin.Context){
 		"data" : data,
 	})
 }
-//更新任务检测结果
+/*
+ *更新任务检测结果
+ */
 func UpdateTask(c *gin.Context){
 	username, _ := c.Get("username")
 	id := c.DefaultQuery("id", "")

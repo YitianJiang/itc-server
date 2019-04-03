@@ -11,39 +11,41 @@ import (
 //二进制包检测任务
 type DetectStruct struct {
 	gorm.Model
-	Creator string 			`json:"creator"`
-	Platform int			`json:"platform"`
-	AppName string			`json:"appName"`
-	AppVersion string		`json:"appVersion"`
-	AppId string			`json:"appId"`
-	CheckContent string		`json:"checkContent"`
-	SelfCheckStatus int		`json:"selfCheckStatus"` //0-自查未完成；1-自查完成
-	TosUrl string			`json:"tosUrl"`
+	Creator 			string 			`json:"creator"`
+	Platform 			int				`json:"platform"`
+	AppName 			string			`json:"appName"`
+	AppVersion 			string			`json:"appVersion"`
+	AppId 				string			`json:"appId"`
+	CheckContent 		string			`json:"checkContent"`
+	SelfCheckStatus 	int				`json:"selfCheckStatus"` //0-自查未完成；1-自查完成
+	TosUrl 				string			`json:"tosUrl"`
 }
 type RecordTotal struct {
-	Total uint
+	Total 				uint
 }
 type RetDetectTasks struct {
-	GetMore uint
-	Total uint
-	NowPage uint
-	Tasks []DetectStruct
+	GetMore 			uint
+	Total 				uint
+	NowPage 			uint
+	Tasks 				[]DetectStruct
 }
 //包检测工具
 type DetectTool struct {
 	gorm.Model
-	Name string 			`json:"name"`
-	Description string 		`json:"description"`
-	Platform int 			`json:"platform"`
+	Name 				string 			`json:"name"`
+	Description 		string 			`json:"description"`
+	Platform 			int 			`json:"platform"`
 }
 //二进制包检测内容
 type DetectContent struct {
 	gorm.Model
-	TaskId int				`json:"taskId"`
-	ToolId int				`json:"toolId"`
-	HtmlContent string		`json:"htmlContent"`
-	JsonContent string		`json:"jsonContent"`
-	Status int				`json:"status"`//是否确认
+	TaskId 				int				`json:"taskId"`
+	ToolId 				int				`json:"toolId"`
+	HtmlContent 		string			`json:"htmlContent"`
+	JsonContent 		string			`json:"jsonContent"`
+	Status 				int				`json:"status"`//是否确认,0-未确认，1-确认通过，2-确认未通过
+	Confirmer			string			`json:"confirmer"`
+	Remark 				string			`json:"remark"`
 }
 func (DetectStruct) TableName() string {
 	return "tb_binary_detect"
@@ -196,6 +198,7 @@ func QueryTaskBinaryCheckContent(condition string) *[]DetectContent{
 func ConfirmBinaryResult(data map[string]string) bool {
 	taskId := data["task_id"]
 	toolId := data["tool_id"]
+	confirmer := data["confirmer"]
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
@@ -204,7 +207,12 @@ func ConfirmBinaryResult(data map[string]string) bool {
 	defer connection.Close()
 	db := connection.Table(DetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	condition := "task_id=" + taskId + " and tool_id=" + toolId
-	if err := db.Where(condition).LogMode(_const.DB_LOG_MODE).Update(map[string]interface{}{"status":1, "updated_at":time.Now()}).Error; err != nil {
+	if err := db.Where(condition).LogMode(_const.DB_LOG_MODE).
+		Update(map[string]interface{}{
+			"status" : 1,
+			"confirmer" : confirmer,
+			"updated_at" : time.Now(),
+		}).Error; err != nil {
 		logs.Error("update db tb_detect_content failed: %v", err)
 		//db.Rollback()
 		return false
