@@ -67,7 +67,9 @@ func AddConfig(c *gin.Context) {
 		"data" : "success",
 	})
 }
-//查询配置项
+/**
+ *查询配置项
+ */
 func QueryConfigs(c *gin.Context) {
 
 	condition := "1=1"
@@ -103,5 +105,35 @@ func QueryConfigs(c *gin.Context) {
 		"message" : "success",
 		"errorCode" : 0,
 		"data" : data,
+	})
+}
+/**
+ *查询平台所配置的问题类型数据
+ */
+func QueryProblemConfigs(c *gin.Context){
+	platform := c.DefaultQuery("platform", "")
+	if platform == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "缺少platform参数！",
+			"errorCode" : -1,
+			"data" : "缺少platform参数！",
+		})
+		return
+	}
+	/*if platform != "0" && platform != "1" {
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "platform参数不合法！",
+			"errorCode" : -2,
+			"data" : "platform参数不合法！",
+		})
+		return
+	}*/
+	condition := "platform='" + platform + "' and config_type='0'"
+	var config *[]dal.ItemConfig
+	config = dal.QueryConfigByCondition(condition)
+	c.JSON(http.StatusOK, gin.H{
+		"message" : "success",
+		"errorCode" : 0,
+		"data" : config,
 	})
 }

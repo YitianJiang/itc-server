@@ -41,8 +41,8 @@ func InitRouter(r *ginex.Engine){
 		api.GET("/config/queryLarkMsgCall", detect.QueryLarkMsgCall)
 		//确认二进制包检测信息
 		api.POST("/detect/confirmResult", detect.ConfirmBinaryResult)
-		//更新自查项
-		//api.POST("/detect/updateItem", detect.UpdateItem)
+		//根据platform获取配置的问题类型
+		api.GET("/config/queryProblemConfigs", detect.QueryProblemConfigs)
 		//增加配置项
 		api.POST("/config/addConfig", detect.AddConfig)
 		//查询配置项
