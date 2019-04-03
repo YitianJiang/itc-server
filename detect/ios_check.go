@@ -3,6 +3,7 @@ package detect
 import (
 	"bytes"
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 	"encoding/json"
 	"fmt"
