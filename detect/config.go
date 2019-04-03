@@ -120,14 +120,14 @@ func QueryProblemConfigs(c *gin.Context){
 		})
 		return
 	}
-	/*if platform != "0" && platform != "1" {
+	if platform != "0" && platform != "1" {
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "platform参数不合法！",
 			"errorCode" : -2,
 			"data" : "platform参数不合法！",
 		})
 		return
-	}*/
+	}
 	condition := "platform='" + platform + "' and config_type='0'"
 	var config *[]dal.ItemConfig
 	config = dal.QueryConfigByCondition(condition)
