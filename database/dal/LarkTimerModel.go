@@ -152,6 +152,12 @@ func DeleteLarkGroupById(larkGroup LarkGroupMsg) bool {
 	defer connection.Close()
 	id := larkGroup.ID
 	condition := "id='" + fmt.Sprint(id) + "'"
+	dbUpdate := connection.Table(LarkGroupMsg{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	//记录是谁进行的删除操作
+	err = dbUpdate.Where(condition).Update(map[string]interface{}{
+		"operator" : larkGroup.Operator,
+		"updated_at" : time.Now(),
+	}).Error
 	db := connection.Table(LarkGroupMsg{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	err = db.Where(condition).Delete(&larkGroup).Error
 	if err != nil {

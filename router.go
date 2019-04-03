@@ -53,5 +53,11 @@ func InitRouter(r *ginex.Engine){
 		api.POST("/ios/scNewTask", detect.ScNewTask)
 		//增加lark群配置
 		api.POST("/lark/addGroup", detect.AddLarkGroup)
+		//查询lark群配置
+		api.GET("/lark/queryGroups", detect.QueryGroupInfosByTimerId)
+		//更新lark群配置
+		api.POST("/lark/updateGroup", detect.UpdateLarkGroup)
+		//删除lark群配置
+		api.DELETE("/lark/deleteGroup", detect.DeleteGroupInfoById)
 	}
 }

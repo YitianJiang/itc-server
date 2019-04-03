@@ -268,3 +268,52 @@ func QueryGroupInfosByTimerId(c *gin.Context){
 		"data" : *groups,
 	})
 }
+/**
+ *删除设置的lark群
+ */
+func DeleteGroupInfoById(c *gin.Context){
+	name, f := c.Get("username")
+	if !f {
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "暂无权限！",
+			"errorCode" : -1,
+			"data" : "暂无权限！",
+		})
+		return
+	}
+	id := c.DefaultPostForm("id", "")
+	if id == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "缺少id参数！",
+			"errorCode" : -2,
+			"data" : "缺少id参数！",
+		})
+		return
+	}
+	idInt, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "id参数格式不正确！",
+			"errorCode" : -3,
+			"data" : "id参数格式不正确！",
+		})
+		return
+	}
+	var group dal.LarkGroupMsg
+	group.ID = uint(idInt)
+	group.Operator = name.(string)
+	flag := dal.DeleteLarkGroupById(group)
+	if !flag {
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "lark群配置删除失败！",
+			"errorCode" : -4,
+			"data" : "lark群配置删除失败！",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message" : "success",
+		"errorCode" : 0,
+		"data" : "success",
+	})
+}
