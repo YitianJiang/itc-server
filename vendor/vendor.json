@@ -57,6 +57,30 @@
 			"revisionTime": "2019-03-05T12:29:18Z"
 		},
 		{
+			"checksumSHA1": "jgqsb30I2aaftT4OXh+dRzMview=",
+			"path": "code.byted.org/dp/gotqs",
+			"revision": "e6e28d36e0aa0c072c1a705d3058b4b61ea184f2",
+			"revisionTime": "2019-04-04T08:01:18Z"
+		},
+		{
+			"checksumSHA1": "S0GJIOZJ6luqabE0WJgAE5IR8Ho=",
+			"path": "code.byted.org/dp/gotqs/client",
+			"revision": "e6e28d36e0aa0c072c1a705d3058b4b61ea184f2",
+			"revisionTime": "2019-04-04T08:01:18Z"
+		},
+		{
+			"checksumSHA1": "ehZff7wiYR1m2cPgHkGv8GH4DU0=",
+			"path": "code.byted.org/dp/gotqs/consts",
+			"revision": "e6e28d36e0aa0c072c1a705d3058b4b61ea184f2",
+			"revisionTime": "2019-04-04T08:01:18Z"
+		},
+		{
+			"checksumSHA1": "OJihNpizNtufxJn9yWXP3A4j3Qo=",
+			"path": "code.byted.org/dp/gotqs/tools",
+			"revision": "e6e28d36e0aa0c072c1a705d3058b4b61ea184f2",
+			"revisionTime": "2019-04-04T08:01:18Z"
+		},
+		{
 			"checksumSHA1": "/L6SJPptfpeNSsvZ/yfugm/jsks=",
 			"path": "code.byted.org/gin/ginex",
 			"revision": "364e68c0e742f248d3562fb231d1e8ffb6a0fdc8",
@@ -228,6 +252,13 @@
 			"path": "code.byted.org/gopkg/net2",
 			"revision": "aad4891b789e9b9d237679f55abee5e15ac14d78",
 			"revisionTime": "2018-12-23T08:37:23Z"
+		},
+		{
+			"checksumSHA1": "fSiGAEeu3+DoHUzFnRyHO6f5Z/g=",
+			"origin": "code.byted.org/dp/gotqs/vendor/code.byted.org/gopkg/pkg/errors",
+			"path": "code.byted.org/gopkg/pkg/errors",
+			"revision": "e6e28d36e0aa0c072c1a705d3058b4b61ea184f2",
+			"revisionTime": "2019-04-04T08:01:18Z"
 		},
 		{
 			"checksumSHA1": "fOyfsjkFHx1t7Meinfn7CuD2N0g=",
