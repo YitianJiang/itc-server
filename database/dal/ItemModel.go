@@ -108,7 +108,7 @@ func QueryItemsByCondition(data map[string]interface{}) *[]QueryItemStruct {
 		db = db.Where(condition)
 	}
 	var items []ItemStruct
-	if err := db.Find(&items).Error; err != nil{
+	if err := db.Order("key_word ASC").Find(&items).Error; err != nil{
 		logs.Error("%v", err)
 		return nil
 	}

@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"net/url"
 )
 
 const(
@@ -189,6 +190,8 @@ func UploadFile(c *gin.Context){
 		}
 		if err != nil {
 			logs.Error("上传二进制包出错，重试一次也失败", err)
+			//及时报警
+			utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！")
 		}
 		resBody := &bytes.Buffer{}
 		if response != nil {
@@ -269,7 +272,7 @@ func UpdateDetectInfos(c *gin.Context){
 	} else {
 		message += "iOS包"
 	}
-	message += "完成二进制检测，请及时进行确认！可在结果展示页面底部进行确认，确认后不会再有消息提醒！"
+	message += "完成二进制检测，请及时进行确认！可在结果展示页面底部进行确认，确认后不会再有消息提醒！\n"
 	appId := (*detect)[0].AppId
 	appIdInt, _ := strconv.Atoi(appId)
 	var config *dal.LarkMsgTimer
@@ -308,6 +311,9 @@ func UpdateDetectInfos(c *gin.Context){
 	var key string
 	key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
 	LARK_MSG_CALL_MAP[key] = ticker
+	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz="+ appId + "&showItcDetail=1&itcTaskId=" + taskId
+	urlEncode := url.QueryEscape(larkUrl)
+	message += "地址链接：" + urlEncode
 	utils.LarkDingOneInner(creator, message)
 	go alertLarkMsgCron(*ticker, creator, message, taskId, toolId)
 }
@@ -348,6 +354,7 @@ func ConfirmBinaryResult(c *gin.Context){
 	type confirm struct {
 		TaskId  int		`json:"taskId"`
 		ToolId	int		`json:"toolId"`
+		Remark  string	`json:"remark"`
 	}
 	param, _ := ioutil.ReadAll(c.Request.Body)
 	var t confirm
@@ -367,6 +374,7 @@ func ConfirmBinaryResult(c *gin.Context){
 	data["task_id"] = strconv.Itoa(t.TaskId)
 	data["tool_id"] = strconv.Itoa(t.ToolId)
 	data["confirmer"] = username.(string)
+	data["remark"] = t.Remark
 	flag := dal.ConfirmBinaryResult(data)
 	if !flag {
 		logs.Error("二进制检测内容确认失败")
@@ -639,23 +647,6 @@ func QueryTaskBinaryCheckContent(c *gin.Context){
 		"errorCode" : 0,
 		"data" : (*content)[0],
 	})
-}
-func LarkMsg(c *gin.Context){
-	msg := c.DefaultQuery("msg", "")
-	if msg == "" {
-		msg = "测试jwt，请忽略！"
-	}
-	username, flag := c.Get("username")
-	if !flag {
-		logs.Error("未获取到username")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "未获取到username",
-			"errorCode" : -3,
-			"data" : "未获取到username",
-		})
-		return
-	}
-	utils.LarkDingOneInner(username.(string), msg)
 }
 /**
  *获取token接口

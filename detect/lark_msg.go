@@ -2,6 +2,7 @@ package detect
 
 import (
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 /*
@@ -95,6 +97,33 @@ func QueryLarkMsgCall(c *gin.Context) {
 		"errorCode" : 0,
 		"data" : larkMsgConfig,
 	})
+}
+/**
+ * lark消息通知，msg：通知的内容；users：以;分割的邮箱前缀
+ */
+func LarkMsg(c *gin.Context){
+	msg := c.DefaultPostForm("msg", "")
+	if msg == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "缺少msg参数！",
+			"errorCode" : -1,
+			"data" : "缺少msg参数！",
+		})
+		return
+	}
+	users := c.DefaultPostForm("users", "")
+	if users == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "缺少users参数！",
+			"errorCode" : -2,
+			"data" : "缺少users参数！",
+		})
+		return
+	}
+	user := strings.Split(users, ";")
+	for _, u := range user {
+		utils.LarkDingOneInner(u, msg)
+	}
 }
 /*
  *新增lark群组配置信息

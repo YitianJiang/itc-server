@@ -199,6 +199,7 @@ func ConfirmBinaryResult(data map[string]string) bool {
 	taskId := data["task_id"]
 	toolId := data["tool_id"]
 	confirmer := data["confirmer"]
+	remark := data["remark"]
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
@@ -211,6 +212,7 @@ func ConfirmBinaryResult(data map[string]string) bool {
 		Update(map[string]interface{}{
 			"status" : 1,
 			"confirmer" : confirmer,
+			"remark" : remark,
 			"updated_at" : time.Now(),
 		}).Error; err != nil {
 		logs.Error("update db tb_detect_content failed: %v", err)
