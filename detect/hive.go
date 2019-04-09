@@ -3,7 +3,6 @@ package detect
 import (
 	"code.byted.org/dp/gotqs"
 	"code.byted.org/dp/gotqs/client"
-	"code.byted.org/dp/gotqs/consts"
 	"code.byted.org/gopkg/logs"
 	"context"
 	"fmt"
@@ -29,7 +28,7 @@ func HiveQuery(c *gin.Context){
 		appKey:   "VTStyv3g7fSS2mkiIBjYACxCPcW20UfIEGdstuC6xVGdCauS",
 		userName: "kanghuaisong",
 		timeout:  time.Minute * 20,
-		cluster:  consts.CLUSTER_DEFAULT,
+		cluster:  "hibis",
 	}
 	tqsClient, err := gotqs.MakeTqsClient(initAg.ctx, initAg.appId, initAg.appKey, initAg.userName, initAg.timeout, initAg.cluster)
 	if err != nil {
@@ -54,7 +53,7 @@ func HiveQuery(c *gin.Context){
 				ctx:       ctx,
 				tqsClient: tqsClient,
 				query: `SELECT
-    					*
+    					device_id
 						FROM
 						origin_log.event_log_hourly
 						where

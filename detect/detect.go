@@ -130,7 +130,7 @@ func UploadFile(c *gin.Context){
 	}
 	//调试，暂时注释
 	//var recipients = "ttqaall@bytedance.com,tt_ios@bytedance.com,"
-	var recipients = "kanghuaisong@bytedance.com"
+	var recipients = "kanghuaisong@bytedance.com,"
 	recipients += name.(string) + "@bytedance.com"
 	filepath := _tmpDir + "/" + filename
 	//1、上传至tos,测试暂时注释
@@ -155,7 +155,6 @@ func UploadFile(c *gin.Context){
 		return
 	}
 	go func() {
-		//callBackUrl := "http://10.224.10.61:6789/updateDetectInfos"
 		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
