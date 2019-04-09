@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"net/url"
 )
 
 const(
@@ -311,9 +310,9 @@ func UpdateDetectInfos(c *gin.Context){
 	var key string
 	key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
 	LARK_MSG_CALL_MAP[key] = ticker
-	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz="+ appId + "&showItcDetail=1&itcTaskId=" + taskId
-	urlEncode := url.QueryEscape(larkUrl)
-	message += "地址链接：" + urlEncode
+	//larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz="+ appId + "&showItcDetail=1&itcTaskId=" + taskId
+	//urlEncode := url.QueryEscape(larkUrl)
+	//message += "地址链接：" + urlEncode
 	utils.LarkDingOneInner(creator, message)
 	go alertLarkMsgCron(*ticker, creator, message, taskId, toolId)
 }
