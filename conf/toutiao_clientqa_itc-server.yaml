@@ -19,7 +19,8 @@ Product:
   LogInterval: "hour"
   EnableMetrics: true
   ConsoleLog: false
-  DatabusLog: true
+  DatabusLog: false
+  AgentLog: true
   FileLog: true
   Mode: "release"
   ServiceVersion: "0.1.0"
