@@ -130,8 +130,8 @@ func UploadFile(c *gin.Context){
 	}
 	//调试，暂时注释
 	//var recipients = "ttqaall@bytedance.com,tt_ios@bytedance.com,"
-	var recipients = "kanghuaisong@bytedance.com,"
-	recipients += name.(string) + "@bytedance.com"
+	//var recipients = ""
+	recipients := name.(string) + "@bytedance.com"
 	filepath := _tmpDir + "/" + filename
 	//1、上传至tos,测试暂时注释
 	//tosUrl, err := upload2Tos(filepath)
@@ -309,9 +309,9 @@ func UpdateDetectInfos(c *gin.Context){
 	var key string
 	key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
 	LARK_MSG_CALL_MAP[key] = ticker
-	//larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz="+ appId + "&showItcDetail=1&itcTaskId=" + taskId
+	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz="+ appId + "&showItcDetail=1&itcTaskId=" + taskId
 	//urlEncode := url.QueryEscape(larkUrl)
-	//message += "地址链接：" + larkUrl
+	message += "地址链接：" + larkUrl
 	utils.LarkDingOneInner(creator, message)
 	go alertLarkMsgCron(*ticker, creator, message, taskId, toolId)
 }
