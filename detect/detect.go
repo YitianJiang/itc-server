@@ -271,6 +271,7 @@ func UpdateDetectInfos(c *gin.Context){
 		message += "iOS包"
 	}
 	message += "完成二进制检测，请及时进行确认！可在结果展示页面底部进行确认，确认后不会再有消息提醒！\n"
+	message += "如果安卓选择了GooglePlay检测和隐私检测，两个检测结果都需要进行确认，请不要遗漏！！！\n"
 	appId := (*detect)[0].AppId
 	appIdInt, _ := strconv.Atoi(appId)
 	var config *dal.LarkMsgTimer
