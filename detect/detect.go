@@ -179,7 +179,7 @@ func UploadFile(c *gin.Context){
 		err = bodyWriter.Close()
 		logs.Info("url: ", url)
 		toolHttp := &http.Client{
-			Timeout: 120 * time.Second,
+			Timeout: 300 * time.Second,
 		}
 		response, err := toolHttp.Post(url, contentType, bodyBuffer)
 		if err != nil {
