@@ -112,6 +112,24 @@ func DeleteDetectModel(detectModeId string) error {
 	}
 	return nil
 }
+/**
+ * 更新tos地址
+ */
+func UpdateDetectTosUrl(path string, taskId uint) bool {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return false
+	}
+	defer connection.Close()
+	condition := "id='" + fmt.Sprint(taskId) + "'"
+	db := connection.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	if err := db.Where(condition).Update(map[string]interface{}{"tos_url" : path, "updated_at" : time.Now()}).Error; err != nil {
+		logs.Error("%v", err)
+		return false
+	}
+	return true
+}
 //query by map
 func QueryDetectModelsByMap(param map[string]interface{}) *[]DetectStruct{
 	connection, err := database.GetConneection()

@@ -129,8 +129,6 @@ func UploadFile(c *gin.Context){
 		return
 	}
 	//调试，暂时注释
-	//var recipients = "ttqaall@bytedance.com,tt_ios@bytedance.com,"
-	//var recipients = ""
 	recipients := name.(string) + "@bytedance.com"
 	filepath := _tmpDir + "/" + filename
 	//1、上传至tos,测试暂时注释
@@ -143,7 +141,6 @@ func UploadFile(c *gin.Context){
 	dbDetectModel.UpdatedAt = time.Now()
 	dbDetectModel.Platform, _ = strconv.Atoi(platform)
 	dbDetectModel.AppId = appId
-	//dbDetectModel.TosUrl = tosUrl
 	dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
 	if checkItem == ""{
@@ -154,6 +151,7 @@ func UploadFile(c *gin.Context){
 		})
 		return
 	}
+	go upload2Tos(filepath, dbDetectModelId)
 	go func() {
 		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
@@ -311,7 +309,6 @@ func UpdateDetectInfos(c *gin.Context){
 	key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
 	LARK_MSG_CALL_MAP[key] = ticker
 	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz="+ appId + "&showItcDetail=1&itcTaskId=" + taskId
-	//urlEncode := url.QueryEscape(larkUrl)
 	message += "地址链接：" + larkUrl
 	utils.LarkDingOneInner(creator, message)
 	go alertLarkMsgCron(*ticker, creator, message, taskId, toolId)
@@ -404,9 +401,9 @@ func ConfirmBinaryResult(c *gin.Context){
 /**
  *将安装包上传至tos
  */
-func upload2Tos(path string) (string, error){
+func upload2Tos(path string, taskId uint) (string, error){
 
-	var tosBucket = tos.WithAuth("", "")
+	var tosBucket = tos.WithAuth("tos-itc-server", "RXFRCE5018AYZNSAUF36")
 	context, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	tosPutClient, err := tos.NewTos(tosBucket)
@@ -431,6 +428,8 @@ func upload2Tos(path string) (string, error){
 	domain = "tosv.byted.org/obj/" + "itcserver"
 	var returnUrl string
 	returnUrl = "https://" + domain + "/" + path
+	logs.Info("returnUrl: " + returnUrl)
+	dal.UpdateDetectTosUrl(returnUrl, taskId)
 	return returnUrl, nil
 }
 /**

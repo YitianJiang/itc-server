@@ -57,8 +57,8 @@ func HiveQuery(c *gin.Context){
 						FROM
 						origin_log.event_log_hourly
 						where
-						date > "20190330"
-    					and date < "20190401"
+						date > "20190409"
+    					and date < "20190411"
     					and app = "news_article"
     					AND os_name='ios'
     					AND event='test_invitation_tfapp_check'

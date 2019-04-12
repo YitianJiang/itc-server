@@ -140,6 +140,7 @@ func AddLarkGroup(c *gin.Context){
 	}
 	groupName := c.DefaultPostForm("groupName", "")
 	if groupName == "" {
+		logs.Error("缺少groupName参数")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少groupName参数",
 			"errorCode" : -2,
@@ -149,6 +150,7 @@ func AddLarkGroup(c *gin.Context){
 	}
 	groupId := c.DefaultPostForm("groupId", "")
 	if groupId == "" {
+		logs.Error("缺少groupId参数")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少groupId参数",
 			"errorCode" : -3,
@@ -158,6 +160,7 @@ func AddLarkGroup(c *gin.Context){
 	}
 	timerId := c.DefaultPostForm("timerId", "")
 	if timerId == "" {
+		logs.Error("缺少timerId参数")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少timerId参数",
 			"errorCode" : -4,
@@ -167,6 +170,7 @@ func AddLarkGroup(c *gin.Context){
 	}
 	platform := c.DefaultPostForm("platform", "")
 	if platform == "" || (platform != "0" && platform != "1") {
+		logs.Error("platform参数不合法")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "platform参数不合法",
 			"errorCode" : -5,
@@ -177,6 +181,7 @@ func AddLarkGroup(c *gin.Context){
 	condition := "group_id='" + groupId + "'"
 	groups := dal.QueryLarkGroupByCondition(condition)
 	if groups != nil && len(*groups) > 0 {
+		logs.Error("已存在该groupid对应的群组！")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "已存在该groupid对应的群组！",
 			"errorCode" : -6,
@@ -194,6 +199,7 @@ func AddLarkGroup(c *gin.Context){
 	larkGroup.UpdatedAt = time.Now()
 	flag := dal.InsertLarkGroup(larkGroup)
 	if !flag {
+		logs.Error("lark群设置失败")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "lark群设置失败",
 			"errorCode" : -5,
@@ -222,6 +228,7 @@ func UpdateLarkGroup(c *gin.Context){
 	}
 	id := c.DefaultPostForm("id", "")
 	if id == "" {
+		logs.Error("缺少id参数！")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少id参数！",
 			"errorCode" : -2,
@@ -231,6 +238,7 @@ func UpdateLarkGroup(c *gin.Context){
 	}
 	idInt, err := strconv.Atoi(id)
 	if err != nil {
+		logs.Error("id参数格式不正确！")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "id参数格式不正确！",
 			"errorCode" : -2,
@@ -240,6 +248,7 @@ func UpdateLarkGroup(c *gin.Context){
 	}
 	groupName := c.DefaultPostForm("groupName", "")
 	if groupName == "" {
+		logs.Error("缺少groupName参数")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少groupName参数",
 			"errorCode" : -2,
@@ -249,6 +258,7 @@ func UpdateLarkGroup(c *gin.Context){
 	}
 	groupId := c.DefaultPostForm("groupId", "")
 	if groupId == "" {
+		logs.Error("缺少groupId参数")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少groupId参数",
 			"errorCode" : -3,
@@ -263,6 +273,7 @@ func UpdateLarkGroup(c *gin.Context){
 	larkGroup.Operator = name.(string)
 	flag := dal.UpdateLarkGroupById(larkGroup)
 	if !flag {
+		logs.Error("lark群组信息更新失败！")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "lark群组信息更新失败！",
 			"errorCode" : -4,
@@ -282,6 +293,7 @@ func UpdateLarkGroup(c *gin.Context){
 func QueryGroupInfosByTimerId(c *gin.Context){
 	timerId := c.DefaultQuery("timerId", "")
 	if timerId == "" {
+		logs.Error("缺少timerId参数！")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少timerId参数！",
 			"errorCode" : -1,
@@ -303,6 +315,7 @@ func QueryGroupInfosByTimerId(c *gin.Context){
 func DeleteGroupInfoById(c *gin.Context){
 	name, f := c.Get("username")
 	if !f {
+		logs.Error("暂无权限！")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "暂无权限！",
 			"errorCode" : -1,
@@ -312,6 +325,7 @@ func DeleteGroupInfoById(c *gin.Context){
 	}
 	id := c.DefaultPostForm("id", "")
 	if id == "" {
+		logs.Error("缺少id参数！")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少id参数！",
 			"errorCode" : -2,
@@ -321,6 +335,7 @@ func DeleteGroupInfoById(c *gin.Context){
 	}
 	idInt, err := strconv.Atoi(id)
 	if err != nil {
+		logs.Error("id参数格式不正确！")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "id参数格式不正确！",
 			"errorCode" : -3,
@@ -333,6 +348,7 @@ func DeleteGroupInfoById(c *gin.Context){
 	group.Operator = name.(string)
 	flag := dal.DeleteLarkGroupById(group)
 	if !flag {
+		logs.Error("lark群配置删除失败！")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "lark群配置删除失败！",
 			"errorCode" : -4,
