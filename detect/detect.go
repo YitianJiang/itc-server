@@ -455,18 +455,14 @@ func UploadTos(c *gin.Context){
 	defer cancel()
 	tosPutClient, err := tos.NewTos(tosBucket)
 	file, err := os.Open(path)
+	byte, err := ioutil.ReadFile(path)
 	defer file.Close()
 	if err != nil {
 		logs.Error("%s", "打开文件失败" + err.Error())
 		data = "打开文件失败"
 	}
-	stat, err := file.Stat()
 	key := time.Now().Format("2006-01-02 15:04:05") + file.Name()
-	if err != nil {
-		logs.Error("%s", "获取文件大小失败：" + err.Error())
-		data = "获取文件大小失败"
-	}
-	err = tosPutClient.PutObject(context, key, stat.Size(), file)
+	err = tosPutClient.PutObject(context, key, int64(len(byte)), bytes.NewBuffer(byte))
 	if err != nil {
 		logs.Error("%s", "上传tos失败：" + err.Error())
 		data = "上传tos失败：" + err.Error()
