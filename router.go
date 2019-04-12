@@ -15,6 +15,8 @@ func InitRouter(r *ginex.Engine){
 	r.GET("/t/generateToken", detect.GetToken)
 	//hive查询接口
 	r.GET("/hive/query", detect.HiveQuery)
+	//upload
+	r.GET("/uploadTos", detect.UploadTos)
 	api.Use(middleware.JWTCheck())
 	{
 		//上传ipa和apk

@@ -433,6 +433,44 @@ func upload2Tos(path string, taskId uint) (string, error){
 	return returnUrl, nil
 }
 /**
+ * test upload tos
+ */
+func UploadTos(c *gin.Context){
+	data := ""
+	path := "/home/kanghuaisong/test.py"
+	var tosBucket = tos.WithAuth("tos-itc-server", "RXFRCE5018AYZNSAUF36")
+	context, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	tosPutClient, err := tos.NewTos(tosBucket)
+	file, err := os.Open(path)
+	defer file.Close()
+	if err != nil {
+		logs.Error("%s", "打开文件失败" + err.Error())
+		data = "打开文件失败"
+	}
+	stat, err := file.Stat()
+	if err != nil {
+		logs.Error("%s", "获取文件大小失败：" + err.Error())
+		data = "获取文件大小失败"
+	}
+	err = tosPutClient.PutObject(context, path, stat.Size(), file)
+	if err != nil {
+		logs.Error("%s", "上传tos失败：" + err.Error())
+		data = "上传tos失败：" + err.Error()
+	}
+	domains := tos.GetDomainsForLargeFile("TT", path)
+	domain := domains[rand.Intn(len(domains)-1)]
+	domain = "tosv.byted.org/obj/" + "itcserver"
+	var returnUrl string
+	returnUrl = "https://" + domain + "/" + path
+	logs.Info("returnUrl: " + returnUrl)
+	c.JSON(http.StatusOK, gin.H{
+		"message" : "success",
+		"errorCode" : 0,
+		"data" : data,
+	})
+}
+/**
  *判断路径是否存在
  */
 func PathExists(path string)(bool, error){
