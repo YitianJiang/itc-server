@@ -436,9 +436,21 @@ func upload2Tos(path string, taskId uint) (string, error){
  * test upload tos
  */
 func UploadTos(c *gin.Context){
-	data := ""
-	path := "/home/kanghuaisong/test.py"
-	var tosBucket = tos.WithAuth("tos-itc-server", "RXFRCE5018AYZNSAUF36")
+	//data := ""
+	//path := "/home/kanghuaisong/test.py"
+	ctx := context.TODO()
+	key := "TestTOS"
+	data := make([]byte, 100+rand.Intn(1000))
+	rand.Read(data)
+	testbucket := tos.WithAuth("tos-itc-server", "RXFRCE5018AYZNSAUF36")
+	tosClient, err := tos.NewTos(testbucket)
+	if err != nil {
+		logs.Error("%s", err.Error())
+	}
+	if err := tosClient.PutObject(ctx, key, int64(len(data)), bytes.NewBuffer(data)); err != nil {
+		logs.Error("%s", err.Error())
+	}
+	/*var tosBucket = tos.WithAuth("tos-itc-server", "RXFRCE5018AYZNSAUF36")
 	context, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	tosPutClient, err := tos.NewTos(tosBucket)
@@ -462,8 +474,8 @@ func UploadTos(c *gin.Context){
 	domain := domains[rand.Intn(len(domains)-1)]
 	domain = "tosv.byted.org/obj/" + "itcserver"
 	var returnUrl string
-	returnUrl = "https://" + domain + "/" + path
-	logs.Info("returnUrl: " + returnUrl)
+	returnUrl = "https://" + domain + "/" + path*/
+	//logs.Info("returnUrl: " + returnUrl)
 	c.JSON(http.StatusOK, gin.H{
 		"message" : "success",
 		"errorCode" : 0,
