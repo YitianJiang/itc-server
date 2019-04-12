@@ -461,7 +461,8 @@ func UploadTos(c *gin.Context){
 		logs.Error("%s", "打开文件失败" + err.Error())
 		data = "打开文件失败"
 	}
-	key := time.Now().Format("2006-01-02 15:04:05") + file.Name()
+	key := fmt.Sprint(time.Now().UnixNano()) + "_" + file.Name()
+	logs.Info("key: " + key)
 	err = tosPutClient.PutObject(context, key, int64(len(byte)), bytes.NewBuffer(byte))
 	if err != nil {
 		logs.Error("%s", "上传tos失败：" + err.Error())
