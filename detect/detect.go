@@ -17,6 +17,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -438,30 +439,17 @@ func upload2Tos(path string, taskId uint) (string, error){
 func UploadTos(c *gin.Context){
 	data := ""
 	path := "/home/kanghuaisong/test.py"
-	/*ctx := context.TODO()
-	key := "TestTOS"
-	data := make([]byte, 100+rand.Intn(1000))
-	rand.Read(data)
-	testbucket := tos.WithAuth("tos-itc-server", "RXFRCE5018AYZNSAUF36")
-	tosClient, err := tos.NewTos(testbucket)
-	if err != nil {
-		logs.Error("%s", err.Error())
-	}
-	if err := tosClient.PutObject(ctx, key, int64(len(data)), bytes.NewBuffer(data)); err != nil {
-		logs.Error("%s", err.Error())
-	}*/
 	var tosBucket = tos.WithAuth("tos-itc-server", "RXFRCE5018AYZNSAUF36")
 	context, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	tosPutClient, err := tos.NewTos(tosBucket)
-	file, err := os.Open(path)
+	fileName := filepath.Base(path)
 	byte, err := ioutil.ReadFile(path)
-	defer file.Close()
 	if err != nil {
 		logs.Error("%s", "打开文件失败" + err.Error())
 		data = "打开文件失败"
 	}
-	key := fmt.Sprint(time.Now().UnixNano()) + "_" + file.Name()
+	key := fmt.Sprint(time.Now().UnixNano()) + "_" + fileName
 	logs.Info("key: " + key)
 	err = tosPutClient.PutObject(context, key, int64(len(byte)), bytes.NewBuffer(byte))
 	if err != nil {
