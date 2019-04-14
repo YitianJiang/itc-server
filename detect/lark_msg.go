@@ -266,11 +266,22 @@ func UpdateLarkGroup(c *gin.Context){
 		})
 		return
 	}
+	platform := c.DefaultPostForm("platform", "")
+	if platform == "" || (platform != "0" && platform != "1"){
+		logs.Error("缺少platform或者该参数不合法！")
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "缺少platform或者该参数不合法！",
+			"errorCode" : -4,
+			"data" : "缺少platform或者该参数不合法！",
+		})
+		return
+	}
 	var larkGroup dal.LarkGroupMsg
 	larkGroup.ID = uint(idInt)
 	larkGroup.GroupName = groupName
 	larkGroup.GroupId = groupId
 	larkGroup.Operator = name.(string)
+	larkGroup.Platform, _ = strconv.Atoi(platform)
 	flag := dal.UpdateLarkGroupById(larkGroup)
 	if !flag {
 		logs.Error("lark群组信息更新失败！")

@@ -135,6 +135,7 @@ func UpdateLarkGroupById(larkGroup LarkGroupMsg) bool {
 		"group_name" : larkGroup.GroupName,
 		"group_id" : larkGroup.GroupId,
 		"operator" : larkGroup.Operator,
+		"platform" : larkGroup.Platform,
 		"updated_at" : time.Now()}).Error
 	if err != nil {
 		logs.Error("update lark group info failed, %v", err)
