@@ -178,7 +178,7 @@ func AddLarkGroup(c *gin.Context){
 		})
 		return
 	}
-	condition := "group_id='" + groupId + "'"
+	condition := "group_id='" + groupId + "'" + " and platform='" + platform + "'"
 	groups := dal.QueryLarkGroupByCondition(condition)
 	if groups != nil && len(*groups) > 0 {
 		logs.Error("已存在该groupid对应的群组！")
