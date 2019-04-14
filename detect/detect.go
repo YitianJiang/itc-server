@@ -2,6 +2,7 @@ package detect
 
 import (
 	"bytes"
+	"code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
@@ -152,7 +153,7 @@ func UploadFile(c *gin.Context){
 		})
 		return
 	}
-	go upload2Tos(filepath, dbDetectModelId)
+	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
 		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
@@ -312,6 +313,17 @@ func UpdateDetectInfos(c *gin.Context){
 	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz="+ appId + "&showItcDetail=1&itcTaskId=" + taskId
 	message += "地址链接：" + larkUrl
 	utils.LarkDingOneInner(creator, message)
+	if config != nil {
+		timerId := config.ID
+		condition := "timer_id='" + fmt.Sprint(timerId) + "' and platform='" + strconv.Itoa(platform) + "'"
+		groups := dal.QueryLarkGroupByCondition(condition)
+		if groups != nil && len(*groups) > 0 {
+			for i:=0; i<len(*groups); i++ {
+				g := (*groups)[i]
+				utils.LarkGroup(message, g.GroupId)
+			}
+		}
+	}
 	go alertLarkMsgCron(*ticker, creator, message, taskId, toolId)
 }
 /**
@@ -352,6 +364,7 @@ func ConfirmBinaryResult(c *gin.Context){
 		TaskId  int		`json:"taskId"`
 		ToolId	int		`json:"toolId"`
 		Remark  string	`json:"remark"`
+		Status  int		`json:"int"`
 	}
 	param, _ := ioutil.ReadAll(c.Request.Body)
 	var t confirm
@@ -372,6 +385,7 @@ func ConfirmBinaryResult(c *gin.Context){
 	data["tool_id"] = strconv.Itoa(t.ToolId)
 	data["confirmer"] = username.(string)
 	data["remark"] = t.Remark
+	data["status"] = strconv.Itoa(t.Status)
 	flag := dal.ConfirmBinaryResult(data)
 	if !flag {
 		logs.Error("二进制检测内容确认失败")
@@ -404,32 +418,26 @@ func ConfirmBinaryResult(c *gin.Context){
  */
 func upload2Tos(path string, taskId uint) (string, error){
 
-	var tosBucket = tos.WithAuth("tos-itc-server", "RXFRCE5018AYZNSAUF36")
+	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME, _const.TOS_BUCKET_KEY)
 	context, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	tosPutClient, err := tos.NewTos(tosBucket)
-	file, err := os.Open(path)
-	defer file.Close()
+	fileName := filepath.Base(path)
+	byte, err := ioutil.ReadFile(path)
 	if err != nil {
 		logs.Error("%s", "打开文件失败" + err.Error())
-		return "打开文件失败", err
 	}
-	stat, err := file.Stat()
-	if err != nil {
-		logs.Error("%s", "获取文件大小失败：" + err.Error())
-		return "获取文件大小失败", err
-	}
-	err = tosPutClient.PutObject(context, path, stat.Size(), file)
+	key := fmt.Sprint(time.Now().UnixNano()) + "_" + fileName
+	logs.Info("key: " + key)
+	err = tosPutClient.PutObject(context, key, int64(len(byte)), bytes.NewBuffer(byte))
 	if err != nil {
 		logs.Error("%s", "上传tos失败：" + err.Error())
-		return "上传tos失败", err
 	}
 	domains := tos.GetDomainsForLargeFile("TT", path)
 	domain := domains[rand.Intn(len(domains)-1)]
-	domain = "tosv.byted.org/obj/" + "itcserver"
+	domain = "tosv.byted.org/obj/" + _const.TOS_BUCKET_NAME
 	var returnUrl string
-	returnUrl = "https://" + domain + "/" + path
-	logs.Info("returnUrl: " + returnUrl)
+	returnUrl = "https://" + domain + "/" + key
 	dal.UpdateDetectTosUrl(returnUrl, taskId)
 	return returnUrl, nil
 }
@@ -439,7 +447,7 @@ func upload2Tos(path string, taskId uint) (string, error){
 func UploadTos(c *gin.Context){
 	data := ""
 	path := "/home/kanghuaisong/test.py"
-	var tosBucket = tos.WithAuth("tos-itc-server", "RXFRCE5018AYZNSAUF36")
+	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME, _const.TOS_BUCKET_KEY)
 	context, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	tosPutClient, err := tos.NewTos(tosBucket)
@@ -458,7 +466,7 @@ func UploadTos(c *gin.Context){
 	}
 	domains := tos.GetDomainsForLargeFile("TT", path)
 	domain := domains[rand.Intn(len(domains)-1)]
-	domain = "tosv.byted.org/obj/" + "itcserver"
+	domain = "tosv.byted.org/obj/" + _const.TOS_BUCKET_NAME
 	var returnUrl string
 	returnUrl = "https://" + domain + "/" + key
 	logs.Info("returnUrl: " + returnUrl)

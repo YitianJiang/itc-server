@@ -6,6 +6,7 @@ import (
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"fmt"
+	"strconv"
 	"time"
 )
 //二进制包检测任务
@@ -218,6 +219,8 @@ func ConfirmBinaryResult(data map[string]string) bool {
 	toolId := data["tool_id"]
 	confirmer := data["confirmer"]
 	remark := data["remark"]
+	status := data["status"]
+	statusInt, _ := strconv.Atoi(status)
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
@@ -228,7 +231,7 @@ func ConfirmBinaryResult(data map[string]string) bool {
 	condition := "task_id=" + taskId + " and tool_id=" + toolId
 	if err := db.Where(condition).LogMode(_const.DB_LOG_MODE).
 		Update(map[string]interface{}{
-			"status" : 1,
+			"status" : statusInt,
 			"confirmer" : confirmer,
 			"remark" : remark,
 			"updated_at" : time.Now(),

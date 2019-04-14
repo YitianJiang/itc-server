@@ -70,6 +70,12 @@ func DoLark(msg string, api string, chatId string, token string) {
 	PostJsonHttp(api, bodyByte)
 }
 /**
+ * 发送lark群消息
+ */
+func LarkGroup(msg string, groupId string){
+	go DoLark(msg, larkAPI, groupId, robotToken)
+}
+/**
  *发送lark富文本消息
  */
 func DoRichLark(chatId string, token string, msg string, title string) {
