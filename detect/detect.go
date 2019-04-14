@@ -364,7 +364,7 @@ func ConfirmBinaryResult(c *gin.Context){
 		TaskId  int		`json:"taskId"`
 		ToolId	int		`json:"toolId"`
 		Remark  string	`json:"remark"`
-		Status  int		`json:"int"`
+		Status  int		`json:"status"`
 	}
 	param, _ := ioutil.ReadAll(c.Request.Body)
 	var t confirm
