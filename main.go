@@ -3,6 +3,7 @@ package main
 import (
 	"code.byted.org/clientQA/itc-server/conf"
 	"code.byted.org/clientQA/itc-server/database"
+	"code.byted.org/clientQA/itc-server/detect"
 	"code.byted.org/clientQA/pkg/http-util"
 	"code.byted.org/clientQA/pkg/request-processor/request-dal"
 	"code.byted.org/gin/ginex"
@@ -27,6 +28,7 @@ func main() {
 	r.Use(Cors())
 	database.InitDB()
 	InitRouter(r)
+	detect.InitCron()
 	r.Run()
 }
 // 跨域
