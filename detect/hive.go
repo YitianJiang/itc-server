@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"net/http"
 	"reflect"
 	"time"
 )
@@ -111,4 +112,9 @@ func HiveQuery(c *gin.Context){
 			db.Exec(sql)
 		}
 	}
+	c.JSON(http.StatusOK, gin.H{
+		"message" : "success",
+		"errorCode" : 0,
+		"data" : "success",
+	})
 }
