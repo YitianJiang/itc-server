@@ -771,6 +771,12 @@
 			"revisionTime": "2019-02-27T00:00:51Z"
 		},
 		{
+			"checksumSHA1": "xGlhb4NZjBVCNSbb7GIMvhn6mQg=",
+			"path": "github.com/robfig/cron",
+			"revision": "b41be1df696709bb6395fe435af20370037c0b4c",
+			"revisionTime": "2018-05-05T20:34:41Z"
+		},
+		{
 			"checksumSHA1": "q6JII/ziSLMqwajFGHj6w8V+RbA=",
 			"origin": "code.byted.org/clientQA/pkg/vendor/github.com/rubyist/circuitbreaker",
 			"path": "github.com/rubyist/circuitbreaker",
