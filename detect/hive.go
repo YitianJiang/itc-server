@@ -5,6 +5,7 @@ import (
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/dp/gotqs"
 	"code.byted.org/dp/gotqs/client"
+	"code.byted.org/dp/gotqs/consts"
 	"code.byted.org/gopkg/logs"
 	"context"
 	"fmt"
@@ -41,8 +42,8 @@ func HiveQuery(c *gin.Context){
 		appKey	:   "VTStyv3g7fSS2mkiIBjYACxCPcW20UfIEGdstuC6xVGdCauS",
 		userName: 	"kanghuaisong",
 		timeout	:   time.Minute * 30,
-		cluster	:   "hibis",
-		//cluster	:   consts.CLUSTER_CN_PRIEST,
+		//cluster	:   "hibis",
+		cluster	:   consts.CLUSTER_CN_PRIEST,
 	}
 	timeEnd := time.Now()
 	timeStart := timeEnd.AddDate(0, 0, -2)
@@ -92,10 +93,10 @@ func HiveQuery(c *gin.Context){
 		fmt.Println("SyncQuery() got = %v, want %v", got, query[0].want)
 	}
 	if !reflect.DeepEqual(got1, query[0].want1) {
-		fmt.Println("SyncQuery() got1 = %v, want %v", got1, query[0].want1)
+		fmt.Println("SyncQuery() got1 = %v, want %v", *got1, query[0].want1)
 	}
 	//PrintGotJson(t, got1)
-	rows := got1.Rows
+	rows := (*got1).Rows
 	//将数据存至数据库
 	connection, err := database.GetConneection()
 	if err != nil {
