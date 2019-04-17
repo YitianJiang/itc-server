@@ -71,8 +71,8 @@ func cronJob(){
     							device_id
 							FROM  origin_log.event_log_hourly
 							where
-								date > ` + ts + `
-    							and date < ` + te + `
+								date > "` + ts + `"
+    							and date < "` + te + `"
     							and app = "news_article"
     							AND os_name='ios'
     							AND event='test_invitation_tfapp_check'
