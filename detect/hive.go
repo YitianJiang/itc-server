@@ -5,7 +5,6 @@ import (
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/dp/gotqs"
 	"code.byted.org/dp/gotqs/client"
-	"code.byted.org/dp/gotqs/consts"
 	"code.byted.org/gopkg/logs"
 	"context"
 	"fmt"
@@ -42,8 +41,8 @@ func HiveQuery(c *gin.Context){
 		appKey	:   "VTStyv3g7fSS2mkiIBjYACxCPcW20UfIEGdstuC6xVGdCauS",
 		userName: 	"kanghuaisong",
 		timeout	:   time.Minute * 30,
-		//cluster	:   "hibis",
-		cluster	:   consts.CLUSTER_CN_PRIEST,
+		cluster	:   "hibis",
+		//cluster	:   consts.CLUSTER_CN_PRIEST,
 	}
 	timeEnd := time.Now()
 	timeStart := timeEnd.AddDate(0, 0, -2)
