@@ -21,7 +21,7 @@ func HiveQuery(c *gin.Context){
 func InitCron(){
 	logs.Info("init cron job")
 	c := cron.New()
-	spec := "0 10 14 * * ?"
+	spec := "0 30 14 * * ?"
 	c.AddFunc(spec, cronJob)
 	c.Start()
 }
