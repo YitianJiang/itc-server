@@ -8,6 +8,7 @@ import (
 	"code.byted.org/dp/gotqs/consts"
 	"code.byted.org/gopkg/logs"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -95,7 +96,7 @@ func HiveQuery(c *gin.Context){
 	if !reflect.DeepEqual(got1, query[0].want1) {
 		fmt.Println("SyncQuery() got1 = %v, want %v", *got1, query[0].want1)
 	}
-	//PrintGotJson(t, got1)
+	PrintGotJson(got1)
 	rows := (*got1).Rows
 	//将数据存至数据库
 	connection, err := database.GetConneection()
@@ -117,4 +118,8 @@ func HiveQuery(c *gin.Context){
 		"errorCode" : 0,
 		"data" : "success",
 	})
+}
+func PrintGotJson(got interface{}) {
+	jsGot, _ := json.Marshal(got)
+	logs.Info("got: %v", string(jsGot))
 }
