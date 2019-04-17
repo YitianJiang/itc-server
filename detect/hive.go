@@ -5,28 +5,28 @@ import (
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/dp/gotqs"
 	"code.byted.org/dp/gotqs/client"
+	"code.byted.org/dp/gotqs/consts"
 	"code.byted.org/gopkg/logs"
-	"container/list"
 	"context"
+	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/robfig/cron"
 	"reflect"
 	"time"
 )
 var ctx = context.Background()
-func HiveQuery(c *gin.Context){
+/*func HiveQuery(c *gin.Context){
 
-}
+}*/
 
 func InitCron(){
 	logs.Info("init cron job")
-	c := cron.New()
-	spec := "0 30 14 * * ?"
+	/*c := cron.New()
+	spec := "0 5 15 * * ?"
 	c.AddFunc(spec, cronJob)
-	c.Start()
+	c.Start()*/
 }
 
-func cronJob(){
+func HiveQuery(c *gin.Context){
 	type initArgs struct {
 		ctx      context.Context
 		appId    string
@@ -41,7 +41,8 @@ func cronJob(){
 		appKey	:   "VTStyv3g7fSS2mkiIBjYACxCPcW20UfIEGdstuC6xVGdCauS",
 		userName: 	"kanghuaisong",
 		timeout	:   time.Minute * 30,
-		cluster	:   "hibis",
+		//cluster	:   "hibis",
+		cluster	:   consts.CLUSTER_CN_PRIEST,
 	}
 	timeEnd := time.Now()
 	timeStart := timeEnd.AddDate(0, 0, -2)
@@ -57,14 +58,15 @@ func cronJob(){
 		tqsClient *client.TqsClient
 		query     string
 	}
-	query := struct {
+	query := []struct {
 		name    string
 		args    args
 		want    string
 		want1   *client.JobPreview
 		wantErr bool
 	}{
-		args: args{
+		{
+			args: args{
 			ctx			: ctx,
 			tqsClient	: tqsClient,
 			query		: `SELECT
@@ -77,29 +79,23 @@ func cronJob(){
     							AND os_name='ios'
     							AND event='test_invitation_tfapp_check'
     							and params ['install_testflight'] = "1" limit 50`,
+			},
+			wantErr: false,
 		},
-		wantErr: false,
 	}
-	got, got1, err := gotqs.SyncQuery(query.args.ctx, tqsClient, query.args.query)
-	if (err != nil) != query.wantErr {
-		logs.Error("SyncQuery() error = %v, wantErr %v", err, query.wantErr)
+	got, got1, err := gotqs.SyncQuery(query[0].args.ctx, tqsClient, query[0].args.query)
+	if (err != nil) != query[0].wantErr {
+		fmt.Println("SyncQuery() error = %v, wantErr %v", err, query[0].wantErr)
 		return
 	}
-	if got != query.want {
-		logs.Error("SyncQuery() got = %v, want %v", got, query.want)
+	if got != query[0].want {
+		fmt.Println("SyncQuery() got = %v, want %v", got, query[0].want)
 	}
-	if !reflect.DeepEqual(got1, query.want1) {
-		logs.Error("SyncQuery() got1 = %v, want %v", got1, query.want1)
+	if !reflect.DeepEqual(got1, query[0].want1) {
+		fmt.Println("SyncQuery() got1 = %v, want %v", got1, query[0].want1)
 	}
+	//PrintGotJson(t, got1)
 	rows := got1.Rows
-	didList := list.New()
-	if rows != nil {
-		for i:=1; i<len(rows); i++ {
-			//获取到did
-			did := rows[i][0]
-			didList.PushBack(did)
-		}
-	}
 	//将数据存至数据库
 	connection, err := database.GetConneection()
 	if err != nil {
@@ -107,9 +103,12 @@ func cronJob(){
 	}
 	defer connection.Close()
 	db := connection.LogMode(_const.DB_LOG_MODE)
-	for i:=didList.Front(); i!=nil; i=i.Next(){
-		did := i.Value
-		sql := "insert ignore into tb_installed_tf (did) values ('" + did.(string) + "')"
-		db.Exec(sql)
+	if rows != nil {
+		for i:=1; i<len(rows); i++ {
+			//获取到did
+			did := rows[i][0]
+			sql := "insert ignore into tb_installed_tf (did) values ('" + did + "')"
+			db.Exec(sql)
+		}
 	}
 }
