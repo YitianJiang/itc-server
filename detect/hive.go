@@ -43,7 +43,7 @@ func HiveQuery(c *gin.Context){
 		userName: 	"kanghuaisong",
 		timeout	:   time.Minute * 30,
 		//cluster	:   "hibis",
-		cluster	:   consts.CLUSTER_CN_PRIEST,
+		cluster	:   consts.CLUSTER_DEFAULT,
 	}
 	timeEnd := time.Now()
 	timeStart := timeEnd.AddDate(0, 0, -2)
