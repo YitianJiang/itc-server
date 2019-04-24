@@ -43,7 +43,6 @@ func HiveQuery(c *gin.Context){
 		appKey	:   "VTStyv3g7fSS2mkiIBjYACxCPcW20UfIEGdstuC6xVGdCauS",
 		userName: 	"kanghuaisong",
 		timeout	:   time.Minute * 30,
-		//cluster	:   "hibis",
 		cluster	:   consts.CLUSTER_DEFAULT,
 	}
 	timeEnd := time.Now()
@@ -96,8 +95,10 @@ func HiveQuery(c *gin.Context){
 	if !reflect.DeepEqual(got1, query[0].want1) {
 		fmt.Println("SyncQuery() got1 = %v, want %v", *got1, query[0].want1)
 	}
-	PrintGotJson(got1)
-	rows := (*got1).Rows
+	jsGot, _ := json.Marshal(got)
+	var jp client.JobPreview
+	json.Unmarshal(jsGot, &jp)
+	rows := jp.Rows
 	//将数据存至数据库
 	connection, err := database.GetConneection()
 	if err != nil {
@@ -109,7 +110,7 @@ func HiveQuery(c *gin.Context){
 		for i:=1; i<len(rows); i++ {
 			//获取到did
 			did := rows[i][0]
-			sql := "insert ignore into tb_installed_tf (did) values ('" + did + "')"
+			sql := "insert ignore into tb_installed_tf (did, status) values ('" + did + "', '1')"
 			db.Exec(sql)
 		}
 	}
