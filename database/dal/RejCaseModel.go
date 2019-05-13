@@ -33,7 +33,7 @@ type RejListInfo struct {
 	RejTime 		time.Time		`json:"rejTime"`
 	RejRea		string 			`json:"rejRea"`
 	Solution 		string 			`json:"solution"`
-	PicLoc 			[]picInfo 		`json:"picLoc"`
+	PicLoc 			[]PicInfo 		`json:"picLoc"`
 }
 type PicInfo struct {
 	PicName			string 		`json:"picName"`
