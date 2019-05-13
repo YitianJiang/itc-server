@@ -125,7 +125,7 @@ func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
 	db = db.Select("id","app_id","app_name","rej_time","rej_reason","solution","pic_loc").Limit(pageSize).Offset((page-1)*pageSize)
 	var infos = make([]rejCase,0)
 	//db = db.Where(condition)
-	if err := db.Order("key_word ASC").Find(&infos).Error; err != nil{
+	if err := db.Order("ID DESC").Find(&infos).Error; err != nil{
 		logs.Error("%v", err)
 		return nil,0,err
 	}
