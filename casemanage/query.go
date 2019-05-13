@@ -101,7 +101,7 @@ func GetRejCasesByConditions(c *gin.Context){
 	//query with conditions
 	condition:=""
 	if ok{
-		condition+=" appId="+appId
+		condition+=" app_id="+appId
 	}
 	if ok2{
 		condition+=" version="+version
