@@ -222,6 +222,7 @@ func AddRejCase(c *gin.Context)  {
 		r.RejRea = c.Request.MultipartForm.Value["rejRea"][0]
 		r.RejTime,_ = time.ParseInLocation("2006-01-02 15:04:05",c.Request.MultipartForm.Value["rejTime"][0],time.Local)
 		r.Solution = c.Request.MultipartForm.Value["solution"][0]
+		r.Version = c.Request.MultipartForm.Value["version"][0]
 	}
 	//param, _ := ioutil.ReadAll(c.Request.Body)
 	//var r dal.RejInfo
