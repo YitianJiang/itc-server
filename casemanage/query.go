@@ -37,7 +37,7 @@ func GetRejCasesByConditions(c *gin.Context){
 		return
 	}
 	page,err := strconv.Atoi(pageS)
-	if err !=nil {
+	if (err !=nil || page<=0){
 		logs.Error("page参数不符合要求")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "page参数不符合要求！",
@@ -60,7 +60,7 @@ func GetRejCasesByConditions(c *gin.Context){
 		return
 	}
 	pageSize,err2 := strconv.Atoi(pageSizeS)
-	if err2 != nil{
+	if (err2 != nil|| pageSize <= 0){
 		logs.Error("pageSize参数不符合要求")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "pageSize参数不符合要求！",
@@ -104,7 +104,12 @@ func GetRejCasesByConditions(c *gin.Context){
 		condition+=" app_id="+appId
 	}
 	if ok2{
-		condition+=" and version="+version
+		if ok {
+			condition+=" and version="+version
+		}else{
+			condition+=" version="+version
+		}
+
 	}
 	param["condition"] = condition
 	param["page"] = string(page)
