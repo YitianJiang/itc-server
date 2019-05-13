@@ -104,7 +104,7 @@ func GetRejCasesByConditions(c *gin.Context){
 		condition+=" app_id="+appId
 	}
 	if ok2{
-		condition+=" version="+version
+		condition+=" and version="+version
 	}
 	param["condition"] = condition
 	param["page"] = string(page)
