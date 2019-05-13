@@ -239,17 +239,17 @@ func UpdateRejCaseofSolution(data map[string]string) error {
 	return nil
 }
 
-func picLocTrans(path string) []picInfo{
-	var result = make([]picInfo,0)
+func picLocTrans(path string) []PicInfo{
+	var result = make([]PicInfo,0)
 	if path ==""{
 		return result
 	}
 	paths := strings.Split(path,";")
 	for _,subpath := range paths {
 		values := strings.Split(subpath,"--")
-		var pic picInfo
-		pic.picName = values[0]
-		pic.picUrl = values[1]
+		var pic PicInfo
+		pic.PicName = values[0]
+		pic.PicUrl = values[1]
 		result = append(result, pic)
 	}
 	return result
