@@ -24,9 +24,9 @@ func InitRouter(r *ginex.Engine){
 	//新增被拒案例
 	api.POST("/casemanage/addRejCase",casemanage.AddRejCase)
 	//删除被拒案例
-	api.GET("/casemanage/deleteRejCase",casemanage.DeleteRejCase)
+	api.DELETE("/casemanage/deleteRejCase",casemanage.DeleteRejCase)
 	//更新被拒案例
-	api.GET("/casemanage/updateRejCase",casemanage.EditRejCaseofSolution)
+	api.POST("/casemanage/updateRejCase",casemanage.EditRejCaseofSolution)
 	api.Use(middleware.JWTCheck())
 	{
 		//上传ipa和apk
