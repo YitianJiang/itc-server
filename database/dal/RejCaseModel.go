@@ -133,11 +133,12 @@ func QueryByConditions(param map[string]string) (*[]RejListInfo,int,error){
 	//db = db.Limit(pageSize).Offset((page-1)*pageSize)
 	var infos []rejCase
 	//db = db.Where(condition)
-	if err := db.Where(condition).Order("ID DESC").Limit((pageSize-0)).Offset(((page - 1)*pageSize)).Find(&infos).Error; err != nil{
+	if err := db.Where(condition).Order("ID DESC").Offset(((page - 1)*pageSize)).Limit(pageSize).Find(&infos).Error; err != nil{
 		logs.Error("%v", err)
 		return nil,0,err
 	}
 	var result []RejListInfo
+	result = make([]RejListInfo,0)
 	for _,item := range infos{
 		var rejInfo RejListInfo
 		rejInfo.Id = int(item.ID)
@@ -148,7 +149,7 @@ func QueryByConditions(param map[string]string) (*[]RejListInfo,int,error){
 		rejInfo.Version = item.Version
 		rejInfo.PicLoc = picLocTrans(item.PicLoc)
 		rejInfo.Solution = item.Solution
-		logs.Info("数据库查询转换结果：%v",rejInfo)
+		//logs.Info("数据库查询转换结果：%v",rejInfo)
 		result=append(result, rejInfo)
 	}
 
