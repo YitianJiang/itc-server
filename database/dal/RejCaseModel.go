@@ -20,6 +20,9 @@ type rejCase struct {
 	picLoc 			string 		`json:"picLoc"`
 }
 
+type totalStruct struct {
+	total 			int 		`json:"total"`
+}
 /*
 struct used when show rejCases
 */
@@ -142,7 +145,7 @@ func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
 		result=append(result, rejInfo)
 	}
 
-	var total int
+	var total totalStruct
 	connect,err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
@@ -158,7 +161,7 @@ func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
 		logs.Error("query total record failed! %v", err)
 		return &result, 0, err
 	}
-	return &result,total,nil
+	return &result,total.total,nil
 }
 
 /*
