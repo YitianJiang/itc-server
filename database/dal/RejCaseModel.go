@@ -133,7 +133,7 @@ func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
 		logs.Error("%v", err)
 		return nil,0,err
 	}
-	var result = make([]rejListInfo,0)
+	var result []rejListInfo
 	for _,item := range infos{
 		var rejInfo rejListInfo
 		rejInfo.id = int(item.ID)
