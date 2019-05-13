@@ -21,7 +21,7 @@ type rejCase struct {
 }
 
 type totalStruct struct {
-	total 			int 		`json:"total"`
+	Total 			int 		`json:"total"`
 }
 /*
 struct used when show rejCases
@@ -117,8 +117,9 @@ func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
 	db := connection.Table(rejCase{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	condition := param["conditon"]
 	logs.Info("query rejCases by Conditions:%s",condition)
-	if condition != "" {
-		db = db.Where(condition)
+	if condition == "" {
+		condition = " 1=1 "
+		//db = db.Where(condition)
 	}
 	//pageI := param["page"]
 	//page,ok := pageI.(string)
@@ -128,7 +129,7 @@ func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
 	db = db.Limit(pageSize).Offset((page-1)*pageSize)
 	var infos []rejCase
 	//db = db.Where(condition)
-	if err := db.Order("ID DESC").Find(&infos).Error; err != nil{
+	if err := db.Where(condition).Order("ID DESC").Find(&infos).Error; err != nil{
 		logs.Error("%v", err)
 		return nil,0,err
 	}
@@ -142,7 +143,7 @@ func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
 		rejInfo.rejTime = item.RejTime
 		rejInfo.picLoc = picLocTrans(item.PicLoc)
 		rejInfo.solution = item.Solution
-		logs.Info("数据库查询结果：%v",item)
+		logs.Info("数据库查询转换结果：%v",rejInfo)
 		result=append(result, rejInfo)
 	}
 
@@ -155,14 +156,14 @@ func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
 	defer connect.Close()
 	dbCount := connect.Table(rejCase{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	logs.Info("query rejCases by Conditions:%s",condition)
-	if condition != "" {
-		dbCount = dbCount.Where(condition)
-	}
-	if err = dbCount.Select("count(ID) as total").Find(&total).Error; err != nil {
+	//if condition != "" {
+	//	dbCount = dbCount.Where(condition)
+	//}
+	if err = dbCount.Select("count(id) as total").Where(condition).Find(&total).Error; err != nil {
 		logs.Error("query total record failed! %v", err)
 		return &result, 0, err
 	}
-	return &result,total.total,nil
+	return &result,total.Total,nil
 }
 
 /*
