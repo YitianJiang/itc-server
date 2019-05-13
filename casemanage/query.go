@@ -220,7 +220,7 @@ func AddRejCase(c *gin.Context)  {
 		r.AppId,err = strconv.Atoi(c.Request.MultipartForm.Value["appId"][0])
 		r.AppName = c.Request.MultipartForm.Value["appName"][0]
 		r.RejRea = c.Request.MultipartForm.Value["rejRea"][0]
-		r.RejTime = c.Request.MultipartForm.Value["rejTime"][0]
+		r.RejTime = time.ParseInLocation("2006-01-02 15:04:05",c.Request.MultipartForm.Value["rejTime"][0],time.Local)
 		r.Solution = c.Request.MultipartForm.Value["solution"][0]
 	}
 	//param, _ := ioutil.ReadAll(c.Request.Body)
