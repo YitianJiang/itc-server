@@ -2,7 +2,9 @@ package casemanage
 
 import (
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/gopkg/logs"
+	"code.byted.org/gopkg/tos"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
@@ -11,7 +13,9 @@ import (
 	"code.byted.org/clientQA/itc-server/detect"
 	"os"
 	"io"
-	"io/ioutil"
+	"time"
+	"fmt"
+	"context"
 )
 
 
@@ -414,7 +418,7 @@ func Upload2Tos(path string) (string, error){
 	byte, err := ioutil.ReadFile(path)
 	if err != nil {
 		logs.Error("%s", "打开文件失败" + err.Error())
-		return nil,err
+		return "",err
 	}
 	key := fmt.Sprint(time.Now().UnixNano()) + "_" + fileName
 	logs.Info("key: " + key)
