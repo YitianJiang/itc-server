@@ -265,7 +265,15 @@ func AddRejCase(c *gin.Context)  {
 	if(len(files)>0){
 		for _,file := range files{
 			var filename = file.Filename
-			fileReal := file.Open()
+			fileReal,err := file.Open()
+			if err != nil {
+				c.JSON(http.StatusOK, gin.H{
+					"message":"图片处理失败，请联系相关人员！",
+					"errorCode":-1,
+				})
+				logs.Fatal("临时图片文件创建失败")
+				return
+			}
 			defer fileReal.Close()
 			filepath := _tmpDir + "/"+filename
 			out,err := os.Create(filepath)
