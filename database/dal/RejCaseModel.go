@@ -142,6 +142,7 @@ func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
 		rejInfo.rejTime = item.rejTime
 		rejInfo.picLoc = picLocTrans(item.picLoc)
 		rejInfo.solution = item.solution
+		logs.Info("数据库查询结果：%v",item)
 		result=append(result, rejInfo)
 	}
 
@@ -155,7 +156,7 @@ func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
 	dbCount := connect.Table(rejCase{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	logs.Info("query rejCases by Conditions:%s",condition)
 	if condition != "" {
-		db = db.Where(condition)
+		dbCount = dbCount.Where(condition)
 	}
 	if err = dbCount.Select("count(id) as total").Find(&total).Error; err != nil {
 		logs.Error("query total record failed! %v", err)
