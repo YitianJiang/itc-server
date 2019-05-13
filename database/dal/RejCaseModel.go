@@ -12,12 +12,12 @@ import (
 
 type rejCase struct {
 	gorm.Model
-	appId  			int 		`json:"appId"`
-	appName 		string 		`json:"appName"`
-	rejTime 		string 		`json:"rejTime"`
-	rejRea 			string 		`json:"rejRea"`
-	solution 		string 		`json:"solution"`
-	picLoc 			string 		`json:"picLoc"`
+	AppId  			int 		`json:"appId"`
+	AppName 		string 		`json:"appName"`
+	RejTime 		time.Time 	`json:"rejTime"`
+	RejRea 			string 		`json:"rejRea"`
+	Solution 		string 		`json:"solution"`
+	PicLoc 			string 		`json:"picLoc"`
 }
 
 type totalStruct struct {
@@ -30,7 +30,7 @@ type rejListInfo struct {
 	id 				int				`json:"id"`
 	appId 			int				`json:"appId"`
 	appName 		string 			`json:"appName"`
-	rejTime 		string 			`json:"rejTime"`
+	rejTime 		time.Time		`json:"rejTime"`
 	rejRea 			string 			`json:"rejRea"`
 	solution 		string 			`json:"solution"`
 	picLoc 			[]picInfo 		`json:"picLoc"`
@@ -46,7 +46,7 @@ struct used when add a rejCase
 type RejInfo struct {
 	AppId 			int 		`json:"appId"`
 	AppName 		string 		`json:"appName"`
-	RejTime 		string 		`json:"rejTime"`
+	RejTime 		time.Time 	`json:"rejTime"`
 	RejRea 			string 		`json:"rejRea"`
 	Solution 		string 		`json:"solution"`
 }
@@ -158,7 +158,7 @@ func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
 	if condition != "" {
 		dbCount = dbCount.Where(condition)
 	}
-	if err = dbCount.Select("count(id) as total").Find(&total).Error; err != nil {
+	if err = dbCount.Select("count(ID) as total").Find(&total).Error; err != nil {
 		logs.Error("query total record failed! %v", err)
 		return &result, 0, err
 	}
