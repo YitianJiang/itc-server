@@ -26,18 +26,18 @@ type totalStruct struct {
 /*
 struct used when show rejCases
 */
-type rejListInfo struct {
-	id 				int				`json:"id"`
-	appId 			int				`json:"appId"`
-	appName 		string 			`json:"appName"`
-	rejTime 		time.Time		`json:"rejTime"`
-	rejRea		string 			`json:"rejRea"`
-	solution 		string 			`json:"solution"`
-	picLoc 			[]picInfo 		`json:"picLoc"`
+type RejListInfo struct {
+	Id 				int				`json:"id"`
+	AppId 			int				`json:"appId"`
+	AppName 		string 			`json:"appName"`
+	RejTime 		time.Time		`json:"rejTime"`
+	RejRea		string 			`json:"rejRea"`
+	Solution 		string 			`json:"solution"`
+	PicLoc 			[]picInfo 		`json:"picLoc"`
 }
-type picInfo struct {
-	picName			string 		`json:"picName"`
-	picUrl			string		`json:"picUrl"`
+type PicInfo struct {
+	PicName			string 		`json:"picName"`
+	PicUrl			string		`json:"picUrl"`
 }
 
 /*
@@ -107,7 +107,7 @@ func (rejCase) TableName() string {
 	query rejCases meeting with conditions ind the db，without condition query all rejCases
 */
 
-func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
+func QueryByConditions(param map[string]string) (*[]RejListInfo,int,error){
 	connection,err :=database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed:%v",err)
@@ -133,16 +133,16 @@ func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
 		logs.Error("%v", err)
 		return nil,0,err
 	}
-	var result []rejListInfo
+	var result []RejListInfo
 	for _,item := range infos{
-		var rejInfo rejListInfo
-		rejInfo.id = int(item.ID)
-		rejInfo.appId = item.AppId
-		rejInfo.appName = item.AppName
-		rejInfo.rejRea = item.RejReason
-		rejInfo.rejTime = item.RejTime
-		rejInfo.picLoc = picLocTrans(item.PicLoc)
-		rejInfo.solution = item.Solution
+		var rejInfo RejListInfo
+		rejInfo.Id = int(item.ID)
+		rejInfo.AppId = item.AppId
+		rejInfo.AppName = item.AppName
+		rejInfo.RejRea = item.RejReason
+		rejInfo.RejTime = item.RejTime
+		rejInfo.PicLoc = picLocTrans(item.PicLoc)
+		rejInfo.Solution = item.Solution
 		logs.Info("数据库查询转换结果：%v",rejInfo)
 		result=append(result, rejInfo)
 	}
