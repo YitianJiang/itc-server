@@ -125,7 +125,7 @@ func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
 
 	page,err := strconv.Atoi(param["page"])
 	pageSize,err := strconv.Atoi(param["pageSize"])
-	db = db.Select("ID,app_id,app_name,rej_time,rej_reason,solution,pic_loc").Limit(pageSize).Offset((page-1)*pageSize)
+	db = db.Limit(pageSize).Offset((page-1)*pageSize)
 	var infos []rejCase
 	//db = db.Where(condition)
 	if err := db.Order("ID DESC").Find(&infos).Error; err != nil{
