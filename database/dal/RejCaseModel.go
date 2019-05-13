@@ -133,6 +133,7 @@ func QueryByConditions(param map[string]string) (*[]RejListInfo,int,error){
 	//db = db.Limit(pageSize).Offset((page-1)*pageSize)
 	var infos []rejCase
 	//db = db.Where(condition)
+	logs.Info("page=%s --------pageSize=%s",page,pageSize)
 	if err := db.Where(condition).Offset(((page - 1)*pageSize)).Limit(pageSize).Order("ID DESC").Find(&infos).Error; err != nil{
 		logs.Error("%v", err)
 		return nil,0,err
