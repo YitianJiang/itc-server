@@ -238,7 +238,7 @@ func UpdateRejCaseofSolution(data map[string]string) error {
 	condition := data["condition"]
 	solution := data["solution"]
 	err1 := db.Where(condition).Update(map[string]interface{}{
-		"update_at": time.Now(),
+		"updated_at": time.Now(),
 		"solution":  solution}).Error;
 	if err1 != nil {
 		logs.Error("update rejCase failes")
