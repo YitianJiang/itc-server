@@ -3,12 +3,12 @@ package casemanage
 import (
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/gopkg/logs"
-	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"path/filepath"
+	"code.byted.org/clientQA/itc-server/detect"
 )
 
 
@@ -61,8 +61,8 @@ func GetRejCasesByConditions(c *gin.Context){
 		})
 		return
 	}
-	var param map[string]interface{}
-	param = make(map[string]interface{})
+	var param map[string]string
+	param = make(map[string]string)
 	appId, ok := c.GetQuery("appId")
 	version,ok2 :=c.GetQuery("version")
 
@@ -208,11 +208,11 @@ func AddRejCase(c *gin.Context)  {
 	}
 	var r dal.RejInfo
 	if c.Request.MultipartForm != nil {
-		r.AppId = c.Request.MultipartForm.Value["appId"]
-		r.AppName = c.Request.MultipartForm.Value["appName"]
-		r.RejRea = c.Request.MultipartForm.Value["rejRea"]
-		r.RejTime = c.Request.MultipartForm.Value["rejTime"]
-		r.Solution = c.Request.MultipartForm.Value["solution"]
+		r.AppId,err = strconv.Atoi(c.Request.MultipartForm.Value["appId"][0])
+		r.AppName = c.Request.MultipartForm.Value["appName"][0]
+		r.RejRea = c.Request.MultipartForm.Value["rejRea"][0]
+		r.RejTime = c.Request.MultipartForm.Value["rejTime"][0]
+		r.Solution = c.Request.MultipartForm.Value["solution"][0]
 	}
 	//param, _ := ioutil.ReadAll(c.Request.Body)
 	//var r dal.RejInfo
@@ -246,8 +246,8 @@ func AddRejCase(c *gin.Context)  {
 	//	return
 	//}
 	files := c.Request.MultipartForm.File["uploadFile"]
-	_tmpDir := "./tmp/"+appId
-	exist, err := PathExists(_tmpDir)
+	_tmpDir := "./tmp/"+string(appId)
+	exist, err := detect.PathExists(_tmpDir)
 	if !exist{
 		os.Mkdir(_tmpDir, os.ModePerm)
 	}
