@@ -15,7 +15,7 @@ type rejCase struct {
 	AppId  			int 		`json:"appId"`
 	AppName 		string 		`json:"appName"`
 	RejTime 		time.Time 	`json:"rejTime"`
-	RejRea 			string 		`json:"rejRea"`
+	RejReason 		string 		`json:"rejRea"`
 	Solution 		string 		`json:"solution"`
 	PicLoc 			string 		`json:"picLoc"`
 }
@@ -31,7 +31,7 @@ type rejListInfo struct {
 	appId 			int				`json:"appId"`
 	appName 		string 			`json:"appName"`
 	rejTime 		time.Time		`json:"rejTime"`
-	rejRea 			string 			`json:"rejRea"`
+	rejRea		string 			`json:"rejRea"`
 	solution 		string 			`json:"solution"`
 	picLoc 			[]picInfo 		`json:"picLoc"`
 }
@@ -136,12 +136,12 @@ func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
 	for _,item := range infos{
 		var rejInfo rejListInfo
 		rejInfo.id = int(item.ID)
-		rejInfo.appId = item.appId
-		rejInfo.appName = item.appName
-		rejInfo.rejRea = item.rejRea
-		rejInfo.rejTime = item.rejTime
-		rejInfo.picLoc = picLocTrans(item.picLoc)
-		rejInfo.solution = item.solution
+		rejInfo.appId = item.AppId
+		rejInfo.appName = item.AppName
+		rejInfo.rejRea = item.RejReason
+		rejInfo.rejTime = item.RejTime
+		rejInfo.picLoc = picLocTrans(item.PicLoc)
+		rejInfo.solution = item.Solution
 		logs.Info("数据库查询结果：%v",item)
 		result=append(result, rejInfo)
 	}
@@ -179,11 +179,11 @@ func InsertRejCase(data map[string]interface{}) error {
 	rejI := data["info"]
 	v,ok := rejI.(RejInfo)
 	if ok {
-		rejC.appId = v.AppId
-		rejC.appName = v.AppName
-		rejC.solution = v.Solution
-		rejC.rejTime = v.RejTime
-		rejC.rejRea = v.RejRea
+		rejC.AppId = v.AppId
+		rejC.AppName = v.AppName
+		rejC.Solution = v.Solution
+		rejC.RejTime = v.RejTime
+		rejC.RejReason = v.RejRea
 	}
 	s := data["picPath"]
 	loc,ok := s.(string)
