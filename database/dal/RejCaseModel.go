@@ -7,6 +7,7 @@ import (
 	"code.byted.org/gopkg/logs"
 	"time"
 	"strconv"
+	"strings"
 )
 
 type rejCase struct {
@@ -116,9 +117,15 @@ func QueryByConditions(param map[string]interface{}) (*[]rejListInfo,int,error){
 	if condition != "" {
 		db = db.Where(condition)
 	}
-	page := strconv.Atoi(param["page"])
+	pageI := param["page"]
+	page,ok := pageI.(string)
+	var pageInt int
+	if ok {
+		pageInt = strconv.Atoi(page)
+	}
+	//page := strconv.Atoi(param["page"])
 	pageSize := param["pageSize"]
-	db = db.Select("id","app_id","app_name","rej_time","rej_reason","solution","pic_loc").Limit(pageSize).Offset((page-1)*pageSize)
+	db = db.Select("id","app_id","app_name","rej_time","rej_reason","solution","pic_loc").Limit(pageSize).Offset((pageInt-1)*pageSize)
 	var infos = make([]rejCase,0)
 	//db = db.Where(condition)
 	if err := db.Order("key_word ASC").Find(&infos).Error; err != nil{
@@ -135,7 +142,7 @@ func QueryByConditions(param map[string]interface{}) (*[]rejListInfo,int,error){
 		rejInfo.rejTime = item.rejTime
 		rejInfo.picLoc = picLocTrans(item.picLoc)
 		rejInfo.solution = item.solution
-		result.append(result, rejInfo)
+		result=append(result, rejInfo)
 	}
 
 	var total int
@@ -219,10 +226,10 @@ func UpdateRejCaseofSolution(data map[string]string) error {
 	db := connection.Table(rejCase{}.TableName())
 	defer connection.Close()
 	condition := data["condition"]
-	solution := data["solution"]
+	solu := data["solution"]
 	err := db.Where(condition).Update(map[string]interface{}{
 		"update_at": time.Now(),
-		"solution":  solution}).Error;
+		"solution":  solu}).Error;
 	if err != nil {
 		logs.Error("update rejCase failes")
 		return err
@@ -241,7 +248,7 @@ func picLocTrans(path string) []picInfo{
 		var pic picInfo
 		pic.picName = values[0]
 		pic.picUrl = values[1]
-		result.append(result, pic)
+		result = append(result, pic)
 	}
 	return result
 
