@@ -6,6 +6,7 @@ import (
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"time"
+	"strconv"
 )
 
 type rejCase struct {
@@ -118,13 +119,13 @@ func QueryByConditions(param map[string]interface{}) (*[]rejListInfo,int,error){
 	page := strconv.Atoi(param["page"])
 	pageSize := param["pageSize"]
 	db = db.Select("id","app_id","app_name","rej_time","rej_reason","solution","pic_loc").Limit(pageSize).Offset((page-1)*pageSize)
-	var infos = make([]rejCase,0,0)
+	var infos = make([]rejCase,0)
 	//db = db.Where(condition)
 	if err := db.Order("key_word ASC").Find(&infos).Error; err != nil{
 		logs.Error("%v", err)
 		return nil,0,err
 	}
-	var result = make([]rejListInfo,0,0)
+	var result = make([]rejListInfo,0)
 	for _,item := range infos{
 		var rejInfo rejListInfo
 		rejInfo.id = int(item.ID)
@@ -183,7 +184,7 @@ func InsertRejCase(data map[string]interface{}) error {
 	}
 	rejC.CreatedAt = time.Now()
 
-	if err = connection.Table(RejCaseStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&rejC).Error; err != nil {
+	if err = connection.Table(rejCase{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&rejC).Error; err != nil {
 		logs.Error("update self check item failed, %v", err)
 		return err
 	}
@@ -230,7 +231,7 @@ func UpdateRejCaseofSolution(data map[string]string) error {
 }
 
 func picLocTrans(path string) []picInfo{
-	var result = make([]picInfo,0,0)
+	var result = make([]picInfo,0)
 	if path ==""{
 		return result
 	}
