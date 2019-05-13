@@ -104,7 +104,7 @@ func (rejCase) TableName() string {
 	query rejCases meeting with conditions ind the db，without condition query all rejCases
 */
 
-func QueryByConditions(param map[string]interface{}) (*[]rejListInfo,int,error){
+func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
 	connection,err :=database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed:%v",err)
@@ -117,15 +117,12 @@ func QueryByConditions(param map[string]interface{}) (*[]rejListInfo,int,error){
 	if condition != "" {
 		db = db.Where(condition)
 	}
-	pageI := param["page"]
-	page,ok := pageI.(string)
-	var pageInt int
-	if ok {
-		pageInt = strconv.Atoi(page)
-	}
-	//page := strconv.Atoi(param["page"])
-	pageSize := param["pageSize"]
-	db = db.Select("id","app_id","app_name","rej_time","rej_reason","solution","pic_loc").Limit(pageSize).Offset((pageInt-1)*pageSize)
+	//pageI := param["page"]
+	//page,ok := pageI.(string)
+
+	page := strconv.Atoi(param["page"])
+	pageSize := strconv.Atoi(param["pageSize"])
+	db = db.Select("id","app_id","app_name","rej_time","rej_reason","solution","pic_loc").Limit(pageSize).Offset((page-1)*pageSize)
 	var infos = make([]rejCase,0)
 	//db = db.Where(condition)
 	if err := db.Order("key_word ASC").Find(&infos).Error; err != nil{
@@ -226,10 +223,10 @@ func UpdateRejCaseofSolution(data map[string]string) error {
 	db := connection.Table(rejCase{}.TableName())
 	defer connection.Close()
 	condition := data["condition"]
-	solu := data["solution"]
+	solution1 := data["solution"]
 	err := db.Where(condition).Update(map[string]interface{}{
 		"update_at": time.Now(),
-		"solution":  solu}).Error;
+		"solution":  solution1}).Error;
 	if err != nil {
 		logs.Error("update rejCase failes")
 		return err
