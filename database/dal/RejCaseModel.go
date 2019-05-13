@@ -18,6 +18,7 @@ type rejCase struct {
 	RejReason 		string 		`json:"rejRea"`
 	Solution 		string 		`json:"solution"`
 	PicLoc 			string 		`json:"picLoc"`
+	Version 		string		`json:"version"`
 }
 
 type totalStruct struct {
@@ -31,9 +32,10 @@ type RejListInfo struct {
 	AppId 			int				`json:"appId"`
 	AppName 		string 			`json:"appName"`
 	RejTime 		time.Time		`json:"rejTime"`
-	RejRea		string 			`json:"rejRea"`
+	RejRea			string 			`json:"rejRea"`
 	Solution 		string 			`json:"solution"`
 	PicLoc 			[]PicInfo 		`json:"picLoc"`
+	Version 		string			`json:"version"`
 }
 type PicInfo struct {
 	PicName			string 		`json:"picName"`
@@ -49,6 +51,7 @@ type RejInfo struct {
 	RejTime 		time.Time 	`json:"rejTime"`
 	RejRea 			string 		`json:"rejRea"`
 	Solution 		string 		`json:"solution"`
+	Version 		string		`json:"version"`
 }
 
 func (rejCase) TableName() string {
@@ -115,7 +118,7 @@ func QueryByConditions(param map[string]string) (*[]RejListInfo,int,error){
 	}
 	defer connection.Close()
 	db := connection.Table(rejCase{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	condition := param["conditon"]
+	condition := param["condition"]
 	logs.Info("query rejCases by Conditions:%s",condition)
 	if condition == "" {
 		condition = " 1=1 "
@@ -141,6 +144,7 @@ func QueryByConditions(param map[string]string) (*[]RejListInfo,int,error){
 		rejInfo.AppName = item.AppName
 		rejInfo.RejRea = item.RejReason
 		rejInfo.RejTime = item.RejTime
+		rejInfo.Version = item.Version
 		rejInfo.PicLoc = picLocTrans(item.PicLoc)
 		rejInfo.Solution = item.Solution
 		logs.Info("数据库查询转换结果：%v",rejInfo)
@@ -185,6 +189,7 @@ func InsertRejCase(data map[string]interface{}) error {
 		rejC.Solution = v.Solution
 		rejC.RejTime = v.RejTime
 		rejC.RejReason = v.RejRea
+		rejC.Version = v.Version
 	}
 	s := data["picPath"]
 	loc,ok := s.(string)
