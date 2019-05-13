@@ -120,7 +120,7 @@ func GetRejCasesByConditions(c *gin.Context){
 		})
 		return
 	}
-	logs.Info("query with condition success")
+	logs.Info("query with condition success,信息为：%v",*items)
 	c.JSON(http.StatusOK, gin.H{
 		"message":"success",
 		"errorCode":0,
