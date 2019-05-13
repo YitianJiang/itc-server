@@ -9,6 +9,9 @@ import (
 	"strconv"
 	"path/filepath"
 	"code.byted.org/clientQA/itc-server/detect"
+	"os"
+	"io"
+	"io/ioutil"
 )
 
 
@@ -98,8 +101,8 @@ func GetRejCasesByConditions(c *gin.Context){
 		condition+=" version="+version
 	}
 	param["condition"] = condition
-	param["page"] = page
-	param["pageSize"] = pageSize
+	param["page"] = string(page)
+	param["pageSize"] = string(pageSize)
 
 	items,total,err := dal.QueryByConditions(param)
 	if err!=nil{
@@ -277,7 +280,7 @@ func AddRejCase(c *gin.Context)  {
 				return
 			}
 
-			returnUrl,err := upload2Tos(filepath)
+			returnUrl,err := Upload2Tos(filepath)
 			if err != nil {
 				logs.Error("图片上传tos失败")
 				c.JSON(http.StatusOK, gin.H{
@@ -385,14 +388,14 @@ func EditRejCaseofSolution(c *gin.Context)  {
 	data["condition"] = "id="+id
 	data["solution"] = solution
 	result := dal.UpdateRejCaseofSolution(data)
-	if result != null {
+	if result != nil {
 		c.JSON(http.StatusOK,gin.H{
-			"message":reslut,
+			"message":result,
 			"errorCode":-1,
 		})
 		return
 	}
-	logs.Infos("edit success")
+	logs.Info("edit success")
 	c.JSON(http.StatusOK,gin.H{
 		"errorCode":0,
 		"message":"success",
