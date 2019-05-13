@@ -5,6 +5,7 @@ import (
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
+	"time"
 )
 
 type rejCase struct {
@@ -45,7 +46,7 @@ type RejInfo struct {
 	Solution 		string 		`json:"solution"`
 }
 
-func (RejCaseStruct) TableName() string {
+func (rejCase) TableName() string {
 	return "tb_rej_cases"
 }
 
@@ -108,20 +109,20 @@ func QueryByConditions(param map[string]interface{}) (*[]rejListInfo,int,error){
 		return nil,0,err
 	}
 	defer connection.Close()
-	db := connection.Table(RejCaseStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	db := connection.Table(rejCase{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	condition := param["conditon"]
 	logs.Info("query rejCases by Conditions:%s",condition)
 	if condition != "" {
 		db = db.Where(condition)
 	}
-	page := param["page"]
+	page := strconv.Atoi(param["page"])
 	pageSize := param["pageSize"]
 	db = db.Select("id","app_id","app_name","rej_time","rej_reason","solution","pic_loc").Limit(pageSize).Offset((page-1)*pageSize)
 	var infos = make([]rejCase,0,0)
 	//db = db.Where(condition)
 	if err := db.Order("key_word ASC").Find(&infos).Error; err != nil{
 		logs.Error("%v", err)
-		return nil,err
+		return nil,0,err
 	}
 	var result = make([]rejListInfo,0,0)
 	for _,item := range infos{
@@ -133,17 +134,17 @@ func QueryByConditions(param map[string]interface{}) (*[]rejListInfo,int,error){
 		rejInfo.rejTime = item.rejTime
 		rejInfo.picLoc = picLocTrans(item.picLoc)
 		rejInfo.solution = item.solution
-		reuslt.append(result, rejInfo)
+		result.append(result, rejInfo)
 	}
 
-	var total uint
+	var total int
 	connect,err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return nil,0,err
 	}
 	defer connect.Close()
-	dbCount := connect.Table(RejCaseStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	dbCount := connect.Table(rejCase{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	logs.Info("query rejCases by Conditions:%s",condition)
 	if condition != "" {
 		db = db.Where(condition)
@@ -169,7 +170,7 @@ func InsertRejCase(data map[string]interface{}) error {
 	rejI := data["info"]
 	v,ok := rejI.(RejInfo)
 	if ok {
-		rejC.appId = v.AppIdppId
+		rejC.appId = v.AppId
 		rejC.appName = v.AppName
 		rejC.solution = v.Solution
 		rejC.rejTime = v.RejTime
@@ -198,7 +199,7 @@ func DeleteCase(id int) error  {
 		logs.Error("Connect to DB failed:%v",err)
 		return err
 	}
-	db := connection.Table(RejCaseStruct{}.TableName())
+	db := connection.Table(rejCase{}.TableName())
 	defer connection.Close()
 	if err := db.Where("id = ?", id).LogMode(_const.DB_LOG_MODE).Delete(&rejCase{}).Error; err != nil{
 		logs.Error("%v", err)
@@ -214,7 +215,7 @@ func UpdateRejCaseofSolution(data map[string]string) error {
 		logs.Error("Connect to DB failed:%v", err)
 		return err
 	}
-	db := connection.Table(RejCaseStruct{}.TableName())
+	db := connection.Table(rejCase{}.TableName())
 	defer connection.Close()
 	condition := data["condition"]
 	solution := data["solution"]
