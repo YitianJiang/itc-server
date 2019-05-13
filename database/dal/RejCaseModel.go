@@ -224,12 +224,12 @@ func UpdateRejCaseofSolution(data map[string]string) error {
 	defer connection.Close()
 	condition := data["condition"]
 	solution := data["solution"]
-	err := db.Where(condition).Update(map[string]interface{}{
+	err1 := db.Where(condition).Update(map[string]interface{}{
 		"update_at": time.Now(),
 		"solution":  solution}).Error;
-	if err != nil {
+	if err1 != nil {
 		logs.Error("update rejCase failes")
-		return err
+		return err1
 	}
 	return nil
 }
