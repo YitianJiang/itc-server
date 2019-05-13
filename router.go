@@ -4,6 +4,7 @@ import (
 	"code.byted.org/clientQA/itc-server/detect"
 	"code.byted.org/clientQA/itc-server/middleware"
 	"code.byted.org/gin/ginex"
+	"code.byted.org/clientQA/itc-server/casemanage"
 )
 
 func InitRouter(r *ginex.Engine){
