@@ -112,8 +112,9 @@ func GetRejCasesByConditions(c *gin.Context){
 
 	}
 	param["condition"] = condition
-	param["page"] = string(page)
-	param["pageSize"] = string(pageSize)
+	param["page"] = strconv.Itoa(page)
+	param["pageSize"] = strconv.Itoa(pageSize)
+	logs.Info("before param:%v",param)
 
 	items,total,err := dal.QueryByConditions(param)
 	if err!=nil{
