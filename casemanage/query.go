@@ -16,6 +16,8 @@ import (
 	"time"
 	"fmt"
 	"context"
+	"math/rand"
+	"bytes"
 )
 
 
@@ -425,7 +427,7 @@ func Upload2Tos(path string) (string, error){
 	err = tosPutClient.PutObject(context, key, int64(len(byte)), bytes.NewBuffer(byte))
 	if err != nil {
 		logs.Error("%s", "上传tos失败：" + err.Error())
-		return nil,err
+		return "",err
 	}
 	domains := tos.GetDomainsForLargeFile("TT", path)
 	domain := domains[rand.Intn(len(domains)-1)]
