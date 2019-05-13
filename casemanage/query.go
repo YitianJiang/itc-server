@@ -352,8 +352,8 @@ func AddRejCase(c *gin.Context)  {
 	delete a rejCase
  */
 func DeleteRejCase(c *gin.Context)  {
-	idS,ok := c.GetQuery("id")
-	if !ok {
+	idS := c.PostForm("id")
+	if idS == "" {
 		logs.Error("no ID")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少ID参数！",
@@ -389,8 +389,8 @@ func DeleteRejCase(c *gin.Context)  {
 }
 
 func EditRejCaseofSolution(c *gin.Context)  {
-	id,ok := c.GetQuery("id")
-	if !ok {
+	id := c.PostForm("id")
+	if id == "" {
 		logs.Error("no ID")
 		c.JSON(http.StatusOK,gin.H{
 			"message":"没有案例id",
@@ -398,11 +398,11 @@ func EditRejCaseofSolution(c *gin.Context)  {
 		})
 		return
 	}
-	solution,ok := c.GetQuery("solution")
-	if (!ok || (ok && solution == "")){
+	solution := c.PostForm("solution")
+	if solution == "" {
 		logs.Error("no solution info")
 		c.JSON(http.StatusOK,gin.H{
-			"message":"没有案例id",
+			"message":"没有案例解决方法",
 			"errorCode":-1,
 		})
 		return
