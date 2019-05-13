@@ -120,8 +120,8 @@ func QueryByConditions(param map[string]string) (*[]rejListInfo,int,error){
 	//pageI := param["page"]
 	//page,ok := pageI.(string)
 
-	page := strconv.Atoi(param["page"])
-	pageSize := strconv.Atoi(param["pageSize"])
+	page,err := strconv.Atoi(param["page"])
+	pageSize,err := strconv.Atoi(param["pageSize"])
 	db = db.Select("id","app_id","app_name","rej_time","rej_reason","solution","pic_loc").Limit(pageSize).Offset((page-1)*pageSize)
 	var infos = make([]rejCase,0)
 	//db = db.Where(condition)
@@ -223,10 +223,10 @@ func UpdateRejCaseofSolution(data map[string]string) error {
 	db := connection.Table(rejCase{}.TableName())
 	defer connection.Close()
 	condition := data["condition"]
-	solution1 := data["solution"]
+	solution := data["solution"]
 	err := db.Where(condition).Update(map[string]interface{}{
 		"update_at": time.Now(),
-		"solution":  solution1}).Error;
+		"solution":  solution}).Error;
 	if err != nil {
 		logs.Error("update rejCase failes")
 		return err
