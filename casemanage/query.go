@@ -15,7 +15,7 @@ import (
 /*
 	query rejCases with conditions
  */
-func getRejCasesByConditions(c *gin.Context){
+func GetRejCasesByConditions(c *gin.Context){
 	pageS,ok := c.GetQuery("page")
 	if !ok{
 		logs.Error("缺少page参数！")
@@ -196,7 +196,7 @@ get the list of rejCases (all)
 /*
 	add a new rejCase
  */
-func addRejCase(c *gin.Context)  {
+func AddRejCase(c *gin.Context)  {
 	err := c.Request.ParseMultipartForm(1 << 20)
 	if err != nil {
 		logs.Error("info get failed!")
@@ -325,7 +325,7 @@ func addRejCase(c *gin.Context)  {
 /*
 	delete a rejCase
  */
-func deleteRejCase(c *gin.Context)  {
+func DeleteRejCase(c *gin.Context)  {
 	idS,ok := c.GetQuery("id")
 	if !ok {
 		logs.Error("no ID")
@@ -362,7 +362,7 @@ func deleteRejCase(c *gin.Context)  {
 
 }
 
-func editRejCaseofSolution(c *gin.Context)  {
+func EditRejCaseofSolution(c *gin.Context)  {
 	id,ok := c.GetQuery("id")
 	if !ok {
 		logs.Error("no ID")
@@ -401,7 +401,7 @@ func editRejCaseofSolution(c *gin.Context)  {
 }
 
 
-func upload2Tos(path string) (string, error){
+func Upload2Tos(path string) (string, error){
 
 	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME, _const.TOS_BUCKET_KEY)
 	context, cancel := context.WithTimeout(context.Background(), time.Minute)
