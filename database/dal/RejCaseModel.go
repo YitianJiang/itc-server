@@ -188,7 +188,7 @@ func InsertRejCase(data map[string]interface{}) error {
 	s := data["picPath"]
 	loc,ok := s.(string)
 	if ok {
-		rejC.picLoc = loc
+		rejC.PicLoc = loc
 	}
 	rejC.CreatedAt = time.Now()
 
