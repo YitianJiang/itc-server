@@ -63,5 +63,13 @@ func InitRouter(r *ginex.Engine){
 		api.POST("/lark/updateGroup", detect.UpdateLarkGroup)
 		//删除lark群配置
 		api.DELETE("/lark/deleteGroup", detect.DeleteGroupInfoById)
+		//查询被拒案例
+		api.GET("/casemanage/queryRejCases",casemanage.GetRejCasesByConditions)
+		//新增被拒案例
+		api.POST("/casemanage/addRejCase",casemanage.AddRejCase)
+		//删除被拒案例
+		api.GET("/casemanage/deleteRejCase",casemanage.DeleteRejCase)
+		//更新被拒案例
+		api.GET("/casemanage/updateRejCase",casemanage.EditRejCaseofSolution)
 	}
 }
