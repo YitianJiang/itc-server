@@ -25,7 +25,8 @@ type CertificateModel struct {
 	PemFile string `gorm:"column:pem_file" json:"pem_file"`
 	PemFileName string `gorm:"column:pem_file_name" json:"pem_file_name"`
 }
-func (CertificateModel) TableName() string {
+
+func (c CertificateModel) TableName() string {
 	return "tb_certificate"
 }
 

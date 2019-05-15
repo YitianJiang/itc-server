@@ -138,6 +138,7 @@ func GetCertificates(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
+		"errorCode" : 0,
 		"data": certificate,
 	})
 }
@@ -149,9 +150,8 @@ func AddCertificate(c *gin.Context){
 	name, f := c.Get("username")
 	if !f {
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "未获取到用户信息！",
 			"errorCode" : -1,
-			"data" : "未获取到用户信息！",
+			"message" : "未获取到用户信息！",
 		})
 		return
 	}
@@ -159,6 +159,7 @@ func AddCertificate(c *gin.Context){
 	file, header, _ := c.Request.FormFile("certificate_file")
 	if file == nil {
 		c.JSON(http.StatusOK, gin.H{
+			"errorCode" : -1,
 			"message":"未选择上传的文件！",
 		})
 		logs.Error("未选择上传的文件！")
@@ -222,6 +223,7 @@ func AddCertificate(c *gin.Context){
 	if err != nil{
 		logs.Error("访问处理失败！", err.Error())
 		c.JSON(http.StatusUnauthorized, gin.H{
+			"errorCode" : -1,
 			"message": "证书处理失败！可能是证书本身的格式问题，或者是密码错误",
 		})
 	}
@@ -231,6 +233,7 @@ func AddCertificate(c *gin.Context){
 
 	if len(result) == 1{
 		c.JSON(http.StatusUnauthorized, gin.H{
+			"errorCode" : -1,
 			"message": "证书处理失败！可能是证书本身的格式问题，或者是密码错误",
 		})
 		return
@@ -275,10 +278,12 @@ func AddCertificate(c *gin.Context){
 
 	if dal.InsertCertificate(certificateModel){
 		c.JSON(http.StatusOK, gin.H{
+			"errorCode" : 0,
 			"message": "OK!",
 		})
 	}else{
 		c.JSON(http.StatusBadRequest, gin.H{
+			"errorCode" : -1,
 			"message": "Failed!",
 		})
 	}
