@@ -1,6 +1,7 @@
 package main
 
 import (
+	"code.byted.org/clientQA/itc-server/controllers"
 	"code.byted.org/clientQA/itc-server/detect"
 	"code.byted.org/clientQA/itc-server/middleware"
 	"code.byted.org/gin/ginex"
@@ -15,6 +16,7 @@ func InitRouter(r *ginex.Engine){
 	r.GET("/t/generateToken", detect.GetToken)
 	//hive查询接口
 	r.GET("/hive/query", detect.HiveQuery)
+
 	//upload
 	//r.GET("/uploadTos", detect.UploadTos)
 	api.Use(middleware.JWTCheck())
@@ -63,5 +65,13 @@ func InitRouter(r *ginex.Engine){
 		api.POST("/lark/updateGroup", detect.UpdateLarkGroup)
 		//删除lark群配置
 		api.DELETE("/lark/deleteGroup", detect.DeleteGroupInfoById)
+		//添加证书
+		api.POST("/certificate", controllers.AddCertificate)
+		//查询展示证书
+		api.GET("/certificates", controllers.GetCertificates)
+		//过期证书提醒
+		api.GET("/certificates/controller", controllers.CertificateController)
+
+
 	}
 }
