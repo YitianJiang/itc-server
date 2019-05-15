@@ -45,8 +45,8 @@ func CertificateController(c *gin.Context){
 				//发送过期信息的用户列表
 				var newMails []string
 				newMails = append(newMails, strings.Replace(creator, " ", "", -1))
-				//newMails = append(newMails, "gongrui")
-				//newMails = append(newMails, "chenyujun")
+				newMails = append(newMails, "gongrui")
+				newMails = append(newMails, "chenyujun")
 				itemMap := map[string]interface{}{
 					"appname":appName,
 					"usage":usage,
@@ -166,7 +166,7 @@ func AddCertificate(c *gin.Context){
 	}
 	defer file.Close()
 
-	certificateFileName := header.Filename  //获取证书名称
+	certificateFileName := header.Filename //获取证书名称
 	pem := c.PostForm("pem")        //是否需要返回pem_file标志
 
 	//查询证书过期日期
@@ -210,7 +210,6 @@ func AddCertificate(c *gin.Context){
 	}()
 
 	//得到证书日期，pem等信息后存入数据库
-
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if err != nil{
 		logs.Error("访问处理失败！", err.Error())
@@ -234,6 +233,7 @@ func AddCertificate(c *gin.Context){
 	certificateModel.Creator = name.(string)
 	certificateModel.ExpireTime = strconv.FormatFloat(result["expire_time"].(float64), 'E', -1, 64)
 	certificateModel.Appname = c.PostForm("appName")
+	certificateModel.AppId, _ = strconv.Atoi(c.PostForm("appId"))
 	certificateModel.Usage = c.PostForm("application")
 	certificateModel.Mails = c.PostForm("mails")
 	certificateModel.Type = c.PostForm("type")
@@ -242,13 +242,14 @@ func AddCertificate(c *gin.Context){
 
 	//如果pem=on，返回中包含pem_file字符串
 	if _, ok := result["pem_file"]; ok{
-		pem_file_name := strings.Split(certificateFileName,".")[0]+".pem"
+		pem_file_name := strings.Split(certificateFileName, ".")[0] +".pem"
 		certificateModel.PemFile = result["pem_file"].(string)
 		certificateModel.PemFileName = pem_file_name
 	}
 
 	//证书上传到TOS，获取访问地址并存到数据库certificate_file那一列
-	localCertificatePath := "./"+ certificateFileName
+	localCertificatePath := "./"+ c.PostForm("appId") + "." + strings.Split(certificateFileName, ".")[1]
+	fmt.Println(localCertificatePath)
 	newFile, err := os.Create(localCertificatePath)   //本地创建临时文件
 	if err!= nil{
 		logs.Error("创建临时失败！", err.Error())
@@ -297,7 +298,7 @@ func uploadTos(path string) string {
 	err = tosPutClient.PutObject(context, key, int64(len(byte)), bytes.NewBuffer(byte))
 	if err != nil {
 		logs.Error("%s", "上传tos失败：" + err.Error())
-
+		return ""
 	}
 	domains := tos.GetDomainsForLargeFile("TT", path)
 	domain := domains[rand.Intn(len(domains)-1)]
