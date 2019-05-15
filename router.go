@@ -1,6 +1,7 @@
 package main
 
 import (
+	"code.byted.org/clientQA/itc-server/controllers"
 	"code.byted.org/clientQA/itc-server/detect"
 	"code.byted.org/clientQA/itc-server/middleware"
 	"code.byted.org/gin/ginex"
@@ -13,6 +14,7 @@ func InitRouter(r *ginex.Engine){
 	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
 	//获取鉴权接口
 	r.GET("/t/generateToken", detect.GetToken)
+
 	api.Use(middleware.JWTCheck())
 	{
 		//上传ipa和apk
@@ -59,5 +61,13 @@ func InitRouter(r *ginex.Engine){
 		api.POST("/lark/updateGroup", detect.UpdateLarkGroup)
 		//删除lark群配置
 		api.DELETE("/lark/deleteGroup", detect.DeleteGroupInfoById)
+		//添加证书
+		api.POST("/certificate", controllers.AddCertificate)
+		//查询展示证书
+		api.GET("/certificates", controllers.GetCertificates)
+		//过期证书提醒
+		api.GET("/certificates/controller", controllers.CertificateController)
+
+
 	}
 }
