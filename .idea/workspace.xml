@@ -2,8 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="20cc60d3-5eb2-456a-a7e0-94990642fb52" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/controllers/certificates.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/database/dal/CertificateModel.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/itc-server.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/router.go" beforeDir="false" afterPath="$PROJECT_DIR$/router.go" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
