@@ -18,12 +18,30 @@ import (
 	"context"
 	"math/rand"
 	"bytes"
+	"encoding/json"
+	"strings"
 )
+
+/*
+更新数据输入结构
+ */
+type EditStruct struct {
+	Id 				int  		`json:"id"`
+	Solution 		string		`json:"solution"`
+}
+/*
+删除数据输入结构
+ */
+type DeleteStruct struct {
+	Id 				int  		`json:"id"`
+}
 
 
 /*
 	query rejCases with conditions
  */
+
+
 func GetRejCasesByConditions(c *gin.Context){
 	pageS,ok := c.GetQuery("page")
 	if !ok{
@@ -75,42 +93,32 @@ func GetRejCasesByConditions(c *gin.Context){
 	appId, ok := c.GetQuery("appId")
 	version,ok2 :=c.GetQuery("version")
 
-	//no conditions,query all rejCases
-	//if !(ok||ok2){
-	//	logs.Info("no condition,query all rejCases!")
-	//	items,total,err:=dal.QueryAllRejCases(page,pageSize)
-	//	if err!=nil{
-	//		c.JSON(http.StatusOK,gin.H{
-	//			"message":"数据库操作失败",
-	//			"errorCode":-1,
-	//			"total":total,
-	//			"data":err,
-	//		})
-	//		return
-	//	}
-	//
-	//	c.JSON(http.StatusOK, gin.H{
-	//		"message":"success",
-	//		"errorCode":0,
-	//		"total":total,
-	//		"data":*items,
-	//	})
-	//	return
-	//}
 
 	//query with conditions
 	condition:=""
 	if ok{
-		condition+=" app_id="+appId
+		appIdInt,err := strconv.Atoi(appId)
+		if err != nil {
+			logs.Error("appId参数不符合要求")
+			c.JSON(http.StatusOK, gin.H{
+				"message" : "appId参数不符合要求！",
+				"errorCode" : -1,
+				"total":0,
+				"data" : "appId参数不符合要求！",
+			})
+			return
+		}
+		condition+=" app_id="+fmt.Sprint(appIdInt)
 	}
 	if ok2{
 		if ok {
-			condition+=" and version="+version
+			condition+=" and version like '%"+version+"%'"
 		}else{
-			condition+=" version="+version
+			condition+=" version like '%"+version+"%'"
 		}
 
 	}
+
 	param["condition"] = condition
 	param["page"] = strconv.Itoa(page)
 	param["pageSize"] = strconv.Itoa(pageSize)
@@ -126,7 +134,7 @@ func GetRejCasesByConditions(c *gin.Context){
 		})
 		return
 	}
-	logs.Info("query with condition success,信息为：%v",*items)
+	logs.Info("query with condition success")
 	c.JSON(http.StatusOK, gin.H{
 		"message":"success",
 		"errorCode":0,
@@ -137,141 +145,43 @@ func GetRejCasesByConditions(c *gin.Context){
 
 }
 
-/*
-get the list of rejCases (all)
- */
-//func getAllRejCases(c *gin.Context){
-//
-//	pageS,ok := c.GetQuery("page")
-//	if !ok{
-//		logs.Error("缺少page参数！")
-//		c.JSON(http.StatusOK, gin.H{
-//			"message" : "缺少page参数！",
-//			"errorCode" : -1,
-//			"total":0,
-//			"data" : "缺少page参数！",
-//		})
-//		return
-//	}
-//	page,err := strconv.Atoi(pageS)
-//	if err !=nil {
-//		logs.Error("page参数不符合要求")
-//		c.JSON(http.StatusOK, gin.H{
-//			"message" : "page参数不符合要求！",
-//			"errorCode" : -1,
-//			"total":0,
-//			"data" : "page参数不符合要求！",
-//		})
-//		return
-//	}
-//
-//	pageSizeS,ok2 := c.GetQuery("pageSize")
-//	if !ok2 {
-//		logs.Error("缺少pageSize参数")
-//		c.JSON(http.StatusOK,gin.H{
-//			"message":"缺少pageSize参数",
-//			"errorCode" : -1,
-//			"total":0,
-//			"data" : "缺少pageSize参数！",
-//		})
-//		return
-//	}
-//	pageSize,err2 := strconv.Atoi(pageSizeS)
-//	if err2 != nil{
-//		logs.Error("pageSize参数不符合要求")
-//		c.JSON(http.StatusOK, gin.H{
-//			"message" : "pageSize参数不符合要求！",
-//			"errorCode" : -1,
-//			"total":0,
-//			"data" : "pageSize参数不符合要求！",
-//		})
-//		return
-//	}
-//
-//	items,total,err:=dal.QueryAllRejCases(page,pageSize)
-//	if err!=nil{
-//		c.JSON(http.StatusOK,gin.H{
-//			"message":"数据库操作失败",
-//			"errorCode":-1,
-//			"total":total,
-//			"data":err,
-//		})
-//		return
-//	}
-//	logs.Info("query success")
-//	c.JSON(http.StatusOK, gin.H{
-//		"message":"success",
-//		"errorCode":0,
-//		"total":total,
-//		"data":*items,
-//	})
-//	return
-//}
 
 /*
 	add a new rejCase
  */
 func AddRejCase(c *gin.Context)  {
-	err := c.Request.ParseMultipartForm(1 << 20)
+	form,err := c.MultipartForm()
 	if err != nil {
-		logs.Error("info get failed!")
+		logs.Error("info get failed! %v",err)
 		c.JSON(http.StatusOK,gin.H{
 			"errorCode":-1,
 			"message":"获取post信息失败！",
 		})
 		return
 	}
+
 	var r dal.RejInfo
-	if c.Request.MultipartForm != nil {
-		r.AppId,err = strconv.Atoi(c.Request.MultipartForm.Value["appId"][0])
-		r.AppName = c.Request.MultipartForm.Value["appName"][0]
-		r.RejRea = c.Request.MultipartForm.Value["rejRea"][0]
-		r.RejTime,_ = time.ParseInLocation("2006-01-02 15:04:05",c.Request.MultipartForm.Value["rejTime"][0],time.Local)
-		r.Solution = c.Request.MultipartForm.Value["solution"][0]
-		r.Version = c.Request.MultipartForm.Value["version"][0]
-	}
-	//param, _ := ioutil.ReadAll(c.Request.Body)
-	//var r dal.RejInfo
-	//err := json.Unmarshal(param, &r)
-	//if err != nil {
-	//	logs.Error("参数格式错误,%v ", err)
-	//	c.JSON(http.StatusOK, gin.H{
-	//		"message" : "提交参数格式错误",
-	//		"errorCode" : -1,
-	//	})
-	//	return
-	//}
-	//
-	//err := c.Request.ParseMultipartForm(1 << 20)
-	//if err != nil {
-	//	logs.Error("photo upload failed!")
-	//	c.JSON(http.StatusOK,gin.H{
-	//		"errorCode":-1,
-	//		"message":"图片上传失败！",
-	//		"data":err,
-	//	})
-	//	return
-	//}
+		r.AppId,err = strconv.Atoi(form.Value["appId"][0])
+		r.AppName = form.Value["appName"][0]
+		r.RejRea = form.Value["rejRea"][0]
+		r.RejTime,_ = time.ParseInLocation("2006-01-02",form.Value["rejTime"][0],time.Local)
+		r.Solution = form.Value["solution"][0]
+		r.Version = form.Value["version"][0]
+
 	appId := r.AppId
-	//if appId == 0 {
-	//	logs.Error("appId参数不合法")
-	//	c.JSON(http.StatusOK, gin.H{
-	//		"message" : "appId参数不合法",
-	//		"errorCode" : -1,
-	//	})
-	//	return
-	//}
-	files := c.Request.MultipartForm.File["uploadFile"]
-	_tmpDir := "./tmp/"+string(appId)
+
+	files := form.File["uploadFile"]
+	_tmpDir := "./tmp/"+strconv.Itoa(appId)
 	exist, err := detect.PathExists(_tmpDir)
 	if !exist{
-		os.Mkdir(_tmpDir, os.ModePerm)
+		os.MkdirAll(_tmpDir, os.ModePerm)
 	}
-
 	var path = ""
 	if(len(files)>0){
 		for _,file := range files{
 			var filename = file.Filename
+			fileNameInfo := strings.Split(filename,".")
+
 			fileReal,err := file.Open()
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{
@@ -282,7 +192,7 @@ func AddRejCase(c *gin.Context)  {
 				return
 			}
 			defer fileReal.Close()
-			filepath := _tmpDir + "/"+filename
+			filepath := _tmpDir + "/"+fmt.Sprint(time.Now().UnixNano())+"."+fileNameInfo[len(fileNameInfo)-1]
 			out,err := os.Create(filepath)
 			defer out.Close()
 			if err != nil{
@@ -290,7 +200,7 @@ func AddRejCase(c *gin.Context)  {
 					"message":"图片处理失败，请联系相关人员！",
 					"errorCode":-1,
 				})
-				logs.Fatal("临时图片文件创建失败")
+				logs.Fatal("临时图片文件创建失败%v",err)
 				return
 			}
 			_, err = io.Copy(out, fileReal)
@@ -299,32 +209,25 @@ func AddRejCase(c *gin.Context)  {
 					"message":"安装包文件处理失败，请联系相关人员！",
 					"errorCode":-1,
 				})
-				logs.Fatal("临时图片保存失败")
+				logs.Fatal("临时图片保存失败%v",err)
 				return
 			}
 
 			returnUrl,err := Upload2Tos(filepath)
 			if err != nil {
-				logs.Error("图片上传tos失败")
+				logs.Error("图片上传tos失败%v",err)
 				c.JSON(http.StatusOK, gin.H{
 					"message":"图片上传tos失败",
 					"errorCode":-1,
 				})
 				return
 			}
-			//outputPath := "./rejCase/"+strconv.Itoa(appId)+"/"+file.Filename
-			//if err := c.SaveUploadedFile(file, outputPath); err != nil {
-			//	logs.Error("pic %s upload to tos failed!",file.Filename)
-			//	c.JSON(http.StatusOK,gin.H{
-			//		"errorCode":-1,
-			//		"message":"图片上传服务器失败！",
-			//		"data":err,
-			//	})
-			//	return
-			//}
+
 			path+=filename+"--"+returnUrl+";"
 			os.Remove(filepath)
 		}
+	}else{
+		logs.Info("-------------no files")
 	}
 	var data = make(map[string]interface{})
 	data["info"] = r
@@ -352,25 +255,19 @@ func AddRejCase(c *gin.Context)  {
 	delete a rejCase
  */
 func DeleteRejCase(c *gin.Context)  {
-	idS := c.PostForm("id")
-	if idS == "" {
-		logs.Error("no ID")
+	param,_ := ioutil.ReadAll(c.Request.Body)
+	var info DeleteStruct
+	err := json.Unmarshal(param,&info)
+	if err != nil {
+		logs.Error("Id 格式不正确，%v",err)
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少ID参数！",
+			"message" : "id格式不正确！",
 			"errorCode" : -1,
 		})
 		return
 	}
-	id,err := strconv.Atoi(idS)
-	if err != nil {
-		logs.Error("wrong format of ID")
-		c.JSON(http.StatusOK,gin.H{
-			"message":"ID参数格式不正确",
-			"errorCode":-1,
-		})
-		return
-	}
-	result := dal.DeleteCase(id)
+
+	result := dal.DeleteCase(info.Id)
 	if result != nil {
 		c.JSON(http.StatusOK,gin.H{
 			"message":result,
@@ -389,27 +286,21 @@ func DeleteRejCase(c *gin.Context)  {
 }
 
 func EditRejCaseofSolution(c *gin.Context)  {
-	id := c.PostForm("id")
-	if id == "" {
-		logs.Error("no ID")
-		c.JSON(http.StatusOK,gin.H{
-			"message":"没有案例id",
-			"errorCode":-1,
+	param, _ := ioutil.ReadAll(c.Request.Body)
+	var r EditStruct
+	err := json.Unmarshal(param, &r)
+	if err != nil {
+		logs.Error("参数格式错误,%v ", err)
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "提交参数格式错误",
+			"errorCode" : -1,
 		})
 		return
 	}
-	solution := c.PostForm("solution")
-	if solution == "" {
-		logs.Error("no solution info")
-		c.JSON(http.StatusOK,gin.H{
-			"message":"没有案例解决方法",
-			"errorCode":-1,
-		})
-		return
-	}
+
 	var data = make(map[string]string)
-	data["condition"] = "id="+id
-	data["solution"] = solution
+	data["condition"] = "id="+strconv.Itoa(r.Id)
+	data["solution"] = r.Solution
 	result := dal.UpdateRejCaseofSolution(data)
 	if result != nil {
 		c.JSON(http.StatusOK,gin.H{
@@ -439,7 +330,7 @@ func Upload2Tos(path string) (string, error){
 		logs.Error("%s", "打开文件失败" + err.Error())
 		return "",err
 	}
-	key := fmt.Sprint(time.Now().UnixNano()) + "_" + fileName
+	key := fileName
 	logs.Info("key: " + key)
 	err = tosPutClient.PutObject(context, key, int64(len(byte)), bytes.NewBuffer(byte))
 	if err != nil {
@@ -451,6 +342,6 @@ func Upload2Tos(path string) (string, error){
 	domain = "tosv.byted.org/obj/" + _const.TOS_BUCKET_NAME
 	var returnUrl string
 	returnUrl = "https://" + domain + "/" + key
-	//dal.UpdateDetectTosUrl(returnUrl, taskId)
+
 	return returnUrl, nil
 }

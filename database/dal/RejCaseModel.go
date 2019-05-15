@@ -10,6 +10,9 @@ import (
 	"strings"
 )
 
+/*
+test_rej_cases表结构
+ */
 type rejCase struct {
 	gorm.Model
 	AppId  			int 		`json:"appId"`
@@ -60,54 +63,7 @@ func (rejCase) TableName() string {
 
 
 /*
-	query all rejCases from the db
-*/
-//func QueryAllRejCases(page int,pageSize int) (*[]rejListInfo,int,error) {
-//	connection, err := database.GetConneection()
-//	if err != nil {
-//		logs.Error("Connect to DB failed: %v", err)
-//		return nil,0,err
-//	}
-//	defer connection.Close()
-//	db := connection.Table(RejCaseStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
-//	logs.Info("query all rejCases")
-//
-//	var infos =make([]rejCase,0)
-//	db = db.Select("id","app_id","app_name","rej_time","rej_reason","solution","pic_loc").Limit(pageSize).Offset((page-1)*pageSize)
-//
-//	if err := db.Order("key_word ASC").Find(&infos).Error; err != nil {
-//		logs.Error("%v", err)
-//		return nil,0,err
-//	}
-//	var result = make([]rejListInfo,0)
-//	for _,item := range items{
-//		var rejInfo rejListInfo
-//		rejInfo.id = int(item.ID)
-//		rejInfo.appId = item.appId
-//		rejInfo.appName = item.appName
-//		rejInfo.rejRea = item.rejRea
-//		rejInfo.rejTime = item.rejTime
-//		rejInfo.picLoc = item.picLoc
-//		rejInfo.solution = item.solution
-//		reuslt.append(result, rejInfo)
-//	}
-//	var total uint
-//	connect,err := database.GetConneection()
-//	if err != nil {
-//		logs.Error("Connect to DB failed: %v", err)
-//		return nil,0,err
-//	}
-//	defer connect.Close()
-//	dbCount := connect.Table(RejCaseStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
-//	if err = dbCount.Select("count(id) as total").Find(&total).Error; err != nil {
-//		logs.Error("query total record failed! %v", err)
-//		return &result, 0, err
-//	}
-//	return &result,total,nil
-//}
-
-/*
-	query rejCases meeting with conditions ind the db，without condition query all rejCases
+	query rejCases meeting with conditions in the db，without condition query all rejCases
 */
 
 func QueryByConditions(param map[string]string) (*[]RejListInfo,int,error){
@@ -122,17 +78,11 @@ func QueryByConditions(param map[string]string) (*[]RejListInfo,int,error){
 	logs.Info("query rejCases by Conditions:%s",condition)
 	if condition == "" {
 		condition = " 1=1 "
-		//db = db.Where(condition)
 	}
-	//pageI := param["page"]
-	//page,ok := pageI.(string)
 
 	page,err := strconv.Atoi(param["page"])
-	//pageSize := param["pageSize"]
 	pageSize,err := strconv.Atoi(param["pageSize"])
-	//db = db.Limit(pageSize).Offset((page-1)*pageSize)
 	var infos []rejCase
-	//db = db.Where(condition)
 	logs.Info("after param:%v",param)
 	if err := db.Where(condition).Offset(((page - 1)*pageSize)).Limit(pageSize).Order("ID DESC").Find(&infos).Error; err != nil{
 		logs.Error("%v", err)
@@ -150,7 +100,6 @@ func QueryByConditions(param map[string]string) (*[]RejListInfo,int,error){
 		rejInfo.Version = item.Version
 		rejInfo.PicLoc = picLocTrans(item.PicLoc)
 		rejInfo.Solution = item.Solution
-		//logs.Info("数据库查询转换结果：%v",rejInfo)
 		result=append(result, rejInfo)
 	}
 
@@ -162,11 +111,11 @@ func QueryByConditions(param map[string]string) (*[]RejListInfo,int,error){
 	}
 	defer connect.Close()
 	dbCount := connect.Table(rejCase{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	logs.Info("query rejCases by Conditions:%s",condition)
-	//if condition != "" {
-	//	dbCount = dbCount.Where(condition)
-	//}
-	if err = dbCount.Select("count(id) as total").Where(condition).Find(&total).Error; err != nil {
+	logs.Info("query rejCases counts by Conditions:%s",condition)
+
+	countCondition := "deleted_at IS NULL and "+condition
+
+	if err = dbCount.Select("count(id) as total").Where(countCondition).Find(&total).Error; err != nil {
 		logs.Error("query total record failed! %v", err)
 		return &result, 0, err
 	}
@@ -254,11 +203,13 @@ func picLocTrans(path string) []PicInfo{
 	}
 	paths := strings.Split(path,";")
 	for _,subpath := range paths {
-		values := strings.Split(subpath,"--")
-		var pic PicInfo
-		pic.PicName = values[0]
-		pic.PicUrl = values[1]
-		result = append(result, pic)
+		if subpath != ""{
+			values := strings.Split(subpath,"--")
+			var pic PicInfo
+			pic.PicName = values[0]
+			pic.PicUrl = values[1]
+			result = append(result, pic)
+		}
 	}
 	return result
 
