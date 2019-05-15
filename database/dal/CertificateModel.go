@@ -10,7 +10,10 @@ import (
 type CertificateModel struct {
 	gorm.Model
 	Appname string `gorm:"column:appname" json:"appname"`
+<<<<<<< HEAD
 	AppId int `gorm:"column:app_id" json:"app_id"`
+=======
+>>>>>>> ITC证书管理功能迁移
 	Creator string `gorm:"column:creator" json:"creator"`
 	Mails string `gorm:"column:mails" json:"mails"`
 	Usage string `gorm:"column:usage" json:"usage"`

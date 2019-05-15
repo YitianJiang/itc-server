@@ -166,7 +166,11 @@ func AddCertificate(c *gin.Context){
 	}
 	defer file.Close()
 
+<<<<<<< HEAD
 	certificateFileName := header.Filename //获取证书名称
+=======
+	certificateFileName := header.Filename  //获取证书名称
+>>>>>>> ITC证书管理功能迁移
 	pem := c.PostForm("pem")        //是否需要返回pem_file标志
 
 	//查询证书过期日期
@@ -210,6 +214,10 @@ func AddCertificate(c *gin.Context){
 	}()
 
 	//得到证书日期，pem等信息后存入数据库
+<<<<<<< HEAD
+=======
+
+>>>>>>> ITC证书管理功能迁移
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if err != nil{
 		logs.Error("访问处理失败！", err.Error())
@@ -243,13 +251,13 @@ func AddCertificate(c *gin.Context){
 	//如果pem=on，返回中包含pem_file字符串
 	if _, ok := result["pem_file"]; ok{
 		pem_file_name := strings.Split(certificateFileName, ".")[0] +".pem"
+
 		certificateModel.PemFile = result["pem_file"].(string)
 		certificateModel.PemFileName = pem_file_name
 	}
 
 	//证书上传到TOS，获取访问地址并存到数据库certificate_file那一列
 	localCertificatePath := "./"+ c.PostForm("appId") + "." + strings.Split(certificateFileName, ".")[1]
-	fmt.Println(localCertificatePath)
 	newFile, err := os.Create(localCertificatePath)   //本地创建临时文件
 	if err!= nil{
 		logs.Error("创建临时失败！", err.Error())
