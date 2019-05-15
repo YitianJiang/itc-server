@@ -78,14 +78,15 @@ func UploadFile(c *gin.Context){
 	checkItem := c.DefaultPostForm("checkItem", "")
 	logs.Info("checkItem: ", checkItem)
 	//检验文件格式是否是apk或者ipa
-	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".ipa")
+	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".ipa") ||
+				strings.HasSuffix(filename, ".abb")
 	if !flag{
 		errorFormatFile(c)
 		return
 	}
 	//检验文件与platform是否匹配，0-安卓apk，1-iOS ipa
 	if platform == "0"{
-		flag := strings.HasSuffix(filename, ".apk")
+		flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".abb")
 		if !flag{
 			errorFormatFile(c)
 			return
