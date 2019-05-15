@@ -14,10 +14,6 @@ func InitRouter(r *ginex.Engine){
 	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
 	//获取鉴权接口
 	r.GET("/t/generateToken", detect.GetToken)
-	//hive查询接口
-	r.GET("/hive/query", detect.HiveQuery)
-	//upload
-	//r.GET("/uploadTos", detect.UploadTos)
 
 	//查询被拒案例
 	api.GET("/casemanage/queryRejCases",casemanage.GetRejCasesByConditions)
@@ -27,7 +23,6 @@ func InitRouter(r *ginex.Engine){
 	api.POST("/casemanage/deleteRejCase",casemanage.DeleteRejCase)
 	//更新被拒案例
 	api.POST("/casemanage/updateRejCase",casemanage.EditRejCaseofSolution)
-
 
 	api.Use(middleware.JWTCheck())
 	{
