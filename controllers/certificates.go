@@ -166,12 +166,7 @@ func AddCertificate(c *gin.Context){
 		return
 	}
 	defer file.Close()
-
-<<<<<<< HEAD
 	certificateFileName := header.Filename //获取证书名称
-=======
-	certificateFileName := header.Filename  //获取证书名称
->>>>>>> ITC证书管理功能迁移
 	pem := c.PostForm("pem")        //是否需要返回pem_file标志
 
 	//查询证书过期日期
@@ -207,7 +202,7 @@ func AddCertificate(c *gin.Context){
 			logs.Error("关闭writer出错！", err.Error())
 		}
 		if response, err := http.Post(upstreamUrl, contentType, body); err != nil{
-			logs.Error("获取过期信息失败！", err.Error())
+			logs.Error("获取证书过期信息失败！", err.Error())
 		}else{
 			return response
 		}
@@ -215,10 +210,6 @@ func AddCertificate(c *gin.Context){
 	}()
 
 	//得到证书日期，pem等信息后存入数据库
-<<<<<<< HEAD
-=======
-
->>>>>>> ITC证书管理功能迁移
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if err != nil{
 		logs.Error("访问处理失败！", err.Error())
