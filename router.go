@@ -4,6 +4,7 @@ import (
 	"code.byted.org/clientQA/itc-server/detect"
 	"code.byted.org/clientQA/itc-server/middleware"
 	"code.byted.org/gin/ginex"
+	"code.byted.org/clientQA/itc-server/casemanage"
 )
 
 func InitRouter(r *ginex.Engine){
@@ -13,6 +14,16 @@ func InitRouter(r *ginex.Engine){
 	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
 	//获取鉴权接口
 	r.GET("/t/generateToken", detect.GetToken)
+
+	//查询被拒案例
+	api.GET("/casemanage/queryRejCases",casemanage.GetRejCasesByConditions)
+	//新增被拒案例
+	api.POST("/casemanage/addRejCase",casemanage.AddRejCase)
+	//删除被拒案例
+	api.POST("/casemanage/deleteRejCase",casemanage.DeleteRejCase)
+	//更新被拒案例
+	api.POST("/casemanage/updateRejCase",casemanage.EditRejCaseofSolution)
+
 	api.Use(middleware.JWTCheck())
 	{
 		//上传ipa和apk
@@ -59,5 +70,6 @@ func InitRouter(r *ginex.Engine){
 		api.POST("/lark/updateGroup", detect.UpdateLarkGroup)
 		//删除lark群配置
 		api.DELETE("/lark/deleteGroup", detect.DeleteGroupInfoById)
+
 	}
 }
