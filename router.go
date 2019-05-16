@@ -7,21 +7,13 @@ import (
 	"code.byted.org/gin/ginex"
 )
 
-func InitRouter(r *ginex.Engine){
+func InitRouter(r *ginex.Engine) {
 
 	api := r.GroupEX("/api")
 	//二进制包检测回调接口
 	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
 	//获取鉴权接口
 	r.GET("/t/generateToken", detect.GetToken)
-<<<<<<< HEAD
-=======
-	//hive查询接口
-	r.GET("/hive/query", detect.HiveQuery)
-
-	//upload
-	//r.GET("/uploadTos", detect.UploadTos)
->>>>>>> ITC证书管理功能迁移
 	api.Use(middleware.JWTCheck())
 	{
 		//上传ipa和apk
@@ -74,7 +66,6 @@ func InitRouter(r *ginex.Engine){
 		api.GET("/certificates", controllers.GetCertificates)
 		//过期证书提醒
 		api.GET("/certificates/controller", controllers.CertificateController)
-
 
 	}
 }
