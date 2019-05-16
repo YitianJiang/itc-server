@@ -101,7 +101,7 @@ func GetCertificates(c *gin.Context) {
 		queryMap["appname"] = appName
 	}
 	if cerType, isExit := c.GetQuery("type"); isExit == true {
-		queryMap["type"] = cerType
+		queryMap["certificate_style"] = cerType
 	}
 	if isSelectCreator, isExit := c.GetQuery("creator"); isExit == true && isSelectCreator == "on" {
 		queryMap["creator"] = name
@@ -142,7 +142,7 @@ func AddCertificate(c *gin.Context) {
 		return
 	}
 	//获取上传的文件
-	file, header, _ := c.Request.FormFile("certificate_file")
+	file, header, _ := c.Request.FormFile("certificateFile")
 	if file == nil {
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": -1,
