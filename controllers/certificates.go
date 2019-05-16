@@ -159,7 +159,7 @@ func AddCertificate(c *gin.Context) {
 	fileType, isExitType := c.GetPostForm("type")
 	appName, isExitAppName := c.GetPostForm("appName")
 	appId, isExitAppId := c.GetPostForm("appId")
-	usage, isExitUsage := c.GetPostForm("application")
+	usage, isExitUsage := c.GetPostForm("usage")
 	mails, isExitMails := c.GetPostForm("mails")
 	//判空处理
 	if isExitPem == false || isExitPass == false || isExitType == false || isExitAppName == false || isExitUsage == false || isExitMails == false || isExitAppId == false {
