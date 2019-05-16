@@ -161,8 +161,8 @@ func AddCertificate(c *gin.Context) {
 	appId, isExitAppId := c.GetPostForm("appId")
 	usage, isExitUsage := c.GetPostForm("usage")
 	mails, isExitMails := c.GetPostForm("mails")
-	//判空处理
-	if isExitPem == false || isExitPass == false || isExitType == false || isExitAppName == false || isExitUsage == false || isExitMails == false || isExitAppId == false {
+	//判空处理,只有.p12证书需要password和pem字段
+	if isExitType == false || (isExitType == true && (fileType == ".p12" && (isExitPem == false || isExitPass == false))) || isExitAppName == false || isExitUsage == false || isExitMails == false || isExitAppId == false {
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": -1,
 			"message":   "上传文件参数填写不完整！",
@@ -241,13 +241,15 @@ func AddCertificate(c *gin.Context) {
 	certificateModel.Usage = usage
 	certificateModel.Mails = mails
 	certificateModel.Type = fileType
-	certificateModel.Password = pass
 	certificateModel.CertificateFileName = certificateFileName
-	//如果pem=on，返回中包含pem_file字符串
-	if _, ok := result["pem_file"]; ok {
-		pem_file_name := strings.Split(certificateFileName, ".")[0] + ".pem"
-		certificateModel.PemFile = result["pem_file"].(string)
-		certificateModel.PemFileName = pem_file_name
+	if fileType == ".p12" {
+		certificateModel.Password = pass
+		//如果pem=on，返回中包含pem_file字符串
+		if _, ok := result["pem_file"]; ok {
+			pem_file_name := strings.Split(certificateFileName, ".")[0] + ".pem"
+			certificateModel.PemFileName = pem_file_name
+			certificateModel.PemFile = result["pem_file"].(string)
+		}
 	}
 	//证书上传到TOS，获取访问地址并存到数据库certificate_file那一列
 	localCertificatePath := "./" + c.PostForm("appId") + "." + strings.Split(certificateFileName, ".")[1]
