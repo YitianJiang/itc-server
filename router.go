@@ -1,6 +1,7 @@
 package main
 
 import (
+	"code.byted.org/clientQA/itc-server/casemanage"
 	"code.byted.org/clientQA/itc-server/controllers"
 	"code.byted.org/clientQA/itc-server/detect"
 	"code.byted.org/clientQA/itc-server/middleware"
@@ -66,6 +67,14 @@ func InitRouter(r *ginex.Engine) {
 		api.GET("/certificates", controllers.GetCertificates)
 		//过期证书提醒
 		api.GET("/certificates/controller", controllers.CertificateController)
+		//查询被拒案例
+		api.GET("/casemanage/queryRejCases",casemanage.GetRejCasesByConditions)
+		//新增被拒案例
+		api.POST("/casemanage/addRejCase",casemanage.AddRejCase)
+		//删除被拒案例
+		api.POST("/casemanage/deleteRejCase",casemanage.DeleteRejCase)
+		//更新被拒案例
+		api.POST("/casemanage/updateRejCase",casemanage.EditRejCaseofSolution)
 
 	}
 }
