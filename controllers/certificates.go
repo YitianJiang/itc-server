@@ -107,10 +107,23 @@ func GetCertificates(c *gin.Context) {
 		queryMap["certificate_style"] = cerType
 	}
 	if isSelectCreator, isExit := c.GetQuery("creator"); isExit == true && isSelectCreator == "on" {
-		queryMap["creator"] = name
+		queryMap["creator"] = name   //查询"我"创建的证书信息
+	}
+	if user, isExit := c.GetQuery("user"); isExit == true {
+		if _, ok := queryMap["creator"]; ok{
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "creator和user不能同时查询!",
+				"errorCode": -1,
+				"total":     0,
+				"data":      []map[string]interface{}{},
+			})
+			return
+		}
+		queryMap["creator"] = user //查询user用户创建的证书信息
 	}
 	totalCertificates := dal.QueryCertificate(queryMap)
-	var total int //存储符合条件的数据库总条数
+	//存储符合条件的数据库总条数
+	var total int
 	if totalCertificates != nil {
 		total = len(*totalCertificates)
 	}
@@ -145,7 +158,7 @@ func GetCertificates(c *gin.Context) {
 			"message":   "未查询到符合条件的数据!",
 			"errorCode": 0,
 			"total":     total,
-			"data":      data,
+			"data":      []map[string]interface{}{},
 		})
 	}
 }

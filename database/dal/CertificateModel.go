@@ -11,7 +11,7 @@ import (
 
 type CertificateModel struct {
 	gorm.Model
-	Appname             string `gorm:"column:appname"                    json:"appname"`
+	Appname             string `gorm:"column:appname"                    json:"appName"`
 	AppId               int    `gorm:"column:app_id"                     json:"appId"`
 	Creator             string `gorm:"column:creator"                    json:"creator"`
 	Mails               string `gorm:"column:mails"                      json:"mails"`
@@ -87,6 +87,7 @@ func QueryLikeCertificate(condition map[string]interface{}) *[]CertificateModel 
 	if _, ok := condition["appId"]; ok {
 		db = db.Where("app_id = ?", condition["appId"].(string))
 	}
+	db = db.Order("id DESC", true)  //按照id递减排序
 	_, ok1 := condition["pageSize"]
 	_, ok2 := condition["page"]
 	if ok1 && ok2 {
