@@ -100,11 +100,32 @@ func GetCertificates(c *gin.Context) {
 	if appName, isExit := c.GetQuery("appName"); isExit == true {
 		queryMap["appname"] = appName
 	}
+	if appId, isExit := c.GetQuery("appId"); isExit == true {
+		queryMap["appId"] = appId
+	}
 	if cerType, isExit := c.GetQuery("type"); isExit == true {
 		queryMap["certificate_style"] = cerType
 	}
 	if isSelectCreator, isExit := c.GetQuery("creator"); isExit == true && isSelectCreator == "on" {
-		queryMap["creator"] = name
+		queryMap["creator"] = name   //查询"我"创建的证书信息
+	}
+	if user, isExit := c.GetQuery("user"); isExit == true {
+		if _, ok := queryMap["creator"]; ok{
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "creator和user不能同时查询!",
+				"errorCode": -1,
+				"total":     0,
+				"data":      []map[string]interface{}{},
+			})
+			return
+		}
+		queryMap["creator"] = user //查询user用户创建的证书信息
+	}
+	totalCertificates := dal.QueryCertificate(queryMap)
+	//存储符合条件的数据库总条数
+	var total int
+	if totalCertificates != nil {
+		total = len(*totalCertificates)
 	}
 	if page, isExit := c.GetQuery("page"); isExit == true {
 		queryMap["page"] = page
@@ -112,19 +133,32 @@ func GetCertificates(c *gin.Context) {
 	if pageSize, isExit := c.GetQuery("pageSize"); isExit == true {
 		queryMap["pageSize"] = pageSize
 	}
-	//查询符合条件的数据
 	certificate := dal.QueryLikeCertificate(queryMap)
-	if certificate != nil && len(*certificate) > 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "OK!",
-			"errorCode": 0,
-			"data":      *certificate,
-		})
+	//查询符合条件的数据,Json转换返回标准形式
+	var data []map[string]interface{}
+	for _, cer := range *certificate{
+		certificateTemp, err1 := json.Marshal(cer)
+		certificateRes := make(map[string]interface{})
+		err2 := json.Unmarshal(certificateTemp, &certificateRes)
+		data = append(data, certificateRes)
+		if err1 != nil || err2 != nil{
+			logs.Error("数据库结果转成json转成map出错！", err1.Error(), err2.Error())
+		}
+	}
+	if certificate != nil && len(*certificate) > 0{
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "OK!",
+				"errorCode": 0,
+				"total":     total,
+				"data":      data,
+			})
 	} else {
+		//返回空
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "未查询到符合条件的数据!",
 			"errorCode": 0,
-			"data":      nil,
+			"total":     total,
+			"data":      []map[string]interface{}{},
 		})
 	}
 }

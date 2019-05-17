@@ -11,18 +11,18 @@ import (
 
 type CertificateModel struct {
 	gorm.Model
-	Appname             string `gorm:"column:appname"                    json:"appname"`
-	AppId               int    `gorm:"column:app_id"                     json:"app_id"`
+	Appname             string `gorm:"column:appname"                    json:"appName"`
+	AppId               int    `gorm:"column:app_id"                     json:"appId"`
 	Creator             string `gorm:"column:creator"                    json:"creator"`
 	Mails               string `gorm:"column:mails"                      json:"mails"`
 	Usage               string `gorm:"column:certificate_usage"          json:"usage"`
 	Type                string `gorm:"column:certificate_style"          json:"type"`
 	Password            string `gorm:"column:certificate_password"       json:"password"`
-	ExpireTime          string `gorm:"column:expire_time"                json:"expire_time"`
-	CertificateFile     string `gorm:"column:certificate_file"           json:"certificate_file"`
-	CertificateFileName string `gorm:"column:certificate_file_name"      json:"certificate_file_name"`
-	PemFile             string `gorm:"column:pem_file"                   json:"pem_file"`
-	PemFileName         string `gorm:"column:pem_file_name"              json:"pem_file_name"`
+	ExpireTime          string `gorm:"column:expire_time"                json:"expireTime"`
+	CertificateFile     string `gorm:"column:certificate_file"           json:"certificateFile"`
+	CertificateFileName string `gorm:"column:certificate_file_name"      json:"certificateName"`
+	PemFile             string `gorm:"column:pem_file"                   json:"pemFile"`
+	PemFileName         string `gorm:"column:pem_file_name"              json:"pemFileName"`
 }
 
 //表命
@@ -71,19 +71,23 @@ func QueryLikeCertificate(condition map[string]interface{}) *[]CertificateModel 
 	defer connection.Close()
 	var configs []CertificateModel
 	db := connection.Table(CertificateModel{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	//appname 模糊查询
+	//appname 模糊查询，大概率被废弃了
 	if _, ok := condition["appname"]; ok {
 		appname := "%"
 		appname += string(condition["appname"].(string)[:])
 		appname += "%"
 		db = db.Where("appname LIKE ?", appname)
 	}
-	if _, ok := condition["type"]; ok {
-		db = db.Where("type = ?", condition["type"].(string))
+	if _, ok := condition["certificate_style"]; ok == true {
+		db = db.Where("certificate_style = ?", condition["certificate_style"].(string))
 	}
 	if _, ok := condition["creator"]; ok {
 		db = db.Where("creator = ?", condition["creator"].(string))
 	}
+	if _, ok := condition["appId"]; ok {
+		db = db.Where("app_id = ?", condition["appId"].(string))
+	}
+	db = db.Order("id DESC", true)  //按照id递减排序
 	_, ok1 := condition["pageSize"]
 	_, ok2 := condition["page"]
 	if ok1 && ok2 {
