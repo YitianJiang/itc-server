@@ -12,6 +12,10 @@ func InitRouter(r *ginex.Engine){
 	api := r.GroupEX("/api")
 	//二进制包检测回调接口
 	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
+
+	//二进制检测回调接口-----fj
+	r.POST("/updateDetectInfosNew", detect.UpdateDetectInfosNew)
+
 	//获取鉴权接口
 	r.GET("/t/generateToken", detect.GetToken)
 
@@ -28,6 +32,8 @@ func InitRouter(r *ginex.Engine){
 	{
 		//上传ipa和apk
 		api.POST("/uploadFile", detect.UploadFile)
+		//上传ipa和apk------fj
+		api.POST("/uploadFileNew", detect.UploadFileNew)
 		//增加检查项
 		api.POST("/addDetectItem", detect.AddDetectItem)
 		//二进制任务查询
@@ -42,6 +48,10 @@ func InitRouter(r *ginex.Engine){
 		api.GET("/task/queryTools", detect.QueryTaskQueryTools)
 		//获取当前任务的二进制工具检测内容
 		api.GET("/task/queryBinaryContent", detect.QueryTaskBinaryCheckContent)
+		//获取当前任务的apk二进制工具检测内容
+		api.GET("/task/queryApkBinaryContent", detect.QueryTaskApkBinaryCheckContent)
+		//获取当前任务的apk二进制工具检测内容---增量式
+		api.GET("/task/queryApkBinaryContentWithIgnorance", detect.QueryTaskApkBinaryCheckContentWithIgnorance)
 		//新增二进制检测工具
 		api.POST("/tool/insert", detect.InsertBinaryTool)
 		//查询二进制检测工具列表
@@ -52,6 +62,10 @@ func InitRouter(r *ginex.Engine){
 		api.GET("/config/queryLarkMsgCall", detect.QueryLarkMsgCall)
 		//确认二进制包检测信息
 		api.POST("/detect/confirmResult", detect.ConfirmBinaryResult)
+		//确认apk二进制包检测信息
+		api.POST("/detect/confirmApkResult", detect.ConfirmApkBinaryResult)
+		//确认apk二进制包检测信息-----v2
+		api.POST("/detect/confirmApkResult_v2", detect.ConfirmApkBinaryResultv_2)
 		//根据platform获取配置的问题类型
 		api.GET("/config/queryProblemConfigs", detect.QueryProblemConfigs)
 		//增加配置项

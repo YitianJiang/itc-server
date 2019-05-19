@@ -6,8 +6,8 @@ import (
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"fmt"
-	"strconv"
 	"time"
+	"strconv"
 )
 //二进制包检测任务
 type DetectStruct struct {
@@ -20,10 +20,12 @@ type DetectStruct struct {
 	CheckContent 		string			`json:"checkContent"`
 	SelfCheckStatus 	int				`json:"selfCheckStatus"` //0-自查未完成；1-自查完成
 	TosUrl 				string			`json:"tosUrl"`
+	Status				int 			`json:"status"`//0---未完全确认；1---已完全确认
 }
 type RecordTotal struct {
 	Total 				uint
 }
+
 type RetDetectTasks struct {
 	GetMore 			uint
 	Total 				uint
@@ -48,6 +50,55 @@ type DetectContent struct {
 	Confirmer			string			`json:"confirmer"`
 	Remark 				string			`json:"remark"`
 }
+
+//apk检测信息----fj新增
+type DetectInfo struct{
+	gorm.Model
+	TaskId				int				`json:"taskId"`
+	ApkName				string			`json:"apkName"`
+	Version				string			`json:"version"`
+	Channel             string			`json:"channel"`
+	Permissions			string 			`json:"permissions"`
+	ToolId				int				`json:"toolId"`
+}
+
+//敏感信息详情---fj新增
+type DetectContentDetail struct {
+	gorm.Model
+	TaskId				int				`json:"taskId"`
+	Status				int				`json:"status"`   //是否确认,0-未确认，1-确认通过，2-确认未通过
+	Remark				string 			`json:"remark"`
+	Confirmer			string			`json:"confirmer"`
+	SensiType			int				`json:"sensiType"`//敏感信息类型，1-敏感方法，2-敏感字符串
+	Key					string			`json:"key"`
+	ClassName			string			`json:"className"`
+	Desc				string			`json:"desc"`
+	CallLoc				string			`json:"callLoc"`
+	ToolId				int				`json:"toolId"`
+}
+
+type IgnoreInfoStruct struct {
+	gorm.Model
+	AppId				int 			`json:"appId"`
+	Platform			int				`json:"platform"`//0-安卓，1-iOS
+	Keys				string			`json:"keys"`
+	SensiType			int				`json:"sensiType"`//敏感信息类型，1-敏感方法，2-敏感字符串
+}
+
+func (IgnoreInfoStruct) TableName() string  {
+	return "tb_ignored_info"
+}
+
+
+func (DetectInfo) TableName() string {
+	return "tb_detect_info_apk"
+
+}
+
+func (DetectContentDetail) TableName() string {
+	return "tb_detect_content_detail"
+}
+
 func (DetectStruct) TableName() string {
 	return "tb_binary_detect"
 }
@@ -98,6 +149,39 @@ func UpdateDetectModel(detectModel DetectStruct, content DetectContent) error {
 	db.Commit()
 	return nil
 }
+
+
+
+//update data-----fj
+func UpdateDetectModelNew(detectModel DetectStruct) error {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return err
+	}
+	defer connection.Close()
+	db := connection.Begin()
+	taskId := detectModel.ID
+	condition := "id=" + fmt.Sprint(taskId)
+	if err := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
+		Where(condition).Update(&detectModel).Error; err != nil {
+		logs.Error("update binary check failed, %v", err)
+		db.Rollback()
+		return err
+	}
+		//此处没有必要了---------fj
+		//insert detect content
+	//if err := db.Table(DetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).
+	//	Create(&content).Error; err != nil {
+	//	logs.Error("insert binary check content failed, %v", err)
+	//	db.Rollback()
+	//	return err
+	//}
+	db.Commit()
+	return nil
+}
+
+
 //delete data
 func DeleteDetectModel(detectModeId string) error {
 	connection, err := database.GetConneection()
@@ -243,3 +327,203 @@ func ConfirmBinaryResult(data map[string]string) bool {
 	//db.Commit()
 	return true
 }
+
+
+
+
+
+/**
+确认安卓二进制结果----------fj
+ */
+func ConfirmApkBinaryResultNew(data map[string]string) bool {
+	id := data["id"]
+	//toolId := data["tool_id"]
+	confirmer := data["confirmer"]
+	remark := data["remark"]
+	statusInt,_ := strconv.Atoi(data["status"])
+	//statusInt, _ := strconv.Atoi(status)
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return false
+	}
+	defer connection.Close()
+	db := connection.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	condition := "id=" + id
+	if err := db.Where(condition).
+		Update(map[string]interface{}{
+			"status" : statusInt,
+			"confirmer" : confirmer,
+			"remark" : remark,
+			"updated_at" : time.Now(),
+		}).Error; err != nil {
+		logs.Error("update db tb_detect_content failed: %v", err)
+		//db.Rollback()
+		return false
+	}
+	//db.Commit()
+	return true
+}
+
+
+/**
+检测信息insert-----fj
+ */
+func InsertDetectInfo (info DetectInfo) error  {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return nil
+	}
+	defer connection.Close()
+
+	db := connection.Table(DetectInfo{}.TableName()).LogMode(_const.DB_LOG_MODE)
+
+	info.CreatedAt = time.Now()
+	info.UpdatedAt = time.Now()
+
+	if err1 := db.Create(&info).Error; err1 != nil {
+		logs.Error("数据库新增检测信息失败,%v",err1)
+		return err1
+	}
+	return nil
+
+}
+
+/**
+敏感信息详情insert------fj
+ */
+func InsertDetectDetail(detail DetectContentDetail) error  {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return nil
+	}
+	defer connection.Close()
+
+	db := connection.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
+
+	detail.CreatedAt = time.Now()
+	detail.UpdatedAt = time.Now()
+
+	if err1 := db.Create(&detail).Error; err1 != nil {
+		logs.Error("数据库新增敏感信息失败,%v，敏感信息具体key参数：%s",err1,detail.Key)
+		return err1
+	}
+	return nil
+}
+
+/**
+未确认敏感信息数据量查询-----fj
+ */
+func QueryUnConfirmDetectContent(condition string) int {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return -1
+	}
+	defer connection.Close()
+
+	db := connection.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	var total RecordTotal
+	if err = db.Select("count(id) as total").Where(condition).Find(&total).Error; err != nil {
+		logs.Error("query sensitive infos total record failed! %v", err)
+		return -1
+	}
+	return int(total.Total)
+
+}
+
+
+/**
+查询apk检测info-----fj
+ */
+func QueryDetectInfo(condition string) (*DetectInfo,error)  {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return nil,err
+	}
+	defer connection.Close()
+
+	db := connection.Table(DetectInfo{}.TableName()).LogMode(_const.DB_LOG_MODE)
+
+	var detectInfo DetectInfo
+	if err1 := db.Where(condition).Find(&detectInfo).Error; err1 !=nil{
+		logs.Error("query detectInfo failed! %v", err)
+		return nil,err1
+	}
+	return &detectInfo,nil
+
+}
+
+/**
+查询apk敏感信息----fj
+ */
+func QueryDetectContentDetail(condition string)(*[]DetectContentDetail,error)  {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return nil,err
+	}
+	defer connection.Close()
+
+	db := connection.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
+
+	var result []DetectContentDetail
+
+	if err1 := db.Where(condition).Find(&result).Error; err1 != nil {
+		logs.Error("query detectDetailInfos failed! %v", err)
+		return nil,err1
+	}
+	return &result, nil
+
+}
+
+
+/**
+可忽略信息insert------fj
+*/
+func InsertIgnoredInfo(detail IgnoreInfoStruct) error {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return nil
+	}
+	defer connection.Close()
+
+	db := connection.Table(IgnoreInfoStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
+
+	detail.CreatedAt = time.Now()
+	detail.UpdatedAt = time.Now()
+
+	if err1 := db.Create(&detail).Error; err1 != nil {
+		logs.Error("数据库新增可忽略信息失败,%v，可忽略信息具体key参数：%s", err1, detail.Keys)
+		return err1
+	}
+	return nil
+}
+
+/**
+查询可忽略信息----fj
+*/
+func QueryIgnoredInfo(condition string)(*[]IgnoreInfoStruct,error)  {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return nil,err
+	}
+	defer connection.Close()
+
+	db := connection.Table(IgnoreInfoStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
+
+	var result []IgnoreInfoStruct
+
+	if err1 := db.Where(condition).Find(&result).Error; err1 != nil {
+		logs.Error("query ignoredInfos failed! %v", err)
+		return nil,err1
+	}
+	return &result, nil
+}
+
+
