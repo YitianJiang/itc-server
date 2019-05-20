@@ -2,16 +2,9 @@ package detect
 
 import (
 	"bytes"
-	"code.byted.org/clientQA/itc-server/const"
-	"code.byted.org/clientQA/itc-server/database/dal"
-	"code.byted.org/clientQA/itc-server/utils"
-	"code.byted.org/gopkg/logs"
-	"code.byted.org/gopkg/tos"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/gin-gonic/gin"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -22,35 +15,47 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mitchellh/mapstructure"
+
+	_const "code.byted.org/clientQA/itc-server/const"
+	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/logs"
+	"code.byted.org/gopkg/tos"
+	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-gonic/gin"
 )
 
-const(
+const (
 	DETECT_URL_DEV = "10.2.209.202:9527"
 	DETECT_URL_PRO = "10.2.9.226:9527"
 	//调试，暂时换成本机的ip地址和端口
 	//DETECT_URL_PRO = "10.2.196.119:9527"
 )
+
 var LARK_MSG_CALL_MAP = make(map[string]interface{})
+
 /**
  *新建检测任务
  */
-func UploadFile(c *gin.Context){
+func UploadFile(c *gin.Context) {
 
 	url := ""
 	name, f := c.Get("username")
 	if !f {
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "未获取到用户信息！",
-			"errorCode" : -1,
-			"data" : "未获取到用户信息！",
+			"message":   "未获取到用户信息！",
+			"errorCode": -1,
+			"data":      "未获取到用户信息！",
 		})
 		return
 	}
 	file, header, err := c.Request.FormFile("uploadFile")
 	if file == nil {
 		c.JSON(http.StatusOK, gin.H{
-			"message":"未选择上传的文件！",
-			"errorCode":-2,
+			"message":   "未选择上传的文件！",
+			"errorCode": -2,
 		})
 		logs.Error("未选择上传的文件！")
 		return
@@ -58,20 +63,20 @@ func UploadFile(c *gin.Context){
 	defer file.Close()
 	filename := header.Filename
 	platform := c.DefaultPostForm("platform", "")
-	if platform == ""{
+	if platform == "" {
 		logs.Error("缺少platform参数！")
 		c.JSON(http.StatusOK, gin.H{
-			"message":"缺少platform参数！",
-			"errorCode":-3,
+			"message":   "缺少platform参数！",
+			"errorCode": -3,
 		})
 		return
 	}
 	appId := c.DefaultPostForm("appId", "")
-	if appId == ""{
+	if appId == "" {
 		logs.Error("缺少appId参数！")
 		c.JSON(http.StatusOK, gin.H{
-			"message":"缺少appId参数！",
-			"errorCode":-4,
+			"message":   "缺少appId参数！",
+			"errorCode": -4,
 		})
 		return
 	}
@@ -79,44 +84,44 @@ func UploadFile(c *gin.Context){
 	logs.Info("checkItem: ", checkItem)
 	//检验文件格式是否是apk或者ipa
 	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".ipa") ||
-				strings.HasSuffix(filename, ".aab")
-	if !flag{
+		strings.HasSuffix(filename, ".aab")
+	if !flag {
 		errorFormatFile(c)
 		return
 	}
 	//检验文件与platform是否匹配，0-安卓apk，1-iOS ipa
-	if platform == "0"{
+	if platform == "0" {
 		flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".aab")
-		if !flag{
+		if !flag {
 			errorFormatFile(c)
 			return
 		}
 		url = "http://" + DETECT_URL_PRO + "/apk_post"
-	} else if platform == "1"{
+	} else if platform == "1" {
 		flag := strings.HasSuffix(filename, ".ipa")
-		if !flag{
+		if !flag {
 			errorFormatFile(c)
 			return
 		}
 		url = "http://" + DETECT_URL_PRO + "/ipa_post/v2"
 	} else {
 		c.JSON(http.StatusOK, gin.H{
-			"message":"platform参数不合法！",
-			"errorCode":-5,
+			"message":   "platform参数不合法！",
+			"errorCode": -5,
 		})
 		logs.Error("platform参数不合法！")
 		return
 	}
 	_tmpDir := "./tmp"
 	exist, err := PathExists(_tmpDir)
-	if !exist{
+	if !exist {
 		os.Mkdir(_tmpDir, os.ModePerm)
 	}
 	out, err := os.Create(_tmpDir + "/" + filename)
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
-			"message":"安装包文件处理失败，请联系相关人员！",
-			"errorCode":-6,
+			"message":   "安装包文件处理失败，请联系相关人员！",
+			"errorCode": -6,
 		})
 		logs.Fatal("临时文件保存失败")
 		return
@@ -125,8 +130,8 @@ func UploadFile(c *gin.Context){
 	_, err = io.Copy(out, file)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
-			"message":"安装包文件处理失败，请联系相关人员！",
-			"errorCode":-6,
+			"message":   "安装包文件处理失败，请联系相关人员！",
+			"errorCode": -6,
 		})
 		logs.Fatal("临时文件保存失败")
 		return
@@ -146,11 +151,11 @@ func UploadFile(c *gin.Context){
 	dbDetectModel.AppId = appId
 	dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
-	if checkItem == ""{
+	if checkItem == "" {
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "未选择二进制检测工具，请直接进行自查",
-			"errorCode" : 0,
-			"data" : "未选择二进制检测工具，请直接进行自查",
+			"message":   "未选择二进制检测工具，请直接进行自查",
+			"errorCode": 0,
+			"data":      "未选择二进制检测工具，请直接进行自查",
 		})
 		return
 	}
@@ -165,11 +170,11 @@ func UploadFile(c *gin.Context){
 		bodyWriter.WriteField("toolIds", checkItem)
 		fileWriter, err := bodyWriter.CreateFormFile("file", filepath)
 		if err != nil {
-			logs.Error("%s", "error writing to buffer: " + err.Error())
+			logs.Error("%s", "error writing to buffer: "+err.Error())
 			c.JSON(http.StatusOK, gin.H{
-				"message" : "二进制包处理错误，请联系相关人员！",
-				"errorCode" : -1,
-				"data" : "二进制包处理错误，请联系相关人员！",
+				"message":   "二进制包处理错误，请联系相关人员！",
+				"errorCode": -1,
+				"data":      "二进制包处理错误，请联系相关人员！",
 			})
 			return
 		}
@@ -205,24 +210,23 @@ func UploadFile(c *gin.Context){
 		}
 	}()
 	c.JSON(http.StatusOK, gin.H{
-		"message" : "文件上传成功，请等待检测结果通知",
-		"errorCode" : 0,
-		"data" : "文件上传成功，请等待检测结果通知",
+		"message":   "文件上传成功，请等待检测结果通知",
+		"errorCode": 0,
+		"data":      "文件上传成功，请等待检测结果通知",
 	})
 }
 
 /**
  *更新检测包的检测信息
  */
-func UpdateDetectInfos(c *gin.Context){
-
+func UpdateDetectInfos(c *gin.Context) {
 	taskId := c.Request.FormValue("task_ID")
 	if taskId == "" {
 		logs.Error("缺少task_ID参数")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少task_ID参数",
-			"errorCode" : -1,
-			"data" : "缺少task_ID参数",
+			"message":   "缺少task_ID参数",
+			"errorCode": -1,
+			"data":      "缺少task_ID参数",
 		})
 		return
 	}
@@ -239,14 +243,14 @@ func UpdateDetectInfos(c *gin.Context){
 	detectContent.CreatedAt = time.Now()
 	detectContent.UpdatedAt = time.Now()
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id" : taskId,
+		"id": taskId,
 	})
 	if (*detect) == nil {
 		logs.Error("未查询到该taskid对应的检测任务，%v", taskId)
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "未查询到该taskid对应的检测任务",
-			"errorCode" : -2,
-			"data" : "未查询到该taskid对应的检测任务",
+			"message":   "未查询到该taskid对应的检测任务",
+			"errorCode": -2,
+			"data":      "未查询到该taskid对应的检测任务",
 		})
 		return
 	}
@@ -255,11 +259,24 @@ func UpdateDetectInfos(c *gin.Context){
 	(*detect)[0].UpdatedAt = time.Now()
 	if err := dal.UpdateDetectModel((*detect)[0], detectContent); err != nil {
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "数据库更新检测信息失败",
-			"errorCode" : -3,
-			"data" : "数据库更新检测信息失败",
+			"message":   "数据库更新检测信息失败",
+			"errorCode": -3,
+			"data":      "数据库更新检测信息失败",
 		})
 		return
+	}
+	//ios新检测内容存储
+	if (*detect)[0].Platform == 1 {
+		task_id, _ := strconv.Atoi(taskId)
+		tool_id, _ := strconv.Atoi(toolId)
+		condition := map[string]interface{}{
+			"taskId":      task_id,
+			"toolId":      tool_id,
+			"htmlContent": htmlContent,
+		}
+		if iOSResultClassify(condition, jsonContent) == false {
+			logs.Error("iOS 新增new detect content失败！！！") //防止影响现有用户，出错后暂不return
+		}
 	}
 	//进行lark消息提醒
 	var message string
@@ -279,7 +296,7 @@ func UpdateDetectInfos(c *gin.Context){
 	config = dal.QueryLarkMsgTimerByAppId(appIdInt)
 	alterType := 0
 	var interval int
-	if config == nil {//如果未进行消息提醒设置，则默认10分钟提醒一次
+	if config == nil { //如果未进行消息提醒设置，则默认10分钟提醒一次
 		logs.Info("采用默认10分钟频率进行提醒")
 		alterType = 1
 		interval = 10
@@ -311,7 +328,7 @@ func UpdateDetectInfos(c *gin.Context){
 	var key string
 	key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
 	LARK_MSG_CALL_MAP[key] = ticker
-	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz="+ appId + "&showItcDetail=1&itcTaskId=" + taskId
+	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
 	message += "地址链接：" + larkUrl
 	utils.LarkDingOneInner(creator, message)
 	if config != nil {
@@ -319,7 +336,7 @@ func UpdateDetectInfos(c *gin.Context){
 		condition := "timer_id='" + fmt.Sprint(timerId) + "' and platform='" + strconv.Itoa(platform) + "'"
 		groups := dal.QueryLarkGroupByCondition(condition)
 		if groups != nil && len(*groups) > 0 {
-			for i:=0; i<len(*groups); i++ {
+			for i := 0; i < len(*groups); i++ {
 				g := (*groups)[i]
 				utils.LarkGroup(message, g.GroupId)
 			}
@@ -327,20 +344,74 @@ func UpdateDetectInfos(c *gin.Context){
 	}
 	go alertLarkMsgCron(*ticker, creator, message, taskId, toolId)
 }
+
+/**
+ *iOS 检测结果jsonContent处理
+ */
+func iOSResultClassify(condition map[string]interface{}, jsonContent string) bool {
+	var dat map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonContent), &dat); err != nil {
+		logs.Error("json转map出错！", err.Error())
+		return false
+	}
+	//黑名单处理
+	blackContent := dat["blacklist_in_app"]
+	condition["category"] = "blacklist"
+	for k, v := range blackContent.(map[string]interface{}) {
+		if len(v.([]interface{})) != 0 {
+			temRes := ""
+			for _, s := range v.([]interface{}) {
+				temRes += s.(string) + "###"
+			}
+			condition["categoryName"] = k
+			condition["categoryContent"] = temRes
+			fmt.Println(condition)
+			var newDetectContent dal.IOSDetectContent
+			if err := mapstructure.Decode(condition, &newDetectContent); err != nil {
+				logs.Error("map转struct出错！", err.Error())
+				return false
+			}
+			if err := dal.CreateIOSDetectModel(newDetectContent); err != nil {
+				logs.Error("数据库中新增new detect content 出错！！！", err.Error())
+				return false
+			}
+		}
+	}
+	//可疑方法名处理
+	methodContent := dat["methods_in_app"]
+	condition["category"] = "method"
+	for _, temMethod := range methodContent.([]interface{}) {
+		susApi := temMethod.(map[string]interface{})["api_name"].(string)
+		susClass := temMethod.(map[string]interface{})["class_name"].(string)
+		condition["categoryName"] = susApi
+		condition["categoryContent"] = susClass
+		var newDetectContent dal.IOSDetectContent
+		if err := mapstructure.Decode(condition, &newDetectContent); err != nil {
+			logs.Error("map转struct出错！", err.Error())
+			return false
+		}
+		if err := dal.CreateIOSDetectModel(newDetectContent); err != nil {
+			logs.Error("数据库中新增new detect content 出错！！！", err.Error())
+			return false
+		}
+	}
+	return true
+}
+
 /**
  *lark消息定时提醒
  */
-func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string, taskId string, toolId string){
+func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string, taskId string, toolId string) {
 	flag := false
 	logs.Info("taskId: " + taskId + ", toolId: " + toolId)
-	if taskId=="" || toolId=="" {
+	if taskId == "" || toolId == "" {
 		return
 	}
 	for _ = range ticker.C {
 		condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
 		binaryTool := dal.QueryTaskBinaryCheckContent(condition)
 		logs.Info("每次提醒前进行提醒检查")
-		if *binaryTool != nil && len(*binaryTool) > 0{
+		if *binaryTool != nil && len(*binaryTool) > 0 {
 			dc := (*binaryTool)[0]
 			status := dc.Status
 			if status == 0 {
@@ -357,24 +428,25 @@ func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string, taskId st
 		ticker.Stop()
 	}
 }
+
 /**
  *确认二进制包检测结果，更新数据库，并停止lark消息
  */
-func ConfirmBinaryResult(c *gin.Context){
+func ConfirmBinaryResult(c *gin.Context) {
 	type confirm struct {
-		TaskId  int		`json:"taskId"`
-		ToolId	int		`json:"toolId"`
-		Remark  string	`json:"remark"`
-		Status  int		`json:"status"`
+		TaskId int    `json:"taskId"`
+		ToolId int    `json:"toolId"`
+		Remark string `json:"remark"`
+		Status int    `json:"status"`
 	}
 	param, _ := ioutil.ReadAll(c.Request.Body)
 	var t confirm
 	err := json.Unmarshal(param, &t)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "参数不合法！",
-			"errorCode" : -1,
-			"data" : "参数不合法！",
+			"message":   "参数不合法！",
+			"errorCode": -1,
+			"data":      "参数不合法！",
 		})
 		return
 	}
@@ -391,14 +463,14 @@ func ConfirmBinaryResult(c *gin.Context){
 	if !flag {
 		logs.Error("二进制检测内容确认失败")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "二进制检测内容确认失败！",
-			"errorCode" : -1,
-			"data" : "二进制检测内容确认失败！",
+			"message":   "二进制检测内容确认失败！",
+			"errorCode": -1,
+			"data":      "二进制检测内容确认失败！",
 		})
 		return
 	}
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id" : t.TaskId,
+		"id": t.TaskId,
 	})
 	appId := (*detect)[0].AppId
 	appVersion := (*detect)[0].AppVersion
@@ -409,15 +481,16 @@ func ConfirmBinaryResult(c *gin.Context){
 		delete(LARK_MSG_CALL_MAP, key)
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"message" : "success",
-		"errorCode" : 0,
-		"data" : "success",
+		"message":   "success",
+		"errorCode": 0,
+		"data":      "success",
 	})
 }
+
 /**
  *将安装包上传至tos
  */
-func upload2Tos(path string, taskId uint) (string, error){
+func upload2Tos(path string, taskId uint) (string, error) {
 
 	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME, _const.TOS_BUCKET_KEY)
 	context, cancel := context.WithTimeout(context.Background(), time.Minute)
@@ -426,13 +499,13 @@ func upload2Tos(path string, taskId uint) (string, error){
 	fileName := filepath.Base(path)
 	byte, err := ioutil.ReadFile(path)
 	if err != nil {
-		logs.Error("%s", "打开文件失败" + err.Error())
+		logs.Error("%s", "打开文件失败"+err.Error())
 	}
 	key := fmt.Sprint(time.Now().UnixNano()) + "_" + fileName
 	logs.Info("key: " + key)
 	err = tosPutClient.PutObject(context, key, int64(len(byte)), bytes.NewBuffer(byte))
 	if err != nil {
-		logs.Error("%s", "上传tos失败：" + err.Error())
+		logs.Error("%s", "上传tos失败："+err.Error())
 	}
 	domains := tos.GetDomainsForLargeFile("TT", path)
 	domain := domains[rand.Intn(len(domains)-1)]
@@ -442,10 +515,11 @@ func upload2Tos(path string, taskId uint) (string, error){
 	dal.UpdateDetectTosUrl(returnUrl, taskId)
 	return returnUrl, nil
 }
+
 /**
  * test upload tos
  */
-func UploadTos(c *gin.Context){
+func UploadTos(c *gin.Context) {
 	data := ""
 	path := "/home/kanghuaisong/test.py"
 	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME, _const.TOS_BUCKET_KEY)
@@ -455,14 +529,14 @@ func UploadTos(c *gin.Context){
 	fileName := filepath.Base(path)
 	byte, err := ioutil.ReadFile(path)
 	if err != nil {
-		logs.Error("%s", "打开文件失败" + err.Error())
+		logs.Error("%s", "打开文件失败"+err.Error())
 		data = "打开文件失败"
 	}
 	key := fmt.Sprint(time.Now().UnixNano()) + "_" + fileName
 	logs.Info("key: " + key)
 	err = tosPutClient.PutObject(context, key, int64(len(byte)), bytes.NewBuffer(byte))
 	if err != nil {
-		logs.Error("%s", "上传tos失败：" + err.Error())
+		logs.Error("%s", "上传tos失败："+err.Error())
 		data = "上传tos失败：" + err.Error()
 	}
 	domains := tos.GetDomainsForLargeFile("TT", path)
@@ -472,39 +546,42 @@ func UploadTos(c *gin.Context){
 	returnUrl = "https://" + domain + "/" + key
 	logs.Info("returnUrl: " + returnUrl)
 	c.JSON(http.StatusOK, gin.H{
-		"message" : "success",
-		"errorCode" : 0,
-		"data" : data,
+		"message":   "success",
+		"errorCode": 0,
+		"data":      data,
 	})
 }
+
 /**
  *判断路径是否存在
  */
-func PathExists(path string)(bool, error){
+func PathExists(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if err == nil {
 		return true, nil
 	}
-	if os.IsNotExist(err){
+	if os.IsNotExist(err) {
 		return false, nil
 	}
 	return false, nil
 }
+
 /*
  *错误格式化信息
  */
-func errorFormatFile(c *gin.Context){
+func errorFormatFile(c *gin.Context) {
 	logs.Infof("文件格式不正确，请上传正确的文件！")
 	c.JSON(http.StatusOK, gin.H{
-		"message" : "文件格式不正确，请上传正确的文件！",
-		"errorCode" : -4,
-		"data" : "文件格式不正确，请上传正确的文件！",
+		"message":   "文件格式不正确，请上传正确的文件！",
+		"errorCode": -4,
+		"data":      "文件格式不正确，请上传正确的文件！",
 	})
 }
+
 /*
  *查询检测任务列表
  */
-func QueryDetectTasks(c *gin.Context){
+func QueryDetectTasks(c *gin.Context) {
 
 	appId := c.DefaultQuery("appId", "")
 	version := c.DefaultQuery("version", "")
@@ -516,9 +593,9 @@ func QueryDetectTasks(c *gin.Context){
 	if pageNo == "" {
 		logs.Error("缺少page参数！")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少page参数！",
-			"errorCode" : -1,
-			"data" : "缺少page参数！",
+			"message":   "缺少page参数！",
+			"errorCode": -1,
+			"data":      "缺少page参数！",
 		})
 		return
 	}
@@ -527,9 +604,9 @@ func QueryDetectTasks(c *gin.Context){
 	if err != nil {
 		logs.Error("appId参数不合法！")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "appId参数不合法！",
-			"errorCode" : -2,
-			"data" : "appId参数不合法！",
+			"message":   "appId参数不合法！",
+			"errorCode": -2,
+			"data":      "appId参数不合法！",
 		})
 		return
 	}
@@ -556,7 +633,7 @@ func QueryDetectTasks(c *gin.Context){
 	items, total := dal.QueryTasksByCondition(param)
 	if uint(page*size) >= total {
 		more = 0
-	}else{
+	} else {
 		more = 1
 	}
 	data.GetMore = more
@@ -564,15 +641,16 @@ func QueryDetectTasks(c *gin.Context){
 	data.NowPage = uint(page)
 	data.Tasks = *items
 	c.JSON(http.StatusOK, gin.H{
-		"message" : "success",
-		"errorCode" : 0,
-		"data" : data,
+		"message":   "success",
+		"errorCode": 0,
+		"data":      data,
 	})
 }
+
 /**
  *根据二进制工具列表
  */
-func QueryDetectTools(c *gin.Context){
+func QueryDetectTools(c *gin.Context) {
 
 	name := c.DefaultQuery("name", "")
 	condition := "1=1"
@@ -583,40 +661,41 @@ func QueryDetectTools(c *gin.Context){
 	if tools == nil {
 		logs.Error("二进制检测工具列表查询失败")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "二进制检测工具列表查询失败",
-			"errorCode" : -1,
-			"data" : "二进制检测工具列表查询失败",
+			"message":   "二进制检测工具列表查询失败",
+			"errorCode": -1,
+			"data":      "二进制检测工具列表查询失败",
 		})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"message" : "success",
-		"errorCode" : 0,
-		"data" : tools,
+		"message":   "success",
+		"errorCode": 0,
+		"data":      tools,
 	})
 }
+
 /**
  *查询检测任务选择的二进制检查工具
  */
-func QueryTaskQueryTools(c *gin.Context){
+func QueryTaskQueryTools(c *gin.Context) {
 
 	taskId := c.DefaultQuery("taskId", "")
 	if taskId == "" {
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少taskId参数",
-			"errorCode" : -1,
-			"data" : "缺少taskId参数",
+			"message":   "缺少taskId参数",
+			"errorCode": -1,
+			"data":      "缺少taskId参数",
 		})
 		return
 	}
 	task := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id" : taskId,
+		"id": taskId,
 	})
-	if task == nil || len(*task) == 0{
+	if task == nil || len(*task) == 0 {
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "未查询到该taskId对应的检测任务",
-			"errorCode" : -2,
-			"data" : "未查询到该taskId对应的检测任务",
+			"message":   "未查询到该taskId对应的检测任务",
+			"errorCode": -2,
+			"data":      "未查询到该taskId对应的检测任务",
 		})
 		return
 	}
@@ -627,16 +706,16 @@ func QueryTaskQueryTools(c *gin.Context){
 		logs.Error("未查询到该检测任务对应的二进制检测结果")
 		var res [0]dal.DetectContent
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "success",
-			"errorCode" : 0,
-			"data" : res,
+			"message":   "success",
+			"errorCode": 0,
+			"data":      res,
 		})
 		return
 	}
 	toolCondition := "id in("
-	for i:=0; i<len(*toolsContent); i++ {
+	for i := 0; i < len(*toolsContent); i++ {
 		content := (*toolsContent)[i]
-		if i==len(*toolsContent)-1 {
+		if i == len(*toolsContent)-1 {
 			toolCondition += "'" + fmt.Sprint(content.ToolId) + "')"
 		} else {
 			toolCondition += "'" + fmt.Sprint(content.ToolId) + "',"
@@ -645,22 +724,23 @@ func QueryTaskQueryTools(c *gin.Context){
 	toolCondition += " and platform ='" + strconv.Itoa(platform) + "'"
 	selected := dal.QueryBinaryToolsByCondition(toolCondition)
 	c.JSON(http.StatusOK, gin.H{
-		"message" : "success",
-		"errorCode" : 0,
-		"data" : *selected,
+		"message":   "success",
+		"errorCode": 0,
+		"data":      *selected,
 	})
 }
+
 /**
  *查询二进制检查结果信息
  */
-func QueryTaskBinaryCheckContent(c *gin.Context){
+func QueryTaskBinaryCheckContent(c *gin.Context) {
 	taskId := c.DefaultQuery("taskId", "")
 	if taskId == "" {
 		logs.Error("缺少taskId参数")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少taskId参数",
-			"errorCode" : -1,
-			"data" : "缺少taskId参数",
+			"message":   "缺少taskId参数",
+			"errorCode": -1,
+			"data":      "缺少taskId参数",
 		})
 		return
 	}
@@ -668,62 +748,63 @@ func QueryTaskBinaryCheckContent(c *gin.Context){
 	if toolId == "" {
 		logs.Error("缺少toolId参数")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少toolId参数",
-			"errorCode" : -2,
-			"data" : "缺少toolId参数",
+			"message":   "缺少toolId参数",
+			"errorCode": -2,
+			"data":      "缺少toolId参数",
 		})
 		return
 	}
 	condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
 	content := dal.QueryTaskBinaryCheckContent(condition)
-	if content == nil || len(*content)==0{
+	if content == nil || len(*content) == 0 {
 		logs.Info("未查询到检测内容")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "未查询到检测内容",
-			"errorCode" : -3,
-			"data" : "未查询到检测内容",
+			"message":   "未查询到检测内容",
+			"errorCode": -3,
+			"data":      "未查询到检测内容",
 		})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"message" : "success",
-		"errorCode" : 0,
-		"data" : (*content)[0],
+		"message":   "success",
+		"errorCode": 0,
+		"data":      (*content)[0],
 	})
 }
+
 /**
  *获取token接口
  */
-func GetToken(c *gin.Context){
+func GetToken(c *gin.Context) {
 	var jwtSecret = []byte("itc_jwt_secret")
 	username := c.DefaultQuery("username", "")
 	if username == "" {
 		logs.Error("未获取到username")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "未获取到username",
-			"errorCode" : -1,
-			"data" : "未获取到username",
+			"message":   "未获取到username",
+			"errorCode": -1,
+			"data":      "未获取到username",
 		})
 		return
 	}
 	claim := jwt.MapClaims{
-		"name" : username,
+		"name": username,
 	}
 	tokenClaims := jwt.NewWithClaims(jwt.SigningMethodHS256, claim)
 	token, err := tokenClaims.SignedString(jwtSecret)
 	if err != nil {
 		logs.Error("生成token失败")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "生成token失败",
-			"errorCode" : -2,
-			"data" : "生成token失败",
+			"message":   "生成token失败",
+			"errorCode": -2,
+			"data":      "生成token失败",
 		})
 	} else {
 		logs.Error("生成token成功")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "success",
-			"errorCode" : 0,
-			"data" : token,
+			"message":   "success",
+			"errorCode": 0,
+			"data":      token,
 		})
 	}
 }
