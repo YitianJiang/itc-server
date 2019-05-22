@@ -1036,12 +1036,12 @@ func ConfirmApkBinaryResult(c *gin.Context){
 	}
 
 	//切换到旧版本
-	if (t.ToolId != 6){
-		c.Request.Body.Close()
-		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(param))
-		ConfirmBinaryResult(c)
-		return
-	}
+	//if (t.ToolId != 6){
+	//	c.Request.Body.Close()
+	//	c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(param))
+	//	ConfirmBinaryResult(c)
+	//	return
+	//}
 	//获取确认人信息
 	username, _ := c.Get("username")
 	var data map[string]string
@@ -1410,10 +1410,10 @@ func QueryTaskApkBinaryCheckContent(c *gin.Context){
 		return
 	}
 	//切换到旧版本
-	if toolId != "6"{
-		QueryTaskBinaryCheckContent(c)
-		return
-	}
+	//if toolId != "6"{
+	//	QueryTaskBinaryCheckContent(c)
+	//	return
+	//}
 	condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
 
 	content,err := dal.QueryDetectInfo(condition)
