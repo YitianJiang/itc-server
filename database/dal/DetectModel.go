@@ -329,9 +329,6 @@ func ConfirmBinaryResult(data map[string]string) bool {
 }
 
 
-
-
-
 /**
 确认安卓二进制结果----------fj
  */

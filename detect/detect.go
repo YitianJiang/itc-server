@@ -953,15 +953,17 @@ func alertLarkMsgCronNew(ticker time.Ticker, receiver string, msg string, taskId
  */
 func ConfirmBinaryResult(c *gin.Context){
 	type confirm struct {
+		Id  	int		`json:"id"`
 		TaskId  int		`json:"taskId"`
 		ToolId	int		`json:"toolId"`
 		Remark  string	`json:"remark"`
 		Status  int		`json:"status"`
-	}
+	}//测试兼容性增加
 	param, _ := ioutil.ReadAll(c.Request.Body)
 	var t confirm
 	err := json.Unmarshal(param, &t)
 	if err != nil {
+		logs.Error("wrong params %v",err)
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "参数不合法！",
 			"errorCode" : -1,
@@ -1030,6 +1032,14 @@ func ConfirmApkBinaryResult(c *gin.Context){
 			"errorCode" : -1,
 			"data" : "参数不合法！",
 		})
+		return
+	}
+
+	//切换到旧版本
+	if (t.ToolId != 6){
+		c.Request.Body.Close()
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(param))
+		ConfirmBinaryResult(c)
 		return
 	}
 	//获取确认人信息
@@ -1296,7 +1306,9 @@ func QueryTaskQueryTools(c *gin.Context){
 	platform := (*task)[0].Platform
 	condition := "task_id='" + taskId + "'"
 	toolsContent := dal.QueryTaskBinaryCheckContent(condition)
-	if toolsContent == nil || len(*toolsContent) == 0 {
+	//scanner检测工具查询内容
+	toolsContent_2,_ := dal.QueryDetectInfo(condition)
+	if (toolsContent == nil || len(*toolsContent) == 0 )&& (toolsContent_2 == nil ) {
 		logs.Error("未查询到该检测任务对应的二进制检测结果")
 		var res [0]dal.DetectContent
 		c.JSON(http.StatusOK, gin.H{
@@ -1307,14 +1319,19 @@ func QueryTaskQueryTools(c *gin.Context){
 		return
 	}
 	toolCondition := "id in("
-	for i:=0; i<len(*toolsContent); i++ {
-		content := (*toolsContent)[i]
-		if i==len(*toolsContent)-1 {
-			toolCondition += "'" + fmt.Sprint(content.ToolId) + "')"
-		} else {
-			toolCondition += "'" + fmt.Sprint(content.ToolId) + "',"
+	if toolsContent_2 != nil{
+		toolCondition += "'"+fmt.Sprint((*toolsContent_2).ToolId)+"')"
+	}else{
+		for i:=0; i<len(*toolsContent); i++ {
+			content := (*toolsContent)[i]
+			if i==len(*toolsContent)-1 {
+				toolCondition += "'" + fmt.Sprint(content.ToolId) + "')"
+			} else {
+				toolCondition += "'" + fmt.Sprint(content.ToolId) + "',"
+			}
 		}
 	}
+
 	toolCondition += " and platform ='" + strconv.Itoa(platform) + "'"
 	selected := dal.QueryBinaryToolsByCondition(toolCondition)
 	c.JSON(http.StatusOK, gin.H{
@@ -1364,6 +1381,7 @@ func QueryTaskBinaryCheckContent(c *gin.Context){
 		"errorCode" : 0,
 		"data" : (*content)[0],
 	})
+	return
 }
 
 
@@ -1391,8 +1409,10 @@ func QueryTaskApkBinaryCheckContent(c *gin.Context){
 		})
 		return
 	}
+	//切换到旧版本
 	if toolId != "6"{
 		QueryTaskBinaryCheckContent(c)
+		return
 	}
 	condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
 
@@ -1549,7 +1569,7 @@ func GetToken(c *gin.Context){
 
 
 /**
- *确认安卓二进制包检测结果，更新数据库，并判断是否停止lark消息--------fj
+ *确认安卓二进制包检测结果，更新数据库（包括确认信息入库），并判断是否停止lark消息--------fj
  */
 func ConfirmApkBinaryResultv_2(c *gin.Context){
 	type confirm struct {
@@ -1573,6 +1593,14 @@ func ConfirmApkBinaryResultv_2(c *gin.Context){
 	}
 	//获取确认人信息
 	username, _ := c.Get("username")
+
+	//切换到旧版本
+	if (t.ToolId != 6){
+		c.Request.Body.Close()
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(param))
+		ConfirmBinaryResult(c)
+		return
+	}
 
 	//获取详情信息
 	condition1 := "id="+strconv.Itoa(t.Id)
@@ -1682,7 +1710,7 @@ func ConfirmApkBinaryResultv_2(c *gin.Context){
 }
 
 /**
- *安卓查询二进制检查结果信息-------fj
+ *安卓增量查询二进制检查结果信息-------fj
  */
 func QueryTaskApkBinaryCheckContentWithIgnorance(c *gin.Context){
 	taskId := c.DefaultQuery("taskId", "")
@@ -1705,31 +1733,47 @@ func QueryTaskApkBinaryCheckContentWithIgnorance(c *gin.Context){
 		})
 		return
 	}
-	//获取任务信息
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id" : taskId,
-	})
-	if (*detect) == nil {
-		logs.Error("未查询到该taskid对应的检测任务，%v", taskId)
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "未查询到该taskid对应的检测任务",
-			"errorCode" : -2,
-			"data" : "未查询到该taskid对应的检测任务",
-		})
+
+	//切换到旧版本
+	if toolId != "6" {
+		QueryTaskBinaryCheckContent(c)
 		return
 	}
-	queryData := make(map[string]string)
-	queryData["appId"] = (*detect)[0].AppId
-	queryData["platform"] = strconv.Itoa((*detect)[0].Platform)
 
-	methodIgs,strIgs,errIg := getIgnoredInfo(queryData)
-	if errIg != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "可忽略信息查询失败",
-			"errorCode" : -1,
-			"data" : errIg,
+	queryType := c.DefaultQuery("type","")
+	var flag = false
+	var methodIgs = make(map[string]int)
+	var strIgs = make(map[string]int)
+	var errIg error
+	if queryType == ""{
+		flag = true
+		//获取任务信息
+		detect := dal.QueryDetectModelsByMap(map[string]interface{}{
+			"id" : taskId,
 		})
-		return
+		if (*detect) == nil {
+			logs.Error("未查询到该taskid对应的检测任务，%v", taskId)
+			c.JSON(http.StatusOK, gin.H{
+				"message" : "未查询到该taskid对应的检测任务",
+				"errorCode" : -2,
+				"data" : "未查询到该taskid对应的检测任务",
+			})
+			return
+		}
+		queryData := make(map[string]string)
+		queryData["appId"] = (*detect)[0].AppId
+		queryData["platform"] = strconv.Itoa((*detect)[0].Platform)
+
+		//此处的逻辑需要再看一下，如果可忽略信息没有的话如何处理
+		methodIgs,strIgs,errIg = getIgnoredInfo(queryData)
+		if errIg != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"message" : "可忽略信息数据库查询失败",
+				"errorCode" : -1,
+				"data" : errIg,
+			})
+			return
+		}
 	}
 
 	condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
@@ -1758,15 +1802,14 @@ func QueryTaskApkBinaryCheckContentWithIgnorance(c *gin.Context){
 		logs.Info("未查询到该任务对应的检测内容")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "未查询到该任务对应的检测内容",
-			"errorCode" : -3,
+			"errorCode" : -1,
 			"data" : "未查询到该任务对应的检测内容",
 		})
 		return
 	}
 
+	//结果数据重组
 	var queryResult DetectQueryStruct
-	//queryResult.TaskId = (*content).TaskId
-	//queryResult.ToolId = (*content).ToolId
 	queryResult.Channel = (*content).Channel
 	queryResult.ApkName = (*content).ApkName
 	queryResult.Version = (*content).Version
@@ -1783,8 +1826,10 @@ func QueryTaskApkBinaryCheckContentWithIgnorance(c *gin.Context){
 
 	for _,detail := range (*details) {
 		if detail.SensiType == 1 {
-			if v,ok := methodIgs[detail.ClassName+"."+detail.Key]; ok&&v==1{
-				continue
+			if flag && methodIgs != nil {
+				if v,ok := methodIgs[detail.ClassName+"."+detail.Key]; ok&&v==1{
+					continue
+				}
 			}
 			var method SMethod
 			method.ClassName = detail.ClassName
@@ -1813,18 +1858,22 @@ func QueryTaskApkBinaryCheckContentWithIgnorance(c *gin.Context){
 			method.CallLoc = callLoc
 			methods = append(methods,method)
 		}else{
-			keys := strings.Split(detail.Key,";")
 			keys2 := make(map[string]int)
-			keys3 := ""
-			for _,keyInfo := range keys[0:len(keys)-1] {
-				if v,ok := strIgs[keyInfo]; ok&&v==1{
-					keys2[keyInfo] = 1
-				}else{
-					keys3 += keyInfo+";"
+			var keys3 = detail.Key
+			if flag && strIgs != nil{
+				keys := strings.Split(detail.Key,";")
+
+				keys3 = ""
+				for _,keyInfo := range keys[0:len(keys)-1] {
+					if v,ok := strIgs[keyInfo]; ok&&v==1{
+						keys2[keyInfo] = 1
+					}else{
+						keys3 += keyInfo+";"
+					}
 				}
-			}
-			if keys3 =="" {
-				continue
+				if keys3 =="" {
+					continue
+				}
 			}
 			var str SStr
 			str.Keys = keys3
@@ -1847,8 +1896,10 @@ func QueryTaskApkBinaryCheckContentWithIgnorance(c *gin.Context){
 					})
 					return
 				}
-				if vv,ok := keys2[callLoc_json.Key]; ok&&vv==1{
-					continue
+				if flag && strIgs != nil {
+					if vv,ok := keys2[callLoc_json.Key]; ok&&vv==1{
+						continue
+					}
 				}
 				callLoc = append(callLoc,callLoc_json)
 			}
@@ -1873,8 +1924,11 @@ func QueryTaskApkBinaryCheckContentWithIgnorance(c *gin.Context){
 func getIgnoredInfo(data map[string]string) (map[string]int,map[string]int,error) {
 	condition := "app_id ="+data["appId"]+" and platform = "+data["platform"]
 	result,err := dal.QueryIgnoredInfo(condition)
-	if err != nil || result == nil || len(*result)==0{
+	if err != nil {
 		return nil,nil,err
+	}
+	if result == nil || len(*result)==0{
+		return nil,nil,nil
 	}
 	methodMap := make(map[string]int)
 	strMap := make(map[string]int)
