@@ -1,14 +1,15 @@
 package dal
 
 import (
+	"fmt"
 	"code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
-	"fmt"
 	"time"
 	"strconv"
 )
+
 //二进制包检测任务
 type DetectStruct struct {
 	gorm.Model
@@ -24,32 +25,34 @@ type DetectStruct struct {
 	Status				int 			`json:"status"`//0---未完全确认；1---已完全确认
 }
 type RecordTotal struct {
-	Total 				uint
+	Total uint
 }
 
 type RetDetectTasks struct {
-	GetMore 			uint
-	Total 				uint
-	NowPage 			uint
-	Tasks 				[]DetectStruct
+	GetMore uint
+	Total   uint
+	NowPage uint
+	Tasks   []DetectStruct
 }
+
 //包检测工具
 type DetectTool struct {
 	gorm.Model
-	Name 				string 			`json:"name"`
-	Description 		string 			`json:"description"`
-	Platform 			int 			`json:"platform"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Platform    int    `json:"platform"`
 }
+
 //二进制包检测内容
 type DetectContent struct {
 	gorm.Model
-	TaskId 				int				`json:"taskId"`
-	ToolId 				int				`json:"toolId"`
-	HtmlContent 		string			`json:"htmlContent"`
-	JsonContent 		string			`json:"jsonContent"`
-	Status 				int				`json:"status"`//是否确认,0-未确认，1-确认通过，2-确认未通过
-	Confirmer			string			`json:"confirmer"`
-	Remark 				string			`json:"remark"`
+	TaskId      int    `json:"taskId"`
+	ToolId      int    `json:"toolId"`
+	HtmlContent string `json:"htmlContent"`
+	JsonContent string `json:"jsonContent"`
+	Status      int    `json:"status"` //是否确认,0-未确认，1-确认通过，2-确认未通过
+	Confirmer   string `json:"confirmer"`
+	Remark      string `json:"remark"`
 }
 
 //apk检测信息----fj新增
@@ -99,6 +102,19 @@ func (DetectInfo) TableName() string {
 func (DetectContentDetail) TableName() string {
 	return "tb_detect_content_detail"
 }
+//二进制包检测内容，json内容处理区分后
+type IOSDetectContent struct {
+	gorm.Model
+	TaskId          int    `gorm:"column:taskId"            json:"taskId"`
+	ToolId          int    `gorm:"column:toolId"            json:"toolId"`
+	HtmlContent     string `gorm:"column:htmlContent"       json:"htmlContent"`
+	Category        string `gorm:"column:category"          json:"category"`
+	CategoryName    string `gorm:"column:categoryName"      json:"categoryName"`
+	CategoryContent string `gorm:"column:categoryContent"   json:"categoryContent"`
+	Status          int    `gorm:"column:status"            json:"status"` //是否确认,0-未确认，1-确认通过，2-确认未通过
+	Confirmer       string `gorm:"column:confirmer"         json:"confirmer"`
+	Remark          string `gorm:"column:remark"            json:"remark"`
+}
 
 func (DetectStruct) TableName() string {
 	return "tb_binary_detect"
@@ -109,6 +125,10 @@ func (DetectContent) TableName() string {
 func (DetectTool) TableName() string {
 	return "tb_detect_tool"
 }
+func (IOSDetectContent) TableName() string {
+	return "tb_ios_detect_content"
+}
+
 //insert data
 func InsertDetectModel(detectModel DetectStruct) uint {
 	connection, err := database.GetConneection()
@@ -118,11 +138,12 @@ func InsertDetectModel(detectModel DetectStruct) uint {
 	}
 	defer connection.Close()
 	db := connection.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	if err := db.Create(&detectModel).Error; err != nil{
+	if err := db.Create(&detectModel).Error; err != nil {
 		return 0
 	}
 	return detectModel.ID
 }
+
 //update data
 func UpdateDetectModel(detectModel DetectStruct, content DetectContent) error {
 	connection, err := database.GetConneection()
@@ -150,8 +171,6 @@ func UpdateDetectModel(detectModel DetectStruct, content DetectContent) error {
 	db.Commit()
 	return nil
 }
-
-
 
 //update data-----fj
 func UpdateDetectModelNew(detectModel DetectStruct) error {
@@ -181,8 +200,25 @@ func UpdateDetectModelNew(detectModel DetectStruct) error {
 	db.Commit()
 	return nil
 }
-
-
+//update tb_ios_detect_content
+func CreateIOSDetectModel(content IOSDetectContent) error {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return err
+	}
+	defer connection.Close()
+	db := connection.Begin()
+	//insert detect content
+	if err := db.Table(IOSDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).
+		Create(&content).Error; err != nil {
+		logs.Error("insert binary check content failed, %v", err)
+		db.Rollback()
+		return err
+	}
+	db.Commit()
+	return nil
+}
 //delete data
 func DeleteDetectModel(detectModeId string) error {
 	connection, err := database.GetConneection()
@@ -192,12 +228,13 @@ func DeleteDetectModel(detectModeId string) error {
 	}
 	defer connection.Close()
 	db := connection.Table(DetectStruct{}.TableName())
-	if err := db.Where("id = ?", detectModeId).LogMode(_const.DB_LOG_MODE).Delete(&DetectStruct{}).Error; err != nil{
+	if err := db.Where("id = ?", detectModeId).LogMode(_const.DB_LOG_MODE).Delete(&DetectStruct{}).Error; err != nil {
 		logs.Error("%v", err)
 		return err
 	}
 	return nil
 }
+
 /**
  * 更新tos地址
  */
@@ -210,14 +247,15 @@ func UpdateDetectTosUrl(path string, taskId uint) bool {
 	defer connection.Close()
 	condition := "id='" + fmt.Sprint(taskId) + "'"
 	db := connection.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	if err := db.Where(condition).Update(map[string]interface{}{"tos_url" : path, "updated_at" : time.Now()}).Error; err != nil {
+	if err := db.Where(condition).Update(map[string]interface{}{"tos_url": path, "updated_at": time.Now()}).Error; err != nil {
 		logs.Error("%v", err)
 		return false
 	}
 	return true
 }
+
 //query by map
-func QueryDetectModelsByMap(param map[string]interface{}) *[]DetectStruct{
+func QueryDetectModelsByMap(param map[string]interface{}) *[]DetectStruct {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
@@ -232,6 +270,7 @@ func QueryDetectModelsByMap(param map[string]interface{}) *[]DetectStruct{
 	}
 	return &detect
 }
+
 //query data
 func QueryTasksByCondition(data map[string]interface{}) (*[]DetectStruct, uint) {
 	connection, err := database.GetConneection()
@@ -260,7 +299,7 @@ func QueryTasksByCondition(data map[string]interface{}) (*[]DetectStruct, uint) 
 		}
 	}
 	var items []DetectStruct
-	if err := db.Find(&items).Error; err != nil{
+	if err := db.Find(&items).Error; err != nil {
 		logs.Error("%v", err)
 		return nil, 0
 	}
@@ -276,14 +315,15 @@ func QueryTasksByCondition(data map[string]interface{}) (*[]DetectStruct, uint) 
 	defer connect.Close()
 	dbCount := connect.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	if err := dbCount.Select("count(id) as total").
-		Where(condition).Find(&total).Error; err != nil{
+		Where(condition).Find(&total).Error; err != nil {
 		logs.Error("query total record failed! %v", err)
 		return &items, 0
 	}
 	return &items, total.Total
 }
+
 //query by map
-func QueryTaskBinaryCheckContent(condition string) *[]DetectContent{
+func QueryTaskBinaryCheckContent(condition string) *[]DetectContent {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
@@ -316,10 +356,10 @@ func ConfirmBinaryResult(data map[string]string) bool {
 	condition := "task_id=" + taskId + " and tool_id=" + toolId
 	if err := db.Where(condition).LogMode(_const.DB_LOG_MODE).
 		Update(map[string]interface{}{
-			"status" : statusInt,
-			"confirmer" : confirmer,
-			"remark" : remark,
-			"updated_at" : time.Now(),
+			"status":     statusInt,
+			"confirmer":  confirmer,
+			"remark":     remark,
+			"updated_at": time.Now(),
 		}).Error; err != nil {
 		logs.Error("update db tb_detect_content failed: %v", err)
 		//db.Rollback()
