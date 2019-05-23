@@ -281,15 +281,12 @@ func CreateIOSDetectModel(content IOSDetectContent) error {
 		return err
 	}
 	defer connection.Close()
-	db := connection.Begin()
 	//insert detect content
-	if err := db.Table(IOSDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).
+	if err := connection.Table(IOSDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).
 		Create(&content).Error; err != nil {
 		logs.Error("insert binary check content failed, %v", err)
-		db.Rollback()
 		return err
 	}
-	db.Commit()
 	return nil
 }
 
