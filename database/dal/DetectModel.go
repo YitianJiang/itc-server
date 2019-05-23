@@ -58,7 +58,7 @@ type IOSDetectContent struct {
 	gorm.Model
 	TaskId          int    `gorm:"column:taskId"            json:"taskId"`
 	ToolId          int    `gorm:"column:toolId"            json:"toolId"`
-	HtmlContent     string `gorm:"column:htmlContent"       json:"htmlContent"`
+	JsonContent     string `gorm:"column:jsonContent"       json:"jsonContent"`
 	Category        string `gorm:"column:category"          json:"category"`
 	CategoryName    string `gorm:"column:categoryName"      json:"categoryName"`
 	CategoryContent string `gorm:"column:categoryContent"   json:"categoryContent"`
@@ -114,26 +114,6 @@ func UpdateDetectModel(detectModel DetectStruct, content DetectContent) error {
 	}
 	//insert detect content
 	if err := db.Table(DetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).
-		Create(&content).Error; err != nil {
-		logs.Error("insert binary check content failed, %v", err)
-		db.Rollback()
-		return err
-	}
-	db.Commit()
-	return nil
-}
-
-//update tb_ios_detect_content
-func CreateIOSDetectModel(content IOSDetectContent) error {
-	connection, err := database.GetConneection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return err
-	}
-	defer connection.Close()
-	db := connection.Begin()
-	//insert detect content
-	if err := db.Table(IOSDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).
 		Create(&content).Error; err != nil {
 		logs.Error("insert binary check content failed, %v", err)
 		db.Rollback()
@@ -290,5 +270,54 @@ func ConfirmBinaryResult(data map[string]string) bool {
 		return false
 	}
 	//db.Commit()
+	return true
+}
+
+//insert tb_ios_detect_content
+func CreateIOSDetectModel(content IOSDetectContent) error {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return err
+	}
+	defer connection.Close()
+	//insert detect content
+	if err := connection.Table(IOSDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).
+		Create(&content).Error; err != nil {
+		logs.Error("insert binary check content failed, %v", err)
+		return err
+	}
+	return nil
+}
+
+//query tb_ios_detect_content
+func QueryIOSDetectModel(condition map[string]interface{}) *[]IOSDetectContent {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return nil
+	}
+	defer connection.Close()
+
+	var iosDetectContent []IOSDetectContent
+	if err := connection.Table(IOSDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).Find(&iosDetectContent).Error; err != nil {
+		logs.Error("请求iOS静态检测结果出错！！！", err.Error())
+		return nil
+	}
+	return &iosDetectContent
+}
+
+//update tb_ios_detect_content
+func UpdateIOSDetectModel(id int, updates map[string]interface{}) bool {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return false
+	}
+	defer connection.Close()
+	if err := connection.Table(IOSDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Model(&IOSDetectContent{}).Where("id = ?", id).Update(updates).Error; err != nil {
+		logs.Error("更新iOS静态检测结果出错！！！", err.Error())
+		return false
+	}
 	return true
 }

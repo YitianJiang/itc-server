@@ -16,13 +16,13 @@ func InitRouter(r *ginex.Engine) {
 	//获取鉴权接口
 	r.GET("/t/generateToken", detect.GetToken)
 	//查询被拒案例
-	api.GET("/casemanage/queryRejCases",casemanage.GetRejCasesByConditions)
+	api.GET("/casemanage/queryRejCases", casemanage.GetRejCasesByConditions)
 	//新增被拒案例
-	api.POST("/casemanage/addRejCase",casemanage.AddRejCase)
+	api.POST("/casemanage/addRejCase", casemanage.AddRejCase)
 	//删除被拒案例
-	api.POST("/casemanage/deleteRejCase",casemanage.DeleteRejCase)
+	api.POST("/casemanage/deleteRejCase", casemanage.DeleteRejCase)
 	//更新被拒案例
-	api.POST("/casemanage/updateRejCase",casemanage.EditRejCaseofSolution)
+	api.POST("/casemanage/updateRejCase", casemanage.EditRejCaseofSolution)
 	api.Use(middleware.JWTCheck())
 	{
 		//上传ipa和apk
@@ -75,6 +75,10 @@ func InitRouter(r *ginex.Engine) {
 		api.GET("/certificates", controllers.GetCertificates)
 		//过期证书提醒
 		api.GET("/certificates/controller", controllers.CertificateController)
+		//获取iOS当前任务的二进制工具检测内容
+		api.GET("/task/queryIOSBinaryContent", detect.QueryIOSTaskBinaryCheckContent)
+		//确认iOS二进制检测信息
+		api.POST("/detect/confirmIOSResult", detect.ConfirmIOSBinaryResult)
 
 	}
 }
