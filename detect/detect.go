@@ -319,8 +319,17 @@ func UpdateDetectInfos(c *gin.Context) {
 			"toolId":      tool_id,
 			"jsonContent": jsonContent,
 		}
-		if iOSResultClassify(condition, jsonContent) == false {
+		res, warnFlag := iOSResultClassify(condition, jsonContent);  //检测结果处理
+		if res == false{
 			logs.Error("iOS 新增new detect content失败！！！") //防止影响现有用户，出错后暂不return
+		}
+		//iOS付费相关黑名单及时报警
+		if warnFlag {
+			tips := "Notice: " + (*detect)[0].AppName + " " + (*detect)[0].AppVersion + "IOS包完成二进制检测，检测黑名单中itms-services不为空，请及时关注！！！！\n"
+			utils.LarkDingOneInner("zhangshuai.02", tips)
+			utils.LarkDingOneInner("gongrui", tips)
+			utils.LarkDingOneInner("kanghuaisong", tips)
+			utils.LarkDingOneInner( (*detect)[0].ToLarker, tips)
 		}
 	}
 	//进行lark消息提醒
@@ -573,11 +582,12 @@ func strRmRepeat(callInfo []interface{}) string {
 /**
  *iOS 检测结果jsonContent处理
  */
-func iOSResultClassify(condition map[string]interface{}, jsonContent string) bool {
+func iOSResultClassify(condition map[string]interface{}, jsonContent string) (bool, bool) {
+	warnFlag := false
 	var dat map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonContent), &dat); err != nil {
 		logs.Error("json转map出错！", err.Error())
-		return false
+		return false, warnFlag
 	}
 	//黑名单处理
 	blackContent := dat["blacklist_in_app"]
@@ -594,14 +604,17 @@ func iOSResultClassify(condition map[string]interface{}, jsonContent string) boo
 			}
 			condition["categoryName"] = k
 			condition["categoryContent"] = temRes
+			if k == "itms-services"{
+				warnFlag = true
+			}
 			var newDetectContent dal.IOSDetectContent
 			if err := mapstructure.Decode(condition, &newDetectContent); err != nil {
 				logs.Error("map转struct出错！", err.Error())
-				return false
+				return false, warnFlag
 			}
 			if err := dal.CreateIOSDetectModel(newDetectContent); err != nil {
 				logs.Error("数据库中新增new detect content 出错！！！", err.Error())
-				return false
+				return false, warnFlag
 			}
 		}
 	}
@@ -616,14 +629,14 @@ func iOSResultClassify(condition map[string]interface{}, jsonContent string) boo
 		var newDetectContent dal.IOSDetectContent
 		if err := mapstructure.Decode(condition, &newDetectContent); err != nil {
 			logs.Error("map转struct出错！", err.Error())
-			return false
+			return false, warnFlag
 		}
 		if err := dal.CreateIOSDetectModel(newDetectContent); err != nil {
 			logs.Error("数据库中新增new detect content 出错！！！", err.Error())
-			return false
+			return false, warnFlag
 		}
 	}
-	return true
+	return true, warnFlag
 }
 
 /**
