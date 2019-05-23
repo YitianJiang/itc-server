@@ -318,12 +318,9 @@ func UpdateIOSDetectModel(id int, updates map[string]interface{}) bool {
 		return false
 	}
 	defer connection.Close()
-	db := connection.Begin()
-	if err := db.Table(IOSDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Model(&IOSDetectContent{}).Where("id = ?", id).Update(updates).Error; err != nil {
+	if err := connection.Table(IOSDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Model(&IOSDetectContent{}).Where("id = ?", id).Update(updates).Error; err != nil {
 		logs.Error("更新iOS静态检测结果出错！！！", err.Error())
-		db.Rollback()
 		return false
 	}
-	db.Commit()
 	return true
 }
