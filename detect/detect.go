@@ -84,13 +84,14 @@ type StrCallJson struct {
 
 var LARK_MSG_CALL_MAP = make(map[string]interface{})
 
+
 /**
- *新建检测任务
+ *新建检测任务更新---------fj
  */
 func UploadFile(c *gin.Context){
 
 	url := ""
-	name, f := c.Get("username")
+	nameI, f := c.Get("username")
 	if !f {
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "未获取到用户信息！",
@@ -99,6 +100,7 @@ func UploadFile(c *gin.Context){
 		})
 		return
 	}
+
 	file, header, err := c.Request.FormFile("uploadFile")
 	if file == nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -110,305 +112,15 @@ func UploadFile(c *gin.Context){
 	}
 	defer file.Close()
 	filename := header.Filename
-	platform := c.DefaultPostForm("platform", "")
-	if platform == ""{
-		logs.Error("缺少platform参数！")
-		c.JSON(http.StatusOK, gin.H{
-			"message":"缺少platform参数！",
-			"errorCode":-3,
-		})
-		return
-	}
-	appId := c.DefaultPostForm("appId", "")
-	if appId == ""{
-		logs.Error("缺少appId参数！")
-		c.JSON(http.StatusOK, gin.H{
-			"message":"缺少appId参数！",
-			"errorCode":-4,
-		})
-		return
-	}
-	checkItem := c.DefaultPostForm("checkItem", "")
-	logs.Info("checkItem: ", checkItem)
-	//检验文件格式是否是apk或者ipa
-	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".ipa") ||
-		strings.HasSuffix(filename, ".aab")
-	if !flag{
-		errorFormatFile(c)
-		return
-	}
-	//检验文件与platform是否匹配，0-安卓apk，1-iOS ipa
-	if platform == "0"{
-		flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".aab")
-		if !flag{
-			errorFormatFile(c)
-			return
-		}
-		url = "http://" + DETECT_URL_PRO + "/apk_post"
-	} else if platform == "1"{
-		flag := strings.HasSuffix(filename, ".ipa")
-		if !flag{
-			errorFormatFile(c)
-			return
-		}
-		url = "http://" + DETECT_URL_PRO + "/ipa_post/v2"
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"message":"platform参数不合法！",
-			"errorCode":-5,
-		})
-		logs.Error("platform参数不合法！")
-		return
-	}
-	_tmpDir := "./tmp"
-	exist, err := PathExists(_tmpDir)
-	if !exist{
-		os.Mkdir(_tmpDir, os.ModePerm)
-	}
-	out, err := os.Create(_tmpDir + "/" + filename)
-	if err != nil{
-		c.JSON(http.StatusOK, gin.H{
-			"message":"安装包文件处理失败，请联系相关人员！",
-			"errorCode":-6,
-		})
-		logs.Fatal("临时文件保存失败")
-		return
-	}
-	defer out.Close()
-	_, err = io.Copy(out, file)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message":"安装包文件处理失败，请联系相关人员！",
-			"errorCode":-6,
-		})
-		logs.Fatal("临时文件保存失败")
-		return
-	}
-	//调试，暂时注释
-	recipients := name.(string) + "@bytedance.com"
-	filepath := _tmpDir + "/" + filename
-	//1、上传至tos,测试暂时注释
-	//tosUrl, err := upload2Tos(filepath)
-	//2、将相关信息保存至数据库
-	var dbDetectModel dal.DetectStruct
-	dbDetectModel.Creator = name.(string)
-	dbDetectModel.SelfCheckStatus = 0
-	dbDetectModel.CreatedAt = time.Now()
-	dbDetectModel.UpdatedAt = time.Now()
-	dbDetectModel.Platform, _ = strconv.Atoi(platform)
-	dbDetectModel.AppId = appId
-	dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
-	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
-	if checkItem == ""{
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "未选择二进制检测工具，请直接进行自查",
-			"errorCode" : 0,
-			"data" : "未选择二进制检测工具，请直接进行自查",
-		})
-		return
-	}
-	//go upload2Tos(filepath, dbDetectModelId)
-	go func() {
-		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
-		bodyBuffer := &bytes.Buffer{}
-		bodyWriter := multipart.NewWriter(bodyBuffer)
-		bodyWriter.WriteField("recipients", recipients)
-		bodyWriter.WriteField("callback", callBackUrl)
-		bodyWriter.WriteField("taskID", fmt.Sprint(dbDetectModelId))
-		bodyWriter.WriteField("toolIds", checkItem)
-		fileWriter, err := bodyWriter.CreateFormFile("file", filepath)
-		if err != nil {
-			logs.Error("%s", "error writing to buffer: " + err.Error())
-			c.JSON(http.StatusOK, gin.H{
-				"message" : "二进制包处理错误，请联系相关人员！",
-				"errorCode" : -1,
-				"data" : "二进制包处理错误，请联系相关人员！",
-			})
-			return
-		}
-		fileHandler, err := os.Open(filepath)
-		defer fileHandler.Close()
-		_, err = io.Copy(fileWriter, fileHandler)
-		contentType := bodyWriter.FormDataContentType()
-		err = bodyWriter.Close()
-		logs.Info("url: ", url)
-		toolHttp := &http.Client{
-			Timeout: 300 * time.Second,
-		}
-		response, err := toolHttp.Post(url, contentType, bodyBuffer)
-		if err != nil {
-			logs.Error("上传二进制包出错，将重试一次: ", err)
-			response, err = toolHttp.Post(url, contentType, bodyBuffer)
-		}
-		if err != nil {
-			logs.Error("上传二进制包出错，重试一次也失败", err)
-			//及时报警
-			utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！")
-		}
-		resBody := &bytes.Buffer{}
-		if response != nil {
-			defer response.Body.Close()
-			_, err = resBody.ReadFrom(response.Body)
-			var data map[string]interface{}
-			data = make(map[string]interface{})
-			json.Unmarshal(resBody.Bytes(), &data)
-			logs.Info("upload detect url's response: %+v", data)
-			//删掉临时文件
-			os.Remove(filepath)
-		}
-	}()
-	c.JSON(http.StatusOK, gin.H{
-		"message" : "文件上传成功，请等待检测结果通知",
-		"errorCode" : 0,
-		"data" : "文件上传成功，请等待检测结果通知",
-	})
-}
 
-/**
- *更新检测包的检测信息
- */
-func UpdateDetectInfos(c *gin.Context){
+	toLarker := c.DefaultPostForm("toLarker","")
+	var name string
+	if toLarker == "" {
+		name = nameI.(string)
+	}else {
+		name = toLarker
+	}
 
-	taskId := c.Request.FormValue("task_ID")
-	if taskId == "" {
-		logs.Error("缺少task_ID参数")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少task_ID参数",
-			"errorCode" : -1,
-			"data" : "缺少task_ID参数",
-		})
-		return
-	}
-	appName := c.Request.FormValue("appName")
-	appVersion := c.Request.FormValue("appVersion")
-	htmlContent := c.Request.FormValue("content")
-	jsonContent := c.Request.FormValue("jsonContent")
-	toolId := c.Request.FormValue("tool_ID")
-	var detectContent dal.DetectContent
-	detectContent.TaskId, _ = strconv.Atoi(taskId)
-	detectContent.ToolId, _ = strconv.Atoi(toolId)
-	detectContent.HtmlContent = htmlContent
-	detectContent.JsonContent = jsonContent
-	detectContent.CreatedAt = time.Now()
-	detectContent.UpdatedAt = time.Now()
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id" : taskId,
-	})
-	if (*detect) == nil {
-		logs.Error("未查询到该taskid对应的检测任务，%v", taskId)
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "未查询到该taskid对应的检测任务",
-			"errorCode" : -2,
-			"data" : "未查询到该taskid对应的检测任务",
-		})
-		return
-	}
-	(*detect)[0].AppName = appName
-	(*detect)[0].AppVersion = appVersion
-	(*detect)[0].UpdatedAt = time.Now()
-	if err := dal.UpdateDetectModel((*detect)[0], detectContent); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "数据库更新检测信息失败",
-			"errorCode" : -3,
-			"data" : "数据库更新检测信息失败",
-		})
-		return
-	}
-	//进行lark消息提醒
-	var message string
-	creator := (*detect)[0].Creator
-	message = creator + "你好，" + (*detect)[0].AppName + " " + (*detect)[0].AppVersion
-	platform := (*detect)[0].Platform
-	if platform == 0 {
-		message += "安卓包"
-	} else {
-		message += "iOS包"
-	}
-	message += "完成二进制检测，请及时进行确认！可在结果展示页面底部进行确认，确认后不会再有消息提醒！\n"
-	message += "如果安卓选择了GooglePlay检测和隐私检测，两个检测结果都需要进行确认，请不要遗漏！！！\n"
-	appId := (*detect)[0].AppId
-	appIdInt, _ := strconv.Atoi(appId)
-	var config *dal.LarkMsgTimer
-	config = dal.QueryLarkMsgTimerByAppId(appIdInt)
-	alterType := 0
-	var interval int
-	if config == nil {//如果未进行消息提醒设置，则默认10分钟提醒一次
-		logs.Info("采用默认10分钟频率进行提醒")
-		alterType = 1
-		interval = 10
-	} else {
-		logs.Info("采用设置的频率进行提醒")
-		alterType = config.Type
-		interval = config.MsgInterval
-	}
-	var ticker *time.Ticker
-	var duration time.Duration
-	switch alterType {
-	case 0:
-		logs.Info("提醒方式为秒")
-		duration = time.Duration(interval) * time.Second
-	case 1:
-		logs.Info("提醒方式为分钟")
-		duration = time.Duration(interval) * time.Minute
-	case 2:
-		logs.Info("提醒方式为小时")
-		duration = time.Duration(interval) * time.Hour
-	case 3:
-		logs.Info("提醒方式为天")
-		duration = time.Duration(interval) * time.Duration(24) * time.Hour
-	default:
-		logs.Info("提醒方式为分钟")
-		duration = 10 * time.Minute
-	}
-	ticker = time.NewTicker(duration)
-	var key string
-	key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
-	LARK_MSG_CALL_MAP[key] = ticker
-	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz="+ appId + "&showItcDetail=1&itcTaskId=" + taskId
-	message += "地址链接：" + larkUrl
-	utils.LarkDingOneInner(creator, message)
-	if config != nil {
-		timerId := config.ID
-		condition := "timer_id='" + fmt.Sprint(timerId) + "' and platform='" + strconv.Itoa(platform) + "'"
-		groups := dal.QueryLarkGroupByCondition(condition)
-		if groups != nil && len(*groups) > 0 {
-			for i:=0; i<len(*groups); i++ {
-				g := (*groups)[i]
-				utils.LarkGroup(message, g.GroupId)
-			}
-		}
-	}
-	go alertLarkMsgCron(*ticker, creator, message, taskId, toolId)
-}
-
-
-
-/**
- *新建检测任务---------fj
- */
-func UploadFileNew(c *gin.Context){
-
-	url := ""
-	name, f := c.Get("username")
-	if !f {
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "未获取到用户信息！",
-			"errorCode" : -1,
-			"data" : "未获取到用户信息！",
-		})
-		return
-	}
-	file, header, err := c.Request.FormFile("uploadFile")
-	if file == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message":"未选择上传的文件！",
-			"errorCode":-2,
-		})
-		logs.Error("未选择上传的文件！")
-		return
-	}
-	defer file.Close()
-	filename := header.Filename
 	platform := c.DefaultPostForm("platform", "")
 	if platform == ""{
 		logs.Error("缺少platform参数！")
@@ -445,10 +157,15 @@ func UploadFileNew(c *gin.Context){
 			errorFormatFile(c)
 			return
 		}
-		//旧服务url
+		if checkItem != "6" {
+			//旧服务url
+			url = "http://" + DETECT_URL_PRO + "/apk_post"
+		}else {
+			//新服务url
+			url = "http://" + DETECT_URL_PRO +"/apk_post/v2"
+		}
 		//url = "http://" + DETECT_URL_PRO + "/apk_post"
-		//新服务url
-		url = "http://" + DETECT_URL_PRO +"/apk_post/v2"
+
 	} else if platform == "1"{
 		flag := strings.HasSuffix(filename, ".ipa")
 		if !flag{
@@ -489,13 +206,14 @@ func UploadFileNew(c *gin.Context){
 		return
 	}
 	//调试，暂时注释
-	recipients := name.(string) + "@bytedance.com"
+	recipients := name + "@bytedance.com"
 	filepath := _tmpDir + "/" + filename
 	//1、上传至tos,测试暂时注释
 	//tosUrl, err := upload2Tos(filepath)
 	//2、将相关信息保存至数据库
 	var dbDetectModel dal.DetectStruct
-	dbDetectModel.Creator = name.(string)
+	dbDetectModel.Creator = nameI.(string)
+	dbDetectModel.ToLarker = name
 	dbDetectModel.SelfCheckStatus = 0
 	dbDetectModel.CreatedAt = time.Now()
 	dbDetectModel.UpdatedAt = time.Now()
@@ -516,7 +234,7 @@ func UploadFileNew(c *gin.Context){
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
 		//测试回调网址------fj
-		callBackUrl := "http://10.224.13.149:6789/updateDetectInfosNew"
+		callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -572,9 +290,9 @@ func UploadFileNew(c *gin.Context){
 }
 
 /**
- *更新检测包的检测信息----------fj
+ *更新检测包的检测信息_v2——----------fj
  */
-func UpdateDetectInfosNew(c *gin.Context){
+func UpdateDetectInfos(c *gin.Context){
 
 	taskId := c.Request.FormValue("task_ID")
 	if taskId == "" {
@@ -586,21 +304,9 @@ func UpdateDetectInfosNew(c *gin.Context){
 		})
 		return
 	}
-	//appName := c.Request.FormValue("appName")
-	//appVersion := c.Request.FormValue("appVersion")
-	//不需要此参数
-	//htmlContent := c.Request.FormValue("content")
+	toolId := c.Request.FormValue("tool_ID")
 	jsonContent := c.Request.FormValue("jsonContent")
 
-
-	toolId := c.Request.FormValue("tool_ID")
-	//var detectContent dal.DetectContent
-	//detectContent.TaskId, _ = strconv.Atoi(taskId)
-	//detectContent.ToolId, _ = strconv.Atoi(toolId)
-	//detectContent.HtmlContent = htmlContent
-	//detectContent.JsonContent = jsonContent
-	//detectContent.CreatedAt = time.Now()
-	//detectContent.UpdatedAt = time.Now()
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id" : taskId,
 	})
@@ -613,33 +319,42 @@ func UpdateDetectInfosNew(c *gin.Context){
 		})
 		return
 	}
-	//logs.Info("测试返回的appName:  %s    +appVersion:%s",appName,appVersion)
-	//(*detect)[0].AppName = appName
-	//(*detect)[0].AppVersion = appVersion
-	//(*detect)[0].UpdatedAt = time.Now()
-	//if err := dal.UpdateDetectModelNew((*detect)[0]); err != nil {
-	//	c.JSON(http.StatusOK, gin.H{
-	//		"message" : "数据库更新任务信息失败",
-	//		"errorCode" : -3,
-	//		"data" : "数据库更新任务信息失败",
-	//	})
-	//	return
-	//}
-	if (*detect)[0].Platform == 0{
+
+	toolIdInt,_ := strconv.Atoi(toolId)
+
+	if toolIdInt == 6 {//安卓兼容新版本
 		//安卓检测信息分析，并将检测信息写库-----fj
 		mapInfo := make(map[string]int)
 		mapInfo["taskId"],_ = strconv.Atoi(taskId)
 		mapInfo["toolId"],_ = strconv.Atoi(toolId)
 		jsonInfoAnalysis(jsonContent,mapInfo)
-	}else {
-		//ios检测结果分析
+	}else{
+		appName := c.Request.FormValue("appName")
+		appVersion := c.Request.FormValue("appVersion")
+		htmlContent := c.Request.FormValue("content")
+		var detectContent dal.DetectContent
+		detectContent.TaskId, _ = strconv.Atoi(taskId)
+		detectContent.ToolId, _ = strconv.Atoi(toolId)
+		detectContent.HtmlContent = htmlContent
+		detectContent.JsonContent = jsonContent
+		detectContent.CreatedAt = time.Now()
+		detectContent.UpdatedAt = time.Now()
+		(*detect)[0].AppName = appName
+		(*detect)[0].AppVersion = appVersion
+		(*detect)[0].UpdatedAt = time.Now()
+		if err := dal.UpdateDetectModel((*detect)[0], detectContent); err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"message" : "数据库更新检测信息失败",
+				"errorCode" : -3,
+				"data" : "数据库更新检测信息失败",
+			})
+			return
+		}
 	}
-
-
 
 	//进行lark消息提醒
 	var message string
-	creator := (*detect)[0].Creator
+	creator := (*detect)[0].ToLarker
 	message = creator + "你好，" + (*detect)[0].AppName + " " + (*detect)[0].AppVersion
 	platform := (*detect)[0].Platform
 	if platform == 0 {
@@ -689,8 +404,8 @@ func UpdateDetectInfosNew(c *gin.Context){
 	key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
 	LARK_MSG_CALL_MAP[key] = ticker
 	//此处测试时注释掉
-	//larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz="+ appId + "&showItcDetail=1&itcTaskId=" + taskId
-	//message += "地址链接：" + larkUrl
+	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz="+ appId + "&showItcDetail=1&itcTaskId=" + taskId
+	message += "地址链接：" + larkUrl
 	utils.LarkDingOneInner(creator, message)
 	if config != nil {
 		timerId := config.ID
@@ -703,9 +418,8 @@ func UpdateDetectInfosNew(c *gin.Context){
 			}
 		}
 	}
-	go alertLarkMsgCronNew(*ticker, creator, message, taskId, toolId)
+	//go alertLarkMsgCronNew(*ticker, creator, message, taskId, toolId)
 }
-
 
 
 /**
@@ -953,7 +667,6 @@ func alertLarkMsgCronNew(ticker time.Ticker, receiver string, msg string, taskId
  */
 func ConfirmBinaryResult(c *gin.Context){
 	type confirm struct {
-		Id  	int		`json:"id"`
 		TaskId  int		`json:"taskId"`
 		ToolId	int		`json:"toolId"`
 		Remark  string	`json:"remark"`

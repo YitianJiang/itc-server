@@ -14,7 +14,7 @@ func InitRouter(r *ginex.Engine){
 	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
 
 	//二进制检测回调接口-----fj
-	r.POST("/updateDetectInfosNew", detect.UpdateDetectInfosNew)
+	//r.POST("/updateDetectInfosNew", detect.UpdateDetectInfosNew)
 
 	//获取鉴权接口
 	r.GET("/t/generateToken", detect.GetToken)
@@ -33,7 +33,7 @@ func InitRouter(r *ginex.Engine){
 		//上传ipa和apk
 		api.POST("/uploadFile", detect.UploadFile)
 		//上传ipa和apk------fj
-		api.POST("/uploadFileNew", detect.UploadFileNew)
+		//api.POST("/uploadFileNew", detect.UploadFileNew)
 		//增加检查项
 		api.POST("/addDetectItem", detect.AddDetectItem)
 		//二进制任务查询

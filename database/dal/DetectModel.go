@@ -13,6 +13,7 @@ import (
 type DetectStruct struct {
 	gorm.Model
 	Creator 			string 			`json:"creator"`
+	ToLarker			string			`json:"toLarker"`
 	Platform 			int				`json:"platform"`
 	AppName 			string			`json:"appName"`
 	AppVersion 			string			`json:"appVersion"`
