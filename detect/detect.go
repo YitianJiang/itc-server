@@ -220,6 +220,7 @@ func UploadFile(c *gin.Context) {
  *更新检测包的检测信息
  */
 func UpdateDetectInfos(c *gin.Context) {
+	logs.Info("回调开始，更新检测信息～～～")
 	taskId := c.Request.FormValue("task_ID")
 	if taskId == "" {
 		logs.Error("缺少task_ID参数")
@@ -272,7 +273,7 @@ func UpdateDetectInfos(c *gin.Context) {
 		condition := map[string]interface{}{
 			"taskId":      task_id,
 			"toolId":      tool_id,
-			"htmlContent": htmlContent,
+			"jsonContent": jsonContent,
 		}
 		if iOSResultClassify(condition, jsonContent) == false {
 			logs.Error("iOS 新增new detect content失败！！！") //防止影响现有用户，出错后暂不return
@@ -360,12 +361,15 @@ func iOSResultClassify(condition map[string]interface{}, jsonContent string) boo
 	for k, v := range blackContent.(map[string]interface{}) {
 		if len(v.([]interface{})) != 0 {
 			temRes := ""
-			for _, s := range v.([]interface{}) {
-				temRes += s.(string) + "###"
+			for i, s := range v.([]interface{}) {
+				if i != len(v.([]interface{}))-1 {
+					temRes += s.(string) + "###"
+				} else {
+					temRes += s.(string)
+				}
 			}
 			condition["categoryName"] = k
 			condition["categoryContent"] = temRes
-			fmt.Println(condition)
 			var newDetectContent dal.IOSDetectContent
 			if err := mapstructure.Decode(condition, &newDetectContent); err != nil {
 				logs.Error("map转struct出错！", err.Error())
@@ -731,7 +735,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 }
 
 /**
- *查询二进制检查结果信息
+ *查询二进制检查结果信息(旧)
  */
 func QueryTaskBinaryCheckContent(c *gin.Context) {
 	taskId := c.DefaultQuery("taskId", "")
@@ -769,6 +773,196 @@ func QueryTaskBinaryCheckContent(c *gin.Context) {
 		"message":   "success",
 		"errorCode": 0,
 		"data":      (*content)[0],
+	})
+}
+
+/**
+ *查询iOS静态检测结果
+ */
+func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
+	taskId := c.DefaultQuery("taskId", "")
+	if taskId == "" {
+		logs.Error("缺少taskId参数")
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "缺少taskId参数",
+			"errorCode": -1,
+			"data":      "缺少taskId参数",
+		})
+		return
+	}
+	toolId := c.DefaultQuery("toolId", "")
+	if toolId == "" {
+		logs.Error("缺少toolId参数")
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "缺少toolId参数",
+			"errorCode": -2,
+			"data":      "缺少toolId参数",
+		})
+		return
+	}
+	//首先查询新库
+	iosTaskBinaryCheckContent := dal.QueryIOSDetectModel(map[string]interface{}{
+		"taskId": taskId,
+		"toolId": toolId,
+	})
+	//如果数据在新库中查不到就去访问老库
+	if iosTaskBinaryCheckContent == nil || len(*iosTaskBinaryCheckContent) == 0 {
+		conditionOld := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
+		content := dal.QueryTaskBinaryCheckContent(conditionOld)
+		if content == nil || len(*content) == 0 {
+			logs.Info("未查询到检测内容")
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "未查询到检测内容",
+				"errorCode": -3,
+				"data":      "未查询到检测内容",
+			})
+			return
+		} else {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "success",
+				"errorCode": 0,
+				"data":      (*content)[0],
+			})
+			return
+		}
+	}
+	//返回检测结果给前端
+	jsonCon := (*iosTaskBinaryCheckContent)[0].JsonContent
+	res := make(map[string]interface{})
+	if err := json.Unmarshal([]byte(jsonCon), &res); err != nil {
+		logs.Error("解析json出错！！！", err.Error())
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "未查询到检测内容",
+			"errorCode": -3,
+			"data":      "未查询到检测内容",
+		})
+		return
+	}
+	var blackListArr []interface{}
+	var methodArr []interface{}
+	for _, tem := range *iosTaskBinaryCheckContent {
+		categoryName := tem.CategoryName
+		categoryContent := tem.CategoryContent
+		id := tem.ID
+		remark := tem.Remark
+		status := tem.Status
+		confirmer := tem.Confirmer
+		if tem.Category == "blacklist" {
+			blackListArr = append(blackListArr, map[string]interface{}{
+				"blackName":    categoryName,
+				"blackContent": strings.Split(categoryContent, "###"),
+				"id":           id,
+				"remark":       remark,
+				"status":       status,
+				"confirmer":    confirmer,
+			})
+		}
+		if tem.Category == "method" {
+			methodArr = append(methodArr, map[string]interface{}{
+				"methodName":  categoryName,
+				"methodClass": categoryContent,
+				"id":          id,
+				"remark":      remark,
+				"status":      status,
+				"confirmer":   confirmer,
+			})
+		}
+	}
+	data := map[string]interface{}{
+		"appName":    res["name"],
+		"appVersion": res["version"],
+		"bundleId":   res["bundle_id"],
+		"sdkVersion": res["tar_version"],
+		"minVersion": res["min_version"],
+		"blackList":  blackListArr,
+		"method":     methodArr,
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "success",
+		"errorCode": 0,
+		"data":      data,
+	})
+}
+
+/**
+ *更新iOS静态检测结果
+ */
+func ConfirmIOSBinaryResult(c *gin.Context) {
+	type IOSConfirm struct {
+		TaskId int    `json:"taskId"    form:"taskId"`
+		ToolId int    `json:"toolId"    form:"toolId"`
+		Status int    `json:"status"    form:"status"`
+		Remark string `json:"remark"    form:"remark"`
+		ID     int    `json:"id"        form:"id"`
+	}
+	var ios IOSConfirm
+	if err := c.BindJSON(&ios); err != nil {
+		logs.Error("确认二进制检测结果传参出错！", err.Error())
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "参数不合法！",
+			"errorCode": -1,
+			"data":      "参数不合法！",
+		})
+		return
+	}
+	//获取确认人信息
+	username, _ := c.Get("username")
+	//兼容旧接口内容
+	if ios.ID == 0 {
+		data := make(map[string]string)
+		data["task_id"] = strconv.Itoa(ios.TaskId)
+		data["tool_id"] = strconv.Itoa(ios.ToolId)
+		data["confirmer"] = username.(string)
+		data["remark"] = ios.Remark
+		data["status"] = strconv.Itoa(ios.Status)
+		flag := dal.ConfirmBinaryResult(data)
+		if !flag {
+			logs.Error("二进制检测内容确认失败")
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "二进制检测内容确认失败！",
+				"errorCode": -1,
+				"data":      "二进制检测内容确认失败！",
+			})
+			return
+		} else {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "success!",
+				"errorCode": 0,
+				"data":      "success",
+			})
+			return
+		}
+	}
+	updateMap := map[string]interface{}{
+		"remark":    ios.Remark,
+		"status":    ios.Status,
+		"confirmer": username.(string),
+	}
+	flag := dal.UpdateIOSDetectModel(ios.ID, updateMap)
+	if !flag {
+		logs.Error("iOS二进制检测内容确认失败")
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "二进制检测内容确认失败！",
+			"errorCode": -1,
+			"data":      "二进制检测内容确认失败！",
+		})
+		return
+	}
+	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
+		"id": ios.TaskId,
+	})
+	appId := (*detect)[0].AppId
+	appVersion := (*detect)[0].AppVersion
+	key := strconv.Itoa(ios.TaskId) + "_" + appId + "_" + appVersion + "_" + strconv.Itoa(ios.ToolId)
+	ticker := LARK_MSG_CALL_MAP[key]
+	if ticker != nil {
+		ticker.(*time.Ticker).Stop()
+		delete(LARK_MSG_CALL_MAP, key)
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "success",
+		"errorCode": 0,
+		"data":      "success",
 	})
 }
 
