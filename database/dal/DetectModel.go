@@ -89,6 +89,54 @@ type IgnoreInfoStruct struct {
 	SensiType			int				`json:"sensiType"`//敏感信息类型，1-敏感方法，2-敏感字符串
 }
 
+
+
+/**
+ *安卓检测数据查询返回结构
+ */
+type DetectQueryStruct struct {
+	ApkName				string							`json:"apkName"`
+	Version				string							`json:"version"`
+	Channel             string							`json:"channel"`
+	Permissions			string 							`json:"permissions"`
+	SMethods		    []SMethod						`json:"sMethods"`
+	SStrs				[]SStr							`json:"sStrs"`
+}
+
+type SMethod struct {
+	Id					uint 				`json:"id"`
+	Status				int					`json:"status"`
+	Remark				string 				`json:"remark"`
+	Confirmer			string				`json:"confirmer"`
+	MethodName			string				`json:"methodName"`
+	ClassName			string				`json:"className"`
+	Desc				string				`json:"desc"`
+	CallLoc				[]MethodCallJson	`json:"callLoc"`
+}
+type MethodCallJson struct {
+	MethodName			string				`json:"method_name"`
+	ClassName			string				`json:"class_name"`
+	LineNumber			interface{}			`json:"line_number"`
+}
+
+type SStr struct {
+	Id					uint 				`json:"id"`
+	Status				int					`json:"status"`
+	Remark				string 				`json:"remark"`
+	Confirmer			string				`json:"confirmer"`
+	Keys				string				`json:"keys"`
+	Desc				string				`json:"desc"`
+	CallLoc				[]StrCallJson		`json:"callLoc"`
+}
+
+type StrCallJson struct {
+	Key					string				`json:"key"`
+	MethodName			string				`json:"method_name"`
+	ClassName			string				`json:"class_name"`
+	LineNumber			interface{}			`json:"line_number"`
+}
+
+
 func (IgnoreInfoStruct) TableName() string  {
 	return "tb_ignored_info"
 }

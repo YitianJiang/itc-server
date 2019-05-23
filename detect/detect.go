@@ -38,50 +38,6 @@ const (
 )
 
 
-/**
- *安卓检测数据查询返回结构
- */
-type DetectQueryStruct struct {
-	ApkName				string							`json:"apkName"`
-	Version				string							`json:"version"`
-	Channel             string							`json:"channel"`
-	Permissions			string 							`json:"permissions"`
-	SMethods		    []SMethod						`json:"sMethods"`
-	SStrs				[]SStr							`json:"sStrs"`
-}
-
-type SMethod struct {
-	Id					uint 				`json:"id"`
-	Status				int					`json:"status"`
-	Remark				string 				`json:"remark"`
-	Confirmer			string				`json:"confirmer"`
-	MethodName			string				`json:"methodName"`
-	ClassName			string				`json:"className"`
-	Desc				string				`json:"desc"`
-	CallLoc				[]MethodCallJson	`json:"callLoc"`
-}
-type MethodCallJson struct {
-	MethodName			string				`json:"method_name"`
-	ClassName			string				`json:"class_name"`
-	LineNumber			interface{}			`json:"line_number"`
-}
-
-type SStr struct {
-	Id					uint 				`json:"id"`
-	Status				int					`json:"status"`
-	Remark				string 				`json:"remark"`
-	Confirmer			string				`json:"confirmer"`
-	Keys				string				`json:"keys"`
-	Desc				string				`json:"desc"`
-	CallLoc				[]StrCallJson		`json:"callLoc"`
-}
-
-type StrCallJson struct {
-	Key					string				`json:"key"`
-	MethodName			string				`json:"method_name"`
-	ClassName			string				`json:"class_name"`
-	LineNumber			interface{}			`json:"line_number"`
-}
 
 
 
@@ -236,7 +192,7 @@ func UploadFile(c *gin.Context) {
 	}
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
-		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
+		callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -1206,7 +1162,7 @@ func QueryTaskApkBinaryCheckContent(c *gin.Context){
 	content,err := dal.QueryDetectInfo(condition)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "查询检测结果信息数据库操作失败",
+			"message" : "查询检测结果信息数据库操作失败,请确认查询条件",
 			"errorCode" : -1,
 			"data" : err,
 		})
@@ -1216,7 +1172,7 @@ func QueryTaskApkBinaryCheckContent(c *gin.Context){
 	details, err := dal.QueryDetectContentDetail(condition)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "查询检测结果详情数据库操作失败",
+			"message" : "查询检测结果详情数据库操作失败,请确认查询条件",
 			"errorCode" : -1,
 			"data" : err,
 		})
@@ -1233,7 +1189,7 @@ func QueryTaskApkBinaryCheckContent(c *gin.Context){
 		return
 	}
 
-	var queryResult DetectQueryStruct
+	var queryResult dal.DetectQueryStruct
 	//queryResult.TaskId = (*content).TaskId
 	//queryResult.ToolId = (*content).ToolId
 	queryResult.Channel = (*content).Channel
@@ -1247,12 +1203,12 @@ func QueryTaskApkBinaryCheckContent(c *gin.Context){
 	}
 	queryResult.Permissions = permission
 
-	methods := make([]SMethod,0)
-	strs := make([]SStr,0)
+	methods := make([]dal.SMethod,0)
+	strs := make([]dal.SStr,0)
 
 	for _,detail := range (*details) {
 		if detail.SensiType == 1 {
-			var method SMethod
+			var method dal.SMethod
 			method.ClassName = detail.ClassName
 			method.Desc = detail.Desc
 			method.Status = detail.Status
@@ -1261,9 +1217,9 @@ func QueryTaskApkBinaryCheckContent(c *gin.Context){
 			method.Remark = detail.Remark
 			method.MethodName = detail.Key
 			callLocs := strings.Split(detail.CallLoc,";")
-			callLoc :=make([]MethodCallJson,0)
+			callLoc :=make([]dal.MethodCallJson,0)
 			for _,call_loc := range callLocs[0:(len(callLocs)-1)] {
-				var call_loc_json MethodCallJson
+				var call_loc_json dal.MethodCallJson
 				err := json.Unmarshal([]byte(call_loc),&call_loc_json)
 				if err != nil {
 					logs.Error("callLoc数据不符合要求，%v===========%s",err,call_loc)
@@ -1279,7 +1235,7 @@ func QueryTaskApkBinaryCheckContent(c *gin.Context){
 			method.CallLoc = callLoc
 			methods = append(methods,method)
 		}else{
-			var str SStr
+			var str dal.SStr
 			str.Keys = detail.Key
 			str.Remark = detail.Remark
 			str.Confirmer = detail.Confirmer
@@ -1287,9 +1243,9 @@ func QueryTaskApkBinaryCheckContent(c *gin.Context){
 			str.Desc = detail.Desc
 			str.Id = detail.ID
 			callLocs := strings.Split(detail.CallLoc,";")
-			callLoc := make([]StrCallJson,0)
+			callLoc := make([]dal.StrCallJson,0)
 			for _,call_loc := range callLocs[0:(len(callLocs)-1)] {
-				var callLoc_json StrCallJson
+				var callLoc_json dal.StrCallJson
 				err := json.Unmarshal([]byte(call_loc),&callLoc_json)
 				if err != nil {
 					logs.Error("callLoc数据不符合要求，%v========%s",err,call_loc)
@@ -1597,7 +1553,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance(c *gin.Context){
 	}
 
 	//结果数据重组
-	var queryResult DetectQueryStruct
+	var queryResult dal.DetectQueryStruct
 	queryResult.Channel = (*content).Channel
 	queryResult.ApkName = (*content).ApkName
 	queryResult.Version = (*content).Version
@@ -1609,8 +1565,8 @@ func QueryTaskApkBinaryCheckContentWithIgnorance(c *gin.Context){
 	}
 	queryResult.Permissions = permission
 
-	methods := make([]SMethod,0)
-	strs := make([]SStr,0)
+	methods := make([]dal.SMethod,0)
+	strs := make([]dal.SStr,0)
 
 	for _,detail := range (*details) {
 		if detail.SensiType == 1 {
@@ -1619,7 +1575,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance(c *gin.Context){
 					continue
 				}
 			}
-			var method SMethod
+			var method dal.SMethod
 			method.ClassName = detail.ClassName
 			method.Desc = detail.Desc
 			method.Status = detail.Status
@@ -1628,9 +1584,9 @@ func QueryTaskApkBinaryCheckContentWithIgnorance(c *gin.Context){
 			method.Remark = detail.Remark
 			method.MethodName = detail.Key
 			callLocs := strings.Split(detail.CallLoc,";")
-			callLoc :=make([]MethodCallJson,0)
+			callLoc :=make([]dal.MethodCallJson,0)
 			for _,call_loc := range callLocs[0:(len(callLocs)-1)] {
-				var call_loc_json MethodCallJson
+				var call_loc_json dal.MethodCallJson
 				err := json.Unmarshal([]byte(call_loc),&call_loc_json)
 				if err != nil {
 					logs.Error("callLoc数据不符合要求，%v===========%s",err,call_loc)
@@ -1663,7 +1619,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance(c *gin.Context){
 					continue
 				}
 			}
-			var str SStr
+			var str dal.SStr
 			str.Keys = keys3
 			str.Remark = detail.Remark
 			str.Confirmer = detail.Confirmer
@@ -1671,9 +1627,9 @@ func QueryTaskApkBinaryCheckContentWithIgnorance(c *gin.Context){
 			str.Desc = detail.Desc
 			str.Id = detail.ID
 			callLocs := strings.Split(detail.CallLoc,";")
-			callLoc := make([]StrCallJson,0)
+			callLoc := make([]dal.StrCallJson,0)
 			for _,call_loc := range callLocs[0:(len(callLocs)-1)] {
-				var callLoc_json StrCallJson
+				var callLoc_json dal.StrCallJson
 				err := json.Unmarshal([]byte(call_loc),&callLoc_json)
 				if err != nil {
 					logs.Error("callLoc数据不符合要求，%v========%s",err,call_loc)
