@@ -74,9 +74,9 @@ type DetectContentDetail struct {
 	Remark				string 			`json:"remark"`
 	Confirmer			string			`json:"confirmer"`
 	SensiType			int				`json:"sensiType"`//敏感信息类型，1-敏感方法，2-敏感字符串
-	Key					string			`json:"key"`
+	KeyInfo				string			`json:"key"`
 	ClassName			string			`json:"className"`
-	Desc				string			`json:"desc"`
+	DescInfo			string			`json:"desc"`
 	CallLoc				string			`json:"callLoc"`
 	ToolId				int				`json:"toolId"`
 }
@@ -466,7 +466,7 @@ func InsertDetectDetail(detail DetectContentDetail) error  {
 	detail.UpdatedAt = time.Now()
 
 	if err1 := db.Create(&detail).Error; err1 != nil {
-		logs.Error("数据库新增敏感信息失败,%v，敏感信息具体key参数：%s",err1,detail.Key)
+		logs.Error("数据库新增敏感信息失败,%v，敏感信息具体key参数：%s",err1,detail.KeyInfo)
 		return err1
 	}
 	return nil
