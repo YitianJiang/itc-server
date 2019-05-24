@@ -488,8 +488,8 @@ func methodAnalysis(method map[string]interface{},detail *dal.DetectContentDetai
 	detail.SensiType = 1
 	detail.Status = 0
 
-	detail.Key = method["method_name"].(string)
-	detail.Desc = method["desc"].(string)
+	detail.KeyInfo = method["method_name"].(string)
+	detail.DescInfo = method["desc"].(string)
 	detail.ClassName = method["method_class_name"].(string)
 	call := method["call_location"].([]interface{})
 
@@ -505,7 +505,7 @@ func methodAnalysis(method map[string]interface{},detail *dal.DetectContentDetai
 	err := dal.InsertDetectDetail(*detail)
 	if err != nil {
 		//及时报警
-		message := "敏感method写入数据库失败，请解决;"+fmt.Sprint(err)+"\n敏感方法名："+fmt.Sprint(detail.Key)
+		message := "敏感method写入数据库失败，请解决;"+fmt.Sprint(err)+"\n敏感方法名："+fmt.Sprint(detail.KeyInfo)
 		utils.LarkDingOneInner("fanjuan.xqp", message)
 	}
 	return
@@ -543,8 +543,8 @@ func strAnalysis(str map[string]interface{},detail *dal.DetectContentDetail)  {
 		ks := ks1.(string)
 		key += ks +";"
 	}
-	detail.Key = key
-	detail.Desc = str["desc"].(string)
+	detail.KeyInfo = key
+	detail.DescInfo = str["desc"].(string)
 
 	callInfo := str["call_location"].([]interface{})
 	//敏感字段信息去重
@@ -1226,12 +1226,12 @@ func QueryTaskApkBinaryCheckContent(c *gin.Context){
 		if detail.SensiType == 1 {
 			var method dal.SMethod
 			method.ClassName = detail.ClassName
-			method.Desc = detail.Desc
+			method.Desc = detail.DescInfo
 			method.Status = detail.Status
 			method.Id = detail.ID
 			method.Confirmer = detail.Confirmer
 			method.Remark = detail.Remark
-			method.MethodName = detail.Key
+			method.MethodName = detail.KeyInfo
 			callLocs := strings.Split(detail.CallLoc,";")
 			callLoc :=make([]dal.MethodCallJson,0)
 			for _,call_loc := range callLocs[0:(len(callLocs)-1)] {
@@ -1252,11 +1252,11 @@ func QueryTaskApkBinaryCheckContent(c *gin.Context){
 			methods = append(methods,method)
 		}else{
 			var str dal.SStr
-			str.Keys = detail.Key
+			str.Keys = detail.KeyInfo
 			str.Remark = detail.Remark
 			str.Confirmer = detail.Confirmer
 			str.Status = detail.Status
-			str.Desc = detail.Desc
+			str.Desc = detail.DescInfo
 			str.Id = detail.ID
 			callLocs := strings.Split(detail.CallLoc,";")
 			callLoc := make([]dal.StrCallJson,0)
@@ -1619,7 +1619,7 @@ func ConfirmApkBinaryResultv_2(c *gin.Context){
 			igInfo.Platform = (*detect)[0].Platform
 			igInfo.AppId,_ = strconv.Atoi((*detect)[0].AppId)
 			igInfo.SensiType = (*detailInfo)[0].SensiType
-			igInfo.Keys = (*detailInfo)[0].ClassName+"."+(*detailInfo)[0].Key
+			igInfo.Keys = (*detailInfo)[0].ClassName+"."+(*detailInfo)[0].KeyInfo
 			err := dal.InsertIgnoredInfo(igInfo)
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{
@@ -1630,7 +1630,7 @@ func ConfirmApkBinaryResultv_2(c *gin.Context){
 				return
 			}
 		}else{
-			keys := strings.Split((*detailInfo)[0].Key,";")
+			keys := strings.Split((*detailInfo)[0].KeyInfo,";")
 			for _,key := range keys[0:len(keys)-1] {
 				var igInfos dal.IgnoreInfoStruct
 				igInfos.SensiType = 2
@@ -1777,18 +1777,18 @@ func QueryTaskApkBinaryCheckContentWithIgnorance(c *gin.Context){
 	for _,detail := range (*details) {
 		if detail.SensiType == 1 {
 			if flag && methodIgs != nil {
-				if v,ok := methodIgs[detail.ClassName+"."+detail.Key]; ok&&v==1{
+				if v,ok := methodIgs[detail.ClassName+"."+detail.KeyInfo]; ok&&v==1{
 					continue
 				}
 			}
 			var method dal.SMethod
 			method.ClassName = detail.ClassName
-			method.Desc = detail.Desc
+			method.Desc = detail.DescInfo
 			method.Status = detail.Status
 			method.Id = detail.ID
 			method.Confirmer = detail.Confirmer
 			method.Remark = detail.Remark
-			method.MethodName = detail.Key
+			method.MethodName = detail.KeyInfo
 			callLocs := strings.Split(detail.CallLoc,";")
 			callLoc :=make([]dal.MethodCallJson,0)
 			for _,call_loc := range callLocs[0:(len(callLocs)-1)] {
@@ -1809,9 +1809,9 @@ func QueryTaskApkBinaryCheckContentWithIgnorance(c *gin.Context){
 			methods = append(methods,method)
 		}else{
 			keys2 := make(map[string]int)
-			var keys3 = detail.Key
+			var keys3 = detail.KeyInfo
 			if flag && strIgs != nil{
-				keys := strings.Split(detail.Key,";")
+				keys := strings.Split(detail.KeyInfo,";")
 
 				keys3 = ""
 				for _,keyInfo := range keys[0:len(keys)-1] {
@@ -1830,7 +1830,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance(c *gin.Context){
 			str.Remark = detail.Remark
 			str.Confirmer = detail.Confirmer
 			str.Status = detail.Status
-			str.Desc = detail.Desc
+			str.Desc = detail.DescInfo
 			str.Id = detail.ID
 			callLocs := strings.Split(detail.CallLoc,";")
 			callLoc := make([]dal.StrCallJson,0)
