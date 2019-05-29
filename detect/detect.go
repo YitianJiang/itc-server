@@ -482,7 +482,10 @@ func appInfoAnalysis(info map[string]interface{},detectInfo *dal.DetectInfo)  {
 	}
 	detectInfo.ApkName = info["apk_name"].(string)
 	detectInfo.Version = info["apk_version_name"].(string)
-	detectInfo.Channel = info["channel"].(string)
+	_, ok := info["channel"]
+	if ok {
+		detectInfo.Channel = info["channel"].(string)
+	}
 	permissionArr := info["permissions"].([]interface{})
 	//permissionArr := permissionArr1.([]string)
 
