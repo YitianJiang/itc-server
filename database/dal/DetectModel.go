@@ -2,27 +2,28 @@ package dal
 
 import (
 	"fmt"
-	"code.byted.org/clientQA/itc-server/const"
+	"strconv"
+	"time"
+
+	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
-	"time"
-	"strconv"
 )
 
 //二进制包检测任务
 type DetectStruct struct {
 	gorm.Model
-	Creator 			string 			`json:"creator"`
-	ToLarker			string			`json:"toLarker"`
-	Platform 			int				`json:"platform"`
-	AppName 			string			`json:"appName"`
-	AppVersion 			string			`json:"appVersion"`
-	AppId 				string			`json:"appId"`
-	CheckContent 		string			`json:"checkContent"`
-	SelfCheckStatus 	int				`json:"selfCheckStatus"` //0-自查未完成；1-自查完成
-	TosUrl 				string			`json:"tosUrl"`
-	Status				int 			`json:"status"`//0---未完全确认；1---已完全确认
+	Creator         string `json:"creator"`
+	ToLarker        string `json:"toLarker"`
+	Platform        int    `json:"platform"`
+	AppName         string `json:"appName"`
+	AppVersion      string `json:"appVersion"`
+	AppId           string `json:"appId"`
+	CheckContent    string `json:"checkContent"`
+	SelfCheckStatus int    `json:"selfCheckStatus"` //0-自查未完成；1-自查完成
+	TosUrl          string `json:"tosUrl"`
+	Status          int    `json:"status"` //0---未完全确认；1---已完全确认
 }
 type RecordTotal struct {
 	Total uint
@@ -56,101 +57,85 @@ type DetectContent struct {
 }
 
 //apk检测信息----fj新增
-type DetectInfo struct{
+type DetectInfo struct {
 	gorm.Model
-	TaskId				int				`json:"taskId"`
-	ApkName				string			`json:"apkName"`
-	Version				string			`json:"version"`
-	Channel             string			`json:"channel"`
-	Permissions			string 			`json:"permissions"`
-	ToolId				int				`json:"toolId"`
+	TaskId      int    `json:"taskId"`
+	ApkName     string `json:"apkName"`
+	Version     string `json:"version"`
+	Channel     string `json:"channel"`
+	Permissions string `json:"permissions"`
+	ToolId      int    `json:"toolId"`
 }
 
 //敏感信息详情---fj新增
 type DetectContentDetail struct {
 	gorm.Model
-	TaskId				int				`json:"taskId"`
-	Status				int				`json:"status"`   //是否确认,0-未确认，1-确认通过，2-确认未通过
-	Remark				string 			`json:"remark"`
-	Confirmer			string			`json:"confirmer"`
-	SensiType			int				`json:"sensiType"`//敏感信息类型，1-敏感方法，2-敏感字符串
-	KeyInfo				string			`json:"key"`
-	ClassName			string			`json:"className"`
-	DescInfo			string			`json:"desc"`
-	CallLoc				string			`json:"callLoc"`
-	ToolId				int				`json:"toolId"`
+	TaskId    int    `json:"taskId"`
+	Status    int    `json:"status"` //是否确认,0-未确认，1-确认通过，2-确认未通过
+	Remark    string `json:"remark"`
+	Confirmer string `json:"confirmer"`
+	SensiType int    `json:"sensiType"` //敏感信息类型，1-敏感方法，2-敏感字符串
+	KeyInfo   string `json:"key"`
+	ClassName string `json:"className"`
+	DescInfo  string `json:"desc"`
+	CallLoc   string `json:"callLoc"`
+	ToolId    int    `json:"toolId"`
 }
 
 type IgnoreInfoStruct struct {
 	gorm.Model
-	AppId				int 			`json:"appId"`
-	Platform			int				`json:"platform"`//0-安卓，1-iOS
-	Keys				string			`json:"keys"`
-	SensiType			int				`json:"sensiType"`//敏感信息类型，1-敏感方法，2-敏感字符串
+	AppId     int    `json:"appId"`
+	Platform  int    `json:"platform"` //0-安卓，1-iOS
+	Keys      string `json:"keys"`
+	SensiType int    `json:"sensiType"` //敏感信息类型，1-敏感方法，2-敏感字符串
 }
-
-
 
 /**
  *安卓检测数据查询返回结构
  */
 type DetectQueryStruct struct {
-	ApkName				string							`json:"apkName"`
-	Version				string							`json:"version"`
-	Channel             string							`json:"channel"`
-	Permissions			string 							`json:"permissions"`
-	SMethods		    []SMethod						`json:"sMethods"`
-	SStrs				[]SStr							`json:"sStrs"`
+	ApkName     string    `json:"apkName"`
+	Version     string    `json:"version"`
+	Channel     string    `json:"channel"`
+	Permissions string    `json:"permissions"`
+	SMethods    []SMethod `json:"sMethods"`
+	SStrs       []SStr    `json:"sStrs"`
 }
 
 type SMethod struct {
-	Id					uint 				`json:"id"`
-	Status				int					`json:"status"`
-	Remark				string 				`json:"remark"`
-	Confirmer			string				`json:"confirmer"`
-	MethodName			string				`json:"methodName"`
-	ClassName			string				`json:"className"`
-	Desc				string				`json:"desc"`
-	CallLoc				[]MethodCallJson	`json:"callLoc"`
+	Id         uint             `json:"id"`
+	Status     int              `json:"status"`
+	Remark     string           `json:"remark"`
+	Confirmer  string           `json:"confirmer"`
+	MethodName string           `json:"methodName"`
+	ClassName  string           `json:"className"`
+	Desc       string           `json:"desc"`
+	CallLoc    []MethodCallJson `json:"callLoc"`
 }
 type MethodCallJson struct {
-	MethodName			string				`json:"method_name"`
-	ClassName			string				`json:"class_name"`
-	LineNumber			interface{}			`json:"line_number"`
+	MethodName string      `json:"method_name"`
+	ClassName  string      `json:"class_name"`
+	LineNumber interface{} `json:"line_number"`
 }
 
 type SStr struct {
-	Id					uint 				`json:"id"`
-	Status				int					`json:"status"`
-	Remark				string 				`json:"remark"`
-	Confirmer			string				`json:"confirmer"`
-	Keys				string				`json:"keys"`
-	Desc				string				`json:"desc"`
-	CallLoc				[]StrCallJson		`json:"callLoc"`
+	Id        uint          `json:"id"`
+	Status    int           `json:"status"`
+	Remark    string        `json:"remark"`
+	Confirmer string        `json:"confirmer"`
+	Keys      string        `json:"keys"`
+	Desc      string        `json:"desc"`
+	CallLoc   []StrCallJson `json:"callLoc"`
 }
 
 type StrCallJson struct {
-	Key					string				`json:"key"`
-	MethodName			string				`json:"method_name"`
-	ClassName			string				`json:"class_name"`
-	LineNumber			interface{}			`json:"line_number"`
+	Key        string      `json:"key"`
+	MethodName string      `json:"method_name"`
+	ClassName  string      `json:"class_name"`
+	LineNumber interface{} `json:"line_number"`
 }
 
-
-func (IgnoreInfoStruct) TableName() string  {
-	return "tb_ignored_info"
-}
-
-
-func (DetectInfo) TableName() string {
-	return "tb_detect_info_apk"
-
-}
-
-func (DetectContentDetail) TableName() string {
-	return "tb_detect_content_detail"
-}
-//二进制包检测内容，json内容处理区分后
+//二进制包检测内容，json内容黑名单和可疑方法区分处理
 type IOSDetectContent struct {
 	gorm.Model
 	TaskId          int    `gorm:"column:taskId"            json:"taskId"`
@@ -164,6 +149,30 @@ type IOSDetectContent struct {
 	Remark          string `gorm:"column:remark"            json:"remark"`
 }
 
+//二进制包检测内容，json内容权限处理
+type IOSDetectPermission struct {
+	gorm.Model
+	TaskId        int       `gorm:"column:taskId"            json:"taskId"`
+	ToolId        int       `gorm:"column:toolId"            json:"toolId"`
+	AppName       string    `gorm:"column:appname"           json:"appName"`
+	Version       string    `gorm:"column:version"           json:"version"`
+	PermissionE   string    `gorm:"column:permission_E"      json:"permissionE"`
+	PermissionC   string    `gorm:"column:permission_C"      json:"permissionC"`
+	Status        int       `gorm:"column:status"            json:"status"` //是否确认,0-未确认，1-确认通过，2-确认未通过
+	Confirmer     string    `gorm:"column:confirmer"         json:"confirmer"`
+	ConfirmReason string    `gorm:"column:confirm_reason"    json:"confirmReason"`
+	ConfirmTime   time.Time `gorm:"column:confirm_time"      json:"confirmTIME"`
+}
+
+func (IgnoreInfoStruct) TableName() string {
+	return "tb_ignored_info"
+}
+func (DetectInfo) TableName() string {
+	return "tb_detect_info_apk"
+}
+func (DetectContentDetail) TableName() string {
+	return "tb_detect_content_detail"
+}
 func (DetectStruct) TableName() string {
 	return "tb_binary_detect"
 }
@@ -175,6 +184,9 @@ func (DetectTool) TableName() string {
 }
 func (IOSDetectContent) TableName() string {
 	return "tb_ios_detect_content"
+}
+func (IOSDetectPermission) TableName() string {
+	return "tb_ios_detect_permission"
 }
 
 //insert data
@@ -240,6 +252,7 @@ func UpdateDetectModelNew(detectModel DetectStruct) error {
 	db.Commit()
 	return nil
 }
+
 //delete data
 func DeleteDetectModel(detectModeId string) error {
 	connection, err := database.GetConneection()
@@ -390,16 +403,15 @@ func ConfirmBinaryResult(data map[string]string) bool {
 	return true
 }
 
-
 /**
 确认安卓二进制结果----------fj
- */
+*/
 func ConfirmApkBinaryResultNew(data map[string]string) bool {
 	id := data["id"]
 	//toolId := data["tool_id"]
 	confirmer := data["confirmer"]
 	remark := data["remark"]
-	statusInt,_ := strconv.Atoi(data["status"])
+	statusInt, _ := strconv.Atoi(data["status"])
 	//statusInt, _ := strconv.Atoi(status)
 	connection, err := database.GetConneection()
 	if err != nil {
@@ -411,10 +423,10 @@ func ConfirmApkBinaryResultNew(data map[string]string) bool {
 	condition := "id=" + id
 	if err := db.Where(condition).
 		Update(map[string]interface{}{
-			"status" : statusInt,
-			"confirmer" : confirmer,
-			"remark" : remark,
-			"updated_at" : time.Now(),
+			"status":     statusInt,
+			"confirmer":  confirmer,
+			"remark":     remark,
+			"updated_at": time.Now(),
 		}).Error; err != nil {
 		logs.Error("update db tb_detect_content failed: %v", err)
 		//db.Rollback()
@@ -424,11 +436,10 @@ func ConfirmApkBinaryResultNew(data map[string]string) bool {
 	return true
 }
 
-
 /**
 检测信息insert-----fj
- */
-func InsertDetectInfo (info DetectInfo) error  {
+*/
+func InsertDetectInfo(info DetectInfo) error {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
@@ -442,7 +453,7 @@ func InsertDetectInfo (info DetectInfo) error  {
 	info.UpdatedAt = time.Now()
 
 	if err1 := db.Create(&info).Error; err1 != nil {
-		logs.Error("数据库新增检测信息失败,%v",err1)
+		logs.Error("数据库新增检测信息失败,%v", err1)
 		return err1
 	}
 	return nil
@@ -451,8 +462,8 @@ func InsertDetectInfo (info DetectInfo) error  {
 
 /**
 敏感信息详情insert------fj
- */
-func InsertDetectDetail(detail DetectContentDetail) error  {
+*/
+func InsertDetectDetail(detail DetectContentDetail) error {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
@@ -466,7 +477,7 @@ func InsertDetectDetail(detail DetectContentDetail) error  {
 	detail.UpdatedAt = time.Now()
 
 	if err1 := db.Create(&detail).Error; err1 != nil {
-		logs.Error("数据库新增敏感信息失败,%v，敏感信息具体key参数：%s",err1,detail.KeyInfo)
+		logs.Error("数据库新增敏感信息失败,%v，敏感信息具体key参数：%s", err1, detail.KeyInfo)
 		return err1
 	}
 	return nil
@@ -474,7 +485,7 @@ func InsertDetectDetail(detail DetectContentDetail) error  {
 
 /**
 未确认敏感信息数据量查询-----fj
- */
+*/
 func QueryUnConfirmDetectContent(condition string) int {
 	connection, err := database.GetConneection()
 	if err != nil {
@@ -493,37 +504,36 @@ func QueryUnConfirmDetectContent(condition string) int {
 
 }
 
-
 /**
 查询apk检测info-----fj
- */
-func QueryDetectInfo(condition string) (*DetectInfo,error)  {
+*/
+func QueryDetectInfo(condition string) (*DetectInfo, error) {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
-		return nil,err
+		return nil, err
 	}
 	defer connection.Close()
 
 	db := connection.Table(DetectInfo{}.TableName()).LogMode(_const.DB_LOG_MODE)
 
 	var detectInfo DetectInfo
-	if err1 := db.Where(condition).Find(&detectInfo).Error; err1 !=nil{
+	if err1 := db.Where(condition).Find(&detectInfo).Error; err1 != nil {
 		logs.Error("query detectInfo failed! %v", err)
-		return nil,err1
+		return nil, err1
 	}
-	return &detectInfo,nil
+	return &detectInfo, nil
 
 }
 
 /**
 查询apk敏感信息----fj
- */
-func QueryDetectContentDetail(condition string)(*[]DetectContentDetail,error)  {
+*/
+func QueryDetectContentDetail(condition string) (*[]DetectContentDetail, error) {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
-		return nil,err
+		return nil, err
 	}
 	defer connection.Close()
 
@@ -533,12 +543,11 @@ func QueryDetectContentDetail(condition string)(*[]DetectContentDetail,error)  {
 
 	if err1 := db.Where(condition).Find(&result).Error; err1 != nil {
 		logs.Error("query detectDetailInfos failed! %v", err)
-		return nil,err1
+		return nil, err1
 	}
 	return &result, nil
 
 }
-
 
 /**
 可忽略信息insert------fj
@@ -566,11 +575,11 @@ func InsertIgnoredInfo(detail IgnoreInfoStruct) error {
 /**
 查询可忽略信息----fj
 */
-func QueryIgnoredInfo(condition string)(*[]IgnoreInfoStruct,error)  {
+func QueryIgnoredInfo(condition string) (*[]IgnoreInfoStruct, error) {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
-		return nil,err
+		return nil, err
 	}
 	defer connection.Close()
 
@@ -580,10 +589,11 @@ func QueryIgnoredInfo(condition string)(*[]IgnoreInfoStruct,error)  {
 
 	if err1 := db.Where(condition).Find(&result).Error; err1 != nil {
 		logs.Error("query ignoredInfos failed! %v", err)
-		return nil,err1
+		return nil, err1
 	}
 	return &result, nil
 }
+
 //insert tb_ios_detect_content
 func CreateIOSDetectModel(content IOSDetectContent) error {
 	connection, err := database.GetConneection()
@@ -628,6 +638,78 @@ func UpdateIOSDetectModel(id int, updates map[string]interface{}) bool {
 	defer connection.Close()
 	if err := connection.Table(IOSDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Model(&IOSDetectContent{}).Where("id = ?", id).Update(updates).Error; err != nil {
 		logs.Error("更新iOS静态检测结果出错！！！", err.Error())
+		return false
+	}
+	return true
+}
+
+//insert tb_ios_detect_permission
+func CreateIOSPermissionModel(permission IOSDetectPermission) error {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return err
+	}
+	defer connection.Close()
+	//insert detect content
+	if err := connection.Table(IOSDetectPermission{}.TableName()).LogMode(_const.DB_LOG_MODE).
+		Create(&permission).Error; err != nil {
+		logs.Error("插入iOS权限检测结果出错, %v", err)
+		return err
+	}
+	return nil
+}
+
+//query tb_ios_detect_permission 按照确认顺序降序排序
+func QueryIOSPermissionModel(condition map[string]interface{}, orderName string) *[]IOSDetectPermission {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return nil
+	}
+	defer connection.Close()
+
+	var iosDetectPermission []IOSDetectPermission
+	db := connection.Table(IOSDetectPermission{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition)
+	if orderName == "" {
+		if err := db.Find(&iosDetectPermission).Error; err != nil {
+			logs.Error("请求iOS权限检测结果出错！！！", err.Error())
+			return nil
+		}
+	} else {
+		if err := db.Order(orderName).Find(&iosDetectPermission).Error; err != nil {
+			logs.Error("请求iOS权限检测结果出错！！！", err.Error())
+			return nil
+		}
+	}
+	return &iosDetectPermission
+}
+
+//update tb_ios_detect_permission
+func UpdateIOSPermissionModel(permission IOSDetectPermission) bool {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return false
+	}
+	defer connection.Close()
+	if err := connection.Table(IOSDetectPermission{}.TableName()).LogMode(_const.DB_LOG_MODE).Model(&IOSDetectPermission{}).Save(permission).Error; err != nil {
+		logs.Error("更新iOS权限检测结果出错！！！", err.Error())
+		return false
+	}
+	return true
+}
+
+//update tb_ios_detect_permission
+func DeleteIOSPermissionModel(condition map[string]interface{}) bool {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return false
+	}
+	defer connection.Close()
+	if err := connection.Table(IOSDetectPermission{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(connection).Delete(IOSDetectPermission{}).Error; err != nil {
+		logs.Error("更新iOS权限检测结果出错！！！", err.Error())
 		return false
 	}
 	return true

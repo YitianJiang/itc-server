@@ -44,6 +44,7 @@ func CertificateController(c *gin.Context) {
 				newMails = append(newMails, strings.Replace(creator, " ", "", -1))
 				newMails = append(newMails, "gongrui")
 				newMails = append(newMails, "chenyujun")
+				newMails = append(newMails, "kanghuaisong")
 				itemMap := map[string]interface{}{
 					"appname":     appName,
 					"usage":       usage,
@@ -107,10 +108,10 @@ func GetCertificates(c *gin.Context) {
 		queryMap["certificate_style"] = cerType
 	}
 	if isSelectCreator, isExit := c.GetQuery("creator"); isExit == true && isSelectCreator == "on" {
-		queryMap["creator"] = name   //查询"我"创建的证书信息
+		queryMap["creator"] = name //查询"我"创建的证书信息
 	}
 	if user, isExit := c.GetQuery("user"); isExit == true {
-		if _, ok := queryMap["creator"]; ok{
+		if _, ok := queryMap["creator"]; ok {
 			c.JSON(http.StatusOK, gin.H{
 				"message":   "creator和user不能同时查询!",
 				"errorCode": -1,
@@ -136,22 +137,22 @@ func GetCertificates(c *gin.Context) {
 	certificate := dal.QueryLikeCertificate(queryMap)
 	//查询符合条件的数据,Json转换返回标准形式
 	var data []map[string]interface{}
-	for _, cer := range *certificate{
+	for _, cer := range *certificate {
 		certificateTemp, err1 := json.Marshal(cer)
 		certificateRes := make(map[string]interface{})
 		err2 := json.Unmarshal(certificateTemp, &certificateRes)
 		data = append(data, certificateRes)
-		if err1 != nil || err2 != nil{
+		if err1 != nil || err2 != nil {
 			logs.Error("数据库结果转成json转成map出错！", err1.Error(), err2.Error())
 		}
 	}
-	if certificate != nil && len(*certificate) > 0{
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "OK!",
-				"errorCode": 0,
-				"total":     total,
-				"data":      data,
-			})
+	if certificate != nil && len(*certificate) > 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "OK!",
+			"errorCode": 0,
+			"total":     total,
+			"data":      data,
+		})
 	} else {
 		//返回空
 		c.JSON(http.StatusOK, gin.H{
