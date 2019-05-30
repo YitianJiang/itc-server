@@ -192,7 +192,7 @@ func UploadFile(c *gin.Context) {
 	}
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
-		callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
+		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -264,6 +264,9 @@ func UpdateDetectInfos(c *gin.Context) {
 	}
 	toolId := c.Request.FormValue("tool_ID")
 	jsonContent := c.Request.FormValue("jsonContent")
+	appName := c.Request.FormValue("appName")
+	appVersion := c.Request.FormValue("appVersion")
+	htmlContent := c.Request.FormValue("content")
 
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id": taskId,
@@ -287,9 +290,6 @@ func UpdateDetectInfos(c *gin.Context) {
 			mapInfo["toolId"],_ = strconv.Atoi(toolId)
 			JsonInfoAnalysis(jsonContent,mapInfo)
 		}else{
-			appName := c.Request.FormValue("appName")
-			appVersion := c.Request.FormValue("appVersion")
-			htmlContent := c.Request.FormValue("content")
 			var detectContent dal.DetectContent
 			detectContent.TaskId, _ = strconv.Atoi(taskId)
 			detectContent.ToolId, _ = strconv.Atoi(toolId)
@@ -314,6 +314,26 @@ func UpdateDetectInfos(c *gin.Context) {
 	if (*detect)[0].Platform == 1 {
 		task_id, _ := strconv.Atoi(taskId)
 		tool_id, _ := strconv.Atoi(toolId)
+		//旧表更新
+		var detectContent dal.DetectContent
+		detectContent.TaskId = task_id
+		detectContent.ToolId = tool_id
+		detectContent.HtmlContent = htmlContent
+		detectContent.JsonContent = jsonContent
+		detectContent.CreatedAt = time.Now()
+		detectContent.UpdatedAt = time.Now()
+		(*detect)[0].AppName = appName
+		(*detect)[0].AppVersion = appVersion
+		(*detect)[0].UpdatedAt = time.Now()
+		if err := dal.UpdateDetectModel((*detect)[0], detectContent); err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"message" : "数据库更新检测信息失败",
+				"errorCode" : -3,
+				"data" : "数据库更新检测信息失败",
+			})
+			return
+		}
+		//新表jsonContent分类存储
 		condition := map[string]interface{}{
 			"taskId":      task_id,
 			"toolId":      tool_id,
@@ -324,7 +344,7 @@ func UpdateDetectInfos(c *gin.Context) {
 			logs.Error("iOS 新增new detect content失败！！！") //防止影响现有用户，出错后暂不return
 		}
 		//iOS付费相关黑名单及时报警
-		if warnFlag {
+		if res && warnFlag {
 			tips := "Notice: " + (*detect)[0].AppName + " " + (*detect)[0].AppVersion + "IOS包完成二进制检测，检测黑名单中itms-services不为空，请及时关注！！！！\n"
 			utils.LarkDingOneInner("zhangshuai.02", tips)
 			utils.LarkDingOneInner("gongrui", tips)
@@ -346,7 +366,7 @@ func UpdateDetectInfos(c *gin.Context) {
 	message += "如果安卓选择了GooglePlay检测和隐私检测，两个检测结果都需要进行确认，请不要遗漏！！！\n"
 	appId := (*detect)[0].AppId
 	appIdInt, _ := strconv.Atoi(appId)
-	appVersion := (*detect)[0].AppVersion
+	//appVersion := (*detect)[0].AppVersion
 	var config *dal.LarkMsgTimer
 	config = dal.QueryLarkMsgTimerByAppId(appIdInt)
 	alterType := 0
@@ -400,6 +420,7 @@ func UpdateDetectInfos(c *gin.Context) {
 	}
 	//go alertLarkMsgCronNew(*ticker, creator, message, taskId, toolId)
 }
+
 
 /**
  *iOS 检测结果jsonContent处理
