@@ -85,8 +85,12 @@ type IgnoreInfoStruct struct {
 	gorm.Model
 	AppId				int 			`json:"appId"`
 	Platform			int				`json:"platform"`//0-安卓，1-iOS
-	Keys				string			`json:"keys"`
+	KeysInfo			string			`json:"keys"`
 	SensiType			int				`json:"sensiType"`//敏感信息类型，1-敏感方法，2-敏感字符串
+	Version				string			`json:"version"`//app版本
+	Remarks				string			`json:"remarks"`
+	Confirmer			string			`json:"confirmer"`
+	Status				int				`json:"status"`   //1-确认通过，2-确认未通过
 }
 
 
@@ -101,6 +105,7 @@ type DetectQueryStruct struct {
 	Permissions			string 							`json:"permissions"`
 	SMethods		    []SMethod						`json:"sMethods"`
 	SStrs				[]SStr							`json:"sStrs"`
+	Permissions_2		[]Permissions					`json:"permissionList"`
 }
 
 type SMethod struct {
@@ -112,6 +117,7 @@ type SMethod struct {
 	ClassName			string				`json:"className"`
 	Desc				string				`json:"desc"`
 	CallLoc				[]MethodCallJson	`json:"callLoc"`
+	OtherVersion 		string				`json:"otherVersion"`
 }
 type MethodCallJson struct {
 	MethodName			string				`json:"method_name"`
@@ -127,6 +133,7 @@ type SStr struct {
 	Keys				string				`json:"keys"`
 	Desc				string				`json:"desc"`
 	CallLoc				[]StrCallJson		`json:"callLoc"`
+	ConfirmInfos		[]ConfirmInfo		`json:"confirmerInfos"`
 }
 
 type StrCallJson struct {
@@ -134,6 +141,24 @@ type StrCallJson struct {
 	MethodName			string				`json:"method_name"`
 	ClassName			string				`json:"class_name"`
 	LineNumber			interface{}			`json:"line_number"`
+}
+type ConfirmInfo struct {
+	//Id					uint 				`json:"id"`
+	Key					string				`json:"key"`
+	//Status				int					`json:"status"`
+	Remark				string 				`json:"remark"`
+	Confirmer			string				`json:"confirmer"`
+	OtherVersion 		string				`json:"otherVersion"`
+}
+
+type Permissions struct {
+	Id					uint 				`json:"id"`
+	Key					string				`json:"key"`
+	Status				int					`json:"status"`
+	Remark				string 				`json:"remark"`
+	Confirmer			string				`json:"confirmer"`
+	OtherVersion 		string				`json:"otherVersion"`
+	Priority 			int					`json:"priority"`
 }
 
 
@@ -472,6 +497,29 @@ func InsertDetectDetail(detail DetectContentDetail) error  {
 	return nil
 }
 
+func InsertDetectDetailBatch(details *[]DetectContentDetail) error  {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return nil
+	}
+	defer connection.Close()
+	db := connection.Begin()
+
+	for _,detail := range *details {
+		detail.CreatedAt = time.Now()
+		detail.UpdatedAt = time.Now()
+		if err1 := db.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&detail).Error; err1 != nil {
+			logs.Error("数据库新增敏感信息失败,%v，敏感信息具体key参数：%s",err1,detail.KeyInfo)
+			db.Rollback()
+			return err1
+		}
+	}
+	db.Commit()
+	return nil
+}
+
+
 /**
 未确认敏感信息数据量查询-----fj
  */
@@ -531,7 +579,7 @@ func QueryDetectContentDetail(condition string)(*[]DetectContentDetail,error)  {
 
 	var result []DetectContentDetail
 
-	if err1 := db.Where(condition).Find(&result).Error; err1 != nil {
+	if err1 := db.Where(condition).Order("status ASC").Find(&result).Error; err1 != nil {
 		logs.Error("query detectDetailInfos failed! %v", err)
 		return nil,err1
 	}
@@ -557,7 +605,7 @@ func InsertIgnoredInfo(detail IgnoreInfoStruct) error {
 	detail.UpdatedAt = time.Now()
 
 	if err1 := db.Create(&detail).Error; err1 != nil {
-		logs.Error("数据库新增可忽略信息失败,%v，可忽略信息具体key参数：%s", err1, detail.Keys)
+		logs.Error("数据库新增可忽略信息失败,%v，可忽略信息具体key参数：%s", err1, detail.KeysInfo)
 		return err1
 	}
 	return nil
@@ -566,7 +614,7 @@ func InsertIgnoredInfo(detail IgnoreInfoStruct) error {
 /**
 查询可忽略信息----fj
 */
-func QueryIgnoredInfo(condition string)(*[]IgnoreInfoStruct,error)  {
+func QueryIgnoredInfo(queryInfo map[string]string)(*[]IgnoreInfoStruct,error)  {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
@@ -578,8 +626,9 @@ func QueryIgnoredInfo(condition string)(*[]IgnoreInfoStruct,error)  {
 
 	var result []IgnoreInfoStruct
 
-	if err1 := db.Where(condition).Find(&result).Error; err1 != nil {
-		logs.Error("query ignoredInfos failed! %v", err)
+	condition := queryInfo["condition"]
+	if err1 := db.Where(condition).Order("updated_at DESC").Find(&result).Error; err1 != nil {
+		logs.Error("query ignoredInfos failed! %v", err1)
 		return nil,err1
 	}
 	return &result, nil
