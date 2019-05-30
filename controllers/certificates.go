@@ -229,8 +229,8 @@ func AddCertificate(c *gin.Context) {
 			writer.WriteField("export_pem", export_pem)
 			writer.WriteField("pass", pass)
 		}
-		writer.WriteField("username", name)
 		writer.WriteField("username", name.(string))
+		writer.WriteField("type", fileType)
 		contentType := writer.FormDataContentType()
 		if err = writer.Close(); err != nil {
 			logs.Error("关闭writer出错！", err.Error())
