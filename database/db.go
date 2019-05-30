@@ -19,7 +19,7 @@ func InitDB(){
 	//dboptional = dbconf.GetDbConf(ssConf, "itcserver", dbconf.Write)
 
 	//test
-	//dboptional = dbconf.GetDbConf(ssConf, "qa_ee", dbconf.Write)
+	dboptional = dbconf.GetDbConf(ssConf, "qa_ee", dbconf.Write)
 }
 
 func GetConneection()(*gorm.DB, error){
