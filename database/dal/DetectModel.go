@@ -1,13 +1,13 @@
 package dal
 
 import (
-	"fmt"
 	"code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
-	"time"
+	"fmt"
 	"strconv"
+	"time"
 )
 
 //二进制包检测任务
@@ -79,6 +79,8 @@ type DetectContentDetail struct {
 	DescInfo			string			`json:"desc"`
 	CallLoc				string			`json:"callLoc"`
 	ToolId				int				`json:"toolId"`
+	//OtherVersion		string			`json:"otherVersion"`
+	//Priority 			int				`json:"priority"`//0--常规，1--注意，2--危险，3--非常危险，4--未定义
 }
 
 type IgnoreInfoStruct struct {
@@ -256,6 +258,7 @@ func UpdateDetectModelNew(detectModel DetectStruct) error {
 	db := connection.Begin()
 	taskId := detectModel.ID
 	condition := "id=" + fmt.Sprint(taskId)
+	detectModel.UpdatedAt = time.Now()
 	if err := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
 		Where(condition).Update(&detectModel).Error; err != nil {
 		logs.Error("update binary check failed, %v", err)
@@ -633,6 +636,8 @@ func QueryIgnoredInfo(queryInfo map[string]string)(*[]IgnoreInfoStruct,error)  {
 	}
 	return &result, nil
 }
+
+
 //insert tb_ios_detect_content
 func CreateIOSDetectModel(content IOSDetectContent) error {
 	connection, err := database.GetConneection()
