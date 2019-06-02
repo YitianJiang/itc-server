@@ -135,33 +135,33 @@ type StrCallJson struct {
 	LineNumber interface{} `json:"line_number"`
 }
 
-//二进制包检测内容，json内容黑名单和可疑方法区分处理
+//二进制包检测内容，json内容黑名单||可疑方法||权限区分处理
 type IOSDetectContent struct {
 	gorm.Model
-	TaskId          int    `gorm:"column:taskId"            json:"taskId"`
-	ToolId          int    `gorm:"column:toolId"            json:"toolId"`
-	JsonContent     string `gorm:"column:jsonContent"       json:"jsonContent"`
-	Category        string `gorm:"column:category"          json:"category"`
-	CategoryName    string `gorm:"column:categoryName"      json:"categoryName"`
-	CategoryContent string `gorm:"column:categoryContent"   json:"categoryContent"`
-	Status          int    `gorm:"column:status"            json:"status"` //是否确认,0-未确认，1-确认通过，2-确认未通过
-	Confirmer       string `gorm:"column:confirmer"         json:"confirmer"`
-	Remark          string `gorm:"column:remark"            json:"remark"`
+	TaskId        int    `gorm:"column:taskId"            json:"taskId"`
+	ToolId        int    `gorm:"column:toolId"            json:"toolId"`
+	AppName       string `gorm:"column:appname"           json:"appName"`
+	AppId         int    `gorm:"column:app_id"            json:"appId"`
+	Version       string `gorm:"column:app_version"       json:"appVersion"`
+	MinVersion    string `gorm:"column:min_version"       json:"minVersion"`
+	BundleId      string `gorm:"column:bundle_id"         json:"bundleId"`
+	SdkVersion    string `gorm:"column:tar_version"       json:"sdkVersion"`
+	JsonContent   string `gorm:"column:json_content"      json:"jsonContent"`
+	DetectType    string `gorm:"column:detect_type"      json:"detectType"`
+	DetectContent string `gorm:"column:detect_content"    json:"detectContent"`
 }
 
-//二进制包检测内容，json内容权限处理
-type IOSDetectPermission struct {
+//二进制包权限确认历史
+type PrivacyHistory struct {
 	gorm.Model
-	TaskId        int       `gorm:"column:taskId"            json:"taskId"`
-	ToolId        int       `gorm:"column:toolId"            json:"toolId"`
-	AppName       string    `gorm:"column:appname"           json:"appName"`
-	Version       string    `gorm:"column:version"           json:"version"`
-	PermissionE   string    `gorm:"column:permission_E"      json:"permissionE"`
-	PermissionC   string    `gorm:"column:permission_C"      json:"permissionC"`
-	Status        int       `gorm:"column:status"            json:"status"` //是否确认,0-未确认，1-确认通过，2-确认未通过
-	Confirmer     string    `gorm:"column:confirmer"         json:"confirmer"`
-	ConfirmReason string    `gorm:"column:confirm_reason"    json:"confirmReason"`
-	ConfirmTime   time.Time `gorm:"column:confirm_time"      json:"confirmTIME"`
+	AppName        string `gorm:"column:appname"            json:"appName"`
+	AppId          int    `gorm:"column:app_id"            json:"appId"`
+	Platform       int    `gorm:"column:platform"           json:"platform"`
+	Permission     string `gorm:"column:permission"          json:"permission"`
+	Status         int    `gorm:"column:status"             json:"status"` //是否确认,0-未确认，1-确认通过，2-确认未通过
+	Confirmer      string `gorm:"column:confirmer"          json:"confirmer"`
+	ConfirmReason  string `gorm:"column:confirm_reason"     json:"confirmReason"`
+	ConfirmVersion string `gorm:"column:confirm_version"    json:"confirmversion"`
 }
 
 func (IgnoreInfoStruct) TableName() string {
@@ -185,8 +185,8 @@ func (DetectTool) TableName() string {
 func (IOSDetectContent) TableName() string {
 	return "tb_ios_detect_content"
 }
-func (IOSDetectPermission) TableName() string {
-	return "tb_ios_detect_permission"
+func (PrivacyHistory) TableName() string {
+	return "tb_privacy_history"
 }
 
 //insert data
@@ -629,22 +629,51 @@ func QueryIOSDetectModel(condition map[string]interface{}) *[]IOSDetectContent {
 }
 
 //update tb_ios_detect_content
-func UpdateIOSDetectModel(id int, updates map[string]interface{}) bool {
+func UpdateIOSDetectModel(model IOSDetectContent, updates map[string]interface{}) bool {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return false
 	}
 	defer connection.Close()
-	if err := connection.Table(IOSDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Model(&IOSDetectContent{}).Where("id = ?", id).Update(updates).Error; err != nil {
+	if err := connection.Table(IOSDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Model(&model).Update(updates).Error; err != nil {
 		logs.Error("更新iOS静态检测结果出错！！！", err.Error())
 		return false
 	}
 	return true
 }
 
+//iOS 检测结果分类处理
+func InsertIOSDetect(black, method, privacy IOSDetectContent) bool {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return false
+	}
+	defer connection.Close()
+	//insert detect content
+	db := connection.Begin()
+	if err := db.Table(IOSDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&black).Error; &black != nil && err != nil {
+		logs.Error("insert binary check content failed, %v", err)
+		db.Rollback()
+		return false
+	}
+	if err := db.Table(IOSDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&method).Error; &method != nil && err != nil {
+		logs.Error("insert binary check content failed, %v", err)
+		db.Rollback()
+		return false
+	}
+	if err := db.Table(IOSDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&privacy).Error; &privacy != nil && err != nil {
+		logs.Error("insert binary check content failed, %v", err)
+		db.Rollback()
+		return false
+	}
+	db.Commit()
+	return true
+}
+
 //insert tb_ios_detect_permission
-func CreateIOSPermissionModel(permission IOSDetectPermission) error {
+func CreatePrivacyHistoryModel(permission PrivacyHistory) error {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
@@ -652,65 +681,26 @@ func CreateIOSPermissionModel(permission IOSDetectPermission) error {
 	}
 	defer connection.Close()
 	//insert detect content
-	if err := connection.Table(IOSDetectPermission{}.TableName()).LogMode(_const.DB_LOG_MODE).
-		Create(&permission).Error; err != nil {
-		logs.Error("插入iOS权限检测结果出错, %v", err)
+	if err := connection.Table(PrivacyHistory{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&permission).Error; err != nil {
+		logs.Error("插入权限确认信息出错！, %v", err)
 		return err
 	}
 	return nil
 }
 
-//query tb_ios_detect_permission 按照确认顺序降序排序
-func QueryIOSPermissionModel(condition map[string]interface{}, orderName string) *[]IOSDetectPermission {
+//query tb_ios_privacy_history
+func QueryPrivacyHistoryModel(condition map[string]interface{}) *[]PrivacyHistory {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return nil
 	}
 	defer connection.Close()
+	var confirmHistory []PrivacyHistory
+	if err := connection.Table(PrivacyHistory{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).Order("id desc", true).Find(&confirmHistory).Error; err != nil {
+		logs.Error("请求iOS权限检测结果出错！！！", err.Error())
+		return nil
+	}
 
-	var iosDetectPermission []IOSDetectPermission
-	db := connection.Table(IOSDetectPermission{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition)
-	if orderName == "" {
-		if err := db.Find(&iosDetectPermission).Error; err != nil {
-			logs.Error("请求iOS权限检测结果出错！！！", err.Error())
-			return nil
-		}
-	} else {
-		if err := db.Order(orderName).Find(&iosDetectPermission).Error; err != nil {
-			logs.Error("请求iOS权限检测结果出错！！！", err.Error())
-			return nil
-		}
-	}
-	return &iosDetectPermission
-}
-
-//update tb_ios_detect_permission
-func UpdateIOSPermissionModel(permission IOSDetectPermission) bool {
-	connection, err := database.GetConneection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return false
-	}
-	defer connection.Close()
-	if err := connection.Table(IOSDetectPermission{}.TableName()).LogMode(_const.DB_LOG_MODE).Model(&IOSDetectPermission{}).Save(permission).Error; err != nil {
-		logs.Error("更新iOS权限检测结果出错！！！", err.Error())
-		return false
-	}
-	return true
-}
-
-//update tb_ios_detect_permission
-func DeleteIOSPermissionModel(condition map[string]interface{}) bool {
-	connection, err := database.GetConneection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return false
-	}
-	defer connection.Close()
-	if err := connection.Table(IOSDetectPermission{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(connection).Delete(IOSDetectPermission{}).Error; err != nil {
-		logs.Error("更新iOS权限检测结果出错！！！", err.Error())
-		return false
-	}
-	return true
+	return &confirmHistory
 }

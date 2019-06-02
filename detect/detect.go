@@ -16,8 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mitchellh/mapstructure"
-
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
@@ -45,15 +43,16 @@ var LARK_MSG_CALL_MAP = make(map[string]interface{})
 func UploadFile(c *gin.Context) {
 
 	url := ""
-	nameI, f := c.Get("username")
-	if !f {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "未获取到用户信息！",
-			"errorCode": -1,
-			"data":      "未获取到用户信息！",
-		})
-		return
-	}
+	//nameI, f := c.Get("username")
+	//if !f {
+	//	c.JSON(http.StatusOK, gin.H{
+	//		"message":   "未获取到用户信息！",
+	//		"errorCode": -1,
+	//		"data":      "未获取到用户信息！",
+	//	})
+	//	return
+	//}
+	nameI := "yinzhihong"
 
 	file, header, err := c.Request.FormFile("uploadFile")
 	if file == nil {
@@ -70,7 +69,8 @@ func UploadFile(c *gin.Context) {
 	toLarker := c.DefaultPostForm("toLarker", "")
 	var name string
 	if toLarker == "" {
-		name = nameI.(string)
+		//name = nameI.(string)
+		name = nameI
 	} else {
 		name = toLarker
 	}
@@ -165,7 +165,8 @@ func UploadFile(c *gin.Context) {
 	//tosUrl, err := upload2Tos(filepath)
 	//2、将相关信息保存至数据库
 	var dbDetectModel dal.DetectStruct
-	dbDetectModel.Creator = nameI.(string)
+	//dbDetectModel.Creator = nameI.(string)
+	dbDetectModel.Creator = nameI
 	dbDetectModel.ToLarker = name
 	dbDetectModel.SelfCheckStatus = 0
 	dbDetectModel.CreatedAt = time.Now()
@@ -186,7 +187,8 @@ func UploadFile(c *gin.Context) {
 	}
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
-		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
+		//callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
+		callBackUrl := "http://10.224.14.220:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -328,12 +330,10 @@ func UpdateDetectInfos(c *gin.Context) {
 			return
 		}
 		//新表jsonContent分类存储
-		condition := map[string]interface{}{
-			"taskId":      task_id,
-			"toolId":      tool_id,
-			"jsonContent": jsonContent,
-		}
-		res, warnFlag := iOSResultClassify(condition, jsonContent) //检测结果处理
+		taskId, _ := strconv.Atoi(taskId)
+		toolId, _ := strconv.Atoi(toolId)
+		appId, _ := strconv.Atoi((*detect)[0].AppId)
+		res, warnFlag := iOSResultClassify(taskId, toolId, appId, jsonContent) //检测结果处理
 		if res == false {
 			logs.Error("iOS 新增new detect content失败！！！") //防止影响现有用户，出错后暂不return
 		}
@@ -344,10 +344,6 @@ func UpdateDetectInfos(c *gin.Context) {
 			utils.LarkDingOneInner("gongrui", tips)
 			utils.LarkDingOneInner("kanghuaisong", tips)
 			utils.LarkDingOneInner((*detect)[0].ToLarker, tips)
-		}
-		//权限插入权限表中
-		if iosPermission(jsonContent, task_id, tool_id) == false {
-			logs.Error("检测权限内容插入失败，请检查！")
 		}
 	}
 
@@ -600,107 +596,147 @@ func strRmRepeat(callInfo []interface{}) string {
 /**
  *iOS 检测结果jsonContent处理
  */
-func iOSResultClassify(condition map[string]interface{}, jsonContent string) (bool, bool) {
+func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, bool) {
 	warnFlag := false
 	var dat map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonContent), &dat); err != nil {
 		logs.Error("json转map出错！", err.Error())
 		return false, warnFlag
 	}
+	appName := dat["name"].(string)
+	version := dat["version"].(string)
+	bundleId := dat["bundle_id"].(string)
+	minVersion := dat["min_version"].(string)
+	sdkVersion := dat["tar_version"].(string)
 	//黑名单处理
+	var blackDetect dal.IOSDetectContent
 	blackContent := dat["blacklist_in_app"]
-	condition["category"] = "blacklist"
-	for k, v := range blackContent.(map[string]interface{}) {
-		if len(v.([]interface{})) != 0 {
-			temRes := ""
-			for i, s := range v.([]interface{}) {
-				if i != len(v.([]interface{}))-1 {
-					temRes += s.(string) + "###"
-				} else {
-					temRes += s.(string)
-				}
+	if blackContent != nil {
+		var blackList []map[string]interface{}
+		for k, v := range blackContent.(map[string]interface{}) {
+			blackMap := make(map[string]interface{})
+			if len(v.([]interface{})) == 0 {
+				continue //黑名单内容为空，跳过
 			}
-			condition["categoryName"] = k
-			condition["categoryContent"] = temRes
+			blackMap["name"] = k
+			blackMap["content"] = v
+			blackMap["status"] = 0
+			blackMap["confirmer"] = ""
+			blackMap["remark"] = ""
+			blackList = append(blackList, blackMap)
 			if k == "itms-services" {
 				warnFlag = true
 			}
-			var newDetectContent dal.IOSDetectContent
-			if err := mapstructure.Decode(condition, &newDetectContent); err != nil {
-				logs.Error("map转struct出错！", err.Error())
-				return false, warnFlag
-			}
-			if err := dal.CreateIOSDetectModel(newDetectContent); err != nil {
-				logs.Error("数据库中新增new detect content 出错！！！", err.Error())
-				return false, warnFlag
-			}
 		}
+		BlackContentValue, err := json.Marshal(map[string]interface{}{
+			"blackList": blackList,
+		})
+		if err != nil {
+			logs.Error("map转json出错！")
+			return false, warnFlag
+		}
+		blackDetect.DetectContent = string(BlackContentValue)
+		blackDetect.DetectType = "blacklist"
+		blackDetect.ToolId = toolId
+		blackDetect.TaskId = taskId
+		blackDetect.AppId = appId
+		blackDetect.AppName = appName
+		blackDetect.Version = version
+		blackDetect.BundleId = bundleId
+		blackDetect.MinVersion = minVersion
+		blackDetect.SdkVersion = sdkVersion
+		blackDetect.JsonContent = jsonContent
 	}
 	//可疑方法名处理
+	var methodDetect dal.IOSDetectContent
 	methodContent := dat["methods_in_app"]
-	condition["category"] = "method"
-	for _, temMethod := range methodContent.([]interface{}) {
-		susApi := temMethod.(map[string]interface{})["api_name"].(string)
-		susClass := temMethod.(map[string]interface{})["class_name"].(string)
-		condition["categoryName"] = susApi
-		condition["categoryContent"] = susClass
-		var newDetectContent dal.IOSDetectContent
-		if err := mapstructure.Decode(condition, &newDetectContent); err != nil {
-			logs.Error("map转struct出错！", err.Error())
-			return false, warnFlag
+	if methodContent != nil {
+		var methodList []map[string]interface{}
+		//异常处理
+		var newMethodContent []interface{}
+		switch methodContent.(type) {
+		case map[string]interface{}:
+			newMethodContent = []interface{}{methodContent}
+		case []interface{}:
+			newMethodContent = methodContent.([]interface{})
 		}
-		if err := dal.CreateIOSDetectModel(newDetectContent); err != nil {
-			logs.Error("数据库中新增new detect content 出错！！！", err.Error())
-			return false, warnFlag
+		for _, temMethod := range newMethodContent {
+			methodMap := make(map[string]interface{})
+			susApi := temMethod.(map[string]interface{})["api_name"].(string)
+			susClass := temMethod.(map[string]interface{})["class_name"].(string)
+			methodMap["name"] = susApi
+			methodMap["content"] = susClass
+			methodMap["status"] = 0
+			methodMap["confirmer"] = ""
+			methodMap["remark"] = ""
+			methodList = append(methodList, methodMap)
 		}
-	}
-	return true, warnFlag
-}
-
-/**
- *iOS 权限处理
- */
-func iosPermission(jsonContent string, taskId, toolId int) bool {
-	result := true
-	var dat map[string]interface{}
-	if err := json.Unmarshal([]byte(jsonContent), &dat); err != nil {
-		logs.Error("json转map出错！", err.Error())
-		return false
-	}
-	appName := dat["name"].(string)
-	version := dat["version"].(string)
-	var permissionList []interface{}
-	switch dat["privacy_keys"].(type) {
-	case []interface{}:
-		permissionList = dat["privacy_keys"].([]interface{})
-	case map[string]interface{}:
-		permissionList = append(permissionList, dat["privacy_keys"].(map[string]interface{}))
-	}
-	var permission dal.IOSDetectPermission
-	permission.AppName = appName
-	permission.Version = version
-	permission.TaskId = taskId
-	permission.ToolId = toolId
-	for _, p := range permissionList {
-		for permissionE, permissionC := range p.(map[string]interface{}) {
-			permission.PermissionE = permissionE
-			permission.PermissionC = permissionC.(string)
-			if err := dal.CreateIOSPermissionModel(permission); err != nil {
-				result = false
-				logs.Error("权限插入数据库失败！", err.Error())
-			}
-		}
-	}
-	//如果单条记录插入出错的话，删除已经插入的部分
-	if result == false {
-		dal.DeleteIOSPermissionModel(map[string]interface{}{
-			"appname": appName,
-			"version": version,
-			"taskId":  taskId,
-			"toolId":  toolId,
+		methodContentValue, err := json.Marshal(map[string]interface{}{
+			"method": methodList,
 		})
+		if err != nil {
+			logs.Error("map转json出错！")
+			return false, warnFlag
+		}
+		methodDetect.DetectContent = string(methodContentValue)
+		methodDetect.DetectType = "method"
+		methodDetect.ToolId = toolId
+		methodDetect.TaskId = taskId
+		methodDetect.AppId = appId
+		methodDetect.AppName = appName
+		methodDetect.Version = version
+		methodDetect.BundleId = bundleId
+		methodDetect.MinVersion = minVersion
+		methodDetect.SdkVersion = sdkVersion
+		methodDetect.JsonContent = jsonContent
 	}
-	return result
+	//权限处理
+	var privacyDetect dal.IOSDetectContent
+	privacyContent := dat["privacy_keys"]
+	if privacyContent != nil {
+		var privacyList []map[string]interface{}
+		for e, c := range privacyContent.(map[string]interface{}) {
+			privacyMap := make(map[string]interface{})
+			privacyMap["permission"] = e
+			privacyMap["permission_C"] = c
+			//找到权限确认信息
+			confirmHistory := dal.QueryPrivacyHistoryModel(map[string]interface{}{
+				"app_id":     appId,
+				"appname":    appName,
+				"permission": e,
+				"platform":   1,
+			})
+			if confirmHistory == nil || len(*confirmHistory) == 0 {
+				privacyMap["confirmer"] = ""
+				privacyMap["confirmVersion"] = ""
+				privacyMap["confirmReason"] = ""
+			} else {
+				privacyMap["confirmer"] = (*confirmHistory)[0].Confirmer
+				privacyMap["confirmReason"] = (*confirmHistory)[0].ConfirmReason
+				privacyMap["confirmVersion"] = (*confirmHistory)[len(*confirmHistory)-1].ConfirmVersion
+			}
+			privacyList = append(privacyList, privacyMap)
+		}
+		privacyContentValue, err := json.Marshal(map[string]interface{}{
+			"privacy": privacyList,
+		})
+		if err != nil {
+			logs.Error("map转json出错！")
+			return false, warnFlag
+		}
+		privacyDetect.DetectContent = string(privacyContentValue)
+		privacyDetect.DetectType = "privacy"
+		privacyDetect.ToolId = toolId
+		privacyDetect.TaskId = taskId
+		privacyDetect.AppId = appId
+		privacyDetect.AppName = appName
+		privacyDetect.Version = version
+		privacyDetect.BundleId = bundleId
+		privacyDetect.MinVersion = minVersion
+		privacyDetect.SdkVersion = sdkVersion
+		privacyDetect.JsonContent = jsonContent
+	}
+	return dal.InsertIOSDetect(blackDetect, methodDetect, privacyDetect), warnFlag
 }
 
 /**
@@ -1401,112 +1437,29 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 		}
 	}
 	//返回检测结果给前端
-	jsonCon := (*iosTaskBinaryCheckContent)[0].JsonContent
-	res := make(map[string]interface{})
-	if err := json.Unmarshal([]byte(jsonCon), &res); err != nil {
-		logs.Error("解析json出错！！！", err.Error())
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "未查询到检测内容",
-			"errorCode": -3,
-			"data":      "未查询到检测内容",
-		})
-		return
-	}
-	var blackListArr []interface{}
-	var methodArr []interface{}
-	for _, tem := range *iosTaskBinaryCheckContent {
-		categoryName := tem.CategoryName
-		categoryContent := tem.CategoryContent
-		id := tem.ID
-		remark := tem.Remark
-		status := tem.Status
-		confirmer := tem.Confirmer
-		if tem.Category == "blacklist" {
-			blackListArr = append(blackListArr, map[string]interface{}{
-				"blackName":    categoryName,
-				"blackContent": strings.Split(categoryContent, "###"),
-				"id":           id,
-				"remark":       remark,
-				"status":       status,
-				"confirmer":    confirmer,
-			})
-		}
-		if tem.Category == "method" {
-			methodArr = append(methodArr, map[string]interface{}{
-				"methodName":  categoryName,
-				"methodClass": categoryContent,
-				"id":          id,
-				"remark":      remark,
-				"status":      status,
-				"confirmer":   confirmer,
-			})
-		}
-	}
-	//检测权限信息的展示
-	var permissionArr []interface{}
-	permissionList := dal.QueryIOSPermissionModel(map[string]interface{}{
-		"taskId": taskId,
-		"toolId": toolId,
-	}, "")
-	if permissionList == nil || len(*permissionList) == 0 {
-		permissionArr = []interface{}{}
-	}
-	appname := (*permissionList)[0].AppName
-	//权限数组去重
-	middleMap := make(map[string]string)
-	for _, permission := range *permissionList {
-		middleMap[permission.PermissionE] = permission.PermissionC
-	}
-	//构造权限返回数组
-	for k, v := range middleMap {
-		//查询相同权限相同app的确认记录，按确认时间倒序显示
-		allHistory := dal.QueryIOSPermissionModel(map[string]interface{}{
-			"permission_E": k,
-			"appname":      appname,
-			"status":       1,
-		}, "confirm_time desc")
-		//构建单个权限的返回样式
-		temMap := make(map[string]interface{})
-		temMap["permisson"] = k
-		temMap["permissonC"] = v
-		//该权限没有被确认，相关字段返回为空
-		if allHistory == nil || len(*allHistory) == 0 {
-			temMap["origin"] = ""
-			temMap["confirmer"] = ""
-			temMap["confirm_reason"] = ""
-			temMap["confirm_history"] = []interface{}{}
-			permissionArr = append(permissionArr, temMap)
-		} else {
-			//获取history需要显示的字段
-			var history []map[string]interface{}
-			for _, h := range *allHistory {
-				history = append(history, map[string]interface{}{
-					"version":       h.Version,
-					"confirmer":     h.Confirmer,
-					"confirmReason": h.ConfirmReason,
-					"confirmTime":   h.ConfirmTime,
-				})
-			}
-			oldConfirmVersion := (*allHistory)[len(*allHistory)-1].Version //起始确认版本
-			confirmer := (*allHistory)[0].Confirmer                        //最后修改人
-			confirmReason := (*allHistory)[0].ConfirmReason                //最后修改原因
-			temMap["origin"] = oldConfirmVersion
-			temMap["confirmer"] = confirmer
-			temMap["confirm_reason"] = confirmReason
-			temMap["confirm_history"] = history
-			permissionArr = append(permissionArr, temMap)
-		}
-	}
-
 	data := map[string]interface{}{
-		"appName":        res["name"],
-		"appVersion":     res["version"],
-		"bundleId":       res["bundle_id"],
-		"sdkVersion":     res["tar_version"],
-		"minVersion":     res["min_version"],
-		"blackList":      blackListArr,
-		"method":         methodArr,
-		"permissionList": permissionArr,
+		"appName":    (*iosTaskBinaryCheckContent)[0].AppName,
+		"appVersion": (*iosTaskBinaryCheckContent)[0].Version,
+		"bundleId":   (*iosTaskBinaryCheckContent)[0].BundleId,
+		"sdkVersion": (*iosTaskBinaryCheckContent)[0].SdkVersion,
+		"minVersion": (*iosTaskBinaryCheckContent)[0].MinVersion,
+	}
+	for _, iosContent := range *iosTaskBinaryCheckContent {
+		var m map[string]interface{}
+		err := json.Unmarshal([]byte(iosContent.DetectContent), &m)
+		if err != nil {
+			logs.Error("数据库内容转map出错!", err.Error())
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "数据库内容读取错误！",
+				"errorCode": -1,
+				"data":      []interface{}{},
+			})
+			return
+		}
+		for k, v := range m {
+			data[k] = v
+		}
+		continue
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
@@ -1520,13 +1473,14 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
  */
 func ConfirmIOSBinaryResult(c *gin.Context) {
 	type IOSConfirm struct {
-		TaskId     int    `json:"taskId"        form:"taskId"`
-		ToolId     int    `json:"toolId"        form:"toolId"`
-		Status     int    `json:"status"        form:"status"`
-		Remark     string `json:"remark"        form:"remark"`
-		Permission string `json:"permission"    form:"permission"`
-		ID         int    `json:"id"            form:"id"`
+		TaskId         int    `json:"taskId"           form:"taskId"`
+		ToolId         int    `json:"toolId"           form:"toolId"`
+		Status         int    `json:"status"           form:"status"`
+		Remark         string `json:"remark"           form:"remark"`
+		ConfirmType    int    `json:"confirmType"       form:"confirmType"` //0是旧样式黑名单，1是新样式黑名单，2是可疑方法，3是权限
+		ConfirmContent string `json:"confirmContent"   form:"confirmContent"`
 	}
+	//参数校验
 	var ios IOSConfirm
 	if err := c.BindJSON(&ios); err != nil {
 		logs.Error("确认二进制检测结果传参出错！", err.Error())
@@ -1537,14 +1491,25 @@ func ConfirmIOSBinaryResult(c *gin.Context) {
 		})
 		return
 	}
+	//参数异常处理
+	if ios.ConfirmType < 0 || ios.ConfirmType > 3 {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "参数错误！",
+			"errorCode": -1,
+			"data":      "参数错误，id和permission不能同时传入！",
+		})
+		return
+	}
 	//获取确认人信息
-	username, _ := c.Get("username")
-	if ios.ID == 0 && ios.Permission == "" {
-		//更新黑名单和可疑方法，兼容旧接口内容
+	//username, _ := c.Get("username")
+	username := "yinzhihong"
+	//兼容旧接口内容
+	if ios.ConfirmType == 0 {
 		data := make(map[string]string)
 		data["task_id"] = strconv.Itoa(ios.TaskId)
 		data["tool_id"] = strconv.Itoa(ios.ToolId)
-		data["confirmer"] = username.(string)
+		//data["confirmer"] = username.(string)
+		data["confirmer"] = username
 		data["remark"] = ios.Remark
 		data["status"] = strconv.Itoa(ios.Status)
 		flag := dal.ConfirmBinaryResult(data)
@@ -1564,94 +1529,115 @@ func ConfirmIOSBinaryResult(c *gin.Context) {
 			})
 			return
 		}
-	} else if ios.ID != 0 && ios.Permission == "" {
-		//更新黑名单和可疑方法
-		updateMap := map[string]interface{}{
-			"remark":    ios.Remark,
-			"status":    ios.Status,
-			"confirmer": username.(string),
-		}
-		//判断taskid下是否存在更新id
-		isExit := dal.QueryIOSDetectModel(map[string]interface{}{
-			"taskId": ios.TaskId,
-			"toolId": ios.ToolId,
-			"id":     ios.ID,
+	}
+	//新接口内容
+	var queryKey string
+	switch ios.ConfirmType {
+	case 1:
+		queryKey = "blackList"
+	case 2:
+		queryKey = "method"
+	case 3:
+		queryKey = "privacy"
+	}
+	//数据库读取检测内容转为map
+	iosDetect := dal.QueryIOSDetectModel(map[string]interface{}{
+		"taskId":      ios.TaskId,
+		"toolId":      ios.ToolId,
+		"detect_type": queryKey,
+	})
+	if iosDetect == nil || len(*iosDetect) == 0 {
+		logs.Error("查询iOS检测内容数据库出错！！！")
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "二进制检测内容确认失败，参数传入有问题！",
+			"errorCode": -1,
+			"data":      "请检查taskId或toolId!",
 		})
-		if isExit == nil || len(*isExit) == 0 {
-			logs.Error("taskId和要修改的id不匹配！！！")
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "二进制检测内容确认失败，参数传入有问题！",
-				"errorCode": -1,
-				"data":      "taskId下不存在要更新的ID！请检查！",
-			})
-			return
-		}
-		flag := dal.UpdateIOSDetectModel(ios.ID, updateMap)
-		if !flag {
-			logs.Error("iOS二进制检测内容确认失败")
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "二进制检测内容确认失败！",
-				"errorCode": -1,
-				"data":      "二进制检测内容确认失败！",
-			})
-			return
-		}
-	} else if ios.Permission != "" && ios.ID == 0 {
-		//更新权限
-		pList := dal.QueryIOSPermissionModel(map[string]interface{}{
-			"taskId":       ios.TaskId,
-			"toolId":       ios.ToolId,
-			"permission_E": ios.Permission,
-		}, "")
-		if pList == nil || len(*pList) == 0 {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "确认iOS权限信息出错",
-				"errorCode": -1,
-				"data":      "传入的参数有误！",
-			})
-			return
-		}
-		//查询到结果多余1个，说明相同版本已经被确认过，也许要更新确认原因，直接在表中插入一条
-		if len(*pList) == 1 && (*pList)[0].Confirmer == "" {
-			(*pList)[0].Status = ios.Status
-			(*pList)[0].Confirmer = username.(string)
-			(*pList)[0].ConfirmReason = ios.Remark
-			(*pList)[0].ConfirmTime = time.Now()
-			if dal.UpdateIOSPermissionModel((*pList)[0]) == false {
-				c.JSON(http.StatusOK, gin.H{
-					"message":   "确认iOS权限信息出错！",
-					"errorCode": -1,
-					"data":      "数据库中更新记录失败！",
-				})
-				return
+		return
+	}
+	var m map[string]interface{}
+	err := json.Unmarshal([]byte((*iosDetect)[0].DetectContent), &m)
+	if err != nil {
+		logs.Error("数据库内容转map出错!", err.Error())
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "更新失败，请重试！",
+			"errorCode": -1,
+			"data":      "更新失败，请重试！",
+		})
+		return
+	}
+	//更新
+	if ios.ConfirmType == 1 || ios.ConfirmType == 2 {
+		isExit := false
+		for _, oneBlack := range m[queryKey].([]interface{}) {
+			needConfirm := oneBlack.(map[string]interface{})
+			if needConfirm["name"] == ios.ConfirmContent {
+				needConfirm["status"] = ios.Status
+				needConfirm["confirmer"] = username
+				needConfirm["remark"] = ios.Remark
+				isExit = true
 			}
-		} else {
-			var rePermission dal.IOSDetectPermission
-			rePermission.ToolId = ios.ToolId
-			rePermission.TaskId = ios.TaskId
-			rePermission.AppName = (*pList)[0].AppName
-			rePermission.Version = (*pList)[0].Version
-			rePermission.PermissionE = ios.Permission
-			rePermission.PermissionC = (*pList)[0].PermissionC
-			rePermission.Status = ios.Status
-			rePermission.ConfirmReason = ios.Remark
-			rePermission.Confirmer = username.(string)
-			rePermission.ConfirmTime = time.Now()
-			if err := dal.CreateIOSPermissionModel(rePermission); err != nil {
-				logs.Error("更新iOS权限信息失败，插入重复数据出错！！！")
-				c.JSON(http.StatusOK, gin.H{
-					"message":   "确认iOS权限信息出错！",
-					"errorCode": -1,
-					"data":      "数据库中插入记录失败！",
-				})
-				return
-			}
+		}
+		if isExit == false {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "iOS二进制检测内容确认失败！",
+				"errorCode": -1,
+				"data":      "不存在该需要确认的内容,请检查！",
+			})
+			return
 		}
 	} else {
+		//权限确认历史表中增加一条记录
+		var newHistory dal.PrivacyHistory
+		newHistory.AppId = (*iosDetect)[0].AppId
+		newHistory.AppName = (*iosDetect)[0].AppName
+		newHistory.ConfirmVersion = (*iosDetect)[0].Version
+		newHistory.Status = ios.Status
+		//newHistory.Confirmer = username.(string)
+		newHistory.Confirmer = username
+		newHistory.ConfirmReason = ios.Remark
+		newHistory.Platform = 1
+		newHistory.Permission = ios.ConfirmContent
+		if err := dal.CreatePrivacyHistoryModel(newHistory); err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "检测中权限更新失败，请重试！",
+				"errorCode": -1,
+				"data":      "检测中权限更新失败，请重试！",
+			})
+			return
+		}
+		confirmHistory := dal.QueryPrivacyHistoryModel(map[string]interface{}{
+			"app_id":     (*iosDetect)[0].AppId,
+			"appname":    (*iosDetect)[0].AppName,
+			"permission": ios.ConfirmContent,
+			"platform":   1,
+		})
+		confirmer := (*confirmHistory)[0].Confirmer
+		confirmReason := (*confirmHistory)[0].ConfirmReason
+		confirmVersion := (*confirmHistory)[len(*confirmHistory)-1].ConfirmVersion
+		fmt.Println("1618,", confirmer)
+		fmt.Println("1619,", confirmVersion)
+		fmt.Println("1620,", confirmReason)
+		for _, pp := range m["privacy"].([]interface{}) {
+			confirmprivacy := pp.(map[string]interface{})
+			if confirmprivacy["permission"] == ios.ConfirmContent {
+				confirmprivacy["confirmVersion"] = confirmVersion
+				confirmprivacy["confirmReason"] = confirmReason
+				confirmprivacy["confirmer"] = confirmer
+			}
+		}
+	}
+	//更新后的内容重新专程json存储到数据库
+	confirmedContent, _ := json.Marshal(m)
+	flag := dal.UpdateIOSDetectModel((*iosDetect)[0], map[string]interface{}{
+		"detect_content": string(confirmedContent),
+	})
+	if !flag {
+		logs.Error("iOS黑名单检测内容确认失败")
 		c.JSON(http.StatusOK, gin.H{
-			"message":   "参数错误！",
+			"message":   "iOS二进制检测内容确认失败！",
 			"errorCode": -1,
-			"data":      "参数错误，id和permission不能同时传入！",
+			"data":      "iOS二进制检测内容确认失败！",
 		})
 		return
 	}
@@ -2084,4 +2070,63 @@ func getIgnoredInfo(data map[string]string) (map[string]int, map[string]int, err
 		}
 	}
 	return methodMap, strMap, nil
+}
+
+func QueryPrivacyHistory(c *gin.Context) {
+	appId, isExit := c.GetPostForm("appId")
+	if isExit == false {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "缺少appID参数",
+			"errorCode": -1,
+			"data":      "缺少appID参数",
+		})
+		return
+	}
+	platform, isExit := c.GetPostForm("platform")
+	if isExit == false {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "缺少platform参数",
+			"errorCode": -1,
+			"data":      "缺少platform参数",
+		})
+		return
+	}
+	key, isExit := c.GetPostForm("key")
+	if isExit == false {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "缺少key参数",
+			"errorCode": -1,
+			"data":      "缺少key参数",
+		})
+		return
+	}
+	history := dal.QueryPrivacyHistoryModel(map[string]interface{}{
+		"app_id":     appId,
+		"platform":   platform,
+		"permission": key,
+	})
+	if history == nil || len(*history) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "该key无确认历史",
+			"errorCode": -1,
+			"data":      []interface{}{},
+		})
+		return
+	}
+	var resList []map[string]interface{}
+	for _, hh := range *history {
+		temMap := map[string]interface{}{
+			"confirmer":  hh.Confirmer,
+			"key":        hh.Permission,
+			"remark":     hh.ConfirmReason,
+			"updateTime": hh.CreatedAt,
+			"version":    hh.ConfirmVersion,
+		}
+		resList = append(resList, temMap)
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "success",
+		"errorCode": 0,
+		"data":      resList,
+	})
 }
