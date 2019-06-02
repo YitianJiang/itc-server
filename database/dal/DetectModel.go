@@ -1,14 +1,13 @@
 package dal
 
 import (
-	"fmt"
-	"strconv"
-	"time"
-
-	_const "code.byted.org/clientQA/itc-server/const"
+	"code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
+	"fmt"
+	"strconv"
+	"time"
 )
 
 //二进制包检测任务
@@ -70,47 +69,55 @@ type DetectInfo struct {
 //敏感信息详情---fj新增
 type DetectContentDetail struct {
 	gorm.Model
-	TaskId    int    `json:"taskId"`
-	Status    int    `json:"status"` //是否确认,0-未确认，1-确认通过，2-确认未通过
-	Remark    string `json:"remark"`
-	Confirmer string `json:"confirmer"`
-	SensiType int    `json:"sensiType"` //敏感信息类型，1-敏感方法，2-敏感字符串
-	KeyInfo   string `json:"key"`
-	ClassName string `json:"className"`
-	DescInfo  string `json:"desc"`
-	CallLoc   string `json:"callLoc"`
-	ToolId    int    `json:"toolId"`
+	TaskId				int				`json:"taskId"`
+	Status				int				`json:"status"`   //是否确认,0-未确认，1-确认通过，2-确认未通过
+	Remark				string 			`json:"remark"`
+	Confirmer			string			`json:"confirmer"`
+	SensiType			int				`json:"sensiType"`//敏感信息类型，1-敏感方法，2-敏感字符串
+	KeyInfo				string			`json:"key"`
+	ClassName			string			`json:"className"`
+	DescInfo			string			`json:"desc"`
+	CallLoc				string			`json:"callLoc"`
+	ToolId				int				`json:"toolId"`
+	//OtherVersion		string			`json:"otherVersion"`
+	//Priority 			int				`json:"priority"`//0--常规，1--注意，2--危险，3--非常危险，4--未定义
 }
 
 type IgnoreInfoStruct struct {
 	gorm.Model
-	AppId     int    `json:"appId"`
-	Platform  int    `json:"platform"` //0-安卓，1-iOS
-	Keys      string `json:"keys"`
-	SensiType int    `json:"sensiType"` //敏感信息类型，1-敏感方法，2-敏感字符串
+	AppId				int 			`json:"appId"`
+	Platform			int				`json:"platform"`//0-安卓，1-iOS
+	KeysInfo			string			`json:"keys"`
+	SensiType			int				`json:"sensiType"`//敏感信息类型，1-敏感方法，2-敏感字符串
+	Version				string			`json:"version"`//app版本
+	Remarks				string			`json:"remarks"`
+	Confirmer			string			`json:"confirmer"`
+	Status				int				`json:"status"`   //1-确认通过，2-确认未通过
 }
 
 /**
  *安卓检测数据查询返回结构
  */
 type DetectQueryStruct struct {
-	ApkName     string    `json:"apkName"`
-	Version     string    `json:"version"`
-	Channel     string    `json:"channel"`
-	Permissions string    `json:"permissions"`
-	SMethods    []SMethod `json:"sMethods"`
-	SStrs       []SStr    `json:"sStrs"`
+	ApkName				string							`json:"apkName"`
+	Version				string							`json:"version"`
+	Channel             string							`json:"channel"`
+	Permissions			string 							`json:"permissions"`
+	SMethods		    []SMethod						`json:"sMethods"`
+	SStrs				[]SStr							`json:"sStrs"`
+	Permissions_2		[]Permissions					`json:"permissionList"`
 }
 
 type SMethod struct {
-	Id         uint             `json:"id"`
-	Status     int              `json:"status"`
-	Remark     string           `json:"remark"`
-	Confirmer  string           `json:"confirmer"`
-	MethodName string           `json:"methodName"`
-	ClassName  string           `json:"className"`
-	Desc       string           `json:"desc"`
-	CallLoc    []MethodCallJson `json:"callLoc"`
+	Id					uint 				`json:"id"`
+	Status				int					`json:"status"`
+	Remark				string 				`json:"remark"`
+	Confirmer			string				`json:"confirmer"`
+	MethodName			string				`json:"methodName"`
+	ClassName			string				`json:"className"`
+	Desc				string				`json:"desc"`
+	CallLoc				[]MethodCallJson	`json:"callLoc"`
+	OtherVersion 		string				`json:"otherVersion"`
 }
 type MethodCallJson struct {
 	MethodName string      `json:"method_name"`
@@ -119,13 +126,14 @@ type MethodCallJson struct {
 }
 
 type SStr struct {
-	Id        uint          `json:"id"`
-	Status    int           `json:"status"`
-	Remark    string        `json:"remark"`
-	Confirmer string        `json:"confirmer"`
-	Keys      string        `json:"keys"`
-	Desc      string        `json:"desc"`
-	CallLoc   []StrCallJson `json:"callLoc"`
+	Id					uint 				`json:"id"`
+	Status				int					`json:"status"`
+	Remark				string 				`json:"remark"`
+	Confirmer			string				`json:"confirmer"`
+	Keys				string				`json:"keys"`
+	Desc				string				`json:"desc"`
+	CallLoc				[]StrCallJson		`json:"callLoc"`
+	ConfirmInfos		[]ConfirmInfo		`json:"confirmerInfos"`
 }
 
 type StrCallJson struct {
@@ -133,6 +141,24 @@ type StrCallJson struct {
 	MethodName string      `json:"method_name"`
 	ClassName  string      `json:"class_name"`
 	LineNumber interface{} `json:"line_number"`
+}
+type ConfirmInfo struct {
+	//Id					uint 				`json:"id"`
+	Key					string				`json:"key"`
+	//Status				int					`json:"status"`
+	Remark				string 				`json:"remark"`
+	Confirmer			string				`json:"confirmer"`
+	OtherVersion 		string				`json:"otherVersion"`
+}
+
+type Permissions struct {
+	Id					uint 				`json:"id"`
+	Key					string				`json:"key"`
+	Status				int					`json:"status"`
+	Remark				string 				`json:"remark"`
+	Confirmer			string				`json:"confirmer"`
+	OtherVersion 		string				`json:"otherVersion"`
+	Priority 			int					`json:"priority"`
 }
 
 //二进制包检测内容，json内容黑名单||可疑方法||权限区分处理
@@ -243,6 +269,7 @@ func UpdateDetectModelNew(detectModel DetectStruct) error {
 	db := connection.Begin()
 	taskId := detectModel.ID
 	condition := "id=" + fmt.Sprint(taskId)
+	detectModel.UpdatedAt = time.Now()
 	if err := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
 		Where(condition).Update(&detectModel).Error; err != nil {
 		logs.Error("update binary check failed, %v", err)
@@ -483,6 +510,29 @@ func InsertDetectDetail(detail DetectContentDetail) error {
 	return nil
 }
 
+func InsertDetectDetailBatch(details *[]DetectContentDetail) error  {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return nil
+	}
+	defer connection.Close()
+	db := connection.Begin()
+
+	for _,detail := range *details {
+		detail.CreatedAt = time.Now()
+		detail.UpdatedAt = time.Now()
+		if err1 := db.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&detail).Error; err1 != nil {
+			logs.Error("数据库新增敏感信息失败,%v，敏感信息具体key参数：%s",err1,detail.KeyInfo)
+			db.Rollback()
+			return err1
+		}
+	}
+	db.Commit()
+	return nil
+}
+
+
 /**
 未确认敏感信息数据量查询-----fj
 */
@@ -541,7 +591,7 @@ func QueryDetectContentDetail(condition string) (*[]DetectContentDetail, error) 
 
 	var result []DetectContentDetail
 
-	if err1 := db.Where(condition).Find(&result).Error; err1 != nil {
+	if err1 := db.Where(condition).Order("status ASC").Find(&result).Error; err1 != nil {
 		logs.Error("query detectDetailInfos failed! %v", err)
 		return nil, err1
 	}
@@ -566,7 +616,7 @@ func InsertIgnoredInfo(detail IgnoreInfoStruct) error {
 	detail.UpdatedAt = time.Now()
 
 	if err1 := db.Create(&detail).Error; err1 != nil {
-		logs.Error("数据库新增可忽略信息失败,%v，可忽略信息具体key参数：%s", err1, detail.Keys)
+		logs.Error("数据库新增可忽略信息失败,%v，可忽略信息具体key参数：%s", err1, detail.KeysInfo)
 		return err1
 	}
 	return nil
@@ -575,7 +625,7 @@ func InsertIgnoredInfo(detail IgnoreInfoStruct) error {
 /**
 查询可忽略信息----fj
 */
-func QueryIgnoredInfo(condition string) (*[]IgnoreInfoStruct, error) {
+func QueryIgnoredInfo(queryInfo map[string]string)(*[]IgnoreInfoStruct,error)  {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
@@ -584,15 +634,15 @@ func QueryIgnoredInfo(condition string) (*[]IgnoreInfoStruct, error) {
 	defer connection.Close()
 
 	db := connection.Table(IgnoreInfoStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
-
 	var result []IgnoreInfoStruct
-
-	if err1 := db.Where(condition).Find(&result).Error; err1 != nil {
-		logs.Error("query ignoredInfos failed! %v", err)
-		return nil, err1
+	condition := queryInfo["condition"]
+	if err1 := db.Where(condition).Order("updated_at DESC").Find(&result).Error; err1 != nil {
+		logs.Error("query ignoredInfos failed! %v", err1)
+		return nil,err1
 	}
 	return &result, nil
 }
+
 
 //insert tb_ios_detect_content
 func CreateIOSDetectModel(content IOSDetectContent) error {

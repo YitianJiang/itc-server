@@ -45,6 +45,7 @@ func CertificateController(c *gin.Context) {
 				newMails = append(newMails, "gongrui")
 				newMails = append(newMails, "chenyujun")
 				newMails = append(newMails, "kanghuaisong")
+				newMails = append(newMails, "zhangshuai.02")
 				itemMap := map[string]interface{}{
 					"appname":     appName,
 					"usage":       usage,
@@ -270,7 +271,7 @@ func AddCertificate(c *gin.Context) {
 	//db Model
 	var certificateModel dal.CertificateModel
 	certificateModel.Creator = name.(string)
-	certificateModel.ExpireTime = strconv.FormatFloat(result["expire_time"].(float64), 'E', -1, 64)
+	certificateModel.ExpireTime = strconv.FormatInt(int64(result["expire_time"].(float64)), 10)
 	certificateModel.Appname = appName
 	certificateModel.AppId, _ = strconv.Atoi(appId)
 	certificateModel.Usage = usage

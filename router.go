@@ -27,6 +27,17 @@ func InitRouter(r *ginex.Engine) {
 	api.POST("/casemanage/deleteRejCase", casemanage.DeleteRejCase)
 	//更新被拒案例
 	api.POST("/casemanage/updateRejCase", casemanage.EditRejCaseofSolution)
+
+	//新增权限
+	api.POST("/perm/addPermission",detect.AddDetectConfig)
+	//删除权限
+	api.GET("/perm/deletePermission",detect.DeleteDetectConfig)
+	//修改权限
+	api.POST("/perm/editPermission",detect.EditDectecConfig)
+	//查询权限
+	api.GET("/perm/queryPermission",detect.QueryDectecConfig)
+
+
 	api.Use(middleware.JWTCheck())
 	{
 		//上传ipa和apk
@@ -48,9 +59,7 @@ func InitRouter(r *ginex.Engine) {
 		//获取当前任务的二进制工具检测内容
 		api.GET("/task/queryBinaryContent", detect.QueryTaskBinaryCheckContent)
 		//获取当前任务的apk二进制工具检测内容
-		api.GET("/task/queryApkBinaryContent", detect.QueryTaskApkBinaryCheckContent)
-		//获取当前任务的apk二进制工具检测内容---增量式
-		api.GET("/task/queryApkBinaryContentWithIgnorance", detect.QueryTaskApkBinaryCheckContentWithIgnorance)
+		api.GET("/task/queryApkBinaryContent", detect.QueryTaskApkBinaryCheckContentWithIgnorance_2)
 		//新增二进制检测工具
 		api.POST("/tool/insert", detect.InsertBinaryTool)
 		//查询二进制检测工具列表
@@ -62,9 +71,9 @@ func InitRouter(r *ginex.Engine) {
 		//确认二进制包检测信息
 		api.POST("/detect/confirmResult", detect.ConfirmBinaryResult)
 		//确认apk二进制包检测信息
-		api.POST("/detect/confirmApkResult", detect.ConfirmApkBinaryResult)
-		//确认apk二进制包检测信息-----v2
-		api.POST("/detect/confirmApkResult_v2", detect.ConfirmApkBinaryResultv_2)
+		api.POST("/detect/confirmApkResult", detect.ConfirmApkBinaryResultv_3)
+		////确认apk二进制包检测信息-----v2
+		//api.POST("/detect/confirmApkResult_v2", detect.ConfirmApkBinaryResultv_3)
 		//根据platform获取配置的问题类型
 		api.GET("/config/queryProblemConfigs", detect.QueryProblemConfigs)
 		//增加配置项
@@ -93,6 +102,10 @@ func InitRouter(r *ginex.Engine) {
 		api.GET("/task/queryIOSBinaryContent", detect.QueryIOSTaskBinaryCheckContent)
 		//确认iOS二进制检测信息
 		api.POST("/detect/confirmIOSResult", detect.ConfirmIOSBinaryResult)
+		//查询安卓确认历史
+		api.POST("detect/queryIgnoreHistory",detect.QueryIgnoredHistory)
+		//iOS权限确认历史
+		api.POST("detect/queryIOSHistory",detect.QueryPrivacyHistory)
 
 	}
 }
