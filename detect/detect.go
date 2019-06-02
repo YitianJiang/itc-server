@@ -278,10 +278,10 @@ func UpdateDetectInfos(c *gin.Context) {
 		if toolIdInt == 6 { //安卓兼容新版本
 			//安卓检测信息分析，并将检测信息写库-----fj
 			mapInfo := make(map[string]int)
-			mapInfo["taskId"],_ = strconv.Atoi(taskId)
-			mapInfo["toolId"],_ = strconv.Atoi(toolId)
-			JsonInfoAnalysis(jsonContent,mapInfo)
-		}else{
+			mapInfo["taskId"], _ = strconv.Atoi(taskId)
+			mapInfo["toolId"], _ = strconv.Atoi(toolId)
+			JsonInfoAnalysis(jsonContent, mapInfo)
+		} else {
 			var detectContent dal.DetectContent
 			detectContent.TaskId, _ = strconv.Atoi(taskId)
 			detectContent.ToolId, _ = strconv.Atoi(toolId)
@@ -593,7 +593,7 @@ func strRmRepeat(callInfo []interface{}) string {
 =======
 >>>>>>> master
  *iOS 检测结果jsonContent处理
- */
+*/
 func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, bool) {
 	warnFlag := false
 	var dat map[string]interface{}
@@ -1681,65 +1681,3 @@ func GetToken(c *gin.Context) {
 		})
 	}
 }
-
-/*
-查询检测结果的权限更改历史
-*/
-func QueryPrivacyHistory(c *gin.Context) {
-	appId, isExit := c.GetPostForm("appId")
-	if isExit == false {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "缺少appID参数",
-			"errorCode": -1,
-			"data":      "缺少appID参数",
-		})
-		return
-	}
-	platform, isExit := c.GetPostForm("platform")
-	if isExit == false {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "缺少platform参数",
-			"errorCode": -1,
-			"data":      "缺少platform参数",
-		})
-		return
-	}
-	key, isExit := c.GetPostForm("key")
-	if isExit == false {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "缺少key参数",
-			"errorCode": -1,
-			"data":      "缺少key参数",
-		})
-		return
-	}
-	history := dal.QueryPrivacyHistoryModel(map[string]interface{}{
-		"app_id":     appId,
-		"platform":   platform,
-		"permission": key,
-	})
-	if history == nil || len(*history) == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "该key无确认历史",
-			"errorCode": -1,
-			"data":      []interface{}{},
-		})
-		return
-	}
-	var resList []map[string]interface{}
-	for _, hh := range *history {
-		temMap := map[string]interface{}{
-			"confirmer":  hh.Confirmer,
-			"remark":     hh.ConfirmReason,
-			"updateTime": hh.CreatedAt,
-			"version":    hh.ConfirmVersion,
-		}
-		resList = append(resList, temMap)
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"message":   "success",
-		"errorCode": 0,
-		"data":      resList,
-	})
-}
-
