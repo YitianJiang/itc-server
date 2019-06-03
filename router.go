@@ -35,7 +35,7 @@ func InitRouter(r *ginex.Engine) {
 	//修改权限
 	api.POST("/perm/editPermission",detect.EditDectecConfig)
 	//查询权限
-	api.POST("/perm/queryPermission",detect.QueryDectecConfig)
+	api.GET("/perm/queryPermission",detect.QueryDectecConfig)
 
 
 	api.Use(middleware.JWTCheck())
@@ -102,8 +102,7 @@ func InitRouter(r *ginex.Engine) {
 		api.GET("/task/queryIOSBinaryContent", detect.QueryIOSTaskBinaryCheckContent)
 		//确认iOS二进制检测信息
 		api.POST("/detect/confirmIOSResult", detect.ConfirmIOSBinaryResult)
-		//查询安卓确认历史
+		//查询权限确认历史
 		api.POST("detect/queryIgnoreHistory",detect.QueryIgnoredHistory)
-
 	}
 }
