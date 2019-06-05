@@ -14,6 +14,18 @@ import (
 	"code.byted.org/gopkg/logs"
 )
 
+//0--一般，1--低危，2--中危，3--高危
+var iosPrivacyPriority = map[string]int{
+	"NSContactsUsageDescription": 3, //通讯录
+	"NSLocationUsageDescription": 1, //位置
+	"NSMicrophoneUsageDescription":3, //麦克风
+	"NSPhotoLibraryUsageDescription": 2, //相册
+	"NSPhotoLibraryAddUsageDescription": 2, //保存到相册
+	"NSLocationAlwaysUsageDescription" : 1, //始终访问位置
+	"NSCameraUsageDescription": 2, //相机
+	"NSLocationWhenInUseUsageDescription": 1, //在使用期间访问位置
+	"NSAppleMusicUsageDescription": 3, //媒体资料库
+}
 /**
  *iOS 检测结果jsonContent处理
  */
@@ -120,6 +132,11 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 			privacyMap := make(map[string]interface{})
 			privacyMap["permission"] = e
 			privacyMap["permission_C"] = c
+			if priority, ok := iosPrivacyPriority[e]; ok{
+				privacyMap["priority"] = priority
+			}else{
+				privacyMap["priority"] = 3
+			}
 			//找到权限确认信息
 			confirmHistory := dal.QueryPrivacyHistoryModel(map[string]interface{}{
 				"app_id":     appId,
@@ -131,10 +148,12 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 				privacyMap["confirmer"] = ""
 				privacyMap["confirmVersion"] = ""
 				privacyMap["confirmReason"] = ""
+				privacyMap["status"] = 0
 			} else {
 				privacyMap["confirmer"] = (*confirmHistory)[0].Confirmer
 				privacyMap["confirmReason"] = (*confirmHistory)[0].ConfirmReason
 				privacyMap["confirmVersion"] = (*confirmHistory)[len(*confirmHistory)-1].ConfirmVersion
+				privacyMap["status"] = 1
 			}
 			privacyList = append(privacyList, privacyMap)
 		}
@@ -258,6 +277,26 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 			return
 		}
 		for k, v := range m {
+			//兼容处理
+			if k == "privacy"{
+				for i, pp := range v.([]interface{}){
+					//添加权限优先级
+					if _, ok := pp.(map[string]interface{})["priority"]; !ok{
+						if priority, ok := iosPrivacyPriority[pp.(map[string]interface{})["permission"].(string)]; ok{
+							pp.(map[string]interface{})["priority"] = priority
+						}else{
+							pp.(map[string]interface{})["priority"] = 3
+						}
+					}
+					//添加权限确认信息
+					if pp.(map[string]interface{})["confirmer"] != ""{
+						pp.(map[string]interface{})["status"] = 1
+					}else{
+						pp.(map[string]interface{})["status"] = 0
+					}
+					v.([]interface{})[i]=pp
+				}
+			}
 			data[k] = v
 		}
 		continue
