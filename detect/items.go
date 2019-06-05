@@ -160,9 +160,13 @@ func GetSelfCheckItems(c *gin.Context) {
 				item.Status = status
 				item.Remark = remarkMap[item.ID]
 				item.Confirmer = confirmerMap[item.ID]
-				(*items)[i] = item
-				filterItem = append(filterItem, item)
+			}else{
+				item.Status = 0
+				item.Remark = ""
+				item.Confirmer = ""
 			}
+			(*items)[i] = item
+			filterItem = append(filterItem, item)
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "success",
@@ -188,16 +192,15 @@ func ConfirmCheck(c *gin.Context) {
 		})
 		return
 	}
-	//name, flag := c.Get("username")
-	name := "wuwuwuuuq"
-	//if !flag {
-	//	c.JSON(http.StatusOK, gin.H{
-	//		"message":   "未获取到用户信息！",
-	//		"errorCode": -1,
-	//		"data":      "未获取到用户信息！",
-	//	})
-	//	return
-	//}
+	name, flag := c.Get("username")
+	if !flag {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "未获取到用户信息！",
+			"errorCode": -1,
+			"data":      "未获取到用户信息！",
+		})
+		return
+	}
 	var param map[string]interface{}
 	param = make(map[string]interface{})
 	param["taskId"] = t.TaskId
