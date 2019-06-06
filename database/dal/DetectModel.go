@@ -155,12 +155,25 @@ type ConfirmInfo struct {
 
 type Permissions struct {
 	Id					uint 				`json:"id"`
+	PermId				int					`json:"permId"`
 	Key					string				`json:"key"`
 	Status				int					`json:"status"`
 	Remark				string 				`json:"remark"`
 	Confirmer			string				`json:"confirmer"`
 	OtherVersion 		string				`json:"otherVersion"`
 	Priority 			int					`json:"priority"`
+	Desc 				string				`json:"desc"`
+}
+/**
+安卓确认post结构
+ */
+type PostConfirm struct {
+	TaskId  int 	`json:"taskId"`
+	Id  	int		`json:"id"`
+	Status  int 	`json:"status"`
+	Remark  string	`json:"remark"`
+	ToolId	int		`json:"toolId"`
+	Type 	int		`json:"type"`
 }
 
 

@@ -28,15 +28,6 @@ func InitRouter(r *ginex.Engine) {
 	//更新被拒案例
 	api.POST("/casemanage/updateRejCase", casemanage.EditRejCaseofSolution)
 
-	//新增权限
-	api.POST("/perm/addPermission",detect.AddDetectConfig)
-	//删除权限
-	api.GET("/perm/deletePermission",detect.DeleteDetectConfig)
-	//修改权限
-	api.POST("/perm/editPermission",detect.EditDectecConfig)
-	//查询权限
-	api.POST("/perm/queryPermission",detect.QueryDectecConfig)
-
 
 	api.Use(middleware.JWTCheck())
 	{
@@ -72,8 +63,8 @@ func InitRouter(r *ginex.Engine) {
 		api.POST("/detect/confirmResult", detect.ConfirmBinaryResult)
 		//确认apk二进制包检测信息
 		api.POST("/detect/confirmApkResult", detect.ConfirmApkBinaryResultv_3)
-		////确认apk二进制包检测信息-----v2
-		//api.POST("/detect/confirmApkResult_v2", detect.ConfirmApkBinaryResultv_3)
+		////确认apk二进制包权限检测信息------fj
+		//api.POST("/detect/confirmApkPermission", detect.ConfirmPermissions)
 		//根据platform获取配置的问题类型
 		api.GET("/config/queryProblemConfigs", detect.QueryProblemConfigs)
 		//增加配置项
@@ -104,6 +95,22 @@ func InitRouter(r *ginex.Engine) {
 		api.POST("/detect/confirmIOSResult", detect.ConfirmIOSBinaryResult)
 		//查询安卓确认历史
 		api.POST("detect/queryIgnoreHistory",detect.QueryIgnoredHistory)
+		//新增权限
+		api.POST("/perm/addPermission",detect.AddDetectConfig)
+		//删除权限
+		//api.GET("/perm/deletePermission",detect.DeleteDetectConfig)
+		//修改权限
+		api.POST("/perm/editPermission",detect.EditDectecConfig)
+		//查询权限
+		api.POST("/perm/queryPermission",detect.QueryDectecConfig)
+		//根据权限查询信息
+		api.POST("/perm/queryWithPermission",detect.GetRelationsWithPermission)
+		//根据App查询权限信息
+		api.POST("/perm/queryPermissionsOfApp",detect.QueryPermissionsWithApp)
+		//查询权限详情
+		api.GET("/perm/getpermDetails",detect.GetPermDetails)
+
+
 
 	}
 }
