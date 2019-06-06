@@ -1271,7 +1271,35 @@ func QueryIgnoredHistory(c *gin.Context)  {
 		})
 		return
 	}else {
-		//ios确认
+		history := dal.QueryPrivacyHistoryModel(map[string]interface{}{
+			"app_id":     t.AppId,
+			"platform":   t.Platform,
+			"permission": t.Key,
+		})
+		if history == nil || len(*history) == 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "该key无确认历史",
+				"errorCode": -1,
+				"data":      []interface{}{},
+			})
+			return
+		}
+		var resList []map[string]interface{}
+		for _, hh := range *history {
+			temMap := map[string]interface{}{
+				"key":        hh.Permission,
+				"confirmer":  hh.Confirmer,
+				"remark":     hh.ConfirmReason,
+				"updateTime": hh.CreatedAt,
+				"version":    hh.ConfirmVersion,
+			}
+			resList = append(resList, temMap)
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "success",
+			"errorCode": 0,
+			"data":      resList,
+		})
 	}
 }
 
