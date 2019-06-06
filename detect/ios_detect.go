@@ -277,9 +277,14 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 			return
 		}
 		for k, v := range m {
+			var highRisk []interface{}
+			var middleRisk []interface{}
+			var lowRisk []interface{}
+			var notice []interface{}
+			var sortedPrivacy []interface{}
 			//兼容处理
 			if k == "privacy"{
-				for i, pp := range v.([]interface{}){
+				for _, pp := range v.([]interface{}){
 					//添加权限优先级
 					if _, ok := pp.(map[string]interface{})["priority"]; !ok{
 						if priority, ok := iosPrivacyPriority[pp.(map[string]interface{})["permission"].(string)]; ok{
@@ -294,8 +299,20 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 					}else{
 						pp.(map[string]interface{})["status"] = 0
 					}
-					v.([]interface{})[i]=pp
+					//按照优先级排列
+					temPriority := int(pp.(map[string]interface{})["priority"].(float64))
+					if temPriority == 3{
+						highRisk = append(highRisk, pp)
+					}else if temPriority == 2{
+						middleRisk = append(middleRisk, pp)
+					}else if temPriority == 1{
+						lowRisk = append(lowRisk, pp)
+					}else{
+						notice = append(notice, pp)
+					}
 				}
+				sortedPrivacy = append(sortedPrivacy, highRisk,  middleRisk, lowRisk, notice)
+				v = sortedPrivacy
 			}
 			data[k] = v
 		}
