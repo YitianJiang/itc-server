@@ -110,5 +110,6 @@ func InitRouter(r *ginex.Engine) {
 	connapi := r.Group("/v1/devConnManage")
 	{
 		connapi.GET("/bundleIdSearch",developerconnmanager.TestAskBundleId)
+		connapi.GET("/getBundleIdsList",developerconnmanager.GetBunldIdsObj)
 	}
 }
