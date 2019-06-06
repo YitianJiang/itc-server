@@ -300,7 +300,13 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 						pp.(map[string]interface{})["status"] = 0
 					}
 					//按照优先级排列
-					temPriority := int(pp.(map[string]interface{})["priority"].(float64))
+					temPriority := pp.(map[string]interface{})["priority"]
+					switch temPriority.(type){
+					case int:
+						temPriority = pp.(map[string]interface{})["priority"].(int)
+					case float64:
+						temPriority = int(pp.(map[string]interface{})["priority"].(float64))
+					}
 					if temPriority == 3{
 						highRisk = append(highRisk, pp)
 					}else if temPriority == 2{
