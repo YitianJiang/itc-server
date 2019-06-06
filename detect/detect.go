@@ -69,8 +69,8 @@ func UploadFile(c *gin.Context) {
 	var name string
 	if toLarker == "" {
 		name = nameI.(string)
-	} else {
-		name = toLarker
+	}else {
+		name = nameI.(string)+","+toLarker
 	}
 
 	platform := c.DefaultPostForm("platform", "")
@@ -157,7 +157,7 @@ func UploadFile(c *gin.Context) {
 		return
 	}
 	//调试，暂时注释
-	recipients := name + "@bytedance.com"
+	recipients := name
 	filepath := _tmpDir + "/" + filename
 	//1、上传至tos,测试暂时注释
 	//tosUrl, err := upload2Tos(filepath)
@@ -185,6 +185,7 @@ func UploadFile(c *gin.Context) {
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
 		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
+		//callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -263,7 +264,7 @@ func UpdateDetectInfos(c *gin.Context) {
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id": taskId,
 	})
-	if (*detect) == nil {
+	if (*detect) == nil || len(*detect) == 0{
 		logs.Error("未查询到该taskid对应的检测任务，%v", taskId)
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "未查询到该taskid对应的检测任务",
@@ -345,150 +346,79 @@ func UpdateDetectInfos(c *gin.Context) {
 
 	//进行lark消息提醒
 	var message string
-	creator := (*detect)[0].ToLarker
-	message = creator + "你好，" + (*detect)[0].AppName + " " + (*detect)[0].AppVersion
-	platform := (*detect)[0].Platform
-	if platform == 0 {
-		message += "安卓包"
-	} else {
-		message += "iOS包"
-	}
-	message += "完成二进制检测，请及时进行确认！可在结果展示页面底部进行确认，确认后不会再有消息提醒！\n"
-	message += "如果安卓选择了GooglePlay检测和隐私检测，两个检测结果都需要进行确认，请不要遗漏！！！\n"
-	appId := (*detect)[0].AppId
-	appIdInt, _ := strconv.Atoi(appId)
-	//appVersion := (*detect)[0].AppVersion
-	var config *dal.LarkMsgTimer
-	config = dal.QueryLarkMsgTimerByAppId(appIdInt)
-	alterType := 0
-	var interval int
-	if config == nil { //如果未进行消息提醒设置，则默认10分钟提醒一次
-		logs.Info("采用默认10分钟频率进行提醒")
-		alterType = 1
-		interval = 10
-	} else {
-		logs.Info("采用设置的频率进行提醒")
-		alterType = config.Type
-		interval = config.MsgInterval
-	}
-	var ticker *time.Ticker
-	var duration time.Duration
-	switch alterType {
-	case 0:
-		logs.Info("提醒方式为秒")
-		duration = time.Duration(interval) * time.Second
-	case 1:
-		logs.Info("提醒方式为分钟")
-		duration = time.Duration(interval) * time.Minute
-	case 2:
-		logs.Info("提醒方式为小时")
-		duration = time.Duration(interval) * time.Hour
-	case 3:
-		logs.Info("提醒方式为天")
-		duration = time.Duration(interval) * time.Duration(24) * time.Hour
-	default:
-		logs.Info("提醒方式为分钟")
-		duration = 10 * time.Minute
-	}
-	ticker = time.NewTicker(duration)
-	var key string
-	key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
-	LARK_MSG_CALL_MAP[key] = ticker
-	//此处测试时注释掉
-	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
-	message += "地址链接：" + larkUrl
-	utils.LarkDingOneInner(creator, message)
-	if config != nil {
-		timerId := config.ID
-		condition := "timer_id='" + fmt.Sprint(timerId) + "' and platform='" + strconv.Itoa(platform) + "'"
-		groups := dal.QueryLarkGroupByCondition(condition)
-		if groups != nil && len(*groups) > 0 {
-			for i := 0; i < len(*groups); i++ {
-				g := (*groups)[i]
-				utils.LarkGroup(message, g.GroupId)
+	creators := (*detect)[0].ToLarker
+	larkList := strings.Split(creators,",")
+	//for _,creator := range larkList {
+		message = "你好，" + (*detect)[0].AppName + " " + (*detect)[0].AppVersion
+		platform := (*detect)[0].Platform
+		if platform == 0 {
+			message += "安卓包"
+		} else {
+			message += "iOS包"
+		}
+		message += "完成二进制检测，请及时对每条未确认信息进行确认！\n"
+		//message += "如果安卓选择了GooglePlay检测和隐私检测，两个检测结果都需要进行确认，请不要遗漏！！！\n"
+		appId := (*detect)[0].AppId
+		appIdInt, _ := strconv.Atoi(appId)
+		//appVersion := (*detect)[0].AppVersion
+		var config *dal.LarkMsgTimer
+		config = dal.QueryLarkMsgTimerByAppId(appIdInt)
+		alterType := 0
+		var interval int
+		if config == nil { //如果未进行消息提醒设置，则默认10分钟提醒一次
+			logs.Info("采用默认10分钟频率进行提醒")
+			alterType = 1
+			interval = 10
+		} else {
+			logs.Info("采用设置的频率进行提醒")
+			alterType = config.Type
+			interval = config.MsgInterval
+		}
+		var ticker *time.Ticker
+		var duration time.Duration
+		switch alterType {
+		case 0:
+			logs.Info("提醒方式为秒")
+			duration = time.Duration(interval) * time.Second
+		case 1:
+			logs.Info("提醒方式为分钟")
+			duration = time.Duration(interval) * time.Minute
+		case 2:
+			logs.Info("提醒方式为小时")
+			duration = time.Duration(interval) * time.Hour
+		case 3:
+			logs.Info("提醒方式为天")
+			duration = time.Duration(interval) * time.Duration(24) * time.Hour
+		default:
+			logs.Info("提醒方式为分钟")
+			duration = 10 * time.Minute
+		}
+		ticker = time.NewTicker(duration)
+		var key string
+		key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
+		LARK_MSG_CALL_MAP[key] = ticker
+		//此处测试时注释掉
+		larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz="+ appId + "&showItcDetail=1&itcTaskId=" + taskId
+		message += "地址链接：" + larkUrl
+		for _,creator := range larkList {
+			utils.LarkDingOneInner(creator, message)
+		}
+
+		if config != nil {
+			timerId := config.ID
+			condition := "timer_id='" + fmt.Sprint(timerId) + "' and platform='" + strconv.Itoa(platform) + "'"
+			groups := dal.QueryLarkGroupByCondition(condition)
+			if groups != nil && len(*groups) > 0 {
+				for i := 0; i < len(*groups); i++ {
+					g := (*groups)[i]
+					utils.LarkGroup(message, g.GroupId)
+				}
 			}
 		}
-	}
+
 	//go alertLarkMsgCronNew(*ticker, creator, message, taskId, toolId)
 }
 
-/**
-json检测信息分析------fj
-*/
-func jsonInfoAnalysis(info string, mapInfo map[string]int) {
-	var infoMap = make(map[string]interface{})
-	json.Unmarshal([]byte(info), &infoMap)
-	appInfos := infoMap["app_info"].(map[string]interface{})
-	methodsInfo := infoMap["method_sensitive_infos"].([]interface{})
-	strsInfo := infoMap["str_sensitive_infos"].([]interface{})
-	var detectInfo dal.DetectInfo
-	detectInfo.TaskId = mapInfo["taskId"]
-	detectInfo.ToolId = mapInfo["toolId"]
-	appInfoAnalysis(appInfos, &detectInfo)
-
-	//敏感method去重
-	mRepeat := make(map[string]int)
-	newMethods := make([]map[string]interface{}, 0)
-	for _, methodi := range methodsInfo {
-		method := methodi.(map[string]interface{})
-		var keystr = method["method_name"].(string) + method["method_class_name"].(string)
-		if v, ok := mRepeat[keystr]; !ok || ok && v == 0 {
-			newMethods = append(newMethods, method)
-			mRepeat[keystr] = 1
-		}
-	}
-	for _, newMethod := range newMethods {
-		var detailContent dal.DetectContentDetail
-		detailContent.TaskId = mapInfo["taskId"]
-		detailContent.ToolId = mapInfo["toolId"]
-		methodAnalysis(newMethod, &detailContent)
-	}
-
-	for _, strInfoi := range strsInfo {
-		strInfo := strInfoi.(map[string]interface{})
-		var detailContent dal.DetectContentDetail
-		detailContent.TaskId = mapInfo["taskId"]
-		detailContent.ToolId = mapInfo["toolId"]
-		strAnalysis(strInfo, &detailContent)
-	}
-	return
-}
-
-/**
-appInfo解析，并写入数据库-------fj
-*/
-func appInfoAnalysis(info map[string]interface{}, detectInfo *dal.DetectInfo) {
-	taskId := detectInfo.TaskId
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": taskId,
-	})
-	(*detect)[0].AppName = info["apk_name"].(string)
-	(*detect)[0].AppVersion = info["apk_version_name"].(string)
-	(*detect)[0].UpdatedAt = time.Now()
-	if err := dal.UpdateDetectModelNew((*detect)[0]); err != nil {
-		logs.Error("任务id:%s信息更新失败，%v", taskId, err)
-		return
-	}
-	detectInfo.ApkName = info["apk_name"].(string)
-	detectInfo.Version = info["apk_version_name"].(string)
-	detectInfo.Channel = info["channel"].(string)
-	permissionArr := info["permissions"].([]interface{})
-	//permissionArr := permissionArr1.([]string)
-
-	perStr := ""
-	for _, per := range permissionArr {
-		perStr += per.(string) + ";"
-	}
-	detectInfo.Permissions = perStr
-
-	err := dal.InsertDetectInfo(*detectInfo)
-	if err != nil {
-		//及时报警
-		message := "appInfo写入数据库失败，请解决;" + fmt.Sprint(err)
-		utils.LarkDingOneInner("fanjuan.xqp", message)
-	}
-	return
-}
 
 /**
 method解析,并写入数据库-------fj

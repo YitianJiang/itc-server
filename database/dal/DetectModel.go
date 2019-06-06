@@ -153,16 +153,29 @@ type ConfirmInfo struct {
 }
 
 type Permissions struct {
-	Id           uint   `json:"id"`
-	Key          string `json:"key"`
-	Status       int    `json:"status"`
-	Remark       string `json:"remark"`
-	Confirmer    string `json:"confirmer"`
-	OtherVersion string `json:"otherVersion"`
-	Priority     int    `json:"priority"`
+	Id					uint 				`json:"id"`
+	PermId				int					`json:"permId"`
+	Key					string				`json:"key"`
+	Status				int					`json:"status"`
+	Remark				string 				`json:"remark"`
+	Confirmer			string				`json:"confirmer"`
+	OtherVersion 		string				`json:"otherVersion"`
+	Priority 			int					`json:"priority"`
+	Desc 				string				`json:"desc"`
+}
+/**
+安卓确认post结构
+ */
+type PostConfirm struct {
+	TaskId  int 	`json:"taskId"`
+	Id  	int		`json:"id"`
+	Status  int 	`json:"status"`
+	Remark  string	`json:"remark"`
+	ToolId	int		`json:"toolId"`
+	Type 	int		`json:"type"`
 }
 
-//二进制包检测内容，json内容黑名单||可疑方法||权限区分处理
+//二进制包检测内容，json内容处理区分后
 type IOSDetectContent struct {
 	gorm.Model
 	TaskId          int    `gorm:"column:taskId"            json:"taskId"`
