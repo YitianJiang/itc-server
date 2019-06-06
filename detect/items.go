@@ -1,18 +1,20 @@
 package detect
 
 import (
-	"code.byted.org/clientQA/itc-server/database/dal"
-	"code.byted.org/gopkg/logs"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+
+	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/gopkg/logs"
+	"github.com/gin-gonic/gin"
 )
+
 /*
  *增加检查项
  */
-func AddDetectItem(c *gin.Context){
+func AddDetectItem(c *gin.Context) {
 
 	param, _ := ioutil.ReadAll(c.Request.Body)
 	var t dal.ItemStruct
@@ -20,9 +22,9 @@ func AddDetectItem(c *gin.Context){
 	if err != nil {
 		logs.Error("参数格式错误!, ", err)
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "参数格式错误",
-			"errorCode" : -5,
-			"data" : "参数格式错误",
+			"message":   "参数格式错误",
+			"errorCode": -5,
+			"data":      "参数格式错误",
 		})
 		return
 	}
@@ -34,9 +36,9 @@ func AddDetectItem(c *gin.Context){
 	if platform != 0 && platform != 1 {
 		logs.Error("platform参数不合法！")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "platform参数不合法！",
-			"errorCode" : -1,
-			"data" : "platform参数不合法！",
+			"message":   "platform参数不合法！",
+			"errorCode": -1,
+			"data":      "platform参数不合法！",
 		})
 		return
 	}
@@ -47,9 +49,9 @@ func AddDetectItem(c *gin.Context){
 	if ggFlag == 0 && appId == 0 {
 		logs.Error("缺失参数appId！")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺失参数appId！",
-			"errorCode" : -2,
-			"data" : "缺失参数appId！",
+			"message":   "缺失参数appId！",
+			"errorCode": -2,
+			"data":      "缺失参数appId！",
 		})
 		return
 	}
@@ -69,33 +71,34 @@ func AddDetectItem(c *gin.Context){
 	if itemModelId == 0 {
 		logs.Error("新增检查项失败")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "新增检查项失败，请联系相关人员！",
-			"errorCode" : -4,
-			"data" : "新增检查项失败，请联系相关人员！",
+			"message":   "新增检查项失败，请联系相关人员！",
+			"errorCode": -4,
+			"data":      "新增检查项失败，请联系相关人员！",
 		})
 		return
 	} else {
 		logs.Error("新增检查项成功")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "success",
-			"errorCode" : 0,
-			"data" : "新增检查项成功！",
+			"message":   "success",
+			"errorCode": 0,
+			"data":      "新增检查项成功！",
 		})
 		return
 	}
 }
+
 /*
  *查询检查项
  */
-func GetSelfCheckItems(c *gin.Context){
+func GetSelfCheckItems(c *gin.Context) {
 
 	appIdParam, ok := c.GetQuery("appId")
 	if !ok {
 		logs.Error("缺少appId参数！")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少appId参数！",
-			"errorCode" : -1,
-			"data" : "缺少appId参数！",
+			"message":   "缺少appId参数！",
+			"errorCode": -1,
+			"data":      "缺少appId参数！",
 		})
 		return
 	}
@@ -122,32 +125,32 @@ func GetSelfCheckItems(c *gin.Context){
 	}
 	data["condition"] = itemCondition
 	items := dal.QueryItemsByCondition(data)
-	if items==nil || len(*items)==0 {
+	if items == nil || len(*items) == 0 {
 		logs.Error("未查询到自查项信息！")
 		var res [0]dal.QueryItemStruct
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "success！",
-			"errorCode" : 0,
-			"data" : res,
+			"message":   "success！",
+			"errorCode": 0,
+			"data":      res,
 		})
 		return
 	}
 	if !bool {
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "success",
-			"errorCode" : 0,
-			"data" : *items,
+			"message":   "success",
+			"errorCode": 0,
+			"data":      *items,
 		})
 		return
 	}
 	tj := "task_id='" + taskId + "'"
-	itemMap, remarkMap := dal.GetSelfCheckByTaskId(tj)
+	itemMap, remarkMap, confirmerMap := dal.GetSelfCheckByTaskId(tj)
 	var filterItem []dal.QueryItemStruct
 	if itemMap == nil {
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "success",
-			"errorCode" : 0,
-			"data" : *items,
+			"message":   "success",
+			"errorCode": 0,
+			"data":      *items,
 		})
 	} else {
 		for i := 0; i < len(*items); i++ {
@@ -156,39 +159,45 @@ func GetSelfCheckItems(c *gin.Context){
 				status := itemMap[item.ID]
 				item.Status = status
 				item.Remark = remarkMap[item.ID]
-				(*items)[i] = item
-				filterItem = append(filterItem, item)
+				item.Confirmer = confirmerMap[item.ID]
+			}else{
+				item.Status = 0
+				item.Remark = ""
+				item.Confirmer = ""
 			}
+			(*items)[i] = item
+			filterItem = append(filterItem, item)
 		}
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "success",
-			"errorCode" : 0,
-			"data" : filterItem,
+			"message":   "success",
+			"errorCode": 0,
+			"data":      filterItem,
 		})
 	}
 }
+
 /*
  *完成自查
  */
-func ConfirmCheck(c *gin.Context){
+func ConfirmCheck(c *gin.Context) {
 	p, _ := ioutil.ReadAll(c.Request.Body)
 	var t dal.Confirm
 	err := json.Unmarshal(p, &t)
 	if err != nil {
 		logs.Error("参数不合法!, ", err)
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "参数不合法",
-			"errorCode" : -5,
-			"data" : "参数不合法",
+			"message":   "参数不合法",
+			"errorCode": -5,
+			"data":      "参数不合法",
 		})
 		return
 	}
 	name, flag := c.Get("username")
 	if !flag {
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "未获取到用户信息！",
-			"errorCode" : -1,
-			"data" : "未获取到用户信息！",
+			"message":   "未获取到用户信息！",
+			"errorCode": -1,
+			"data":      "未获取到用户信息！",
 		})
 		return
 	}
@@ -200,15 +209,15 @@ func ConfirmCheck(c *gin.Context){
 	bool := dal.ConfirmSelfCheck(param)
 	if !bool {
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "自查确认失败，请联系相关人员！",
-			"errorCode" : -3,
-			"data" : "自查确认失败，请联系相关人员！",
+			"message":   "自查确认失败，请联系相关人员！",
+			"errorCode": -3,
+			"data":      "自查确认失败，请联系相关人员！",
 		})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"message" : "success",
-		"errorCode" : 0,
-		"data" : "success",
+		"message":   "success",
+		"errorCode": 0,
+		"data":      "success",
 	})
 }

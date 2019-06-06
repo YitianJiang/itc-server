@@ -29,6 +29,7 @@ func InitRouter(r *ginex.Engine) {
 	api.POST("/casemanage/updateRejCase", casemanage.EditRejCaseofSolution)
 
 
+
 	api.Use(middleware.JWTCheck())
 	{
 		//上传ipa和apk
@@ -93,7 +94,7 @@ func InitRouter(r *ginex.Engine) {
 		api.GET("/task/queryIOSBinaryContent", detect.QueryIOSTaskBinaryCheckContent)
 		//确认iOS二进制检测信息
 		api.POST("/detect/confirmIOSResult", detect.ConfirmIOSBinaryResult)
-		//查询安卓确认历史
+		//查询权限确认历史
 		api.POST("detect/queryIgnoreHistory",detect.QueryIgnoredHistory)
 		//新增权限
 		api.POST("/perm/addPermission",detect.AddDetectConfig)

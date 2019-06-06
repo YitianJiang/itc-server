@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/mitchellh/mapstructure"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -16,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
 
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
@@ -37,12 +35,7 @@ const (
 	//DETECT_URL_PRO = "10.2.196.119:9527"
 )
 
-
-
-
-
 var LARK_MSG_CALL_MAP = make(map[string]interface{})
-
 
 /**
  *新建检测任务更新---------fj
@@ -72,7 +65,7 @@ func UploadFile(c *gin.Context) {
 	defer file.Close()
 	filename := header.Filename
 
-	toLarker := c.DefaultPostForm("toLarker","")
+	toLarker := c.DefaultPostForm("toLarker", "")
 	var name string
 	if toLarker == "" {
 		name = nameI.(string)
@@ -101,7 +94,6 @@ func UploadFile(c *gin.Context) {
 	checkItem := c.DefaultPostForm("checkItem", "")
 	logs.Info("checkItem: ", checkItem)
 
-
 	//检验文件格式是否是apk或者ipa
 	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".ipa") ||
 		strings.HasSuffix(filename, ".aab")
@@ -119,13 +111,13 @@ func UploadFile(c *gin.Context) {
 		if checkItem != "6" {
 			//旧服务url
 			url = "http://" + DETECT_URL_PRO + "/apk_post"
-		}else {
+		} else {
 			//新服务url
-			url = "http://" + DETECT_URL_PRO +"/apk_post/v2"
+			url = "http://" + DETECT_URL_PRO + "/apk_post/v2"
 		}
 		//url = "http://" + DETECT_URL_PRO + "/apk_post"
 
-	} else if platform == "1"{
+	} else if platform == "1" {
 		flag := strings.HasSuffix(filename, ".ipa")
 		if !flag {
 			errorFormatFile(c)
@@ -281,16 +273,16 @@ func UpdateDetectInfos(c *gin.Context) {
 		})
 		return
 	}
-	toolIdInt,_ := strconv.Atoi(toolId)
+	toolIdInt, _ := strconv.Atoi(toolId)
 
 	if (*detect)[0].Platform == 0 {
-		if toolIdInt == 6 {//安卓兼容新版本
+		if toolIdInt == 6 { //安卓兼容新版本
 			//安卓检测信息分析，并将检测信息写库-----fj
 			mapInfo := make(map[string]int)
-			mapInfo["taskId"],_ = strconv.Atoi(taskId)
-			mapInfo["toolId"],_ = strconv.Atoi(toolId)
-			JsonInfoAnalysis(jsonContent,mapInfo)
-		}else{
+			mapInfo["taskId"], _ = strconv.Atoi(taskId)
+			mapInfo["toolId"], _ = strconv.Atoi(toolId)
+			JsonInfoAnalysis(jsonContent, mapInfo)
+		} else {
 			var detectContent dal.DetectContent
 			detectContent.TaskId, _ = strconv.Atoi(taskId)
 			detectContent.ToolId, _ = strconv.Atoi(toolId)
@@ -303,9 +295,9 @@ func UpdateDetectInfos(c *gin.Context) {
 			(*detect)[0].UpdatedAt = time.Now()
 			if err := dal.UpdateDetectModel((*detect)[0], detectContent); err != nil {
 				c.JSON(http.StatusOK, gin.H{
-					"message" : "数据库更新检测信息失败",
-					"errorCode" : -3,
-					"data" : "数据库更新检测信息失败",
+					"message":   "数据库更新检测信息失败",
+					"errorCode": -3,
+					"data":      "数据库更新检测信息失败",
 				})
 				return
 			}
@@ -328,20 +320,18 @@ func UpdateDetectInfos(c *gin.Context) {
 		(*detect)[0].UpdatedAt = time.Now()
 		if err := dal.UpdateDetectModel((*detect)[0], detectContent); err != nil {
 			c.JSON(http.StatusOK, gin.H{
-				"message" : "数据库更新检测信息失败",
-				"errorCode" : -3,
-				"data" : "数据库更新检测信息失败",
+				"message":   "数据库更新检测信息失败",
+				"errorCode": -3,
+				"data":      "数据库更新检测信息失败",
 			})
 			return
 		}
 		//新表jsonContent分类存储
-		condition := map[string]interface{}{
-			"taskId":      task_id,
-			"toolId":      tool_id,
-			"jsonContent": jsonContent,
-		}
-		res, warnFlag := iOSResultClassify(condition, jsonContent);  //检测结果处理
-		if res == false{
+		taskId, _ := strconv.Atoi(taskId)
+		toolId, _ := strconv.Atoi(toolId)
+		appId, _ := strconv.Atoi((*detect)[0].AppId)
+		res, warnFlag := iOSResultClassify(taskId, toolId, appId, jsonContent) //检测结果处理
+		if res == false {
 			logs.Error("iOS 新增new detect content失败！！！") //防止影响现有用户，出错后暂不return
 		}
 		//iOS付费相关黑名单及时报警
@@ -350,9 +340,10 @@ func UpdateDetectInfos(c *gin.Context) {
 			utils.LarkDingOneInner("zhangshuai.02", tips)
 			utils.LarkDingOneInner("gongrui", tips)
 			utils.LarkDingOneInner("kanghuaisong", tips)
-			utils.LarkDingOneInner( (*detect)[0].ToLarker, tips)
+			utils.LarkDingOneInner((*detect)[0].ToLarker, tips)
 		}
 	}
+
 	//进行lark消息提醒
 	var message string
 	creators := (*detect)[0].ToLarker
@@ -407,8 +398,8 @@ func UpdateDetectInfos(c *gin.Context) {
 		key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
 		LARK_MSG_CALL_MAP[key] = ticker
 		//此处测试时注释掉
-		//larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz="+ appId + "&showItcDetail=1&itcTaskId=" + taskId
-		//message += "地址链接：" + larkUrl
+		larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz="+ appId + "&showItcDetail=1&itcTaskId=" + taskId
+		message += "地址链接：" + larkUrl
 		for _,creator := range larkList {
 			utils.LarkDingOneInner(creator, message)
 		}
@@ -430,63 +421,102 @@ func UpdateDetectInfos(c *gin.Context) {
 
 
 /**
- *iOS 检测结果jsonContent处理
- */
-func iOSResultClassify(condition map[string]interface{}, jsonContent string) (bool, bool) {
-	warnFlag := false
-	var dat map[string]interface{}
-	if err := json.Unmarshal([]byte(jsonContent), &dat); err != nil {
-		logs.Error("json转map出错！", err.Error())
-		return false, warnFlag
+method解析,并写入数据库-------fj
+*/
+func methodAnalysis(method map[string]interface{}, detail *dal.DetectContentDetail) {
+	detail.SensiType = 1
+	detail.Status = 0
+
+	detail.KeyInfo = method["method_name"].(string)
+	detail.DescInfo = method["desc"].(string)
+	detail.ClassName = method["method_class_name"].(string)
+	call := method["call_location"].([]interface{})
+
+	callLocation := methodRmRepeat(call)
+	//for _,loc1 := range call {
+	//	//var loc MethodCallJson
+	//	loc := loc1.(map[string]interface{})
+	//	mapLoc,_ := json.Marshal(loc)
+	//	callLocation += string(mapLoc)+";"
+	//}
+	detail.CallLoc = callLocation
+
+	err := dal.InsertDetectDetail(*detail)
+	if err != nil {
+		//及时报警
+		message := "敏感method写入数据库失败，请解决;" + fmt.Sprint(err) + "\n敏感方法名：" + fmt.Sprint(detail.KeyInfo)
+		utils.LarkDingOneInner("fanjuan.xqp", message)
 	}
-	//黑名单处理
-	blackContent := dat["blacklist_in_app"]
-	condition["category"] = "blacklist"
-	for k, v := range blackContent.(map[string]interface{}) {
-		if len(v.([]interface{})) != 0 {
-			temRes := ""
-			for i, s := range v.([]interface{}) {
-				if i != len(v.([]interface{}))-1 {
-					temRes += s.(string) + "###"
-				} else {
-					temRes += s.(string)
-				}
-			}
-			condition["categoryName"] = k
-			condition["categoryContent"] = temRes
-			if k == "itms-services"{
-				warnFlag = true
-			}
-			var newDetectContent dal.IOSDetectContent
-			if err := mapstructure.Decode(condition, &newDetectContent); err != nil {
-				logs.Error("map转struct出错！", err.Error())
-				return false, warnFlag
-			}
-			if err := dal.CreateIOSDetectModel(newDetectContent); err != nil {
-				logs.Error("数据库中新增new detect content 出错！！！", err.Error())
-				return false, warnFlag
-			}
+	return
+}
+
+/**
+apk敏感方法内容去重--------fj
+*/
+func methodRmRepeat(callInfo []interface{}) string {
+	repeatMap := make(map[string]int)
+	result := ""
+	for _, info1 := range callInfo {
+		info := info1.(map[string]interface{})
+		var keystr string
+		keystr = info["class_name"].(string) + info["method_name"].(string) + fmt.Sprint(info["line_number"])
+		if v, ok := repeatMap[keystr]; !ok || (ok && v == 0) {
+			repeatMap[keystr] = 1
+			mapInfo, _ := json.Marshal(info)
+			result += string(mapInfo) + ";"
 		}
 	}
-	//可疑方法名处理
-	methodContent := dat["methods_in_app"]
-	condition["category"] = "method"
-	for _, temMethod := range methodContent.([]interface{}) {
-		susApi := temMethod.(map[string]interface{})["api_name"].(string)
-		susClass := temMethod.(map[string]interface{})["class_name"].(string)
-		condition["categoryName"] = susApi
-		condition["categoryContent"] = susClass
-		var newDetectContent dal.IOSDetectContent
-		if err := mapstructure.Decode(condition, &newDetectContent); err != nil {
-			logs.Error("map转struct出错！", err.Error())
-			return false, warnFlag
-		}
-		if err := dal.CreateIOSDetectModel(newDetectContent); err != nil {
-			logs.Error("数据库中新增new detect content 出错！！！", err.Error())
-			return false, warnFlag
+	return result
+}
+
+/**
+str解析，并写入数据库--------fj
+*/
+func strAnalysis(str map[string]interface{}, detail *dal.DetectContentDetail) {
+	detail.SensiType = 2
+	detail.Status = 0
+
+	keys := str["keys"].([]interface{})
+	key := ""
+	for _, ks1 := range keys {
+		ks := ks1.(string)
+		key += ks + ";"
+	}
+	detail.KeyInfo = key
+	detail.DescInfo = str["desc"].(string)
+
+	callInfo := str["call_location"].([]interface{})
+	//敏感字段信息去重
+	call_location := strRmRepeat(callInfo)
+	detail.CallLoc = call_location
+
+	err := dal.InsertDetectDetail(*detail)
+	if err != nil {
+		//及时报警
+		message := "敏感str写入数据库失败，请解决;" + fmt.Sprint(err) + "\n敏感方法名：" + fmt.Sprint(key)
+		utils.LarkDingOneInner("fanjuan.xqp", message)
+	}
+	return
+
+}
+
+/**
+apk敏感字符串去重--------fj
+*/
+func strRmRepeat(callInfo []interface{}) string {
+	repeatMap := make(map[string]int)
+	result := ""
+	for _, info1 := range callInfo {
+		info := info1.(map[string]interface{})
+		var keystr string
+		keystr = info["class_name"].(string) + info["method_name"].(string) + info["key"].(string) + fmt.Sprint(info["line_number"])
+		if v, ok := repeatMap[keystr]; !ok || (ok && v == 0) {
+			repeatMap[keystr] = 1
+			mapInfo, _ := json.Marshal(info)
+			result += string(mapInfo) + ";"
 		}
 	}
-	return true, warnFlag
+	return result
 }
 
 /**
@@ -520,23 +550,22 @@ func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string, taskId st
 	}
 }
 
-
 /**
  *lark消息定时提醒,根据任务中的status提醒--------fj
  */
-func alertLarkMsgCronNew(ticker time.Ticker, receiver string, msg string, taskId string, toolId string){
+func alertLarkMsgCronNew(ticker time.Ticker, receiver string, msg string, taskId string, toolId string) {
 	flag := false
 	logs.Info("taskId: " + taskId + ", toolId: " + toolId)
-	if taskId=="" || toolId=="" {
+	if taskId == "" || toolId == "" {
 		return
 	}
 	for _ = range ticker.C {
 		detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-			"id" : taskId,
+			"id": taskId,
 		})
 		logs.Info("每次提醒前进行提醒检查")
-		if *detect != nil && len(*detect)>0{
-			if (*detect)[0].Status == 0{
+		if *detect != nil && len(*detect) > 0 {
+			if (*detect)[0].Status == 0 {
 				utils.LarkDingOneInner(receiver, msg)
 				logs.Info("调试，先以打印输出代替lark通知 ")
 			} else {
@@ -556,16 +585,16 @@ func alertLarkMsgCronNew(ticker time.Ticker, receiver string, msg string, taskId
  */
 func ConfirmBinaryResult(c *gin.Context) {
 	type confirm struct {
-		TaskId  int		`json:"taskId"`
-		ToolId	int		`json:"toolId"`
-		Remark  string	`json:"remark"`
-		Status  int		`json:"status"`
-	}//测试兼容性增加
+		TaskId int    `json:"taskId"`
+		ToolId int    `json:"toolId"`
+		Remark string `json:"remark"`
+		Status int    `json:"status"`
+	} //测试兼容性增加
 	param, _ := ioutil.ReadAll(c.Request.Body)
 	var t confirm
 	err := json.Unmarshal(param, &t)
 	if err != nil {
-		logs.Error("wrong params %v",err)
+		logs.Error("wrong params %v", err)
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "参数不合法！",
 			"errorCode": -1,
@@ -609,30 +638,28 @@ func ConfirmBinaryResult(c *gin.Context) {
 		"data":      "success",
 	})
 
-
 }
-
 
 /**
  *确认安卓二进制包检测结果，更新数据库，并判断是否停止lark消息--------fj
  */
-func ConfirmApkBinaryResult(c *gin.Context){
+func ConfirmApkBinaryResult(c *gin.Context) {
 	type confirm struct {
-		TaskId  int 	`json:"taskId"`
-		Id  	int		`json:"id"`
-		Status  int 	`json:"status"`
-		Remark  string	`json:"remark"`
-		ToolId	int		`json:"toolId"`
+		TaskId int    `json:"taskId"`
+		Id     int    `json:"id"`
+		Status int    `json:"status"`
+		Remark string `json:"remark"`
+		ToolId int    `json:"toolId"`
 	}
 	param, _ := ioutil.ReadAll(c.Request.Body)
 	var t confirm
 	err := json.Unmarshal(param, &t)
 	if err != nil {
-		logs.Error("参数不合法 ，%v",err)
+		logs.Error("参数不合法 ，%v", err)
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "参数不合法！",
-			"errorCode" : -1,
-			"data" : "参数不合法！",
+			"message":   "参数不合法！",
+			"errorCode": -1,
+			"data":      "参数不合法！",
 		})
 		return
 	}
@@ -649,46 +676,46 @@ func ConfirmApkBinaryResult(c *gin.Context){
 	if !flag {
 		logs.Error("二进制检测内容确认失败")
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "二进制检测内容确认失败！",
-			"errorCode" : -1,
-			"data" : "二进制检测内容确认失败！",
+			"message":   "二进制检测内容确认失败！",
+			"errorCode": -1,
+			"data":      "二进制检测内容确认失败！",
 		})
 		return
 	}
 
 	//改变任务确认状态
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id" : t.TaskId,
+		"id": t.TaskId,
 	})
 	if (*detect) == nil {
 		logs.Error("未查询到该taskid对应的检测任务，%v", t.TaskId)
 		c.JSON(http.StatusOK, gin.H{
-			"message" : "未查询到该taskid对应的检测任务",
-			"errorCode" : -2,
-			"data" : "未查询到该taskid对应的检测任务",
+			"message":   "未查询到该taskid对应的检测任务",
+			"errorCode": -2,
+			"data":      "未查询到该taskid对应的检测任务",
 		})
 		return
 	}
 	condition := "deleted_at IS NULL and task_id='" + strconv.Itoa(t.TaskId) + "' and tool_id='" + strconv.Itoa(t.ToolId) + "' and status= 0"
 	counts := dal.QueryUnConfirmDetectContent(condition)
 	if counts == 0 {
-		(*detect)[0].Status =1
+		(*detect)[0].Status = 1
 		err := dal.UpdateDetectModelNew((*detect)[0])
 		if err != nil {
-			logs.Error("任务确认状态更新失败！%v",err)
+			logs.Error("任务确认状态更新失败！%v", err)
 			c.JSON(http.StatusOK, gin.H{
-				"message" : "任务确认状态更新失败！",
-				"errorCode" : -1,
-				"data" : "任务确认状态更新失败！",
+				"message":   "任务确认状态更新失败！",
+				"errorCode": -1,
+				"data":      "任务确认状态更新失败！",
 			})
 			return
 		}
 	}
-	logs.Info("confirm success +id :%s",t.Id)
+	logs.Info("confirm success +id :%s", t.Id)
 	c.JSON(http.StatusOK, gin.H{
-		"message" : "success",
-		"errorCode" : 0,
-		"data" : "success",
+		"message":   "success",
+		"errorCode": 0,
+		"data":      "success",
 	})
 	return
 }
@@ -909,8 +936,8 @@ func QueryTaskQueryTools(c *gin.Context) {
 	condition := "task_id='" + taskId + "'"
 	toolsContent := dal.QueryTaskBinaryCheckContent(condition)
 	//scanner检测工具查询内容
-	toolsContent_2,_ := dal.QueryDetectInfo(condition)
-	if (toolsContent == nil || len(*toolsContent) == 0 )&& (toolsContent_2 == nil ) {
+	toolsContent_2, _ := dal.QueryDetectInfo(condition)
+	if (toolsContent == nil || len(*toolsContent) == 0) && (toolsContent_2 == nil) {
 		logs.Error("未查询到该检测任务对应的二进制检测结果")
 		var res [0]dal.DetectContent
 		c.JSON(http.StatusOK, gin.H{
@@ -921,12 +948,12 @@ func QueryTaskQueryTools(c *gin.Context) {
 		return
 	}
 	toolCondition := "id in("
-	if toolsContent_2 != nil{
-		toolCondition += "'"+fmt.Sprint((*toolsContent_2).ToolId)+"')"
-	}else{
-		for i:=0; i<len(*toolsContent); i++ {
+	if toolsContent_2 != nil {
+		toolCondition += "'" + fmt.Sprint((*toolsContent_2).ToolId) + "')"
+	} else {
+		for i := 0; i < len(*toolsContent); i++ {
 			content := (*toolsContent)[i]
-			if i==len(*toolsContent)-1 {
+			if i == len(*toolsContent)-1 {
 				toolCondition += "'" + fmt.Sprint(content.ToolId) + "')"
 			} else {
 				toolCondition += "'" + fmt.Sprint(content.ToolId) + "',"
@@ -986,157 +1013,10 @@ func QueryTaskBinaryCheckContent(c *gin.Context) {
 	return
 }
 
-
 /**
  *安卓查询二进制检查结果信息-------fj
  */
-func QueryTaskApkBinaryCheckContent(c *gin.Context){
-	taskId := c.DefaultQuery("taskId", "")
-	if taskId == "" {
-		logs.Error("缺少taskId参数")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少taskId参数",
-			"errorCode" : -1,
-			"data" : "缺少taskId参数",
-		})
-		return
-	}
-	toolId := c.DefaultQuery("toolId", "")
-	if toolId == "" {
-		logs.Error("缺少toolId参数")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少toolId参数",
-			"errorCode" : -2,
-			"data" : "缺少toolId参数",
-		})
-		return
-	}
-	//切换到旧版本
-	//if toolId != "6"{
-	//	QueryTaskBinaryCheckContent(c)
-	//	return
-	//}
-	condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
-
-	content,err := dal.QueryDetectInfo(condition)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "查询检测结果信息数据库操作失败,请确认查询条件",
-			"errorCode" : -1,
-			"data" : err,
-		})
-		return
-	}
-
-	details, err := dal.QueryDetectContentDetail(condition)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "查询检测结果详情数据库操作失败,请确认查询条件",
-			"errorCode" : -1,
-			"data" : err,
-		})
-		return
-	}
-
-	if (content == nil || details==nil||len(*details)==0){
-		logs.Info("未查询到对应任务的检测内容")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "未查询到对应任务的检测内容",
-			"errorCode" : -3,
-			"data" : "未查询到对应任务的检测内容",
-		})
-		return
-	}
-
-	var queryResult dal.DetectQueryStruct
-	//queryResult.TaskId = (*content).TaskId
-	//queryResult.ToolId = (*content).ToolId
-	queryResult.Channel = (*content).Channel
-	queryResult.ApkName = (*content).ApkName
-	queryResult.Version = (*content).Version
-
-	permission := ""
-	perms := strings.Split((*content).Permissions,";")
-	for _,perm := range perms[0:(len(perms)-1)]{
-		permission += perm +"\n"
-	}
-	queryResult.Permissions = permission
-
-	methods := make([]dal.SMethod,0)
-	strs := make([]dal.SStr,0)
-
-	for _,detail := range (*details) {
-		if detail.SensiType == 1 {
-			var method dal.SMethod
-			method.ClassName = detail.ClassName
-			method.Desc = detail.DescInfo
-			method.Status = detail.Status
-			method.Id = detail.ID
-			method.Confirmer = detail.Confirmer
-			method.Remark = detail.Remark
-			method.MethodName = detail.KeyInfo
-			callLocs := strings.Split(detail.CallLoc,";")
-			callLoc :=make([]dal.MethodCallJson,0)
-			for _,call_loc := range callLocs[0:(len(callLocs)-1)] {
-				var call_loc_json dal.MethodCallJson
-				err := json.Unmarshal([]byte(call_loc),&call_loc_json)
-				if err != nil {
-					logs.Error("callLoc数据不符合要求，%v===========%s",err,call_loc)
-					c.JSON(http.StatusOK, gin.H{
-						"message" : "callLoc数据不符合要求",
-						"errorCode" : 0,
-						"data" : "callLoc数据不符合要求",
-					})
-					return
-				}
-				callLoc = append(callLoc,call_loc_json)
-			}
-			method.CallLoc = callLoc
-			methods = append(methods,method)
-		}else{
-			var str dal.SStr
-			str.Keys = detail.KeyInfo
-			str.Remark = detail.Remark
-			str.Confirmer = detail.Confirmer
-			str.Status = detail.Status
-			str.Desc = detail.DescInfo
-			str.Id = detail.ID
-			callLocs := strings.Split(detail.CallLoc,";")
-			callLoc := make([]dal.StrCallJson,0)
-			for _,call_loc := range callLocs[0:(len(callLocs)-1)] {
-				var callLoc_json dal.StrCallJson
-				err := json.Unmarshal([]byte(call_loc),&callLoc_json)
-				if err != nil {
-					logs.Error("callLoc数据不符合要求，%v========%s",err,call_loc)
-					c.JSON(http.StatusOK, gin.H{
-						"message" : "callLoc数据不符合要求",
-						"errorCode" : 0,
-						"data" : "callLoc数据不符合要求",
-					})
-					return
-				}
-				callLoc = append(callLoc,callLoc_json)
-			}
-			str.CallLoc = callLoc
-			strs = append(strs,str)
-		}
-	}
-	queryResult.SMethods = methods
-	queryResult.SStrs = strs
-
-	logs.Info("query detect result success!")
-	c.JSON(http.StatusOK, gin.H{
-		"message" : "success",
-		"errorCode" : 0,
-		"data" : queryResult,
-	})
-	return
-}
-
-/**
- *查询iOS静态检测结果
- */
-func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
+func QueryTaskApkBinaryCheckContent(c *gin.Context) {
 	taskId := c.DefaultQuery("taskId", "")
 	if taskId == "" {
 		logs.Error("缺少taskId参数")
@@ -1157,170 +1037,126 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 		})
 		return
 	}
-	//首先查询新库
-	iosTaskBinaryCheckContent := dal.QueryIOSDetectModel(map[string]interface{}{
-		"taskId": taskId,
-		"toolId": toolId,
-	})
-	//如果数据在新库中查不到就去访问老库
-	if iosTaskBinaryCheckContent == nil || len(*iosTaskBinaryCheckContent) == 0 {
-		conditionOld := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
-		content := dal.QueryTaskBinaryCheckContent(conditionOld)
-		if content == nil || len(*content) == 0 {
-			logs.Info("未查询到检测内容")
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "未查询到检测内容",
-				"errorCode": -3,
-				"data":      "未查询到检测内容",
-			})
-			return
-		} else {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "success",
-				"errorCode": 0,
-				"data":      (*content)[0],
-			})
-			return
-		}
-	}
-	//返回检测结果给前端
-	jsonCon := (*iosTaskBinaryCheckContent)[0].JsonContent
-	res := make(map[string]interface{})
-	if err := json.Unmarshal([]byte(jsonCon), &res); err != nil {
-		logs.Error("解析json出错！！！", err.Error())
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "未查询到检测内容",
-			"errorCode": -3,
-			"data":      "未查询到检测内容",
-		})
-		return
-	}
-	var blackListArr []interface{}
-	var methodArr []interface{}
-	for _, tem := range *iosTaskBinaryCheckContent {
-		categoryName := tem.CategoryName
-		categoryContent := tem.CategoryContent
-		id := tem.ID
-		remark := tem.Remark
-		status := tem.Status
-		confirmer := tem.Confirmer
-		if tem.Category == "blacklist" {
-			blackListArr = append(blackListArr, map[string]interface{}{
-				"blackName":    categoryName,
-				"blackContent": strings.Split(categoryContent, "###"),
-				"id":           id,
-				"remark":       remark,
-				"status":       status,
-				"confirmer":    confirmer,
-			})
-		}
-		if tem.Category == "method" {
-			methodArr = append(methodArr, map[string]interface{}{
-				"methodName":  categoryName,
-				"methodClass": categoryContent,
-				"id":          id,
-				"remark":      remark,
-				"status":      status,
-				"confirmer":   confirmer,
-			})
-		}
-	}
-	data := map[string]interface{}{
-		"appName":    res["name"],
-		"appVersion": res["version"],
-		"bundleId":   res["bundle_id"],
-		"sdkVersion": res["tar_version"],
-		"minVersion": res["min_version"],
-		"blackList":  blackListArr,
-		"method":     methodArr,
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"message":   "success",
-		"errorCode": 0,
-		"data":      data,
-	})
-}
+	//切换到旧版本
+	//if toolId != "6"{
+	//	QueryTaskBinaryCheckContent(c)
+	//	return
+	//}
+	condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
 
-/**
- *更新iOS静态检测结果
- */
-func ConfirmIOSBinaryResult(c *gin.Context) {
-	type IOSConfirm struct {
-		TaskId int    `json:"taskId"    form:"taskId"`
-		ToolId int    `json:"toolId"    form:"toolId"`
-		Status int    `json:"status"    form:"status"`
-		Remark string `json:"remark"    form:"remark"`
-		ID     int    `json:"id"        form:"id"`
-	}
-	var ios IOSConfirm
-	if err := c.BindJSON(&ios); err != nil {
-		logs.Error("确认二进制检测结果传参出错！", err.Error())
+	content, err := dal.QueryDetectInfo(condition)
+	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
-			"message":   "参数不合法！",
+			"message":   "查询检测结果信息数据库操作失败,请确认查询条件",
 			"errorCode": -1,
-			"data":      "参数不合法！",
+			"data":      err,
 		})
 		return
 	}
-	//获取确认人信息
-	username, _ := c.Get("username")
-	//兼容旧接口内容
-	if ios.ID == 0 {
-		data := make(map[string]string)
-		data["task_id"] = strconv.Itoa(ios.TaskId)
-		data["tool_id"] = strconv.Itoa(ios.ToolId)
-		data["confirmer"] = username.(string)
-		data["remark"] = ios.Remark
-		data["status"] = strconv.Itoa(ios.Status)
-		flag := dal.ConfirmBinaryResult(data)
-		if !flag {
-			logs.Error("二进制检测内容确认失败")
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "二进制检测内容确认失败！",
-				"errorCode": -1,
-				"data":      "二进制检测内容确认失败！",
-			})
-			return
+
+	details, err := dal.QueryDetectContentDetail(condition)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "查询检测结果详情数据库操作失败,请确认查询条件",
+			"errorCode": -1,
+			"data":      err,
+		})
+		return
+	}
+
+	if content == nil || details == nil || len(*details) == 0 {
+		logs.Info("未查询到对应任务的检测内容")
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "未查询到对应任务的检测内容",
+			"errorCode": -3,
+			"data":      "未查询到对应任务的检测内容",
+		})
+		return
+	}
+
+	var queryResult dal.DetectQueryStruct
+	//queryResult.TaskId = (*content).TaskId
+	//queryResult.ToolId = (*content).ToolId
+	queryResult.Channel = (*content).Channel
+	queryResult.ApkName = (*content).ApkName
+	queryResult.Version = (*content).Version
+
+	permission := ""
+	perms := strings.Split((*content).Permissions, ";")
+	for _, perm := range perms[0:(len(perms) - 1)] {
+		permission += perm + "\n"
+	}
+	queryResult.Permissions = permission
+
+	methods := make([]dal.SMethod, 0)
+	strs := make([]dal.SStr, 0)
+
+	for _, detail := range *details {
+		if detail.SensiType == 1 {
+			var method dal.SMethod
+			method.ClassName = detail.ClassName
+			method.Desc = detail.DescInfo
+			method.Status = detail.Status
+			method.Id = detail.ID
+			method.Confirmer = detail.Confirmer
+			method.Remark = detail.Remark
+			method.MethodName = detail.KeyInfo
+			callLocs := strings.Split(detail.CallLoc, ";")
+			callLoc := make([]dal.MethodCallJson, 0)
+			for _, call_loc := range callLocs[0:(len(callLocs) - 1)] {
+				var call_loc_json dal.MethodCallJson
+				err := json.Unmarshal([]byte(call_loc), &call_loc_json)
+				if err != nil {
+					logs.Error("callLoc数据不符合要求，%v===========%s", err, call_loc)
+					c.JSON(http.StatusOK, gin.H{
+						"message":   "callLoc数据不符合要求",
+						"errorCode": 0,
+						"data":      "callLoc数据不符合要求",
+					})
+					return
+				}
+				callLoc = append(callLoc, call_loc_json)
+			}
+			method.CallLoc = callLoc
+			methods = append(methods, method)
 		} else {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "success!",
-				"errorCode": 0,
-				"data":      "success",
-			})
-			return
+			var str dal.SStr
+			str.Keys = detail.KeyInfo
+			str.Remark = detail.Remark
+			str.Confirmer = detail.Confirmer
+			str.Status = detail.Status
+			str.Desc = detail.DescInfo
+			str.Id = detail.ID
+			callLocs := strings.Split(detail.CallLoc, ";")
+			callLoc := make([]dal.StrCallJson, 0)
+			for _, call_loc := range callLocs[0:(len(callLocs) - 1)] {
+				var callLoc_json dal.StrCallJson
+				err := json.Unmarshal([]byte(call_loc), &callLoc_json)
+				if err != nil {
+					logs.Error("callLoc数据不符合要求，%v========%s", err, call_loc)
+					c.JSON(http.StatusOK, gin.H{
+						"message":   "callLoc数据不符合要求",
+						"errorCode": 0,
+						"data":      "callLoc数据不符合要求",
+					})
+					return
+				}
+				callLoc = append(callLoc, callLoc_json)
+			}
+			str.CallLoc = callLoc
+			strs = append(strs, str)
 		}
 	}
-	updateMap := map[string]interface{}{
-		"remark":    ios.Remark,
-		"status":    ios.Status,
-		"confirmer": username.(string),
-	}
-	flag := dal.UpdateIOSDetectModel(ios.ID, updateMap)
-	if !flag {
-		logs.Error("iOS二进制检测内容确认失败")
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "二进制检测内容确认失败！",
-			"errorCode": -1,
-			"data":      "二进制检测内容确认失败！",
-		})
-		return
-	}
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": ios.TaskId,
-	})
-	appId := (*detect)[0].AppId
-	appVersion := (*detect)[0].AppVersion
-	key := strconv.Itoa(ios.TaskId) + "_" + appId + "_" + appVersion + "_" + strconv.Itoa(ios.ToolId)
-	ticker := LARK_MSG_CALL_MAP[key]
-	if ticker != nil {
-		ticker.(*time.Ticker).Stop()
-		delete(LARK_MSG_CALL_MAP, key)
-	}
+	queryResult.SMethods = methods
+	queryResult.SStrs = strs
+
+	logs.Info("query detect result success!")
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
 		"errorCode": 0,
-		"data":      "success",
+		"data":      queryResult,
 	})
+	return
 }
 
 /**
@@ -1359,4 +1195,3 @@ func GetToken(c *gin.Context) {
 		})
 	}
 }
-
