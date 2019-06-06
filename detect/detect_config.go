@@ -333,7 +333,7 @@ func QueryPermissionsWithApp(c *gin.Context)  {
 		"app_id":t.AppId,
 		"app_version":t.AppVersion,
 	})
-	if err1 != nil || (*queryResult) == nil || len(*queryResult) == 0 {
+	if err1 != nil || queryResult == nil || len(*queryResult) == 0 {
 		logs.Error("未查询到相关信息")
 		c.JSON(http.StatusOK,gin.H{
 			"message":"未查询到相关信息！",

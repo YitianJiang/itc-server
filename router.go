@@ -112,6 +112,5 @@ func InitRouter(r *ginex.Engine) {
 		api.GET("/perm/getpermDetails",detect.GetPermDetails)
 
 
-
 	}
 }

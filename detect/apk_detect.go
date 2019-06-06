@@ -251,7 +251,7 @@ func AppInfoAnalysis(info map[string]interface{},detectInfo *dal.DetectInfo){
 		message += larkPerms
 		utils.LarkDingOneInner("kanghuaisong",message)
 		//测试时使用
-		utils.LarkDingOneInner("fanjuan.xqp",message)
+		//utils.LarkDingOneInner("fanjuan.xqp",message)
 		//上线时使用
 		//utils.LarkDingOneInner("lirensheng",message)
 	}
@@ -530,7 +530,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_2(c *gin.Context){
 		detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 			"id" : taskId,
 		})
-		if (*detect) == nil || len(*detect)==0{
+		if detect == nil || len(*detect)==0{
 			logs.Error("未查询到该taskid对应的检测任务，%v", taskId)
 			c.JSON(http.StatusOK, gin.H{
 				"message" : "未查询到该taskid对应的检测任务",
@@ -730,7 +730,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_2(c *gin.Context){
 
 	//权限结果重组
 	permissionsP,errP := GetTaskPermissions(taskId,appId)
-	if errP != nil || (*permissionsP) == nil || len(*permissionsP) == 0 {
+	if errP != nil || permissionsP == nil || len(*permissionsP) == 0 {
 		queryResult.Permissions_2 = permissions
 	}else {
 		queryResult.Permissions_2 = (*permissionsP)
@@ -753,7 +753,7 @@ func GetTaskPermissions(taskId string,appId int) (*[]dal.Permissions,error) {
 	info, err := dal.QueryPermAppRelation(map[string]interface{}{
 		"task_id": task_id,
 	})
-	if err != nil || (*info) == nil || len(*info)==0 {
+	if err != nil || info == nil || len(*info)==0 {
 		logs.Error("未查询到该任务的权限确认信息")
 		return nil, err
 	}
@@ -820,7 +820,7 @@ func GetIgnoredPermission(appId int) map[int]interface{}  {
 	queryResult,err := dal.QueryPermHistory(map[string]interface{}{
 		"app_id":appId,
 	})
-	if err != nil || (*queryResult) == nil || len(*queryResult)== 0 {
+	if err != nil || queryResult == nil || len(*queryResult)== 0 {
 		logs.Error("该app暂时没有确认信息")
 	}else {
 		for _, infoP := range (*queryResult) {
@@ -870,7 +870,7 @@ func GetImportedPermission(appId int) map[int]interface{}  {
 	queryResult,err := dal.QueryPermHistory(map[string]interface{}{
 		"app_id":appId,
 	})
-	if err != nil || (*queryResult) == nil || len(*queryResult)== 0 {
+	if err != nil || queryResult == nil || len(*queryResult)== 0 {
 		logs.Error("该app暂时没有确认信息")
 	}else {
 		for _, infoP := range (*queryResult) {
@@ -901,7 +901,7 @@ func getIgnoredInfo_2(data map[string]string) (map[string]interface{},map[string
 	result,err := dal.QueryIgnoredInfo(queryInfo)
 
 	//此处如果条件1没有命中，但是23命中了，返回的err其实是nil
-	if err != nil ||(*result) == nil || len(*result)==0{
+	if err != nil || result == nil || len(*result)==0{
 		return nil,nil,nil,err
 	}
 
@@ -1043,7 +1043,7 @@ func confirmApkResult(c *gin.Context,t dal.PostConfirm, username string)  {
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id" : t.TaskId,
 	})
-	if (*detect) == nil || len(*detect)== 0{
+	if detect == nil || len(*detect)== 0{
 		logs.Error("未查询到该taskid对应的检测任务，%v", t.TaskId)
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "未查询到该taskid对应的检测任务",

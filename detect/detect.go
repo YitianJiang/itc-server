@@ -264,7 +264,7 @@ func UpdateDetectInfos(c *gin.Context) {
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id": taskId,
 	})
-	if (*detect) == nil || len(*detect) == 0{
+	if detect == nil || len(*detect) == 0{
 		logs.Error("未查询到该taskid对应的检测任务，%v", taskId)
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "未查询到该taskid对应的检测任务",
@@ -687,7 +687,7 @@ func ConfirmApkBinaryResult(c *gin.Context) {
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id": t.TaskId,
 	})
-	if (*detect) == nil {
+	if detect == nil {
 		logs.Error("未查询到该taskid对应的检测任务，%v", t.TaskId)
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "未查询到该taskid对应的检测任务",
