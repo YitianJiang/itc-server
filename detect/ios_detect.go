@@ -311,7 +311,18 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 						notice = append(notice, pp)
 					}
 				}
-				sortedPrivacy = append(sortedPrivacy, highRisk,  middleRisk, lowRisk, notice)
+				for _, high := range highRisk{
+					sortedPrivacy = append(sortedPrivacy, high)
+				}
+				for _, middle := range middleRisk{
+					sortedPrivacy = append(sortedPrivacy, middle)
+				}
+				for _, low := range middleRisk{
+					sortedPrivacy = append(sortedPrivacy, low)
+				}
+				for _, noti := range notice{
+					sortedPrivacy = append(sortedPrivacy, noti)
+				}
 				v = sortedPrivacy
 			}
 			data[k] = v
