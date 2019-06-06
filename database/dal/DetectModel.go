@@ -175,20 +175,6 @@ type PostConfirm struct {
 	Type 	int		`json:"type"`
 }
 
-
-func (IgnoreInfoStruct) TableName() string  {
-	return "tb_ignored_info"
-}
-
-
-func (DetectInfo) TableName() string {
-	return "tb_detect_info_apk"
-
-}
-
-func (DetectContentDetail) TableName() string {
-	return "tb_detect_content_detail"
-}
 //二进制包检测内容，json内容处理区分后
 type IOSDetectContent struct {
 	gorm.Model
