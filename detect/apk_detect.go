@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -745,10 +746,22 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_2(c *gin.Context){
 	return
 }
 
+type PermSlice [] dal.Permissions
+
+func (a PermSlice) Len() int {         // 重写 Len() 方法
+	return len(a)
+}
+func (a PermSlice) Swap(i, j int){     // 重写 Swap() 方法
+	a[i], a[j] = a[j], a[i]
+}
+func (a PermSlice) Less(i, j int) bool {    // 重写 Less() 方法， 从大到小排序
+	return a[j].Priority< a[i].Priority
+}
+
 /**
 	重组任务的权限检测结果
  */
-func GetTaskPermissions(taskId string,appId int) (*[]dal.Permissions,error) {
+func GetTaskPermissions(taskId string,appId int) (*PermSlice,error) {
 	task_id,_ := strconv.Atoi(taskId)
 	info, err := dal.QueryPermAppRelation(map[string]interface{}{
 		"task_id": task_id,
@@ -767,8 +780,8 @@ func GetTaskPermissions(taskId string,appId int) (*[]dal.Permissions,error) {
 	//一次查所有
 	perIgs := GetIgnoredPermission(appId)
 	allPermList := GetPermList()
-	var result []dal.Permissions
-	var reulst_con [] dal.Permissions
+	var result PermSlice
+	var reulst_con PermSlice
 	for v,permInfo := range infos {
 		var permOut dal.Permissions
 		permMap := permInfo.(map[string]interface{})
@@ -804,6 +817,8 @@ func GetTaskPermissions(taskId string,appId int) (*[]dal.Permissions,error) {
 			reulst_con = append(reulst_con,permOut)
 		}
 	}
+	sort.Sort(PermSlice(result))
+	sort.Sort(PermSlice(reulst_con))
 	for _,outInfo := range reulst_con {
 		result = append(result,outInfo)
 	}

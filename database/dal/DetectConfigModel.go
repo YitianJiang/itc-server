@@ -148,11 +148,11 @@ func QueryDetectConfig(queryData map[string]interface{}) *[]DetectConfigStruct  
 /**
 	查询权限列表信息
  */
-func QueryDetectConfigList (condition string,pageInfo map[string]int) (*[]DetectConfigStruct,int){
+func QueryDetectConfigList (condition string,pageInfo map[string]int) (*[]DetectConfigStruct,int,error){
 	connection,err := database.GetConneection()
 	if err != nil {
 		logs.Error("connect to db error,%v",err)
-		return nil,0
+		return nil,0,err
 	}
 	defer connection.Close()
 	db := connection.Table(DetectConfigStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
@@ -163,17 +163,17 @@ func QueryDetectConfigList (condition string,pageInfo map[string]int) (*[]Detect
 	if err := db.Where(condition).Offset((page-1)*pageSize).Limit(pageSize).Order("id DESC").Find(&result).Error; err!= nil {
 		logs.Error("query detectConfig failed,%v", err)
 		//db.Rollback()
-		return nil,0
+		return nil,0,err
 	}
 	condition = "deleted_at IS NULL and "+ condition
 	var total TotalStruct
 	if err := db.Select("count(id) as total").Where(condition).Find(&total).Error; err != nil {
 		logs.Error("query detectConfig counts failed,%v", err)
 		//db.Rollback()
-		return nil,0
+		return nil,0,err
 	}
 	//db.Commit()
-	return &result, total.Total
+	return &result, total.Total,nil
 }
 /**
 	根据权限信息模糊联查使用该权限的app情况

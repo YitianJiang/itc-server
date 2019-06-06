@@ -49,7 +49,18 @@ func AddDetectConfig(c *gin.Context)  {
 
 	username,_ := c.Get("username")
 	data.Creator = username.(string)
-
+	queryResult := dal.QueryDetectConfig(map[string]interface{}{
+		"key_info":data.KeyInfo,
+		"platform":data.Platform,
+	})
+	if queryResult != nil && len(*queryResult) != 0{
+		logs.Error("平台已存在该权限！")
+		c.JSON(http.StatusOK,gin.H{
+			"message":"新增权限设置失败，对应平台已存在该权限！！",
+			"errorCode":-1,
+		})
+		return
+	}
 	if _,err := dal.InsertDetectConfig(data); err != nil {
 		c.JSON(http.StatusOK,gin.H{
 			"message":"新增权限设置失败！",
@@ -75,7 +86,7 @@ func QueryDectecConfig(c *gin.Context)  {
 		PageSize 		int			`json:"pageSize"`
 		Page 			int			`json:"page"`
 		Info    		string		`json:"info"`
-		Platform		interface{}			`json:"platform"`
+		Platform		interface{}	`json:"platform"`
 	}
 	var t queryStruct
 	param,_ := ioutil.ReadAll(c.Request.Body)
@@ -110,19 +121,29 @@ func QueryDectecConfig(c *gin.Context)  {
 	if t.Platform != nil {
 		condition += " and platform ='"+fmt.Sprint(t.Platform)+"'"
 	}
-	result,count := dal.QueryDetectConfigList(condition,pageInfo)
+	result,count,errQ := dal.QueryDetectConfigList(condition,pageInfo)
+	if errQ != nil {
+		c.JSON(http.StatusOK,gin.H{
+			"message":"查询权限数据库操作失败！",
+			"errorCode":-1,
+			"data":errQ,
+		})
+		return
+	}
+	var permList = make([]dal.DetectConfigListInfo,0)
 	if result == nil || len(*result)== 0{
 		logs.Error("未查询到相关权限信息")
 		c.JSON(http.StatusOK,gin.H{
 			"message":"未查询到相关权限信息！",
-			"errorCode":-1,
-			"data":"未查询到相关权限信息！",
+			"errorCode":0,
+			"data":map[string]interface{}{
+				"count":0,
+				"permList":permList,
+			},
 		})
 		return
 	}
-
 	var realResult = make(map[string]interface{})
-	var permList = make([]dal.DetectConfigListInfo,0)
 	for _,re := range (*result) {
 		var perm dal.DetectConfigListInfo
 		perm.Creator = re.Creator
