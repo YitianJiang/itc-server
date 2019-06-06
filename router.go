@@ -4,6 +4,7 @@ import (
 	"code.byted.org/clientQA/itc-server/casemanage"
 	"code.byted.org/clientQA/itc-server/controllers"
 	"code.byted.org/clientQA/itc-server/detect"
+	"code.byted.org/clientQA/itc-server/developerconnmanager"
 	"code.byted.org/clientQA/itc-server/middleware"
 	"code.byted.org/gin/ginex"
 )
@@ -104,5 +105,10 @@ func InitRouter(r *ginex.Engine) {
 		api.POST("/detect/confirmIOSResult", detect.ConfirmIOSBinaryResult)
 		//查询权限确认历史
 		api.POST("detect/queryIgnoreHistory",detect.QueryIgnoredHistory)
+	}
+	//todo 巩锐开始开发证书体系监管后台API
+	connapi := r.Group("/v1/devConnManage")
+	{
+		connapi.GET("/bundleIdSearch",developerconnmanager.TestAskBundleId)
 	}
 }
