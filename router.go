@@ -111,5 +111,7 @@ func InitRouter(r *ginex.Engine) {
 	{
 		connapi.GET("/bundleIdSearch",developerconnmanager.TestAskBundleId)
 		connapi.GET("/getBundleIdsList",developerconnmanager.GetBunldIdsObj)
+		connapi.GET("/testPrivatePrint",developerconnmanager.ParsePrivateKey)
+		connapi.GET("/createProvProfile",developerconnmanager.Test64DecodeToString)
 	}
 }
