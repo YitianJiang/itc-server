@@ -12,10 +12,33 @@ import (
 	"time"
 )
 
+
+
+
+//权限配置页面操作人员
+var permToModify = map[string]int {
+	"kanghuaisong":1,
+	"zhangshuai.02":1,
+	"lirensheng":1,
+}
+
+
 /**
 	新增权限
  */
 func AddDetectConfig(c *gin.Context)  {
+	username,_ := c.Get("username")
+
+	//权限配置页面操作人员判断
+	if v,ok := permToModify[username.(string)]; !ok || v!=1 {
+		logs.Error("该用户不允许对权限配置进行操作！")
+		c.JSON(http.StatusOK,gin.H{
+			"message":"该用户不允许对权限配置进行操作！",
+			"errorCode":-1,
+		})
+		return
+	}
+
 	param,_ := ioutil.ReadAll(c.Request.Body)
 	var t dal.DetectConfigInfo
 	err := json.Unmarshal(param,&t)
@@ -47,8 +70,8 @@ func AddDetectConfig(c *gin.Context)  {
 	data.Suggestion = t.Suggestion
 	data.Platform = int(t.Platform.(float64))
 
-	username,_ := c.Get("username")
 	data.Creator = username.(string)
+
 	queryResult := dal.QueryDetectConfig(map[string]interface{}{
 		"key_info":data.KeyInfo,
 		"platform":data.Platform,
@@ -171,6 +194,18 @@ func QueryDectecConfig(c *gin.Context)  {
 	修改权限信息
  */
 func EditDectecConfig(c *gin.Context){
+	username,_ := c.Get("username")
+
+	//权限配置页面操作人员判断
+	if v,ok := permToModify[username.(string)]; !ok || v!=1 {
+		logs.Error("该用户不允许对权限配置进行操作！")
+		c.JSON(http.StatusOK,gin.H{
+			"message":"该用户不允许对权限配置进行操作！",
+			"errorCode":-1,
+		})
+		return
+	}
+
 	param,_ := ioutil.ReadAll(c.Request.Body)
 	var t dal.DetectConfigInfo
 	err := json.Unmarshal(param,&t)

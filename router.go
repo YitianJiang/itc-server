@@ -63,9 +63,9 @@ func InitRouter(r *ginex.Engine) {
 		//确认二进制包检测信息
 		api.POST("/detect/confirmResult", detect.ConfirmBinaryResult)
 		//确认apk二进制包检测信息
-		api.POST("/detect/confirmApkResult", detect.ConfirmApkBinaryResultv_3)
+		api.POST("/detect/confirmApkResult", detect.ConfirmApkBinaryResultv_4)
 		////确认apk二进制包权限检测信息------fj
-		//api.POST("/detect/confirmApkPermission", detect.ConfirmPermissions)
+		//api.POST("/detect/confirmApk_2", detect.ConfirmApkBinaryResultv_4)
 		//根据platform获取配置的问题类型
 		api.GET("/config/queryProblemConfigs", detect.QueryProblemConfigs)
 		//增加配置项

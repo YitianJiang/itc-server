@@ -98,6 +98,33 @@ func JsonInfoAnalysis(info string,mapInfo map[string]int){
 		message := "敏感str写入数据库失败，请解决;"+fmt.Sprint(err)
 		utils.LarkDingOneInner("fanjuan.xqp",message)
 	}
+
+	//任务状态更新----该app无需要特别确认的敏感方法、字符串或权限
+	condition := "deleted_at IS NULL and task_id='" + strconv.Itoa(mapInfo["taskId"]) + "' and tool_id='" + strconv.Itoa(mapInfo["toolId"]) + "' and status= 0"
+	counts := dal.QueryUnConfirmDetectContent(condition)
+	//获取该任务的权限信息
+	perms,_ := dal.QueryPermAppRelation(map[string]interface{}{
+		"task_id":mapInfo["taskId"],
+	})
+	var permList []interface{}
+	var permFlag = true
+	permsInfoDB := (*perms)[0].PermInfos
+	json.Unmarshal([]byte(permsInfoDB),&permList)
+	for _,m := range permList {
+		permInfo := m.(map[string]interface{})
+		if permInfo["status"].(float64) == 0 {
+			permFlag = false
+			break
+		}
+	}
+	logs.Notice("当前确认情况，字符串和方法剩余："+fmt.Sprint(counts)+" ,权限是否全部确认："+fmt.Sprint(permFlag))
+	if counts == 0 && permFlag {
+		(*detect)[0].Status = 1
+		err := dal.UpdateDetectModelNew((*detect)[0])
+		if err != nil {
+			logs.Error("任务确认状态更新失败！%v", err)
+		}
+	}
 	return
 }
 
@@ -250,6 +277,7 @@ func AppInfoAnalysis(info map[string]interface{},detectInfo *dal.DetectInfo){
 	if larkPerms != ""{
 		message := "你好，安卓二进制静态包检测出未知权限，请去权限配置页面完善权限信息,需要完善的权限信息有：\n"
 		message += larkPerms
+		message += "修改链接：http://cloud.bytedance.net/rocket/itc/permission?biz=13"
 		utils.LarkDingOneInner("kanghuaisong",message)
 		//测试时使用
 		//utils.LarkDingOneInner("fanjuan.xqp",message)
@@ -1318,3 +1346,226 @@ func QueryIgnoredHistory(c *gin.Context)  {
 	}
 }
 
+
+func ConfirmApkBinaryResultv_4(c *gin.Context){
+	param, _ := ioutil.ReadAll(c.Request.Body)
+	var t dal.PostConfirm
+	err := json.Unmarshal(param, &t)
+	if err != nil {
+		logs.Error("参数不合法 ，%v",err)
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "参数不合法！",
+			"errorCode" : -1,
+			"data" : "参数不合法！",
+		})
+		return
+	}
+	//获取确认人信息
+	username, _ := c.Get("username")
+	usernameStr := username.(string)
+
+	var permFlag = true
+	//获取任务信息
+	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
+		"id" : t.TaskId,
+	})
+
+	//获取该任务的权限信息
+	perms,errPerm := dal.QueryPermAppRelation(map[string]interface{}{
+		"task_id":t.TaskId,
+	})
+
+	if t.Type == 0 {//敏感方法和字符串确认
+		condition1 := "id="+strconv.Itoa(t.Id)
+		detailInfo, err := dal.QueryDetectContentDetail(condition1)
+		if err != nil || detailInfo == nil||len(*detailInfo)==0{
+			logs.Error("不存在该检测结果，ID：%d",t.Id)
+			c.JSON(http.StatusOK, gin.H{
+				"message" : "不存在该检测结果！",
+				"errorCode" : -1,
+				"data" : "不存在该检测结果！",
+			})
+			return
+		}
+		if detect == nil || len(*detect)== 0{
+			logs.Error("未查询到该taskid对应的检测任务，%v", t.TaskId)
+			c.JSON(http.StatusOK, gin.H{
+				"message" : "未查询到该taskid对应的检测任务",
+				"errorCode" : -2,
+				"data" : "未查询到该taskid对应的检测任务",
+			})
+			return
+		}
+
+		var data map[string]string
+		data = make(map[string]string)
+		data["id"] = strconv.Itoa(t.Id)
+		data["confirmer"] = usernameStr
+		data["remark"] = t.Remark
+		data["status"] = strconv.Itoa(t.Status)
+		flag := dal.ConfirmApkBinaryResultNew(data)
+		if !flag {
+			logs.Error("二进制检测内容确认失败")
+			c.JSON(http.StatusOK, gin.H{
+				"message" : "二进制检测内容确认失败！",
+				"errorCode" : -1,
+				"data" : "二进制检测内容确认失败！",
+			})
+			return
+		}
+
+		//增量忽略结果录入
+		if t.Status != 0 {
+			senType := (*detailInfo)[0].SensiType
+			if senType == 1 {
+				var igInfo dal.IgnoreInfoStruct
+				igInfo.Platform = (*detect)[0].Platform
+				igInfo.AppId,_ = strconv.Atoi((*detect)[0].AppId)
+				igInfo.SensiType = 1
+				igInfo.KeysInfo = (*detailInfo)[0].ClassName+"."+(*detailInfo)[0].KeyInfo
+				igInfo.Confirmer = usernameStr
+				igInfo.Remarks = t.Remark
+				igInfo.Version = (*detect)[0].AppVersion
+				igInfo.Status = t.Status
+				err := dal.InsertIgnoredInfo(igInfo)
+				if err != nil {
+					c.JSON(http.StatusOK, gin.H{
+						"message" : "增量信息更新失败！",
+						"errorCode" : -1,
+						"data" : "增量信息更新失败！",
+					})
+					return
+				}
+			}else {
+				keys := strings.Split((*detailInfo)[0].KeyInfo,";")
+				for _,key := range keys[0:len(keys)-1] {
+					var igInfos dal.IgnoreInfoStruct
+					igInfos.SensiType = 2
+					igInfos.KeysInfo = key
+					igInfos.AppId,_ = strconv.Atoi((*detect)[0].AppId)
+					igInfos.Platform = (*detect)[0].Platform
+					igInfos.Confirmer = usernameStr
+					igInfos.Remarks = t.Remark
+					igInfos.Status = t.Status
+					igInfos.Version = (*detect)[0].AppVersion
+					err := dal.InsertIgnoredInfo(igInfos)
+					if err != nil {
+						c.JSON(http.StatusOK, gin.H{
+							"message" : "增量信息更新失败！",
+							"errorCode" : -1,
+							"data" : "增量信息更新失败！",
+						})
+						return
+					}
+				}
+			}
+		}
+	}else {
+		if errPerm != nil || perms == nil || len(*perms) == 0 {
+			logs.Error("未查询到该任务的检测信息")
+			c.JSON(http.StatusOK,gin.H{
+				"message":"未查询到该任务的检测信息",
+				"errorCode":-1,
+				"data":"权限操作历史写入失败！",
+			})
+			return
+		}
+		permsInfoDB := (*perms)[0].PermInfos
+		var permList []interface{}
+		if err := json.Unmarshal([]byte(permsInfoDB),&permList); err != nil {
+			logs.Error("该任务的权限存储信息格式出错")
+			c.JSON(http.StatusOK,gin.H{
+				"message":"该任务的权限存储信息格式出错",
+				"errorCode":-1,
+				"data":"权限操作历史写入失败！",
+			})
+			return
+		}
+		permMap := permList[t.Id-1].(map[string]interface{})
+		permMap["status"] = t.Status
+
+		permId := int(permMap["perm_id"].(float64))
+		newPerms,_ := json.Marshal(permList)
+		(*perms)[0].PermInfos = string(newPerms)
+		if err := dal.UpdataPermAppRelation(&(*perms)[0]); err != nil {
+			logs.Error("更新任务权限确认情况失败")
+			c.JSON(http.StatusOK,gin.H{
+				"message":"更新任务权限确认情况失败",
+				"errorCode":-1,
+				"data":"权限操作历史写入失败！",
+			})
+			return
+		}
+		//写入操作历史
+		var history dal.PermHistory
+		history.Status = t.Status
+		history.AppVersion = (*perms)[0].AppVersion
+		history.AppId = (*perms)[0].AppId
+		history.PermId = permId
+		history.Remarks = t.Remark
+		history.Confirmer = usernameStr
+		if err := dal.InsertPermOperationHistory(history); err != nil {
+			logs.Error("权限操作历史写入失败！")
+			c.JSON(http.StatusOK,gin.H{
+				"errorCode":-1,
+				"message":"权限操作历史写入失败！",
+				"data":"权限操作历史写入失败！",
+			})
+			return
+		}
+	}
+	//任务状态更新
+	condition := "deleted_at IS NULL and task_id='" + strconv.Itoa(t.TaskId) + "' and tool_id='" + strconv.Itoa(t.ToolId) + "' and status= 0"
+	counts := dal.QueryUnConfirmDetectContent(condition)
+
+	var permList []interface{}
+	if t.Type == 0 {
+		if errPerm != nil || perms == nil || len(*perms) == 0 {
+			logs.Error("未查询到该任务的权限检测信息")
+		}else {
+			permsInfoDB := (*perms)[0].PermInfos
+			//var permList []interface{}
+			if err := json.Unmarshal([]byte(permsInfoDB),&permList); err != nil {
+				logs.Error("该任务的权限存储信息格式出错")
+				c.JSON(http.StatusOK,gin.H{
+					"message":"该任务的权限存储信息格式出错",
+					"errorCode":-1,
+					"data":"该任务的权限存储信息格式出错",
+				})
+				return
+			}
+		}
+
+	}else {
+		permsInfoDB := (*perms)[0].PermInfos
+		json.Unmarshal([]byte(permsInfoDB),&permList)
+	}
+	for _,m := range permList {
+		permInfo := m.(map[string]interface{})
+		if permInfo["status"].(float64) == 0 {
+			permFlag = false
+			break
+		}
+	}
+	//logs.Notice("当前确认情况，字符串和方法剩余："+fmt.Sprint(counts)+" ,权限是否全部确认："+fmt.Sprint(permFlag))
+	if counts == 0 && permFlag{
+		(*detect)[0].Status =1
+		err := dal.UpdateDetectModelNew((*detect)[0])
+		if err != nil {
+			logs.Error("任务确认状态更新失败！%v",err)
+			c.JSON(http.StatusOK, gin.H{
+				"message" : "任务确认状态更新失败！",
+				"errorCode" : -1,
+				"data" : "任务确认状态更新失败！",
+			})
+			return
+		}
+	}
+	logs.Info("confirm success +id :%d",t.Id)
+	c.JSON(http.StatusOK, gin.H{
+		"message" : "success",
+		"errorCode" : 0,
+		"data" : "success",
+	})
+	return
+}
