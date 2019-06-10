@@ -236,7 +236,9 @@ func UploadFile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "文件上传成功，请等待检测结果通知",
 		"errorCode": 0,
-		"data":      "文件上传成功，请等待检测结果通知",
+		"data":      map[string]interface{}{
+			"taskId": dbDetectModelId,
+		},
 	})
 }
 
@@ -421,105 +423,6 @@ func UpdateDetectInfos(c *gin.Context) {
 
 
 /**
-method解析,并写入数据库-------fj
-*/
-func methodAnalysis(method map[string]interface{}, detail *dal.DetectContentDetail) {
-	detail.SensiType = 1
-	detail.Status = 0
-
-	detail.KeyInfo = method["method_name"].(string)
-	detail.DescInfo = method["desc"].(string)
-	detail.ClassName = method["method_class_name"].(string)
-	call := method["call_location"].([]interface{})
-
-	callLocation := methodRmRepeat(call)
-	//for _,loc1 := range call {
-	//	//var loc MethodCallJson
-	//	loc := loc1.(map[string]interface{})
-	//	mapLoc,_ := json.Marshal(loc)
-	//	callLocation += string(mapLoc)+";"
-	//}
-	detail.CallLoc = callLocation
-
-	err := dal.InsertDetectDetail(*detail)
-	if err != nil {
-		//及时报警
-		message := "敏感method写入数据库失败，请解决;" + fmt.Sprint(err) + "\n敏感方法名：" + fmt.Sprint(detail.KeyInfo)
-		utils.LarkDingOneInner("fanjuan.xqp", message)
-	}
-	return
-}
-
-/**
-apk敏感方法内容去重--------fj
-*/
-func methodRmRepeat(callInfo []interface{}) string {
-	repeatMap := make(map[string]int)
-	result := ""
-	for _, info1 := range callInfo {
-		info := info1.(map[string]interface{})
-		var keystr string
-		keystr = info["class_name"].(string) + info["method_name"].(string) + fmt.Sprint(info["line_number"])
-		if v, ok := repeatMap[keystr]; !ok || (ok && v == 0) {
-			repeatMap[keystr] = 1
-			mapInfo, _ := json.Marshal(info)
-			result += string(mapInfo) + ";"
-		}
-	}
-	return result
-}
-
-/**
-str解析，并写入数据库--------fj
-*/
-func strAnalysis(str map[string]interface{}, detail *dal.DetectContentDetail) {
-	detail.SensiType = 2
-	detail.Status = 0
-
-	keys := str["keys"].([]interface{})
-	key := ""
-	for _, ks1 := range keys {
-		ks := ks1.(string)
-		key += ks + ";"
-	}
-	detail.KeyInfo = key
-	detail.DescInfo = str["desc"].(string)
-
-	callInfo := str["call_location"].([]interface{})
-	//敏感字段信息去重
-	call_location := strRmRepeat(callInfo)
-	detail.CallLoc = call_location
-
-	err := dal.InsertDetectDetail(*detail)
-	if err != nil {
-		//及时报警
-		message := "敏感str写入数据库失败，请解决;" + fmt.Sprint(err) + "\n敏感方法名：" + fmt.Sprint(key)
-		utils.LarkDingOneInner("fanjuan.xqp", message)
-	}
-	return
-
-}
-
-/**
-apk敏感字符串去重--------fj
-*/
-func strRmRepeat(callInfo []interface{}) string {
-	repeatMap := make(map[string]int)
-	result := ""
-	for _, info1 := range callInfo {
-		info := info1.(map[string]interface{})
-		var keystr string
-		keystr = info["class_name"].(string) + info["method_name"].(string) + info["key"].(string) + fmt.Sprint(info["line_number"])
-		if v, ok := repeatMap[keystr]; !ok || (ok && v == 0) {
-			repeatMap[keystr] = 1
-			mapInfo, _ := json.Marshal(info)
-			result += string(mapInfo) + ";"
-		}
-	}
-	return result
-}
-
-/**
  *lark消息定时提醒
  */
 func alertLarkMsgCron(ticker time.Ticker, receiver string, msg string, taskId string, toolId string) {
@@ -640,85 +543,6 @@ func ConfirmBinaryResult(c *gin.Context) {
 
 }
 
-/**
- *确认安卓二进制包检测结果，更新数据库，并判断是否停止lark消息--------fj
- */
-func ConfirmApkBinaryResult(c *gin.Context) {
-	type confirm struct {
-		TaskId int    `json:"taskId"`
-		Id     int    `json:"id"`
-		Status int    `json:"status"`
-		Remark string `json:"remark"`
-		ToolId int    `json:"toolId"`
-	}
-	param, _ := ioutil.ReadAll(c.Request.Body)
-	var t confirm
-	err := json.Unmarshal(param, &t)
-	if err != nil {
-		logs.Error("参数不合法 ，%v", err)
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "参数不合法！",
-			"errorCode": -1,
-			"data":      "参数不合法！",
-		})
-		return
-	}
-
-	//获取确认人信息
-	username, _ := c.Get("username")
-	var data map[string]string
-	data = make(map[string]string)
-	data["id"] = strconv.Itoa(t.Id)
-	data["confirmer"] = username.(string)
-	data["remark"] = t.Remark
-	data["status"] = strconv.Itoa(t.Status)
-	flag := dal.ConfirmApkBinaryResultNew(data)
-	if !flag {
-		logs.Error("二进制检测内容确认失败")
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "二进制检测内容确认失败！",
-			"errorCode": -1,
-			"data":      "二进制检测内容确认失败！",
-		})
-		return
-	}
-
-	//改变任务确认状态
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": t.TaskId,
-	})
-	if detect == nil {
-		logs.Error("未查询到该taskid对应的检测任务，%v", t.TaskId)
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "未查询到该taskid对应的检测任务",
-			"errorCode": -2,
-			"data":      "未查询到该taskid对应的检测任务",
-		})
-		return
-	}
-	condition := "deleted_at IS NULL and task_id='" + strconv.Itoa(t.TaskId) + "' and tool_id='" + strconv.Itoa(t.ToolId) + "' and status= 0"
-	counts := dal.QueryUnConfirmDetectContent(condition)
-	if counts == 0 {
-		(*detect)[0].Status = 1
-		err := dal.UpdateDetectModelNew((*detect)[0])
-		if err != nil {
-			logs.Error("任务确认状态更新失败！%v", err)
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "任务确认状态更新失败！",
-				"errorCode": -1,
-				"data":      "任务确认状态更新失败！",
-			})
-			return
-		}
-	}
-	logs.Info("confirm success +id :%s", t.Id)
-	c.JSON(http.StatusOK, gin.H{
-		"message":   "success",
-		"errorCode": 0,
-		"data":      "success",
-	})
-	return
-}
 
 /**
  *将安装包上传至tos
