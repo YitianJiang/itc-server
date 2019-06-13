@@ -419,7 +419,12 @@ func UpdateDetectInfos(c *gin.Context) {
 	//给群ID对应群发送消息
 	toGroupID := (*detect)[0].ToGroup
 	if toGroupID != "" {
-		utils.LarkGroup(message, toGroupID)
+		group := strings.Replace(toGroupID, "，", ",", -1) //中文逗号切换成英文逗号
+		groupArr := strings.Split(group, ",")
+		for _, group_id := range groupArr{
+			to_lark_group := strings.Trim(group_id, " ")
+			utils.LarkGroup(message, to_lark_group)
+		}
 	}
 
 	if config != nil {
