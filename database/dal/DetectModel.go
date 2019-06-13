@@ -14,16 +14,17 @@ import (
 //二进制包检测任务
 type DetectStruct struct {
 	gorm.Model
-	Creator         string `json:"creator"`
-	ToLarker        string `json:"toLarker"`
-	Platform        int    `json:"platform"`
-	AppName         string `json:"appName"`
-	AppVersion      string `json:"appVersion"`
-	AppId           string `json:"appId"`
-	CheckContent    string `json:"checkContent"`
-	SelfCheckStatus int    `json:"selfCheckStatus"` //0-自查未完成；1-自查完成
-	TosUrl          string `json:"tosUrl"`
-	Status          int    `json:"status"` //0---未完全确认；1---已完全确认
+	Creator         string `gorm:"column:creator"                json:"creator"`
+	ToLarker        string `gorm:"column:to_larker"              json:"toLarker"`
+	ToGroup         string `gorm:"column:to_group"               json:"toGroup"`
+	Platform        int    `gorm:"column:platform"               json:"platform"`
+	AppName         string `gorm:"column:app_name"               json:"appName"`
+	AppVersion      string `gorm:"column:app_version"            json:"appVersion"`
+	AppId           string `gorm:"column:app_id"                 json:"appId"`
+	CheckContent    string `gorm:"column:check_content"          json:"checkContent"`
+	SelfCheckStatus int    `gorm:"column:self_check_status"      json:"selfCheckStatus"` //0-自查未完成；1-自查完成
+	TosUrl          string `gorm:"column:tos_url"                json:"tosUrl"`
+	Status          int    `gorm:"column:status"                 json:"status"` //0---未完全确认；1---已完全确认
 }
 type RecordTotal struct {
 	Total uint
@@ -153,26 +154,27 @@ type ConfirmInfo struct {
 }
 
 type Permissions struct {
-	Id					uint 				`json:"id"`
-	PermId				int					`json:"permId"`
-	Key					string				`json:"key"`
-	Status				int					`json:"status"`
-	Remark				string 				`json:"remark"`
-	Confirmer			string				`json:"confirmer"`
-	OtherVersion 		string				`json:"otherVersion"`
-	Priority 			int					`json:"priority"`
-	Desc 				string				`json:"desc"`
+	Id           uint   `json:"id"`
+	PermId       int    `json:"permId"`
+	Key          string `json:"key"`
+	Status       int    `json:"status"`
+	Remark       string `json:"remark"`
+	Confirmer    string `json:"confirmer"`
+	OtherVersion string `json:"otherVersion"`
+	Priority     int    `json:"priority"`
+	Desc         string `json:"desc"`
 }
+
 /**
 安卓确认post结构
- */
+*/
 type PostConfirm struct {
-	TaskId  int 	`json:"taskId"`
-	Id  	int		`json:"id"`
-	Status  int 	`json:"status"`
-	Remark  string	`json:"remark"`
-	ToolId	int		`json:"toolId"`
-	Type 	int		`json:"type"`
+	TaskId int    `json:"taskId"`
+	Id     int    `json:"id"`
+	Status int    `json:"status"`
+	Remark string `json:"remark"`
+	ToolId int    `json:"toolId"`
+	Type   int    `json:"type"`
 }
 
 //二进制包检测内容，json内容处理区分后
