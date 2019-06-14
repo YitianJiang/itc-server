@@ -901,7 +901,7 @@ func GetToken(c *gin.Context) {
  * 检测服务报警接口
  */
 func Alram(c *gin.Context) {
-	message := c.DefaultPostForm("errorMsg", "")
+	message := c.Request.FormValue("errorMsg")
 	larkList := strings.Split("kanghuaisong,yinzhihong,fanjuan.xqp", ",")
 	for _, creator := range larkList {
 		utils.LarkDingOneInner(creator, "检测服务异常，请立即关注！" + message)
