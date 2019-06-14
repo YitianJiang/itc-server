@@ -66,6 +66,7 @@ type DetectInfo struct {
 	Channel     string `json:"channel"`
 	Permissions string `json:"permissions"`
 	ToolId      int    `json:"toolId"`
+	SubIndex   			int					`json:"index"`
 }
 
 //敏感信息详情---fj新增
@@ -81,6 +82,7 @@ type DetectContentDetail struct {
 	DescInfo  string `json:"desc"`
 	CallLoc   string `json:"callLoc"`
 	ToolId    int    `json:"toolId"`
+	SubIndex   			int					`json:"index"`
 	//OtherVersion		string			`json:"otherVersion"`
 	//Priority 			int				`json:"priority"`//0--常规，1--注意，2--危险，3--非常危险，4--未定义
 }
@@ -101,6 +103,7 @@ type IgnoreInfoStruct struct {
  *安卓检测数据查询返回结构
  */
 type DetectQueryStruct struct {
+	Index 		  int 			`json:"index"`
 	ApkName       string        `json:"apkName"`
 	Version       string        `json:"version"`
 	Channel       string        `json:"channel"`
@@ -147,7 +150,7 @@ type StrCallJson struct {
 type ConfirmInfo struct {
 	//Id					uint 				`json:"id"`
 	Key string `json:"key"`
-	//Status				int					`json:"status"`
+	Status				int					`json:"status"`
 	Remark       string `json:"remark"`
 	Confirmer    string `json:"confirmer"`
 	OtherVersion string `json:"otherVersion"`
@@ -169,12 +172,13 @@ type Permissions struct {
 安卓确认post结构
 */
 type PostConfirm struct {
-	TaskId int    `json:"taskId"`
-	Id     int    `json:"id"`
-	Status int    `json:"status"`
-	Remark string `json:"remark"`
-	ToolId int    `json:"toolId"`
-	Type   int    `json:"type"`
+	TaskId  int 	`json:"taskId"`
+	Id  	int		`json:"id"`
+	Status  int 	`json:"status"`
+	Remark  string	`json:"remark"`
+	ToolId	int		`json:"toolId"`
+	Type 	int		`json:"type"`
+	Index   int 	`json:"index"`
 }
 
 //二进制包检测内容，json内容处理区分后
@@ -605,6 +609,28 @@ func QueryDetectInfo(condition string) (*DetectInfo, error) {
 	return &detectInfo, nil
 
 }
+/**
+	兼容.aab查询内容
+ */
+func QueryDetectInfo_2(condition string) (*[]DetectInfo, error) {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return nil, err
+	}
+	defer connection.Close()
+
+	db := connection.Table(DetectInfo{}.TableName()).LogMode(_const.DB_LOG_MODE)
+
+	var detectInfo []DetectInfo
+	if err1 := db.Where(condition).Find(&detectInfo).Error; err1 != nil {
+		logs.Error("query detectInfo failed! %v", err)
+		return nil, err1
+	}
+	return &detectInfo, nil
+
+}
+
 
 /**
 查询apk敏感信息----fj
