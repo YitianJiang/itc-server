@@ -16,16 +16,31 @@ import (
 
 //0--一般，1--低危，2--中危，3--高危
 var iosPrivacyPriority = map[string]int{
-	"NSContactsUsageDescription": 3, //通讯录
-	"NSLocationUsageDescription": 1, //位置
-	"NSMicrophoneUsageDescription":3, //麦克风
-	"NSPhotoLibraryUsageDescription": 2, //相册
-	"NSPhotoLibraryAddUsageDescription": 2, //保存到相册
-	"NSLocationAlwaysUsageDescription" : 1, //始终访问位置
-	"NSCameraUsageDescription": 2, //相机
+	"NSContactsUsageDescription":          3, //通讯录
+	"NSLocationUsageDescription":          1, //位置
+	"NSMicrophoneUsageDescription":        3, //麦克风
+	"NSPhotoLibraryUsageDescription":      2, //相册
+	"NSPhotoLibraryAddUsageDescription":   2, //保存到相册
+	"NSLocationAlwaysUsageDescription":    1, //始终访问位置
+	"NSCameraUsageDescription":            2, //相机
 	"NSLocationWhenInUseUsageDescription": 1, //在使用期间访问位置
-	"NSAppleMusicUsageDescription": 3, //媒体资料库
+	"NSAppleMusicUsageDescription":        3, //媒体资料库
 }
+
+//ios检测结果黑名单描述说明
+var iosBlackListDescription = map[string]interface{}{
+	"alipay":           map[string]interface{}{"blackType": "支付", "Description": "苹果对支付的严格，控制，需要参考相关苹果的政策确认是否符合支付条件"},
+	"jspatch":          map[string]interface{}{"blackType": "热更新", "Description": "苹果平台不愿意支持热更新"},
+	"JPEngine":         map[string]interface{}{"blackType": "热更新", "Description": "苹果平台不愿意支持热更新"},
+	"JPLoader":         map[string]interface{}{"blackType": "热更新", "Description": "苹果平台不愿意支持热更新"},
+	"PayPal":           map[string]interface{}{"blackType": "支付", "Description": "苹果对支付的严格，控制，需要参考相关苹果的政策确认是否符合支付条件"},
+	"PayPalpay":        map[string]interface{}{"blackType": "支付", "Description": "苹果对支付的严格，控制，需要参考相关苹果的政策确认是否符合支付条件"},
+	"AVAudioRecorder":  map[string]interface{}{"blackType": "录音", "Description": "隐私权限问题，需要确认是否符合调用场景"},
+	"AVAudioSession":   map[string]interface{}{"blackType": "音频", "Description": "隐私权限问题，需要确认是否符合调用场景"},
+	"AVCaptureSession": map[string]interface{}{"blackType": "视频", "Description": "隐私权限问题，需要确认是否符合调用场景"},
+	"items-searvices":  map[string]interface{}{"blackType": "协议", "Description": "通过苹果的items-searvices协议，可以进行ipa的安装，存在风险，苹果对渠道的控制"},
+}
+
 /**
  *iOS 检测结果jsonContent处理
  */
@@ -132,9 +147,9 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 			privacyMap := make(map[string]interface{})
 			privacyMap["permission"] = e
 			privacyMap["permission_C"] = c
-			if priority, ok := iosPrivacyPriority[e]; ok{
+			if priority, ok := iosPrivacyPriority[e]; ok {
 				privacyMap["priority"] = priority
-			}else{
+			} else {
 				privacyMap["priority"] = 3
 			}
 			//找到权限确认信息
@@ -282,54 +297,67 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 			var lowRisk []interface{}
 			var notice []interface{}
 			var sortedPrivacy []interface{}
-			//兼容处理
-			if k == "privacy"{
-				for _, pp := range v.([]interface{}){
+			//权限兼容处理
+			if k == "privacy" {
+				for _, pp := range v.([]interface{}) {
 					//添加权限优先级
-					if _, ok := pp.(map[string]interface{})["priority"]; !ok{
-						if priority, ok := iosPrivacyPriority[pp.(map[string]interface{})["permission"].(string)]; ok{
+					if _, ok := pp.(map[string]interface{})["priority"]; !ok {
+						if priority, ok := iosPrivacyPriority[pp.(map[string]interface{})["permission"].(string)]; ok {
 							pp.(map[string]interface{})["priority"] = priority
-						}else{
+						} else {
 							pp.(map[string]interface{})["priority"] = 3
 						}
 					}
 					//添加权限确认信息
-					if pp.(map[string]interface{})["confirmer"] != ""{
+					if pp.(map[string]interface{})["confirmer"] != "" {
 						pp.(map[string]interface{})["status"] = 1
-					}else{
+					} else {
 						pp.(map[string]interface{})["status"] = 0
 					}
 					//按照优先级排列
 					temPriority := pp.(map[string]interface{})["priority"]
-					switch temPriority.(type){
+					switch temPriority.(type) {
 					case int:
 						temPriority = pp.(map[string]interface{})["priority"].(int)
 					case float64:
 						temPriority = int(pp.(map[string]interface{})["priority"].(float64))
 					}
-					if temPriority == 3{
+					if temPriority == 3 {
 						highRisk = append(highRisk, pp)
-					}else if temPriority == 2{
+					} else if temPriority == 2 {
 						middleRisk = append(middleRisk, pp)
-					}else if temPriority == 1{
+					} else if temPriority == 1 {
 						lowRisk = append(lowRisk, pp)
-					}else{
+					} else {
 						notice = append(notice, pp)
 					}
 				}
-				for _, high := range highRisk{
+				for _, high := range highRisk {
 					sortedPrivacy = append(sortedPrivacy, high)
 				}
-				for _, middle := range middleRisk{
+				for _, middle := range middleRisk {
 					sortedPrivacy = append(sortedPrivacy, middle)
 				}
-				for _, low := range middleRisk{
+				for _, low := range middleRisk {
 					sortedPrivacy = append(sortedPrivacy, low)
 				}
-				for _, noti := range notice{
+				for _, noti := range notice {
 					sortedPrivacy = append(sortedPrivacy, noti)
 				}
 				v = sortedPrivacy
+			}
+			//黑名单增加描述
+			var addDescriptionBlackList []interface{}
+			if k == "blackList" {
+				for _, black := range v.([]interface{}) {
+					blackName := black.(map[string]interface{})["name"]
+					if blackDescription, ok := iosBlackListDescription[blackName.(string)]; ok {
+						black.(map[string]interface{})["blackType"] = blackDescription.(map[string]interface{})["blackType"]
+						black.(map[string]interface{})["Description"] = blackDescription.(map[string]interface{})["Description"]
+					}
+					addDescriptionBlackList = append(addDescriptionBlackList, black)
+				}
+				v = addDescriptionBlackList
 			}
 			data[k] = v
 		}
