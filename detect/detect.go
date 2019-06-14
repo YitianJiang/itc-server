@@ -28,6 +28,8 @@ import (
 const (
 	DETECT_URL_DEV = "10.2.209.202:9527"
 	DETECT_URL_PRO = "10.2.9.226:9527"
+	//test----fj
+	Local_URL_PRO = "10.2.221.213:9527"
 
 	//目前apk检测接口
 	//TEST_DETECT_URL = "http://10.2.9.226:9527/apk_post/v2"
@@ -115,6 +117,7 @@ func UploadFile(c *gin.Context) {
 			url = "http://" + DETECT_URL_PRO + "/apk_post"
 		} else {
 			//新服务url
+			//url = "http://"+Local_URL_PRO +"/apk_post/v2"
 			url = "http://" + DETECT_URL_PRO + "/apk_post/v2"
 		}
 		//url = "http://" + DETECT_URL_PRO + "/apk_post"
@@ -294,7 +297,7 @@ func UpdateDetectInfos(c *gin.Context) {
 			mapInfo := make(map[string]int)
 			mapInfo["taskId"], _ = strconv.Atoi(taskId)
 			mapInfo["toolId"], _ = strconv.Atoi(toolId)
-			JsonInfoAnalysis(jsonContent, mapInfo)
+			ApkJsonAnalysis(jsonContent, mapInfo)
 		} else {
 			var detectContent dal.DetectContent
 			detectContent.TaskId, _ = strconv.Atoi(taskId)
@@ -854,152 +857,6 @@ func QueryTaskBinaryCheckContent(c *gin.Context) {
 		"message":   "success",
 		"errorCode": 0,
 		"data":      (*content)[0],
-	})
-	return
-}
-
-/**
- *安卓查询二进制检查结果信息-------fj
- */
-func QueryTaskApkBinaryCheckContent(c *gin.Context) {
-	taskId := c.DefaultQuery("taskId", "")
-	if taskId == "" {
-		logs.Error("缺少taskId参数")
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "缺少taskId参数",
-			"errorCode": -1,
-			"data":      "缺少taskId参数",
-		})
-		return
-	}
-	toolId := c.DefaultQuery("toolId", "")
-	if toolId == "" {
-		logs.Error("缺少toolId参数")
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "缺少toolId参数",
-			"errorCode": -2,
-			"data":      "缺少toolId参数",
-		})
-		return
-	}
-	//切换到旧版本
-	//if toolId != "6"{
-	//	QueryTaskBinaryCheckContent(c)
-	//	return
-	//}
-	condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
-
-	content, err := dal.QueryDetectInfo(condition)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "查询检测结果信息数据库操作失败,请确认查询条件",
-			"errorCode": -1,
-			"data":      err,
-		})
-		return
-	}
-
-	details, err := dal.QueryDetectContentDetail(condition)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "查询检测结果详情数据库操作失败,请确认查询条件",
-			"errorCode": -1,
-			"data":      err,
-		})
-		return
-	}
-
-	if content == nil || details == nil || len(*details) == 0 {
-		logs.Info("未查询到对应任务的检测内容")
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "未查询到对应任务的检测内容",
-			"errorCode": -3,
-			"data":      "未查询到对应任务的检测内容",
-		})
-		return
-	}
-
-	var queryResult dal.DetectQueryStruct
-	//queryResult.TaskId = (*content).TaskId
-	//queryResult.ToolId = (*content).ToolId
-	queryResult.Channel = (*content).Channel
-	queryResult.ApkName = (*content).ApkName
-	queryResult.Version = (*content).Version
-
-	permission := ""
-	perms := strings.Split((*content).Permissions, ";")
-	for _, perm := range perms[0:(len(perms) - 1)] {
-		permission += perm + "\n"
-	}
-	queryResult.Permissions = permission
-
-	methods := make([]dal.SMethod, 0)
-	strs := make([]dal.SStr, 0)
-
-	for _, detail := range *details {
-		if detail.SensiType == 1 {
-			var method dal.SMethod
-			method.ClassName = detail.ClassName
-			method.Desc = detail.DescInfo
-			method.Status = detail.Status
-			method.Id = detail.ID
-			method.Confirmer = detail.Confirmer
-			method.Remark = detail.Remark
-			method.MethodName = detail.KeyInfo
-			callLocs := strings.Split(detail.CallLoc, ";")
-			callLoc := make([]dal.MethodCallJson, 0)
-			for _, call_loc := range callLocs[0:(len(callLocs) - 1)] {
-				var call_loc_json dal.MethodCallJson
-				err := json.Unmarshal([]byte(call_loc), &call_loc_json)
-				if err != nil {
-					logs.Error("callLoc数据不符合要求，%v===========%s", err, call_loc)
-					c.JSON(http.StatusOK, gin.H{
-						"message":   "callLoc数据不符合要求",
-						"errorCode": 0,
-						"data":      "callLoc数据不符合要求",
-					})
-					return
-				}
-				callLoc = append(callLoc, call_loc_json)
-			}
-			method.CallLoc = callLoc
-			methods = append(methods, method)
-		} else {
-			var str dal.SStr
-			str.Keys = detail.KeyInfo
-			str.Remark = detail.Remark
-			str.Confirmer = detail.Confirmer
-			str.Status = detail.Status
-			str.Desc = detail.DescInfo
-			str.Id = detail.ID
-			callLocs := strings.Split(detail.CallLoc, ";")
-			callLoc := make([]dal.StrCallJson, 0)
-			for _, call_loc := range callLocs[0:(len(callLocs) - 1)] {
-				var callLoc_json dal.StrCallJson
-				err := json.Unmarshal([]byte(call_loc), &callLoc_json)
-				if err != nil {
-					logs.Error("callLoc数据不符合要求，%v========%s", err, call_loc)
-					c.JSON(http.StatusOK, gin.H{
-						"message":   "callLoc数据不符合要求",
-						"errorCode": 0,
-						"data":      "callLoc数据不符合要求",
-					})
-					return
-				}
-				callLoc = append(callLoc, callLoc_json)
-			}
-			str.CallLoc = callLoc
-			strs = append(strs, str)
-		}
-	}
-	queryResult.SMethods = methods
-	queryResult.SStrs = strs
-
-	logs.Info("query detect result success!")
-	c.JSON(http.StatusOK, gin.H{
-		"message":   "success",
-		"errorCode": 0,
-		"data":      queryResult,
 	})
 	return
 }
