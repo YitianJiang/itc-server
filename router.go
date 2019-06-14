@@ -28,7 +28,8 @@ func InitRouter(r *ginex.Engine) {
 	//更新被拒案例
 	api.POST("/casemanage/updateRejCase", casemanage.EditRejCaseofSolution)
 
-
+	//检测服务检测异常报警接口
+	api.POST("/check_server/alarm", detect.Alram)
 
 	api.Use(middleware.JWTCheck())
 	{
