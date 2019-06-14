@@ -349,7 +349,9 @@ func UpdateDetectInfos(c *gin.Context) {
 		}
 		//iOS付费相关黑名单及时报警
 		if res && warnFlag {
-			tips := "Notice: " + (*detect)[0].AppName + " " + (*detect)[0].AppVersion + "IOS包完成二进制检测，检测黑名单中itms-services不为空，请及时关注！！！！\n"
+			tips := "Notice: " + (*detect)[0].AppName + " " + (*detect)[0].AppVersion + " iOS包完成二进制检测，检测黑名单中itms-services不为空，请及时关注！！！！\n"
+			larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + strconv.Itoa(toolId) + "&showItcDetail=1&itcTaskId=" +  strconv.Itoa(taskId)
+			tips += "地址链接：" + larkUrl
 			utils.LarkDingOneInner("zhangshuai.02", tips)
 			utils.LarkDingOneInner("gongrui", tips)
 			utils.LarkDingOneInner("kanghuaisong", tips)
