@@ -24,7 +24,7 @@ func ApkJsonAnalysis (info string,mapInfo map[string]int){
 	err_f := json.Unmarshal([]byte(info),&fisrtResult)
 	if err_f != nil {
 		logs.Error("二进制静态包检测返回信息格式错误！")
-		message := "二进制静态包检测返回信息格式错误，请解决;"+fmt.Sprint(err_f)
+		message := "taskId:"+fmt.Sprint(mapInfo["taskId"])+",二进制静态包检测返回信息格式错误，请解决;"+fmt.Sprint(err_f)
 		utils.LarkDingOneInner("fanjuan.xqp",message)
 		return
 	}
@@ -89,7 +89,7 @@ func ApkJsonAnalysis (info string,mapInfo map[string]int){
 		err1 := dal.InsertDetectDetailBatch(&allMethods)
 		if err1 != nil {
 			//及时报警
-			message := "敏感method写入数据库失败，请解决;"+fmt.Sprint(err)
+			message := "taskId:"+fmt.Sprint(mapInfo["taskId"])+",敏感method写入数据库失败，请解决;"+fmt.Sprint(err)
 			utils.LarkDingOneInner("fanjuan.xqp", message)
 		}
 
@@ -105,7 +105,7 @@ func ApkJsonAnalysis (info string,mapInfo map[string]int){
 		err2 := dal.InsertDetectDetailBatch(&allStrs)
 		if err2 != nil {
 			//及时报警
-			message := "敏感str写入数据库失败，请解决;"+fmt.Sprint(err)
+			message := "taskId:"+fmt.Sprint(mapInfo["taskId"])+",敏感str写入数据库失败，请解决;"+fmt.Sprint(err)
 			utils.LarkDingOneInner("fanjuan.xqp",message)
 		}
 	}
@@ -158,7 +158,7 @@ func JsonInfoAnalysis(info string,mapInfo map[string]int){
 
 	if err_f != nil {
 		logs.Error("二进制静态包检测返回信息格式错误！")
-		message := "二进制静态包检测返回信息格式错误，请解决;"+fmt.Sprint(err_f)
+		message := "taskId:"+fmt.Sprint(mapInfo["taskId"])+",二进制静态包检测返回信息格式错误，请解决;"+fmt.Sprint(err_f)
 		utils.LarkDingOneInner("fanjuan.xqp",message)
 		return
 	}
@@ -215,7 +215,7 @@ func JsonInfoAnalysis(info string,mapInfo map[string]int){
 	err1 := dal.InsertDetectDetailBatch(&allMethods)
 	if err1 != nil {
 		//及时报警
-		message := "敏感method写入数据库失败，请解决;"+fmt.Sprint(err)
+		message := "taskId:"+fmt.Sprint(mapInfo["taskId"])+",敏感method写入数据库失败，请解决;"+fmt.Sprint(err)
 		utils.LarkDingOneInner("fanjuan.xqp", message)
 	}
 
@@ -230,7 +230,7 @@ func JsonInfoAnalysis(info string,mapInfo map[string]int){
 	err2 := dal.InsertDetectDetailBatch(&allStrs)
 	if err2 != nil {
 		//及时报警
-		message := "敏感str写入数据库失败，请解决;"+fmt.Sprint(err)
+		message := "taskId:"+fmt.Sprint(mapInfo["taskId"])+",敏感str写入数据库失败，请解决;"+fmt.Sprint(err)
 		utils.LarkDingOneInner("fanjuan.xqp",message)
 	}
 
@@ -376,7 +376,7 @@ func AppInfoAnalysis(info map[string]interface{},detectInfo *dal.DetectInfo,inde
 			if err != nil {
 				logs.Error("update回调时新增权限失败，%v",err)
 				//及时报警
-				utils.LarkDingOneInner("fanjuan.xqp","update回调新增权限失败")
+				utils.LarkDingOneInner("fanjuan.xqp","taskId:"+fmt.Sprint(taskId)+",update回调新增权限失败")
 				return
 			}else {
 				fhflag = true
@@ -427,9 +427,9 @@ func AppInfoAnalysis(info map[string]interface{},detectInfo *dal.DetectInfo,inde
 	if len(first_history)>0 {
 		errB := dal.BatchInsertPermHistory(&first_history)
 		if errB != nil {
-			logs.Error("插入权限第一次引入历史失败")
+			logs.Error("taskId:"+fmt.Sprint(taskId)+",插入权限第一次引入历史失败")
 			//及时报警
-			utils.LarkDingOneInner("fanjuan.xqp","插入权限第一次引入历史失败")
+			utils.LarkDingOneInner("fanjuan.xqp","taskId:"+fmt.Sprint(taskId)+",插入权限第一次引入历史失败")
 		}
 	}
 	//lark通知创建人完善权限信息-----只发一条消息
@@ -461,7 +461,7 @@ func AppInfoAnalysis(info map[string]interface{},detectInfo *dal.DetectInfo,inde
 	//---------------------------失败时处理方式要再仔细看一下
 	err1 := dal.InsertPermAppRelation(relationship)
 	if err1 != nil {
-		utils.LarkDingOneInner("fanjuan.xqp","新增权限App关系失败！appID="+(*detect)[0].AppId)
+		utils.LarkDingOneInner("fanjuan.xqp","新增权限App关系失败！taskId:"+fmt.Sprint(taskId)+",appID="+(*detect)[0].AppId)
 	}
 	detectInfo.Permissions = perStr
 	detectInfo.SubIndex = realIndex
@@ -469,7 +469,7 @@ func AppInfoAnalysis(info map[string]interface{},detectInfo *dal.DetectInfo,inde
 	err := dal.InsertDetectInfo(*detectInfo)
 	if err != nil {
 		//及时报警
-		message := "appInfo写入数据库失败，请解决;"+fmt.Sprint(err)
+		message := "taskId:"+fmt.Sprint(taskId)+",appInfo写入数据库失败，请解决;"+fmt.Sprint(err)
 		utils.LarkDingOneInner("fanjuan.xqp", message)
 	}
 	return
