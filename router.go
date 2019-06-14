@@ -111,6 +111,10 @@ func InitRouter(r *ginex.Engine) {
 		//查询权限详情
 		api.GET("/perm/getpermDetails",detect.GetPermDetails)
 
+		//兼容.aab检测结果的接口,测试用
+		api.GET("/perm/getTaskInfo",detect.QueryTaskApkBinaryCheckContentWithIgnorance_3)
+		api.POST("/detect/confirmAll",detect.ConfirmApkBinaryResultv_5)
+
 
 	}
 }

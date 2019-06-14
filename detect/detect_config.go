@@ -20,6 +20,8 @@ var permToModify = map[string]int {
 	"kanghuaisong":1,
 	"zhangshuai.02":1,
 	"lirensheng":1,
+	//测试加入
+	"fanjuan.xqp":1,
 }
 
 
@@ -50,7 +52,7 @@ func AddDetectConfig(c *gin.Context)  {
 		})
 		return
 	}
-	if t.KeyInfo == "" || t.Priority == nil || t.Platform == nil || t.DescInfo == "" {
+	if t.KeyInfo == "" || t.Priority == nil || t.Platform == nil || t.DescInfo == "" || t.Type == nil{
 		logs.Error("缺少关键参数！")
 		c.JSON(http.StatusOK,gin.H{
 			"message":"缺少关键参数！",
@@ -66,7 +68,7 @@ func AddDetectConfig(c *gin.Context)  {
 	data.DetectType = t.DetectType
 	data.Priority = int(t.Priority.(float64))
 	data.Reference = t.Reference
-	//data.Type = t.Type
+	data.CheckType = int(t.Type.(float64))
 	data.Suggestion = t.Suggestion
 	data.Platform = int(t.Platform.(float64))
 
@@ -75,6 +77,7 @@ func AddDetectConfig(c *gin.Context)  {
 	queryResult := dal.QueryDetectConfig(map[string]interface{}{
 		"key_info":data.KeyInfo,
 		"platform":data.Platform,
+		"check_type":data.CheckType,
 	})
 	if queryResult != nil && len(*queryResult) != 0{
 		logs.Error("平台已存在该权限！")
@@ -110,6 +113,7 @@ func QueryDectecConfig(c *gin.Context)  {
 		Page 			int			`json:"page"`
 		Info    		string		`json:"info"`
 		Platform		interface{}	`json:"platform"`
+		Type 			interface{} `json:"type"`
 	}
 	var t queryStruct
 	param,_ := ioutil.ReadAll(c.Request.Body)
@@ -144,6 +148,10 @@ func QueryDectecConfig(c *gin.Context)  {
 	if t.Platform != nil {
 		condition += " and platform ='"+fmt.Sprint(t.Platform)+"'"
 	}
+	if t.Type != nil {
+		condition += " and check_type = '"+fmt.Sprint(t.Type)+"'"
+	}
+
 	result,count,errQ := dal.QueryDetectConfigList(condition,pageInfo)
 	if errQ != nil {
 		c.JSON(http.StatusOK,gin.H{
@@ -160,7 +168,7 @@ func QueryDectecConfig(c *gin.Context)  {
 			"message":"未查询到相关权限信息！",
 			"errorCode":0,
 			"data":map[string]interface{}{
-				"count":0,
+				"count":count,
 				"permList":permList,
 			},
 		})
@@ -177,6 +185,7 @@ func QueryDectecConfig(c *gin.Context)  {
 		perm.Ability = re.Ability
 		perm.DescInfo = re.DescInfo
 		perm.Platform = re.Platform
+		perm.Type = re.CheckType
 		permList = append(permList,perm)
 	}
 	realResult["permList"] = permList

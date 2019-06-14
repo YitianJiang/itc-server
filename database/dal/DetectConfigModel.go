@@ -15,7 +15,7 @@ import (
 type DetectConfigStruct struct {
 	gorm.Model
 	KeyInfo			string			`json:"key"`
-	//Type			int				`json:"type"` 	//1--权限，2--api，3--action，4--monitor
+	CheckType		int				`json:"type"` 	//0--权限，1--api
 	Priority		int				`json:"priority"`//0--一般，1--低危，2--中危，3--高危
 	Ability			string			`json:"ability"`
 	DescInfo 		string			`json:"desc"`
@@ -39,15 +39,16 @@ type DetectConfigListInfo struct {
 	DescInfo 		string			`json:"desc"`
 	Creator 		string			`json:"creator"`
 	Platform		int				`json:"platform"`//0--安卓，1--iOS
+	Type 			int				`json:"type"`
 }
 
 /**
-	新增权限结构
+	新增/修改权限数据结构
  */
 type DetectConfigInfo struct {
 	ID 				int			`json:"id"`
 	KeyInfo 		string		`json:"key"`
-	//Type 			int 		`json:"type"`
+	Type 			interface{}		`json:"type"`
 	Priority    	interface{}			 `json:"priority"`
 	Ability			string		`json:"ability"`
 	DescInfo    	string		`json:"desc"`
@@ -78,6 +79,7 @@ type PermAppRelation struct {
 	AppId				int					`json:"appId"`
 	AppVersion			string				`json:"appVersion"`
 	PermInfos			string				`json:"permInfos"`
+	SubIndex   			int					`json:"index"`
 }
 /**
 	根据权限查询返回数据结构
@@ -157,20 +159,20 @@ func QueryDetectConfigList (condition string,pageInfo map[string]int) (*[]Detect
 	defer connection.Close()
 	db := connection.Table(DetectConfigStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	//db.Begin()
+	var condition1 = "deleted_at IS NULL and "+ condition
+	var total TotalStruct
+	if err := db.Select("count(id) as total").Where(condition1).Find(&total).Error; err != nil {
+		logs.Error("query detectConfig counts failed,%v", err)
+		//db.Rollback()
+		return nil,0,err
+	}
 	var result []DetectConfigStruct
 	pageSize := pageInfo["pageSize"]
 	page := pageInfo["page"]
 	if err := db.Where(condition).Offset((page-1)*pageSize).Limit(pageSize).Order("id DESC").Find(&result).Error; err!= nil {
 		logs.Error("query detectConfig failed,%v", err)
 		//db.Rollback()
-		return nil,0,err
-	}
-	condition = "deleted_at IS NULL and "+ condition
-	var total TotalStruct
-	if err := db.Select("count(id) as total").Where(condition).Find(&total).Error; err != nil {
-		logs.Error("query detectConfig counts failed,%v", err)
-		//db.Rollback()
-		return nil,0,err
+		return nil,total.Total,err
 	}
 	//db.Commit()
 	return &result, total.Total,nil
