@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -372,6 +373,21 @@ func DeleteDetectConfig(c *gin.Context)  {
 	return
 }
 
+
+
+
+type PermQuerySlice [] map[string]interface{}
+
+func (a PermQuerySlice) Len() int {         // 重写 Len() 方法
+	return len(a)
+}
+func (a PermQuerySlice) Swap(i, j int){     // 重写 Swap() 方法
+	a[i], a[j] = a[j], a[i]
+}
+func (a PermQuerySlice) Less(i, j int) bool {    // 重写 Less() 方法， 从大到小排序
+	return a[j]["priority"].(int)< a[i]["priority"].(int)
+}
+
 /**
 	根据app信息查询权限信息
  */
@@ -393,57 +409,92 @@ func QueryPermissionsWithApp(c *gin.Context)  {
 		})
 		return
 	}
-
-	queryResult, err1 := dal.QueryPermAppRelation(map[string]interface{}{
-		"app_id":t.AppId,
-		"app_version":t.AppVersion,
-	})
-	if err1 != nil || queryResult == nil || len(*queryResult) == 0 {
-		logs.Error("未查询到相关信息")
+	//查询某一app下的权限信息
+	if t.AppVersion == "" {
+		sql := "SELECT h.app_version,c.id AS perm_id,c.key_info,c.ability,c.priority FROM `tb_detect_config` c, `tb_perm_history` h WHERE h.status = 0 AND c.id = h.perm_id AND h.app_id = '"+fmt.Sprint(t.AppId)+"'"
+		result := dal.QueryDetectConfigWithSql(sql)
+		if result == nil || len(*result) == 0{
+			logs.Error("没有查询到App的权限信息")
+			c.JSON(http.StatusOK,gin.H{
+				"errorCode":-1,
+				"message":"没有查询到App的权限信息",
+				"data":"没有查询到App的权限信息",
+			})
+			return
+		}
+		realResult := make([]map[string]interface{},0)
+		for _,one := range (*result) {
+			info := map[string]interface{}{
+				"permId" : one.PermId,
+				"key":one.KeyInfo,
+				"priority":one.Priority,
+				"ability":one.Ability,
+				"firstVersion":one.AppVersion,
+			}
+			realResult = append(realResult,info)
+		}
+		sort.Sort(PermQuerySlice(realResult))
+		logs.Info("query permission with appId success!")
 		c.JSON(http.StatusOK,gin.H{
-			"message":"未查询到相关信息！",
-			"errorCode":-1,
-			"data":"未查询到相关信息！",
+			"message":"success",
+			"errorCode": 0,
+			"data": realResult,
 		})
 		return
-	}
-	permInfo := []byte((*queryResult)[len(*queryResult)-1].PermInfos)
-	var infos []interface{}
-	if err := json.Unmarshal(permInfo,&infos); err != nil {
-		logs.Error("该app下权限信息存储格式出错,%v",err)
-		c.JSON(http.StatusOK,gin.H{
-			"message":"该app下权限信息存储格式出错！",
-			"errorCode":-1,
-			"data":"该app下权限信息存储格式出错！",
+	}else{
+		queryResult, err1 := dal.QueryPermAppRelation(map[string]interface{}{
+			"app_id":t.AppId,
+			"app_version":t.AppVersion,
 		})
-		return
-	}
-	allPermList := GetPermList()
-	result := make([]map[string]interface{},0)
-	for _,info := range infos {
-		vInfo := info.(map[string]interface{})
-		//if vInfo["state"].(float64) == 0 {
+		if err1 != nil || queryResult == nil || len(*queryResult) == 0 {
+			logs.Error("未查询到相关信息")
+			c.JSON(http.StatusOK,gin.H{
+				"message":"未查询到相关信息！",
+				"errorCode":-1,
+				"data":"未查询到相关信息！",
+			})
+			return
+		}
+		permInfo := []byte((*queryResult)[len(*queryResult)-1].PermInfos)
+		var infos []interface{}
+		if err := json.Unmarshal(permInfo,&infos); err != nil {
+			logs.Error("该app下权限信息存储格式出错,%v",err)
+			c.JSON(http.StatusOK,gin.H{
+				"message":"该app下权限信息存储格式出错！",
+				"errorCode":-1,
+				"data":"该app下权限信息存储格式出错！",
+			})
+			return
+		}
+		allPermList := GetPermList()
+		result := make([]map[string]interface{},0)
+		for _,info := range infos {
+			vInfo := info.(map[string]interface{})
+			//if vInfo["state"].(float64) == 0 {
 			if v,ok := allPermList[int(vInfo["perm_id"].(float64))];ok {
 				info := v.(map[string]interface{})
 				vInfo["priority"] = info["priority"].(int)
 				vInfo["ability"] = info["ability"].(string)
 			}
-		//}
-		subInfo := map[string]interface{}{
-			"permId" : vInfo["perm_id"],
-			"key":vInfo["key"],
-			"priority":vInfo["priority"],
-			"ability":vInfo["ability"],
-			"firstVersion":vInfo["first_version"],
+			//}
+			subInfo := map[string]interface{}{
+				"permId" : vInfo["perm_id"],
+				"key":vInfo["key"],
+				"priority":vInfo["priority"],
+				"ability":vInfo["ability"],
+				"firstVersion":vInfo["first_version"],
+			}
+			result = append(result,subInfo)
 		}
-		result = append(result,subInfo)
+		sort.Sort(PermQuerySlice(result))
+		logs.Info("query permission with appId and appVersion success!")
+		c.JSON(http.StatusOK,gin.H{
+			"message":"success",
+			"errorCode":0,
+			"data":result,
+		})
+		return
 	}
-	c.JSON(http.StatusOK,gin.H{
-		"message":"success",
-		"errorCode":0,
-		"data":result,
-	})
-	return
 }
 
 /**

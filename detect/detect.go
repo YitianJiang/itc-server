@@ -199,7 +199,7 @@ func UploadFile(c *gin.Context) {
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
 		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
-		//callBackUrl := "http://10.224.14.220:6789/updateDetectInfos"
+		//callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -552,6 +552,39 @@ func ConfirmBinaryResult(c *gin.Context) {
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id": t.TaskId,
 	})
+	//更新旧接口任务状态
+	condition := "task_id = '"+fmt.Sprint(t.TaskId)+"'"
+	detectContent := dal.QueryTaskBinaryCheckContent(condition)
+	if detectContent == nil || len(*detectContent)==0 {
+		logs.Error("未查询到相关二进制检测内容,更新任务状态失败")
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "未查询到相关二进制检测内容,更新任务状态失败！",
+			"errorCode": -1,
+			"data":      "未查询到相关二进制检测内容,更新任务状态失败",
+		})
+		return
+	}else {
+		changeFlag := true
+		for _,detectCon := range (*detectContent) {
+			if detectCon.Status == 0 {
+				changeFlag = false
+				break
+			}
+		}
+		if changeFlag {
+			(*detect)[0].Status = 1
+			err :=dal.UpdateDetectModelNew((*detect)[0])
+			if err != nil {
+				logs.Error("更新任务状态失败，任务ID："+fmt.Sprint(t.TaskId)+",错误原因:%v",err)
+				c.JSON(http.StatusOK, gin.H{
+					"message":   "更新任务状态失败！",
+					"errorCode": -1,
+					"data":      "更新任务状态失败",
+				})
+				return
+			}
+		}
+	}
 	appId := (*detect)[0].AppId
 	appVersion := (*detect)[0].AppVersion
 	key := strconv.Itoa(t.TaskId) + "_" + appId + "_" + appVersion + "_" + strconv.Itoa(t.ToolId)

@@ -110,6 +110,7 @@ type DetectQueryStruct struct {
 	Permissions   string        `json:"permissions"`
 	SMethods      []SMethod     `json:"sMethods"`
 	SStrs         []SStr        `json:"sStrs"`
+	SStrs_new	  []SStr		`json:"newStrs"`
 	Permissions_2 []Permissions `json:"permissionList"`
 }
 
