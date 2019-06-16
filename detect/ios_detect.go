@@ -338,7 +338,7 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 				for _, middle := range middleRisk {
 					sortedPrivacy = append(sortedPrivacy, middle)
 				}
-				for _, low := range middleRisk {
+				for _, low := range lowRisk {
 					sortedPrivacy = append(sortedPrivacy, low)
 				}
 				for _, noti := range notice {
@@ -420,6 +420,9 @@ func ConfirmIOSBinaryResult(c *gin.Context) {
 	}
 }
 func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
+	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
+		"id": ios.TaskId,
+	})
 	//兼容旧接口内容
 	if ios.ConfirmType == 0 {
 		data := make(map[string]string)
@@ -432,9 +435,31 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 		if !flag {
 			logs.Error("二进制检测内容确认失败")
 			return false
-		} else {
-			return true
 		}
+		//更新旧接口任务状态
+		condition := "task_id = '"+fmt.Sprint(ios.TaskId)+"'"
+		detectContent := dal.QueryTaskBinaryCheckContent(condition)
+		if detectContent == nil || len(*detectContent)==0 {
+			logs.Error("未查询到相关二进制检测内容,更新任务状态失败")
+			return false
+		}else {
+			changeFlag := true
+			for _,detectCon := range (*detectContent) {
+				if detectCon.Status == 0 {
+					changeFlag = false
+					break
+				}
+			}
+			if changeFlag {
+				(*detect)[0].Status = 1
+				err :=dal.UpdateDetectModelNew((*detect)[0])
+				if err != nil {
+					logs.Error("更新任务状态失败，任务ID："+fmt.Sprint(ios.TaskId)+",错误原因:%v",err)
+					return false
+				}
+			}
+		}
+		return true
 	}
 	//新接口内容
 	var queryKey string
@@ -527,6 +552,7 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 				confirmprivacy["confirmVersion"] = confirmVersion
 				confirmprivacy["confirmReason"] = confirmReason
 				confirmprivacy["confirmer"] = confirmer
+				confirmprivacy["status"] = ios.Status
 			}
 		}
 	}
@@ -540,9 +566,6 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 		return false
 	}
 	//取消Lark通知逻辑暂时不改，增量ready后修改
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": ios.TaskId,
-	})
 	appId := (*detect)[0].AppId
 	appVersion := (*detect)[0].AppVersion
 	key := strconv.Itoa(ios.TaskId) + "_" + appId + "_" + appVersion + "_" + strconv.Itoa(ios.ToolId)
@@ -550,6 +573,47 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 	if ticker != nil {
 		ticker.(*time.Ticker).Stop()
 		delete(LARK_MSG_CALL_MAP, key)
+	}
+	//新接口更新任务状态
+	var newChangeFlag = true
+	iosDetectAll := dal.QueryNewIOSDetectModel(map[string]interface{}{
+		"taskId":      ios.TaskId,
+		"toolId":      ios.ToolId,
+		//"detect_type": queryKey,
+	})
+	P:
+	for _,oneDetect := range(*iosDetectAll){
+		var im map[string]interface{}
+		err := json.Unmarshal([]byte(oneDetect.DetectContent), &im)
+		if err != nil {
+			logs.Error("确认任务状态时，map信息数据库内容转map出错!", err.Error())
+			return false
+		}
+
+		//logs.Notice(fmt.Sprint(im))
+		newQueryKey := oneDetect.DetectType
+		if newQueryKey == "blacklist"{
+			newQueryKey = "blackList"
+		}
+		logs.Error(newQueryKey)
+		a := im[newQueryKey].([]interface{})
+		for _, oneBlack := range a {
+			needConfirm := oneBlack.(map[string]interface{})
+			if needConfirm["status"].(float64) == 0 {
+				newChangeFlag = false
+				//logs.Error("未确认内容"+needConfirm["name"].(string))
+				break P
+			}
+		}
+	}
+	logs.Error(fmt.Sprint(newChangeFlag))
+	if newChangeFlag {
+		(*detect)[0].Status = 1
+		err :=dal.UpdateDetectModelNew((*detect)[0])
+		if err != nil {
+			logs.Error("更新任务状态失败，任务ID："+fmt.Sprint(ios.TaskId)+",错误原因:%v",err)
+			return false
+		}
 	}
 	return true
 }

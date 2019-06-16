@@ -865,7 +865,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_2(c *gin.Context){
 			var str dal.SStr
 			str.Status = detail.Status
 			confirmInfos := make([]dal.ConfirmInfo,0)
-			if flag && strIgs != nil{
+			if flag{
 				keys := strings.Split(detail.KeyInfo,";")
 				keys3 := ""
 				//通过or不通过标识
@@ -946,6 +946,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_2(c *gin.Context){
 	}
 	queryResult.SMethods = methods_un
 	queryResult.SStrs = strs_un
+	queryResult.SStrs_new = strs_un
 
 	//权限结果重组
 	permissionsP,errP := GetTaskPermissions(taskId,appId)
