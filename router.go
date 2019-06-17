@@ -43,6 +43,8 @@ func InitRouter(r *ginex.Engine) {
 		api.GET("/queryTasks", detect.QueryDetectTasks)
 		//获取任务对应的自查项
 		api.GET("/getSelfCheckItems", detect.GetSelfCheckItems)
+		//删除检查项
+		api.POST("/deleteDetectItem", detect.DropDetectItem)
 		//完成自查
 		api.POST("/confirmCheck", detect.ConfirmCheck)
 		//获取检测列表
