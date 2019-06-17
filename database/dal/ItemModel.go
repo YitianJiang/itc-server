@@ -151,6 +151,22 @@ func QueryItemsByCondition(data map[string]interface{}) *[]QueryItemStruct {
 	return &qis
 }
 
+//delete item data
+func DeleteItemsByCondition(condition map[string]interface{}) bool {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return false
+	}
+	defer connection.Close()
+	if err := connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).Delete(ItemStruct{}).Error; err != nil {
+		logs.Error("delete failed: %v", err)
+		return false
+	} else {
+		return true
+	}
+}
+
 //confirm check
 func ConfirmSelfCheck(param map[string]interface{}) bool {
 	//获取前端数据
