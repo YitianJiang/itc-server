@@ -98,6 +98,15 @@ func UploadFile(c *gin.Context) {
 	checkItem := c.DefaultPostForm("checkItem", "")
 	logs.Info("checkItem: ", checkItem)
 
+	//增加任务来源判断
+	//sourceStr := c.DefaultPostForm("source","")
+	//var source int
+	//if sourceStr == "" {
+	//	source = 0
+	//}else {
+	//	source = 1
+	//}
+
 	//检验文件格式是否是apk或者ipa
 	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".ipa") ||
 		strings.HasSuffix(filename, ".aab")
@@ -178,6 +187,7 @@ func UploadFile(c *gin.Context) {
 	dbDetectModel.AppId = appId
 	//增加状态字段，0---未完全确认；1---已完全确认
 	dbDetectModel.Status = 0
+	//dbDetectModel.Source = source
 	dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
 	if checkItem == "" {
@@ -824,6 +834,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "success",
 			"errorCode": 0,
+			"appId": (*task)[0].AppId,
 			"data":      res,
 		})
 		return
@@ -847,6 +858,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
 		"errorCode": 0,
+		"appId": (*task)[0].AppId,
 		"data":      *selected,
 	})
 }
