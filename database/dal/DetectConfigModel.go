@@ -180,20 +180,21 @@ func QueryDetectConfigList (condition string,pageInfo map[string]int) (*[]Detect
 /**
 	根据权限信息模糊联查使用该权限的app情况
  */
-func QueryDetectConfigWithSql(sql string) *[]QueryInfoWithPerm{
+func QueryDetectConfigWithSql(sql string) (*[]QueryInfoWithPerm,error){
 	connection,err := database.GetConneection()
 	if err != nil {
 		logs.Error("connect to db error,%v",err)
-		return nil
+		return nil,err
 	}
 	defer connection.Close()
 
 	var result =  make([]QueryInfoWithPerm,0)
 	if err := connection.LogMode(_const.DB_LOG_MODE).Raw(sql).Scan(&result).Error; err != nil {
 		logs.Error("query detectConfig failed,%v",err)
-		return nil
+		return nil,err
 	}
-	return &result
+
+	return &result,nil
 }
 /**
 	修改权限信息
@@ -285,6 +286,25 @@ func QueryPermAppRelation(data map[string]interface{}) (*[]PermAppRelation,error
 	db := connection.Table(PermAppRelation{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var result []PermAppRelation
 	if err := db.Where(data).Find(&result).Error; err != nil {
+		logs.Error("query permission-app relationship failed,%v",err)
+		return nil ,err
+	}
+	return &result,nil
+}
+
+/**
+	查询权限信息withGroup
+ */
+func QueryPermAppRelationWithGroup(data map[string]interface{}) (*[]PermAppRelation,error)  {
+	connection,err := database.GetConneection()
+	if err != nil {
+		logs.Error("connect to db failed,%v",err)
+		return nil,err
+	}
+	defer connection.Close()
+	db := connection.Table(PermAppRelation{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	var result []PermAppRelation
+	if err := db.Where(data).Group("app_version").Find(&result).Error; err != nil {
 		logs.Error("query permission-app relationship failed,%v",err)
 		return nil ,err
 	}
