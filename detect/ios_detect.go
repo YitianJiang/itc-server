@@ -29,16 +29,16 @@ var iosPrivacyPriority = map[string]int{
 
 //ios检测结果黑名单描述说明
 var iosBlackListDescription = map[string]interface{}{
-	"alipay":           map[string]interface{}{"blackType": "支付", "Description": "苹果对支付的严格，控制，需要参考相关苹果的政策确认是否符合支付条件"},
-	"jspatch":          map[string]interface{}{"blackType": "热更新", "Description": "苹果平台不愿意支持热更新"},
-	"JPEngine":         map[string]interface{}{"blackType": "热更新", "Description": "苹果平台不愿意支持热更新"},
-	"JPLoader":         map[string]interface{}{"blackType": "热更新", "Description": "苹果平台不愿意支持热更新"},
-	"PayPal":           map[string]interface{}{"blackType": "支付", "Description": "苹果对支付的严格，控制，需要参考相关苹果的政策确认是否符合支付条件"},
-	"PayPalpay":        map[string]interface{}{"blackType": "支付", "Description": "苹果对支付的严格，控制，需要参考相关苹果的政策确认是否符合支付条件"},
-	"AVAudioRecorder":  map[string]interface{}{"blackType": "录音", "Description": "隐私权限问题，需要确认是否符合调用场景"},
-	"AVAudioSession":   map[string]interface{}{"blackType": "音频", "Description": "隐私权限问题，需要确认是否符合调用场景"},
-	"AVCaptureSession": map[string]interface{}{"blackType": "视频", "Description": "隐私权限问题，需要确认是否符合调用场景"},
-	"items-searvices":  map[string]interface{}{"blackType": "协议", "Description": "通过苹果的items-searvices协议，可以进行ipa的安装，存在风险，苹果对渠道的控制"},
+	"alipay":           map[string]interface{}{"blackType": "支付", "description": "苹果对支付的严格，控制，需要参考相关苹果的政策确认是否符合支付条件"},
+	"jspatch":          map[string]interface{}{"blackType": "热更新", "description": "苹果平台不愿意支持热更新"},
+	"JPEngine":         map[string]interface{}{"blackType": "热更新", "description": "苹果平台不愿意支持热更新"},
+	"JPLoader":         map[string]interface{}{"blackType": "热更新", "description": "苹果平台不愿意支持热更新"},
+	"PayPal":           map[string]interface{}{"blackType": "支付", "description": "苹果对支付的严格，控制，需要参考相关苹果的政策确认是否符合支付条件"},
+	"PayPalpay":        map[string]interface{}{"blackType": "支付", "description": "苹果对支付的严格，控制，需要参考相关苹果的政策确认是否符合支付条件"},
+	"AVAudioRecorder":  map[string]interface{}{"blackType": "录音", "description": "隐私权限问题，需要确认是否符合调用场景"},
+	"AVAudioSession":   map[string]interface{}{"blackType": "音频", "description": "隐私权限问题，需要确认是否符合调用场景"},
+	"AVCaptureSession": map[string]interface{}{"blackType": "视频", "description": "隐私权限问题，需要确认是否符合调用场景"},
+	"items-searvices":  map[string]interface{}{"blackType": "协议", "description": "通过苹果的items-searvices协议，可以进行ipa的安装，存在风险，苹果对渠道的控制"},
 }
 
 /**
@@ -56,6 +56,36 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 	bundleId := dat["bundle_id"].(string)
 	minVersion := dat["min_version"].(string)
 	sdkVersion := dat["tar_version"].(string)
+
+	lastTaskId := dal.QueryLastTaskId(taskId) //获取相同app上次检测taskId
+	//获取上次黑名单检测结果
+	var blacklist []interface{}
+	var method []interface{}
+	lastDetectContent := dal.QueryNewIOSDetectModel(map[string]interface{}{
+		"taskId": lastTaskId,
+	})
+	if lastDetectContent == nil || len(*lastDetectContent) == 0 {
+		logs.Error(strconv.Itoa(lastTaskId) + "没有存储在检测结果中！原因可能为：上一次检测任务没有检测结果，检测工具回调出错！")
+	} else {
+		for _, lastDetect := range *lastDetectContent {
+			if lastDetect.DetectType == "blacklist" {
+				b := make(map[string]interface{})
+				err := json.Unmarshal([]byte(lastDetect.DetectContent), &b)
+				if err != nil {
+					logs.Error("Umarshal failed:", err.Error())
+				}
+				blacklist = b["blackList"].([]interface{})
+			}
+			if lastDetect.DetectType == "method" {
+				m := make(map[string]interface{})
+				err := json.Unmarshal([]byte(lastDetect.DetectContent), &m)
+				if err != nil {
+					logs.Error("Umarshal failed:", err.Error())
+				}
+				method = m["method"].([]interface{})
+			}
+		}
+	}
 	//黑名单处理
 	var blackDetect dal.IOSNewDetectContent
 	blackContent := dat["blacklist_in_app"]
@@ -68,9 +98,16 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 			}
 			blackMap["name"] = k
 			blackMap["content"] = v
-			blackMap["status"] = 0
-			blackMap["confirmer"] = ""
-			blackMap["remark"] = ""
+			if blacklist != nil || len(blacklist) != 0 { //diff处理
+				status, confirmer, remark := iosDetectDiff(blackMap, blacklist)
+				blackMap["status"] = status
+				blackMap["confirmer"] = confirmer
+				blackMap["remark"] = remark
+			} else {
+				blackMap["status"] = 0
+				blackMap["confirmer"] = ""
+				blackMap["remark"] = ""
+			}
 			blackList = append(blackList, blackMap)
 			if k == "itms-services" {
 				warnFlag = true
@@ -114,9 +151,16 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 			susClass := temMethod.(map[string]interface{})["class_name"].(string)
 			methodMap["name"] = susApi
 			methodMap["content"] = susClass
-			methodMap["status"] = 0
-			methodMap["confirmer"] = ""
-			methodMap["remark"] = ""
+			if method != nil || len(method) != 0 { //diff 处理
+				status, confirmer, remark := iosDetectDiff(methodMap, method)
+				methodMap["status"] = status
+				methodMap["confirmer"] = confirmer
+				methodMap["remark"] = remark
+			} else {
+				methodMap["status"] = 0
+				methodMap["confirmer"] = ""
+				methodMap["remark"] = ""
+			}
 			methodList = append(methodList, methodMap)
 		}
 		methodContentValue, err := json.Marshal(map[string]interface{}{
@@ -191,7 +235,63 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 		privacyDetect.SdkVersion = sdkVersion
 		privacyDetect.JsonContent = jsonContent
 	}
-	return dal.InsertNewIOSDetect(blackDetect, methodDetect, privacyDetect), warnFlag
+	insertFlag := dal.InsertNewIOSDetect(blackDetect, methodDetect, privacyDetect)
+	//更新tb_binary_detect中status值
+	if err := changeTotalStatus(taskId, toolId); err != nil {
+		logs.Error("判断总的total status出错！", err.Error())
+	}
+	return insertFlag, warnFlag
+}
+
+//检测结果与上一次检测结果比较
+func iosDetectDiff(newDetect map[string]interface{}, lastDetect []interface{}) (status int, confirmer, remark string) {
+	name := newDetect["name"]
+	content := newDetect["content"]
+	for _, last := range lastDetect {
+		if last.(map[string]interface{})["name"].(string) == name.(string) {
+			var status int
+			switch last.(map[string]interface{})["status"].(type) {
+			case float64:
+				status = int(last.(map[string]interface{})["status"].(float64))
+			case int:
+				status = last.(map[string]interface{})["status"].(int)
+			}
+			confirmer := last.(map[string]interface{})["confirmer"].(string)
+			remark := last.(map[string]interface{})["remark"].(string)
+
+			last_content := last.(map[string]interface{})["content"]
+			switch content.(type) {
+			//method 比较
+			case string:
+				if last_content.(string) == content.(string) {
+					return status, confirmer, remark
+				}
+			// blacklist比较
+			case []interface{}:
+				if compareSlice(last_content.([]interface{}), content.([]interface{})) {
+					return status, confirmer, remark
+				}
+			}
+		}
+	}
+	return 0, "", ""
+}
+
+//比较两个数组是否deep相等，与list的顺序无关
+func compareSlice(a, b []interface{}) bool {
+	m := make(map[string]bool)
+	for i := 0; i < len(a); i++ {
+		m[a[i].(string)] = true
+	}
+	if len(a) != len(b) {
+		return false
+	}
+	for _, value := range b {
+		if _, ok := m[value.(string)]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 /**
@@ -353,7 +453,7 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 					blackName := black.(map[string]interface{})["name"]
 					if blackDescription, ok := iosBlackListDescription[blackName.(string)]; ok {
 						black.(map[string]interface{})["blackType"] = blackDescription.(map[string]interface{})["blackType"]
-						black.(map[string]interface{})["Description"] = blackDescription.(map[string]interface{})["Description"]
+						black.(map[string]interface{})["description"] = blackDescription.(map[string]interface{})["description"]
 					}
 					addDescriptionBlackList = append(addDescriptionBlackList, black)
 				}
@@ -437,14 +537,14 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 			return false
 		}
 		//更新旧接口任务状态
-		condition := "task_id = '"+fmt.Sprint(ios.TaskId)+"'"
+		condition := "task_id = '" + fmt.Sprint(ios.TaskId) + "'"
 		detectContent := dal.QueryTaskBinaryCheckContent(condition)
-		if detectContent == nil || len(*detectContent)==0 {
+		if detectContent == nil || len(*detectContent) == 0 {
 			logs.Error("未查询到相关二进制检测内容,更新任务状态失败")
 			return false
-		}else {
+		} else {
 			changeFlag := true
-			for _,detectCon := range (*detectContent) {
+			for _, detectCon := range *detectContent {
 				if detectCon.Status == 0 {
 					changeFlag = false
 					break
@@ -452,9 +552,9 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 			}
 			if changeFlag {
 				(*detect)[0].Status = 1
-				err :=dal.UpdateDetectModelNew((*detect)[0])
+				err := dal.UpdateDetectModelNew((*detect)[0])
 				if err != nil {
-					logs.Error("更新任务状态失败，任务ID："+fmt.Sprint(ios.TaskId)+",错误原因:%v",err)
+					logs.Error("更新任务状态失败，任务ID："+fmt.Sprint(ios.TaskId)+",错误原因:%v", err)
 					return false
 				}
 			}
@@ -574,48 +674,54 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 		ticker.(*time.Ticker).Stop()
 		delete(LARK_MSG_CALL_MAP, key)
 	}
-	//新接口更新任务状态
+	//更新tb_binary_detect中status值
+	if err := changeTotalStatus(ios.TaskId, ios.ToolId); err != nil {
+		logs.Error("总状态更改出错！", err)
+		return false
+	}
+	return true
+}
+
+//判断是否需要更新total status状态值
+func changeTotalStatus(taskId, toolId int) error {
 	var newChangeFlag = true
 	iosDetectAll := dal.QueryNewIOSDetectModel(map[string]interface{}{
-		"taskId":      ios.TaskId,
-		"toolId":      ios.ToolId,
-		//"detect_type": queryKey,
+		"taskId": taskId,
+		"toolId": toolId,
 	})
-	P:
-	for _,oneDetect := range(*iosDetectAll){
+P:
+	for _, oneDetect := range *iosDetectAll {
 		var im map[string]interface{}
 		err := json.Unmarshal([]byte(oneDetect.DetectContent), &im)
 		if err != nil {
 			logs.Error("确认任务状态时，map信息数据库内容转map出错!", err.Error())
-			return false
+			return err
 		}
-
-		//logs.Notice(fmt.Sprint(im))
 		newQueryKey := oneDetect.DetectType
-		if newQueryKey == "blacklist"{
+		if newQueryKey == "blacklist" {
 			newQueryKey = "blackList"
 		}
-		logs.Error(newQueryKey)
 		a := im[newQueryKey].([]interface{})
 		for _, oneBlack := range a {
 			needConfirm := oneBlack.(map[string]interface{})
 			if needConfirm["status"].(float64) == 0 {
 				newChangeFlag = false
-				//logs.Error("未确认内容"+needConfirm["name"].(string))
 				break P
 			}
 		}
 	}
-	logs.Error(fmt.Sprint(newChangeFlag))
 	if newChangeFlag {
+		detect := dal.QueryDetectModelsByMap(map[string]interface{}{
+			"id": taskId,
+		})
 		(*detect)[0].Status = 1
-		err :=dal.UpdateDetectModelNew((*detect)[0])
+		err := dal.UpdateDetectModelNew((*detect)[0])
 		if err != nil {
-			logs.Error("更新任务状态失败，任务ID："+fmt.Sprint(ios.TaskId)+",错误原因:%v",err)
-			return false
+			logs.Error("更新任务状态失败，任务ID："+strconv.Itoa(taskId)+",错误原因:%v", err)
+			return err
 		}
 	}
-	return true
+	return nil
 }
 
 //返回两个bool值，第一个代表是否是middl数据，第二个代表处理是否成功
