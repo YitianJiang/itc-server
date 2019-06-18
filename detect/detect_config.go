@@ -395,6 +395,8 @@ func QueryPermissionsWithApp(c *gin.Context)  {
 	type queryInfo struct {
 		AppId			int 		`json:"appId"`
 		AppVersion		string		`json:"appVersion"`
+		Page			int			`json:"page"`
+		PageSize		int			`json:"pageSize"`
 	}
 	var t queryInfo
 	param,_ := ioutil.ReadAll(c.Request.Body)
@@ -409,49 +411,100 @@ func QueryPermissionsWithApp(c *gin.Context)  {
 		})
 		return
 	}
+	if t.Page <= 0 || t.PageSize <= 0 {
+		logs.Error("page或pageSize参数不合法")
+		c.JSON(http.StatusOK,gin.H{
+			"message":"page或pageSize参数不合法",
+			"errorCode":-1,
+			"data":"page或pageSize参数不合法",
+		})
+		return
+	}
 	//查询某一app下的权限信息
 	if t.AppVersion == "" {
 		sql := "SELECT h.app_version,c.id AS perm_id,c.key_info,c.ability,c.priority FROM `tb_detect_config` c, `tb_perm_history` h WHERE h.status = 0 AND c.id = h.perm_id AND h.app_id = '"+fmt.Sprint(t.AppId)+"'"
-		result := dal.QueryDetectConfigWithSql(sql)
-		if result == nil || len(*result) == 0{
-			logs.Error("没有查询到App的权限信息")
+		result,err := dal.QueryDetectConfigWithSql(sql)
+		if err != nil {
 			c.JSON(http.StatusOK,gin.H{
 				"errorCode":-1,
-				"message":"没有查询到App的权限信息",
-				"data":"没有查询到App的权限信息",
+				"message":"查询数据库失败",
+				"data":err,
 			})
 			return
 		}
 		realResult := make([]map[string]interface{},0)
-		for _,one := range (*result) {
-			info := map[string]interface{}{
-				"permId" : one.PermId,
-				"key":one.KeyInfo,
-				"priority":one.Priority,
-				"ability":one.Ability,
-				"firstVersion":one.AppVersion,
-			}
-			realResult = append(realResult,info)
+		if result == nil || len(*result) == 0{
+			logs.Error("没有查询到App的权限信息")
+			c.JSON(http.StatusOK,gin.H{
+				"errorCode":0,
+				"message":"没有查询到App的权限信息",
+				"data":map[string]interface{}{
+					"count":0,
+					"result":realResult,
+				},
+			})
+			return
 		}
-		sort.Sort(PermQuerySlice(realResult))
-		logs.Info("query permission with appId success!")
-		c.JSON(http.StatusOK,gin.H{
-			"message":"success",
-			"errorCode": 0,
-			"data": realResult,
-		})
-		return
-	}else{
+		//分页处理+返回数据
+		count := len(*result)
+		first := (t.Page-1)*t.PageSize
+		last := t.Page*t.PageSize
+		if first >= count {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "success",
+				"errorCode": 0,
+				"data": map[string]interface{}{
+					"count":  count,
+					"result": realResult,
+				},
+			})
+			return
+		}else {
+			for i:=first;i<last&&i<count;i++{
+				one := (*result)[i]
+				info := map[string]interface{}{
+					"permId" : one.PermId,
+					"key":one.KeyInfo,
+					"priority":one.Priority,
+					"ability":one.Ability,
+					"firstVersion":one.AppVersion,
+				}
+				realResult = append(realResult,info)
+			}
+			sort.Sort(PermQuerySlice(realResult))
+			logs.Info("query permission with appId success!")
+			c.JSON(http.StatusOK,gin.H{
+				"message":"success",
+				"errorCode": 0,
+				"data": map[string]interface{}{
+					"count":count,
+					"result":realResult,
+				},
+			})
+			return
+		}
+	}else{//查询app+appVersion的权限信息
 		queryResult, err1 := dal.QueryPermAppRelation(map[string]interface{}{
 			"app_id":t.AppId,
 			"app_version":t.AppVersion,
 		})
-		if err1 != nil || queryResult == nil || len(*queryResult) == 0 {
-			logs.Error("未查询到相关信息")
+		if err1 != nil {
 			c.JSON(http.StatusOK,gin.H{
-				"message":"未查询到相关信息！",
 				"errorCode":-1,
-				"data":"未查询到相关信息！",
+				"message":"查询数据库失败",
+				"data":err1,
+			})
+			return
+		}
+		result := make([]map[string]interface{},0)
+		if queryResult == nil || len(*queryResult) == 0{
+			c.JSON(http.StatusOK,gin.H{
+				"errorCode":0,
+				"message":"没有查询到App的权限信息",
+				"data":map[string]interface{}{
+					"count":0,
+					"result":result,
+				},
 			})
 			return
 		}
@@ -462,38 +515,56 @@ func QueryPermissionsWithApp(c *gin.Context)  {
 			c.JSON(http.StatusOK,gin.H{
 				"message":"该app下权限信息存储格式出错！",
 				"errorCode":-1,
-				"data":"该app下权限信息存储格式出错！",
+				"data":err,
 			})
 			return
 		}
 		allPermList := GetPermList()
-		result := make([]map[string]interface{},0)
-		for _,info := range infos {
-			vInfo := info.(map[string]interface{})
-			//if vInfo["state"].(float64) == 0 {
-			if v,ok := allPermList[int(vInfo["perm_id"].(float64))];ok {
-				info := v.(map[string]interface{})
-				vInfo["priority"] = info["priority"].(int)
-				vInfo["ability"] = info["ability"].(string)
+		//分页处理+返回数据
+		count := len(infos)
+		first := (t.Page-1)*t.PageSize
+		last := t.Page*t.PageSize
+		if first >= count {
+			c.JSON(http.StatusOK,gin.H{
+				"message":"success",
+				"errorCode":0,
+				"data":map[string]interface{}{
+					"count":count,
+					"result":result,
+				},
+			})
+			return
+		}else {
+			for i:= first;i<last&&i<count;i++{
+				vInfo := infos[i].(map[string]interface{})
+				//if vInfo["state"].(float64) == 0 {
+				if v,ok := allPermList[int(vInfo["perm_id"].(float64))];ok {
+					info := v.(map[string]interface{})
+					vInfo["priority"] = info["priority"].(int)
+					vInfo["ability"] = info["ability"].(string)
+				}
+				//}
+				subInfo := map[string]interface{}{
+					"permId" : vInfo["perm_id"],
+					"key":vInfo["key"],
+					"priority":vInfo["priority"],
+					"ability":vInfo["ability"],
+					"firstVersion":vInfo["first_version"],
+				}
+				result = append(result,subInfo)
 			}
-			//}
-			subInfo := map[string]interface{}{
-				"permId" : vInfo["perm_id"],
-				"key":vInfo["key"],
-				"priority":vInfo["priority"],
-				"ability":vInfo["ability"],
-				"firstVersion":vInfo["first_version"],
-			}
-			result = append(result,subInfo)
+			sort.Sort(PermQuerySlice(result))
+			logs.Info("query permission with appId and appVersion success!")
+			c.JSON(http.StatusOK,gin.H{
+				"message":"success",
+				"errorCode":0,
+				"data":map[string]interface{}{
+					"count":count,
+					"result":result,
+				},
+			})
+			return
 		}
-		sort.Sort(PermQuerySlice(result))
-		logs.Info("query permission with appId and appVersion success!")
-		c.JSON(http.StatusOK,gin.H{
-			"message":"success",
-			"errorCode":0,
-			"data":result,
-		})
-		return
 	}
 }
 
@@ -501,36 +572,152 @@ func QueryPermissionsWithApp(c *gin.Context)  {
 	查看权限在app中的确认信息
  */
 func GetRelationsWithPermission(c *gin.Context)  {
-	info := c.DefaultPostForm("info","")
-	if info == "" {
-		logs.Error("无查询信息")
+	type infoStruct struct {
+		Info 		string		`json:"info"`
+		Id  		int         `json:"id"`
+		Page 		int			`json:"page"`
+		PageSize	int			`json:"pageSize"`
+	}
+	param,_ := ioutil.ReadAll(c.Request.Body)
+	var t infoStruct
+	err := json.Unmarshal(param,&t)
+	//info := c.DefaultPostForm("info","")
+	if err != nil {
+		logs.Error("查询信息不合法")
 		c.JSON(http.StatusOK,gin.H{
 			"errorCode":-1,
-			"message":"无查询信息",
-			"data":"无查询信息",
+			"message":"查询信息不合法",
+			"data":"查询信息不合法",
 		})
 		return
 	}
-	//-----------模糊联查
-	sql := "SELECT h.app_id,h.app_version,c.id AS perm_id,c.key_info,c.ability,c.priority FROM `tb_detect_config` c, `tb_perm_history` h WHERE h.status = 0 AND c.id = h.perm_id AND c.key_info LIKE '%"+info+"%'"
+	if t.Page <= 0 || t.PageSize <= 0 {
+		logs.Error("page或pageSize参数不合法")
+		c.JSON(http.StatusOK,gin.H{
+			"message":"page或pageSize参数不合法",
+			"errorCode":-1,
+			"data":"page或pageSize参数不合法",
+		})
+		return
+	}
+	var sql string
+	if t.Id != 0 {
+		//-----------权限ID精准查
+		sql = "SELECT h.app_id,h.app_version,c.id AS perm_id,c.key_info,c.ability,c.priority FROM `tb_detect_config` c, `tb_perm_history` h WHERE h.status = 0 AND c.id = h.perm_id AND c.id = '"+fmt.Sprint(t.Id)+"'"
+	}else{
+		//-----------模糊联查
+		sql = "SELECT h.app_id,h.app_version,c.id AS perm_id,c.key_info,c.ability,c.priority FROM `tb_detect_config` c, `tb_perm_history` h WHERE h.status = 0 AND c.id = h.perm_id AND c.key_info LIKE '%"+t.Info+"%'"
+	}
 
-	result := dal.QueryDetectConfigWithSql(sql)
-	if result == nil || len(*result) == 0{
-		logs.Error("没有查询到该权限信息")
+	result,err1 := dal.QueryDetectConfigWithSql(sql)
+	if err1 != nil {
 		c.JSON(http.StatusOK,gin.H{
 			"errorCode":-1,
-			"message":"没有查询到该权限信息",
-			"data":"没有查询到该权限信息",
+			"message":"查询数据库失败",
+			"data":err1,
 		})
 		return
 	}
-	logs.Info("根据权限查询成功！")
+	outResult := make([]dal.QueryInfoWithPerm,0)
+	if result == nil || len(*result) == 0{
+		logs.Error("没有查询到该权限数据")
+		c.JSON(http.StatusOK,gin.H{
+			"errorCode":0,
+			"message":"没有查询到该权限数据",
+			"data":map[string]interface{}{
+				"count":0,
+				"result":outResult,
+			},
+		})
+		return
+	}
+	//分页处理+返回数据
+	count := len(*result)
+	first := (t.Page-1)*t.PageSize
+	last := t.Page*t.PageSize
+	if first >= count {
+		//outResult := make([]dal.QueryInfoWithPerm,0)
+		c.JSON(http.StatusOK,gin.H{
+			"message":"success",
+			"errorCode":0,
+			"data":map[string]interface{}{
+				"count":count,
+				"result":outResult,
+			},
+		})
+		return
+	}else {
+		for i:= first;i<last&&i<count;i++{
+			outResult =append(outResult,(*result)[i])
+		}
+		logs.Info("根据权限查询成功！")
+		c.JSON(http.StatusOK,gin.H{
+			"message":"success",
+			"errorCode": 0,
+			"data":map[string]interface{}{
+				"count":count,
+				"result":outResult,
+			},
+		})
+		return
+	}
+ }
+
+/**
+	获取权限版本信息---权限关联查询时的信息
+ */
+func GetAppVersions(c *gin.Context)  {
+	appId,ok := c.GetQuery("appId")
+	if !ok {
+		logs.Error("没有AppID信息")
+		c.JSON(http.StatusOK,gin.H{
+			"message":"没有AppID信息",
+			"errorCode": -1,
+			"data": "没有AppID信息",
+		})
+		return
+	}
+	appIdInt,err := strconv.Atoi(appId)
+	if err != nil {
+		logs.Error("AppID格式不符合要求，%v",err)
+		c.JSON(http.StatusOK,gin.H{
+			"message":"AppID格式不符合要求",
+			"errorCode": -1,
+			"data": err,
+		})
+		return
+	}
+	queryInfo := map[string]interface{}{
+		"app_id":appIdInt,
+	}
+	p_a, errDB := dal.QueryPermAppRelationWithGroup(queryInfo)
+	if errDB != nil {
+		c.JSON(http.StatusOK,gin.H{
+			"message":"获取app下版本操作失败",
+			"errorCode": -1,
+			"data": errDB,
+		})
+		return
+	}
+	result := make([]string,0)
+	if p_a == nil || len(*p_a)==0 {
+		c.JSON(http.StatusOK,gin.H{
+			"message":"无该app的权限版本信息",
+			"errorCode": 0,
+			"data": result,
+		})
+		return
+	}
+	for _,pp := range (*p_a) {
+		result = append(result,pp.AppVersion)
+	}
+	logs.Info("查询app的权限版本成功！")
 	c.JSON(http.StatusOK,gin.H{
 		"message":"success",
 		"errorCode": 0,
-		"data": (*result),
+		"data": result,
 	})
 	return
- }
+}
 
 
