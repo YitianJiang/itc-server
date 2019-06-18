@@ -1735,6 +1735,7 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context,me
 						if info["status"] != 0 {
 							keys2[keyInfo] = 1
 							confirmInfo.Key = keyInfo
+							confirmInfo.Status = info["status"].(int)
 							confirmInfo.Remark = info["remarks"].(string)
 							confirmInfo.Confirmer = info["confirmer"].(string)
 							confirmInfo.OtherVersion = info["version"].(string)
