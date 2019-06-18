@@ -1688,7 +1688,7 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context,me
 			if methodIgs != nil {
 				if v,ok := methodIgs[detail.ClassName+"."+detail.KeyInfo]; ok{
 					info := v.(map[string]interface{})
-					if info["status"] != 0 {
+					if info["status"] != 0 && method.Status != 0{
 						method.Status = info["status"].(int)
 						method.Confirmer = info["confirmer"].(string)
 						method.Remark = info["remarks"].(string)
