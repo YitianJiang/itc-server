@@ -61,9 +61,12 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 	//获取上次黑名单检测结果
 	var blacklist []interface{}
 	var method []interface{}
-	lastDetectContent := dal.QueryNewIOSDetectModel(map[string]interface{}{
-		"taskId": lastTaskId,
-	})
+	var lastDetectContent *[]dal.IOSNewDetectContent
+	if lastTaskId >= 0{
+		lastDetectContent = dal.QueryNewIOSDetectModel(map[string]interface{}{
+			"taskId": lastTaskId,
+		})
+	}
 	if lastDetectContent == nil || len(*lastDetectContent) == 0 {
 		logs.Error(strconv.Itoa(lastTaskId) + "没有存储在检测结果中！原因可能为：上一次检测任务没有检测结果，检测工具回调出错！")
 	} else {

@@ -820,19 +820,19 @@ func QueryLastTaskId(taskId int) int {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
-		return 0
+		return -1
 	}
 	defer connection.Close()
 	var detect DetectStruct
 	if err := connection.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Select("app_id").Where("id = ?", taskId).Limit(1).Find(&detect).Error; err != nil {
 		logs.Error(err.Error())
-		return 0
+		return -1
 	} else {
 		appId := detect.AppId
 		var lastDetect DetectStruct
 		if err := connection.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Select("id").Where("app_id = ? AND platform = 1 AND id < ?", appId, taskId).Order("id desc", true).Limit(1).Find(&lastDetect).Error; err != nil {
 			logs.Error(err.Error())
-			return 0
+			return -1
 		} else {
 			return int(lastDetect.ID)
 		}
