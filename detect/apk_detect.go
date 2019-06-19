@@ -1941,6 +1941,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context){
 				igInfo.Remarks = t.Remark
 				igInfo.Version = (*detect)[0].AppVersion
 				igInfo.Status = t.Status
+				igInfo.TaskId = t.TaskId
 				err := dal.InsertIgnoredInfo(igInfo)
 				if err != nil {
 					c.JSON(http.StatusOK, gin.H{
@@ -1962,6 +1963,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context){
 					igInfos.Remarks = t.Remark
 					igInfos.Status = t.Status
 					igInfos.Version = (*detect)[0].AppVersion
+					igInfos.TaskId = t.TaskId
 					err := dal.InsertIgnoredInfo(igInfos)
 					if err != nil {
 						c.JSON(http.StatusOK, gin.H{
@@ -2037,6 +2039,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context){
 		history.PermId = permId
 		history.Remarks = t.Remark
 		history.Confirmer = usernameStr
+		history.TaskId = t.TaskId
 		if err := dal.InsertPermOperationHistory(history); err != nil {
 			logs.Error("权限操作历史写入失败！")
 			c.JSON(http.StatusOK,gin.H{

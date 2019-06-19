@@ -98,6 +98,7 @@ type IgnoreInfoStruct struct {
 	Remarks   string `json:"remarks"`
 	Confirmer string `json:"confirmer"`
 	Status    int    `json:"status"` //1-确认通过，2-确认未通过
+	TaskId	  int	 `json:"taskId"`
 }
 
 /**
