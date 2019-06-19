@@ -1,6 +1,7 @@
 package detect
 
 import (
+	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/gopkg/logs"
 	"encoding/json"
@@ -600,16 +601,77 @@ func GetRelationsWithPermission(c *gin.Context)  {
 		})
 		return
 	}
+	pageInfo := make(map[string]int)
+	pageInfo["pageSize"] = t.PageSize
+	pageInfo["page"]= t.Page
+
+	condition := "1=1"
+	if t.Info != ""{
+		condition += " and (ability like '%"+t.Info+"%' or key_info like '%"+t.Info+"%')"
+	}
+
+	result,count,errQ := dal.QueryDetectConfigList(condition,pageInfo)
+	if errQ != nil {
+		c.JSON(http.StatusOK,gin.H{
+			"message":"查询权限数据库操作失败！",
+			"errorCode":-1,
+			"data":errQ,
+		})
+		return
+	}
+
+	type AppPermInfo struct {
+		AppId 			int				`json:"appId"`
+		AppName			string			`json:"appName"`
+		AppVersion		string			`json:"appVersion"`
+	}
+
+	type ValueStruct struct {
+		Ability  		string			`json:"ability"`
+		Priority 		int 			`json:"priority"`
+		KeyInfo 		string			`json:"key"`
+		AppInfos        []AppPermInfo   `json:"appInfos"`
+	}
+
+
+	var finalData = make(map[int]ValueStruct)
+	if result == nil || len(*result)== 0{
+		logs.Error("未查询到相关权限信息")
+		c.JSON(http.StatusOK,gin.H{
+			"message":"未查询到相关权限信息！",
+			"errorCode":0,
+			"data":map[string]interface{}{
+				"count":count,
+				"result":finalData,
+			},
+		})
+		return
+	}
+
+	permRange := ""
+
+
+	for _,permInfo := range (*result) {
+		var valueOne ValueStruct
+		valueOne.Ability = permInfo.Ability
+		valueOne.Priority = permInfo.Priority
+		valueOne.KeyInfo = permInfo.KeyInfo
+		valueOne.AppInfos = make([]AppPermInfo,0)
+		finalData[int(permInfo.ID)] = valueOne
+		permRange += fmt.Sprint(permInfo.ID)+","
+	}
+	permRange += "0"
+
 	var sql string
 	if t.Id != 0 {
 		//-----------权限ID精准查
-		sql = "SELECT h.app_id,h.app_version,c.id AS perm_id,c.key_info,c.ability,c.priority FROM `tb_detect_config` c, `tb_perm_history` h WHERE h.status = 0 AND c.id = h.perm_id AND c.id = '"+fmt.Sprint(t.Id)+"'"
+		sql = "SELECT h.app_id,h.app_version,c.id AS perm_id,c.key_info,c.ability,c.priority FROM `tb_detect_config` c, `tb_perm_history` h WHERE h.status = 0 AND c.id = h.perm_id AND c.id = '"+fmt.Sprint(t.Id)+"' order by perm_id ASC"
 	}else{
 		//-----------模糊联查
-		sql = "SELECT h.app_id,h.app_version,c.id AS perm_id,c.key_info,c.ability,c.priority FROM `tb_detect_config` c, `tb_perm_history` h WHERE h.status = 0 AND c.id = h.perm_id AND c.key_info LIKE '%"+t.Info+"%'"
+		sql = "SELECT h.app_id,h.app_version,c.id AS perm_id,c.key_info,c.ability,c.priority FROM `tb_detect_config` c, `tb_perm_history` h WHERE h.status = 0 AND c.id = h.perm_id AND c.id in ("+permRange+")"
 	}
 
-	result,err1 := dal.QueryDetectConfigWithSql(sql)
+	result_1,err1 := dal.QueryDetectConfigWithSql(sql)
 	if err1 != nil {
 		c.JSON(http.StatusOK,gin.H{
 			"errorCode":-1,
@@ -618,49 +680,46 @@ func GetRelationsWithPermission(c *gin.Context)  {
 		})
 		return
 	}
-	outResult := make([]dal.QueryInfoWithPerm,0)
-	if result == nil || len(*result) == 0{
-		logs.Error("没有查询到该权限数据")
-		c.JSON(http.StatusOK,gin.H{
-			"errorCode":0,
-			"message":"没有查询到该权限数据",
-			"data":map[string]interface{}{
-				"count":0,
-				"result":outResult,
-			},
-		})
-		return
-	}
-	//分页处理+返回数据
-	count := len(*result)
-	first := (t.Page-1)*t.PageSize
-	last := t.Page*t.PageSize
-	if first >= count {
-		//outResult := make([]dal.QueryInfoWithPerm,0)
-		c.JSON(http.StatusOK,gin.H{
-			"message":"success",
-			"errorCode":0,
-			"data":map[string]interface{}{
-				"count":count,
-				"result":outResult,
-			},
-		})
-		return
-	}else {
-		for i:= first;i<last&&i<count;i++{
-			outResult =append(outResult,(*result)[i])
-		}
-		logs.Info("根据权限查询成功！")
-		c.JSON(http.StatusOK,gin.H{
-			"message":"success",
+
+	if result_1 == nil || len(*result_1) == 0 {
+		logs.Error("没有查询到相关权限的App使用数据")
+		c.JSON(http.StatusOK, gin.H{
 			"errorCode": 0,
-			"data":map[string]interface{}{
-				"count":count,
-				"result":outResult,
+			"message":   "没有查询到该权限数据",
+			"data": map[string]interface{}{
+				"count":  count,
+				"result": finalData,
 			},
 		})
 		return
 	}
+
+	//获取APPIDMap
+	appIdMap := _const.GetAPPMAP()
+
+	for _,permApp := range(*result_1) {
+		if v,ok := finalData[permApp.PermId];ok {
+			var newInfo AppPermInfo
+			newInfo.AppId = permApp.AppId
+			newInfo.AppVersion = permApp.AppVersion
+			if _,okv := appIdMap[permApp.AppId]; okv {
+				newInfo.AppName = appIdMap[permApp.AppId]
+			}else{
+				newInfo.AppName = "该App未命名"
+			}
+			v.AppInfos = append(v.AppInfos,newInfo)
+			finalData[permApp.PermId] = v
+		}
+	}
+	logs.Info("查询权限的app使用情况成功")
+	c.JSON(http.StatusOK,gin.H{
+		"message":"success",
+		"errorCode":0,
+		"data":map[string]interface{}{
+			"count":count,
+			"result":finalData,
+		},
+	})
  }
 
 /**
