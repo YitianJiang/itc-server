@@ -242,7 +242,9 @@ func UploadFile(c *gin.Context) {
 		if err != nil {
 			logs.Error("上传二进制包出错，重试一次也失败", err)
 			//及时报警
-			utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！")
+			utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
+			utils.LarkDingOneInner("yinzhihong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
+			utils.LarkDingOneInner("fanjuan.xqp", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
 		}
 		resBody := &bytes.Buffer{}
 		if response != nil {
