@@ -99,13 +99,9 @@ func UploadFile(c *gin.Context) {
 	logs.Info("checkItem: ", checkItem)
 
 	//增加任务来源判断
-	//sourceStr := c.DefaultPostForm("source","")
-	//var source int
-	//if sourceStr == "" {
-	//	source = 0
-	//}else {
-	//	source = 1
-	//}
+	callBackAddr := c.DefaultPostForm("callBackAddr","")
+	var extraInfo dal.ExtraStruct
+	extraInfo.CallBackAddr = callBackAddr
 
 	//检验文件格式是否是apk或者ipa
 	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".ipa") ||
@@ -187,7 +183,8 @@ func UploadFile(c *gin.Context) {
 	dbDetectModel.AppId = appId
 	//增加状态字段，0---未完全确认；1---已完全确认
 	dbDetectModel.Status = 0
-	//dbDetectModel.Source = source
+	byteExtraInfo,_ := json.Marshal(extraInfo)
+	dbDetectModel.ExtraInfo = string(byteExtraInfo)
 	dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
 	if checkItem == "" {
@@ -208,8 +205,8 @@ func UploadFile(c *gin.Context) {
 	}
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
-		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
-		//callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
+		//callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
+		callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -307,7 +304,10 @@ func UpdateDetectInfos(c *gin.Context) {
 			mapInfo := make(map[string]int)
 			mapInfo["taskId"], _ = strconv.Atoi(taskId)
 			mapInfo["toolId"], _ = strconv.Atoi(toolId)
-			ApkJsonAnalysis(jsonContent, mapInfo)
+			errApk := ApkJsonAnalysis_2(jsonContent, mapInfo)
+			if errApk != nil {
+				return
+			}
 		} else {
 			var detectContent dal.DetectContent
 			detectContent.TaskId, _ = strconv.Atoi(taskId)

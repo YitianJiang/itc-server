@@ -25,7 +25,10 @@ type DetectStruct struct {
 	SelfCheckStatus int    `gorm:"column:self_check_status"      json:"selfCheckStatus"` //0-自查未完成；1-自查完成
 	TosUrl          string `gorm:"column:tos_url"                json:"tosUrl"`
 	Status          int    `gorm:"column:status"                 json:"status"` //0---未完全确认；1---已完全确认
-	//Source 			int	   `gorm:"column:source" 				 json:"source"`//0--发布平台；1--页面
+	ExtraInfo		string `gorm:"column:extra_info" 		     json:"extraInfo"`//其他附加信息
+}
+type ExtraStruct struct {
+	CallBackAddr		string 			`json:"callBackAddr"`
 }
 type RecordTotal struct {
 	Total uint
@@ -812,4 +815,60 @@ func QueryIOSDetectContent(condition map[string]interface{}) *[]IOSDetectContent
 		return nil
 	}
 	return &iosMiddleContenct
+}
+
+//安卓检测数据解析方式重构之-----struct和json转换
+//json返回结构
+type JSONResultStruct struct {
+	Result       []CheckResult       `json:"result"`
+}
+//数组中元素结构
+type CheckResult struct {
+	MissSearchInfos 		[]MissSearchInfo				`json:"miss_search_infos"`
+	AppInfo 				AppInfoStruct					`json:"app_info"`
+	MethodInfos				[]MethodInfo					`json:"method_sensitive_infos"`
+	PermInfos				[]PermInfo						`json:"permission_sensitive_infos"`
+	StrInfos				[]StrInfo						`json:"str_sensitive_infos"`
+}
+
+//miss_search_info结构
+type MissSearchInfo struct {
+
+}
+
+//基本信息json结构
+type AppInfoStruct struct {
+	ApkName					string 						`json:"apk_name"`
+	ApkVersionName 			string						`json:"apk_version_name"`
+	ApkVersionCode 			string						`json:"apk_version_code"`
+	Channel 				string 						`json:"channel"`
+	Primary  				interface{}					`json:"primary"`
+	PermsInAppInfo			[]string					`json:"permissions"`
+}
+
+//敏感方法json结构
+type MethodInfo struct {
+	MethodName				string						`json:"method_name"`
+	Flag 					float64						`json:"gpflag"`
+	ClassName				string						`json:"method_class_name"`
+	Desc 					string						`json:"desc"`
+	CallLocation			[]CallLocInfo				`json:"call_location"`
+}
+//权限json结构
+type PermInfo struct {
+
+}
+//敏感方法json结构
+type StrInfo struct {
+	Keys 					[]string					`json:"keys"`
+	Flag 					float64						`json:"gpflag"`
+	Desc 					string						`json:"desc"`
+	CallLocation			[]CallLocInfo				`json:"call_location"`
+}
+//敏感方法和字符串的callLoc结构
+type CallLocInfo struct {
+	ClassName				string						`json:"class_name"`
+	CallMethodName 			string						`json:"method_name"`
+	LineNum					interface{}						`json:"line_number"`
+	Key 					string						`json:"key"`
 }
