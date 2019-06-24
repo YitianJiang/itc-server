@@ -144,6 +144,8 @@ func ApkJsonAnalysis (info string,mapInfo map[string]int){
 		err := dal.UpdateDetectModelNew((*detect)[0])
 		if err != nil {
 			logs.Error("任务确认状态更新失败！%v", err)
+		}else{
+			CICallBack(&(*detect)[0])
 		}
 	}
 	return
@@ -2088,6 +2090,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context){
 			})
 			return
 		}
+		CICallBack(&(*detect)[0])
 	}
 	logs.Info("confirm success +id :%d",t.Id)
 	c.JSON(http.StatusOK, gin.H{

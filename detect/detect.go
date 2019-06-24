@@ -2,9 +2,16 @@ package detect
 
 import (
 	"bytes"
+	_const "code.byted.org/clientQA/itc-server/const"
+	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/logs"
+	"code.byted.org/gopkg/tos"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-gonic/gin"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -15,14 +22,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	_const "code.byted.org/clientQA/itc-server/const"
-	"code.byted.org/clientQA/itc-server/database/dal"
-	"code.byted.org/clientQA/itc-server/utils"
-	"code.byted.org/gopkg/logs"
-	"code.byted.org/gopkg/tos"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -98,14 +97,11 @@ func UploadFile(c *gin.Context) {
 	checkItem := c.DefaultPostForm("checkItem", "")
 	logs.Info("checkItem: ", checkItem)
 
-	//增加任务来源判断
-	//sourceStr := c.DefaultPostForm("source","")
-	//var source int
-	//if sourceStr == "" {
-	//	source = 0
-	//}else {
-	//	source = 1
-	//}
+	//增加回调地址
+	callBackAddr := c.DefaultPostForm("callBackAddr","")
+	var extraInfo dal.ExtraStruct
+	extraInfo.CallBackAddr = callBackAddr
+
 
 	//检验文件格式是否是apk或者ipa
 	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".ipa") ||
@@ -187,7 +183,8 @@ func UploadFile(c *gin.Context) {
 	dbDetectModel.AppId = appId
 	//增加状态字段，0---未完全确认；1---已完全确认
 	dbDetectModel.Status = 0
-	//dbDetectModel.Source = source
+	byteExtraInfo,_ := json.Marshal(extraInfo)
+	dbDetectModel.ExtraInfo = string(byteExtraInfo)
 	dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
 	if checkItem == "" {
@@ -209,7 +206,7 @@ func UploadFile(c *gin.Context) {
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
 		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
-		//callBackUrl := "http://10.224.14.220:6789/updateDetectInfos"
+		//callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -232,16 +229,14 @@ func UploadFile(c *gin.Context) {
 		contentType := bodyWriter.FormDataContentType()
 		err = bodyWriter.Close()
 		logs.Info("url: ", url)
+		tr := http.Transport{DisableKeepAlives: true}
 		toolHttp := &http.Client{
 			Timeout: 300 * time.Second,
+			Transport: &tr,
 		}
 		response, err := toolHttp.Post(url, contentType, bodyBuffer)
 		if err != nil {
-			logs.Error("上传二进制包出错，将重试一次: ", err)
-			response, err = toolHttp.Post(url, contentType, bodyBuffer)
-		}
-		if err != nil {
-			logs.Error("上传二进制包出错，重试一次也失败", err)
+			logs.Error("上传二进制包出错", err)
 			//及时报警
 			utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
 			utils.LarkDingOneInner("yinzhihong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
@@ -777,7 +772,6 @@ func QueryDetectTasks(c *gin.Context) {
  *根据二进制工具列表
  */
 func QueryDetectTools(c *gin.Context) {
-
 	name := c.DefaultQuery("name", "")
 	condition := "1=1"
 	if name != "" {
@@ -958,4 +952,98 @@ func Alram(c *gin.Context) {
 		"message":   "success",
 		"errorCode": 0,
 	})
+}
+
+
+func CICallBack(task *dal.DetectStruct) error{
+	var t dal.ExtraStruct
+	//兼容旧信息---无extra_info字段
+	if task.ExtraInfo == ""{
+		return nil
+	}
+	err := json.Unmarshal([]byte(task.ExtraInfo),&t)
+	if err != nil {
+		logs.Error("任务附加信息存储格式错误，任务ID："+fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("fanjuan.xqp","任务附加信息存储格式错误，任务ID："+fmt.Sprint(task.ID))
+		return err
+	}
+	//无回调地址（页面上传），不需要进行回调
+	if t.CallBackAddr == "" {
+		return nil
+	}
+	urlInfos := strings.Split(t.CallBackAddr,"?")
+	workflow_id := ""
+	job_id := ""
+	if len(urlInfos)>1 {
+		queryInfos := getUrlInfo(urlInfos[1])
+		if v,ok := queryInfos["workflow_id"];ok {
+			workflow_id = v
+		}
+		if v,ok := queryInfos["job_id"];ok {
+			job_id = v
+		}
+	}
+
+	//回调CI接口，发送post请求
+	data := make(map[string]string)
+	data["workflow_id"]= workflow_id
+	data["job_id"] = job_id
+	data["statsu"] = "2"
+	data["task_id"] = fmt.Sprint(task.ID)
+	bytesData, err1 := json.Marshal(data)
+	if err != nil {
+		logs.Error("CI回调信息转换失败"+fmt.Sprint(err1))
+		utils.LarkDingOneInner("fanjuan.xqp", "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		return err1
+	}
+	reader := bytes.NewReader(bytesData)
+	url := urlInfos[0]
+	request, err2 := http.NewRequest("POST", url, reader)
+	if err2 != nil {
+		logs.Error("CI回调请求Create失败"+fmt.Sprint(err2))
+		utils.LarkDingOneInner("fanjuan.xqp", "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		return err2
+	}
+	request.Header.Set("Content-Type", "application/json;charset=UTF-8")
+	client := http.Client{}
+	resp, err3 := client.Do(request)
+	if err3 != nil {
+		logs.Error("回调CI接口失败,%v", err3)
+		//及时报警
+		//utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("fanjuan.xqp", "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		return err3
+	}
+	if resp != nil {
+		defer resp.Body.Close()
+		respBytes, _ := ioutil.ReadAll(resp.Body)
+		var data map[string]interface{}
+		data = make(map[string]interface{})
+		json.Unmarshal(respBytes, &data)
+		logs.Info("CI detect url's response: %+v", data)
+	}
+	return nil
+}
+/**
+	获取URL信息
+ */
+func getUrlInfo(url string) map[string]string {
+	infos := strings.Split(url,"&")
+	result := make(map[string]string)
+	for _,info := range infos {
+		keyValues := strings.Split(info,"=")
+		if len(keyValues)>1{
+			result[keyValues[0]] = keyValues[1]
+		}
+	}
+	return result
+}
+/**
+	自测Ci回调接口
+ */
+func CICallBackTest(c *gin.Context)  {
+	param,_ := ioutil.ReadAll(c.Request.Body)
+	var t map[string]interface{}
+	json.Unmarshal(param,&t)
+	logs.Notice("CI回调返回信息，%v",t)
 }
