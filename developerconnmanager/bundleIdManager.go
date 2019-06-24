@@ -39,26 +39,26 @@ func Test64DecodeToString(c *gin.Context){
 	}
 }
 
-func TestAskBundleId(c *gin.Context)  {
-	logs.Info("开始测试Bundle ID逻辑")
-	nameBundle := c.Query("nameBundle")
-	var bundleIdObj dal.BundleIdManager
-	bundleIdObj.BundleId = nameBundle
-
-	if dal.InsertBundleId(bundleIdObj) {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "success",
-			"errorCode": 0,
-			"data": "插入BundleID正常",
-			"name": nameBundle,
-		})
-	} else {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"errorCode": -1,
-			"message":   "数据库存储错误，新建BundleID失败！",
-		})
-	}
-}
+//func TestAskBundleId(c *gin.Context)  {
+//	logs.Info("开始测试Bundle ID逻辑")
+//	nameBundle := c.Query("nameBundle")
+//	var bundleIdObj dal.BundleIdManager
+//	bundleIdObj.BundleId = nameBundle
+//
+//	if dal.InsertBundleId(bundleIdObj) {
+//		c.JSON(http.StatusOK, gin.H{
+//			"message":   "success",
+//			"errorCode": 0,
+//			"data": "插入BundleID正常",
+//			"name": nameBundle,
+//		})
+//	} else {
+//		c.JSON(http.StatusBadRequest, gin.H{
+//			"errorCode": -1,
+//			"message":   "数据库存储错误，新建BundleID失败！",
+//		})
+//	}
+//}
 
 func GetBunldIdsObj(c *gin.Context){
 	logs.Info("返回数据库中所有的Bundle ID")
@@ -77,11 +77,54 @@ func GetBunldIdsObj(c *gin.Context){
 	}
 }
 
+func CreateP8DBInfoToTable(c *gin.Context) {
+	logs.Info("接收P8文件，并转化string字符串存入DB")
+	nameBundle := c.PostForm("nameBundle")
+	file, header, _ := c.Request.FormFile("P8file")
+	logs.Info("打印File Name：" + header.Filename)
+	p8ByteInfo,err := ioutil.ReadAll(file)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "error read p8 file",
+			"errorCode": 0,
+			"data": err,
+		})
+		return
+	}
+	var p8info dal.P8fileManager
+	p8info.BundleId = nameBundle
+	p8info.P8StringInfo = string(p8ByteInfo)
+	if dal.InsertBundleIdAndP8(p8info) {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "success",
+			"errorCode": 0,
+			"data": "插入BundleID正常",
+			"name": nameBundle,
+			"p8infostring": string(p8ByteInfo),
+		})
+		return
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"errorCode": -1,
+			"message":   "数据库存储错误，新建BundleID失败！",
+		})
+		return
+	}
+}
+
 func ParsePrivateKey(c *gin.Context) {
 	tokenString := GetTokenString()
-	c.JSON(http.StatusOK, gin.H{
-		"message":   "success",
-		"errorCode": 0,
-		"data": tokenString,
-	})
+	if tokenString == "not find p8String"{
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "error",
+			"errorCode": 1,
+			"data": tokenString,
+		})
+	}else {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "success",
+			"errorCode": 0,
+			"data": tokenString,
+		})
+	}
 }

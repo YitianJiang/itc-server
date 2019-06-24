@@ -122,9 +122,10 @@ func InitRouter(r *ginex.Engine) {
 	//todo 巩锐开始开发证书体系监管后台API
 	connapi := r.Group("/v1/devConnManage")
 	{
-		connapi.GET("/bundleIdSearch",developerconnmanager.TestAskBundleId)
+		//connapi.GET("/bundleIdSearch",developerconnmanager.TestAskBundleId)
 		connapi.GET("/getBundleIdsList",developerconnmanager.GetBunldIdsObj)
 		connapi.GET("/testPrivatePrint",developerconnmanager.ParsePrivateKey)
 		connapi.GET("/createProvProfile",developerconnmanager.Test64DecodeToString)
+		connapi.POST("/createP8DBInfo",developerconnmanager.CreateP8DBInfoToTable)
 	}
 }
