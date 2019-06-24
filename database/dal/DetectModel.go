@@ -14,16 +14,18 @@ import (
 //二进制包检测任务
 type DetectStruct struct {
 	gorm.Model
-	Creator         string `json:"creator"`
-	ToLarker        string `json:"toLarker"`
-	Platform        int    `json:"platform"`
-	AppName         string `json:"appName"`
-	AppVersion      string `json:"appVersion"`
-	AppId           string `json:"appId"`
-	CheckContent    string `json:"checkContent"`
-	SelfCheckStatus int    `json:"selfCheckStatus"` //0-自查未完成；1-自查完成
-	TosUrl          string `json:"tosUrl"`
-	Status          int    `json:"status"` //0---未完全确认；1---已完全确认
+	Creator         string `gorm:"column:creator"                json:"creator"`
+	ToLarker        string `gorm:"column:to_larker"              json:"toLarker"`
+	ToGroup         string `gorm:"column:to_group"               json:"toGroup"`
+	Platform        int    `gorm:"column:platform"               json:"platform"`
+	AppName         string `gorm:"column:app_name"               json:"appName"`
+	AppVersion      string `gorm:"column:app_version"            json:"appVersion"`
+	AppId           string `gorm:"column:app_id"                 json:"appId"`
+	CheckContent    string `gorm:"column:check_content"          json:"checkContent"`
+	SelfCheckStatus int    `gorm:"column:self_check_status"      json:"selfCheckStatus"` //0-自查未完成；1-自查完成
+	TosUrl          string `gorm:"column:tos_url"                json:"tosUrl"`
+	Status          int    `gorm:"column:status"                 json:"status"` //0---未完全确认；1---已完全确认
+	//Source 			int	   `gorm:"column:source" 				 json:"source"`//0--发布平台；1--页面
 }
 type RecordTotal struct {
 	Total uint
@@ -65,6 +67,7 @@ type DetectInfo struct {
 	Channel     string `json:"channel"`
 	Permissions string `json:"permissions"`
 	ToolId      int    `json:"toolId"`
+	SubIndex    int    `json:"index"`
 }
 
 //敏感信息详情---fj新增
@@ -80,6 +83,7 @@ type DetectContentDetail struct {
 	DescInfo  string `json:"desc"`
 	CallLoc   string `json:"callLoc"`
 	ToolId    int    `json:"toolId"`
+	SubIndex  int    `json:"index"`
 	//OtherVersion		string			`json:"otherVersion"`
 	//Priority 			int				`json:"priority"`//0--常规，1--注意，2--危险，3--非常危险，4--未定义
 }
@@ -100,12 +104,14 @@ type IgnoreInfoStruct struct {
  *安卓检测数据查询返回结构
  */
 type DetectQueryStruct struct {
+	Index         int           `json:"index"`
 	ApkName       string        `json:"apkName"`
 	Version       string        `json:"version"`
 	Channel       string        `json:"channel"`
 	Permissions   string        `json:"permissions"`
 	SMethods      []SMethod     `json:"sMethods"`
 	SStrs         []SStr        `json:"sStrs"`
+	SStrs_new     []SStr        `json:"newStrs"`
 	Permissions_2 []Permissions `json:"permissionList"`
 }
 
@@ -145,8 +151,8 @@ type StrCallJson struct {
 }
 type ConfirmInfo struct {
 	//Id					uint 				`json:"id"`
-	Key string `json:"key"`
-	//Status				int					`json:"status"`
+	Key          string `json:"key"`
+	Status       int    `json:"status"`
 	Remark       string `json:"remark"`
 	Confirmer    string `json:"confirmer"`
 	OtherVersion string `json:"otherVersion"`
@@ -154,15 +160,30 @@ type ConfirmInfo struct {
 
 type Permissions struct {
 	Id           uint   `json:"id"`
+	PermId       int    `json:"permId"`
 	Key          string `json:"key"`
 	Status       int    `json:"status"`
 	Remark       string `json:"remark"`
 	Confirmer    string `json:"confirmer"`
 	OtherVersion string `json:"otherVersion"`
 	Priority     int    `json:"priority"`
+	Desc         string `json:"desc"`
 }
 
-//二进制包检测内容，json内容黑名单||可疑方法||权限区分处理
+/**
+安卓确认post结构
+*/
+type PostConfirm struct {
+	TaskId int    `json:"taskId"`
+	Id     int    `json:"id"`
+	Status int    `json:"status"`
+	Remark string `json:"remark"`
+	ToolId int    `json:"toolId"`
+	Type   int    `json:"type"`
+	Index  int    `json:"index"`
+}
+
+//二进制包检测内容，json内容处理区分后
 type IOSDetectContent struct {
 	gorm.Model
 	TaskId          int    `gorm:"column:taskId"            json:"taskId"`
@@ -592,6 +613,28 @@ func QueryDetectInfo(condition string) (*DetectInfo, error) {
 }
 
 /**
+兼容.aab查询内容
+*/
+func QueryDetectInfo_2(condition string) (*[]DetectInfo, error) {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return nil, err
+	}
+	defer connection.Close()
+
+	db := connection.Table(DetectInfo{}.TableName()).LogMode(_const.DB_LOG_MODE)
+
+	var detectInfo []DetectInfo
+	if err1 := db.Where(condition).Find(&detectInfo).Error; err1 != nil {
+		logs.Error("query detectInfo failed! %v", err)
+		return nil, err1
+	}
+	return &detectInfo, nil
+
+}
+
+/**
 查询apk敏感信息----fj
 */
 func QueryDetectContentDetail(condition string) (*[]DetectContentDetail, error) {
@@ -768,4 +811,30 @@ func QueryIOSDetectContent(condition map[string]interface{}) *[]IOSDetectContent
 		return nil
 	}
 	return &iosMiddleContenct
+}
+
+/*
+查询当前taskId对应app的上一次检测taskId
+*/
+func QueryLastTaskId(taskId int) int {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return -1
+	}
+	defer connection.Close()
+	var detect DetectStruct
+	if err := connection.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Select("app_id").Where("id = ?", taskId).Limit(1).Find(&detect).Error; err != nil {
+		logs.Error(err.Error())
+		return -1
+	} else {
+		appId := detect.AppId
+		var lastDetect DetectStruct
+		if err := connection.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Select("id").Where("app_id = ? AND platform = 1 AND id < ?", appId, taskId).Order("id desc", true).Limit(1).Find(&lastDetect).Error; err != nil {
+			logs.Error(err.Error())
+			return -1
+		} else {
+			return int(lastDetect.ID)
+		}
+	}
 }

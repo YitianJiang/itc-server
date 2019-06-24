@@ -29,15 +29,8 @@ func InitRouter(r *ginex.Engine) {
 	//更新被拒案例
 	api.POST("/casemanage/updateRejCase", casemanage.EditRejCaseofSolution)
 
-	//新增权限
-	api.POST("/perm/addPermission",detect.AddDetectConfig)
-	//删除权限
-	api.GET("/perm/deletePermission",detect.DeleteDetectConfig)
-	//修改权限
-	api.POST("/perm/editPermission",detect.EditDectecConfig)
-	//查询权限
-	api.GET("/perm/queryPermission",detect.QueryDectecConfig)
-
+	//检测服务检测异常报警接口
+	api.POST("/check_server/alarm", detect.Alram)
 
 	api.Use(middleware.JWTCheck())
 	{
@@ -51,6 +44,8 @@ func InitRouter(r *ginex.Engine) {
 		api.GET("/queryTasks", detect.QueryDetectTasks)
 		//获取任务对应的自查项
 		api.GET("/getSelfCheckItems", detect.GetSelfCheckItems)
+		//删除检查项
+		api.POST("/deleteDetectItem", detect.DropDetectItem)
 		//完成自查
 		api.POST("/confirmCheck", detect.ConfirmCheck)
 		//获取检测列表
@@ -60,7 +55,8 @@ func InitRouter(r *ginex.Engine) {
 		//获取当前任务的二进制工具检测内容
 		api.GET("/task/queryBinaryContent", detect.QueryTaskBinaryCheckContent)
 		//获取当前任务的apk二进制工具检测内容
-		api.GET("/task/queryApkBinaryContent", detect.QueryTaskApkBinaryCheckContentWithIgnorance_2)
+		//api.GET("/task/queryApkBinaryContent", detect.QueryTaskApkBinaryCheckContentWithIgnorance_2)
+		api.GET("/task/queryApkBinaryContent", detect.QueryTaskApkBinaryCheckContentWithIgnorance_3)
 		//新增二进制检测工具
 		api.POST("/tool/insert", detect.InsertBinaryTool)
 		//查询二进制检测工具列表
@@ -72,9 +68,10 @@ func InitRouter(r *ginex.Engine) {
 		//确认二进制包检测信息
 		api.POST("/detect/confirmResult", detect.ConfirmBinaryResult)
 		//确认apk二进制包检测信息
-		api.POST("/detect/confirmApkResult", detect.ConfirmApkBinaryResultv_3)
-		////确认apk二进制包检测信息-----v2
-		//api.POST("/detect/confirmApkResult_v2", detect.ConfirmApkBinaryResultv_3)
+		//api.POST("/detect/confirmApkResult", detect.ConfirmApkBinaryResultv_4)
+		api.POST("/detect/confirmApkResult", detect.ConfirmApkBinaryResultv_5)
+		////确认apk二进制包权限检测信息------fj
+		//api.POST("/detect/confirmApk_2", detect.ConfirmApkBinaryResultv_4)
 		//根据platform获取配置的问题类型
 		api.GET("/config/queryProblemConfigs", detect.QueryProblemConfigs)
 		//增加配置项
@@ -105,6 +102,22 @@ func InitRouter(r *ginex.Engine) {
 		api.POST("/detect/confirmIOSResult", detect.ConfirmIOSBinaryResult)
 		//查询权限确认历史
 		api.POST("detect/queryIgnoreHistory",detect.QueryIgnoredHistory)
+		//新增权限
+		api.POST("/perm/addPermission",detect.AddDetectConfig)
+		//删除权限
+		//api.GET("/perm/deletePermission",detect.DeleteDetectConfig)
+		//修改权限
+		api.POST("/perm/editPermission",detect.EditDectecConfig)
+		//查询权限
+		api.POST("/perm/queryPermission",detect.QueryDectecConfig)
+		//根据权限查询信息
+		api.POST("/perm/queryWithPermission",detect.GetRelationsWithPermission)
+		//根据App查询权限信息
+		api.POST("/perm/queryPermissionsOfApp",detect.QueryPermissionsWithApp)
+		//查询权限详情
+		api.GET("/perm/getpermDetails",detect.GetPermDetails)
+		//获取app的版本号---权限关联查询使用
+		api.GET("/perm/getAppVesions",detect.GetAppVersions)
 	}
 	//todo 巩锐开始开发证书体系监管后台API
 	connapi := r.Group("/v1/devConnManage")
