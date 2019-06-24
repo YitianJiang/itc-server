@@ -27,7 +27,8 @@ import (
 
 const (
 	DETECT_URL_DEV = "10.2.209.202:9527"
-	DETECT_URL_PRO = "10.2.9.226:9527"
+	//DETECT_URL_PRO = "10.2.9.226:9527"
+	DETECT_URL_PRO = "10.1.221.15:9527"
 	//test----fj
 	Local_URL_PRO = "10.2.221.213:9527"
 
@@ -54,7 +55,6 @@ func UploadFile(c *gin.Context) {
 		})
 		return
 	}
-
 	file, header, err := c.Request.FormFile("uploadFile")
 	if file == nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -240,7 +240,9 @@ func UploadFile(c *gin.Context) {
 		if err != nil {
 			logs.Error("上传二进制包出错，重试一次也失败", err)
 			//及时报警
-			utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！")
+			utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
+			utils.LarkDingOneInner("yinzhihong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
+			utils.LarkDingOneInner("fanjuan.xqp", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
 		}
 		resBody := &bytes.Buffer{}
 		if response != nil {
@@ -363,7 +365,7 @@ func UpdateDetectInfos(c *gin.Context) {
 		//iOS付费相关黑名单及时报警
 		if res && warnFlag {
 			tips := "Notice: " + (*detect)[0].AppName + " " + (*detect)[0].AppVersion + " iOS包完成二进制检测，检测黑名单中itms-services不为空，请及时关注！！！！\n"
-			larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + strconv.Itoa(toolId) + "&showItcDetail=1&itcTaskId=" +  strconv.Itoa(taskId)
+			larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + strconv.Itoa(toolId) + "&showItcDetail=1&itcTaskId=" + strconv.Itoa(taskId)
 			tips += "地址链接：" + larkUrl
 			utils.LarkDingOneInner("zhangshuai.02", tips)
 			utils.LarkDingOneInner("gongrui", tips)
@@ -436,7 +438,7 @@ func UpdateDetectInfos(c *gin.Context) {
 	if toGroupID != "" {
 		group := strings.Replace(toGroupID, "，", ",", -1) //中文逗号切换成英文逗号
 		groupArr := strings.Split(group, ",")
-		for _, group_id := range groupArr{
+		for _, group_id := range groupArr {
 			to_lark_group := strings.Trim(group_id, " ")
 			utils.LarkGroup(message, to_lark_group)
 		}
@@ -563,9 +565,9 @@ func ConfirmBinaryResult(c *gin.Context) {
 		"id": t.TaskId,
 	})
 	//更新旧接口任务状态
-	condition := "task_id = '"+fmt.Sprint(t.TaskId)+"'"
+	condition := "task_id = '" + fmt.Sprint(t.TaskId) + "'"
 	detectContent := dal.QueryTaskBinaryCheckContent(condition)
-	if detectContent == nil || len(*detectContent)==0 {
+	if detectContent == nil || len(*detectContent) == 0 {
 		logs.Error("未查询到相关二进制检测内容,更新任务状态失败")
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "未查询到相关二进制检测内容,更新任务状态失败！",
@@ -573,9 +575,9 @@ func ConfirmBinaryResult(c *gin.Context) {
 			"data":      "未查询到相关二进制检测内容,更新任务状态失败",
 		})
 		return
-	}else {
+	} else {
 		changeFlag := true
-		for _,detectCon := range (*detectContent) {
+		for _, detectCon := range *detectContent {
 			if detectCon.Status == 0 {
 				changeFlag = false
 				break
@@ -583,9 +585,9 @@ func ConfirmBinaryResult(c *gin.Context) {
 		}
 		if changeFlag {
 			(*detect)[0].Status = 1
-			err :=dal.UpdateDetectModelNew((*detect)[0])
+			err := dal.UpdateDetectModelNew((*detect)[0])
 			if err != nil {
-				logs.Error("更新任务状态失败，任务ID："+fmt.Sprint(t.TaskId)+",错误原因:%v",err)
+				logs.Error("更新任务状态失败，任务ID："+fmt.Sprint(t.TaskId)+",错误原因:%v", err)
 				c.JSON(http.StatusOK, gin.H{
 					"message":   "更新任务状态失败！",
 					"errorCode": -1,
@@ -942,6 +944,7 @@ func GetToken(c *gin.Context) {
 		})
 	}
 }
+
 /**
  * 检测服务报警接口
  */
@@ -949,7 +952,7 @@ func Alram(c *gin.Context) {
 	message := c.Request.FormValue("errorMsg")
 	larkList := strings.Split("kanghuaisong,yinzhihong,fanjuan.xqp", ",")
 	for _, creator := range larkList {
-		utils.LarkDingOneInner(creator, "检测服务异常，请立即关注！" + message)
+		utils.LarkDingOneInner(creator, "检测服务异常，请立即关注！"+message)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",

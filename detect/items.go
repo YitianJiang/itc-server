@@ -160,7 +160,7 @@ func GetSelfCheckItems(c *gin.Context) {
 				item.Status = status
 				item.Remark = remarkMap[item.ID]
 				item.Confirmer = confirmerMap[item.ID]
-			}else{
+			} else {
 				item.Status = 0
 				item.Remark = ""
 				item.Confirmer = ""
@@ -220,4 +220,59 @@ func ConfirmCheck(c *gin.Context) {
 		"errorCode": 0,
 		"data":      "success",
 	})
+}
+
+/*
+ *删除检查项
+ */
+var whiteList = []string{"kanghuaisong", "zhangshuai.02", "liusiyu.lsy", "yinzhihong"} //检查项删除白名单
+func DropDetectItem(c *gin.Context) {
+	itemId := c.DefaultPostForm("itemId", "")
+	if itemId == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "参数不合法",
+			"errorCode": -2,
+			"data":      "参数不合法,请重新输入！",
+		})
+		return
+	}
+	name, flag := c.Get("username")
+	if !flag {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "未获取到用户信息！",
+			"errorCode": -2,
+			"data":      "未获取到用户信息！",
+		})
+		return
+	}
+	//判断用户是否有权限
+	isPrivacy := false
+	for _, people := range whiteList {
+		if people == name {
+			isPrivacy = true
+		}
+	}
+	if isPrivacy {
+		if dal.DeleteItemsByCondition(map[string]interface{}{
+			"id": itemId,
+		}) {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "success",
+				"errorCode": 0,
+				"data":      "success",
+			})
+		} else {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "删除自查项失败！",
+				"errorCode": -1,
+				"data":      "删除自查项失败！",
+			})
+		}
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "该用户没有删除权限",
+			"errorCode": -3,
+			"data":      "该用户没有删除权限",
+		})
+	}
 }
