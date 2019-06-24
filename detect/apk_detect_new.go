@@ -13,7 +13,7 @@ import (
 安卓json检测信息分析----兼容.aab格式检测结果---json到Struct
 */
 func ApkJsonAnalysis_2 (info string,mapInfo map[string]int)error{
-	logs.Notice("新的安卓解析开始～～～～")
+	logs.Info("新的安卓解析开始～～～～")
 	var fisrtResult dal.JSONResultStruct
 	err_f := json.Unmarshal([]byte(info),&fisrtResult)
 	if err_f != nil {
@@ -103,7 +103,10 @@ func ApkJsonAnalysis_2 (info string,mapInfo map[string]int)error{
 	}
 
 	//任务状态更新----该app无需要特别确认的敏感方法、字符串或权限
-	taskStatusUpdate(mapInfo["taskId"],mapInfo["toolId"],&(*detect)[0])
+	errTaskUpdate := taskStatusUpdate(mapInfo["taskId"],mapInfo["toolId"],&(*detect)[0])
+	if errTaskUpdate != "" {
+		return fmt.Errorf(errTaskUpdate)
+	}
 	return nil
 }
 
@@ -322,8 +325,13 @@ func MethodAnalysis(method dal.MethodInfo,detail *dal.DetectContentDetail) *dal.
 	detail.KeyInfo = method.MethodName
 	detail.DescInfo = method.Desc
 	detail.ClassName = method.ClassName
-
-
+	//增加flag标识
+	if method.Flag != 0 {
+		var extraInfo dal.DetailExtraInfo
+		extraInfo.GPFlag = method.Flag
+		byteExtra,_ := json.Marshal(extraInfo)
+		detail.ExtraInfo = string(byteExtra)
+	}
 	var call = method.CallLocation
 
 	callLocation := MethodRmRepeat_2(call)
@@ -383,13 +391,18 @@ func StrAnalysis(str dal.StrInfo,detail *dal.DetectContentDetail,strInfos map[st
 	}else {
 		detail.Status = 0
 	}
-
 	detail.DescInfo = str.Desc
+	//增加敏感字符串的gp标识
+	if str.Flag != 0 {
+		var extraInfo dal.DetailExtraInfo
+		extraInfo.GPFlag = str.Flag
+		byteExtra,_ := json.Marshal(extraInfo)
+		detail.ExtraInfo = string(byteExtra)
+	}
 	var callInfo = str.CallLocation
 	//敏感字段信息去重
 	call_location := StrRmRepeat_2(callInfo)
 	detail.CallLoc = call_location
-
 	return detail
 
 }
@@ -411,3 +424,5 @@ func StrRmRepeat_2(callInfo []dal.CallLocInfo) string {
 	}
 	return result
 }
+
+
