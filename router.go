@@ -14,9 +14,6 @@ func InitRouter(r *ginex.Engine) {
 	//二进制包检测回调接口
 	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
 
-	//二进制检测回调接口-----fj
-	//r.POST("/updateDetectInfosNew", detect.UpdateDetectInfosNew)
-
 	//获取鉴权接口
 	r.GET("/t/generateToken", detect.GetToken)
 	//查询被拒案例

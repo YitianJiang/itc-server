@@ -1299,6 +1299,7 @@ func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct) string {
 			utils.LarkDingOneInner("fanjuan.xqp","任务ID："+fmt.Sprint(taskId)+"确认状态更新失败，失败原因："+err.Error())
 			return "任务确认状态更新失败！"
 		}
+		CICallBack(&(*detect)[0])
 	}
 	return ""
 
