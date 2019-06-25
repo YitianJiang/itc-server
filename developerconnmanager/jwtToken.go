@@ -8,7 +8,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"github.com/dgrijalva/jwt-go"
-	"io/ioutil"
 	"time"
 )
 var (
@@ -17,13 +16,13 @@ var (
 )
 
 
-func AuthKeyFromFile(filename string) (*ecdsa.PrivateKey, error) {
-	bytes, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-	return AuthKeyFromBytes(bytes)
-}
+//func AuthKeyFromFile(filename string) (*ecdsa.PrivateKey, error) {
+//	bytes, err := ioutil.ReadFile(filename)
+//	if err != nil {
+//		return nil, err
+//	}
+//	return AuthKeyFromBytes(bytes)
+//}
 
 func AuthKeyFromBytes(bytes []byte) (*ecdsa.PrivateKey, error) {
 	block, _ := pem.Decode(bytes)
