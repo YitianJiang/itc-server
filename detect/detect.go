@@ -1001,6 +1001,8 @@ func CICallBack(task *dal.DetectStruct) error{
 	if err != nil {
 		logs.Error("任务ID："+fmt.Sprint(task.ID)+",CI回调信息转换失败"+fmt.Sprint(err1))
 		utils.LarkDingOneInner("fanjuan.xqp", "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("kanghuaisong", "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("yinzhihong", "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
 		return err1
 	}
 	reader := bytes.NewReader(bytesData)
@@ -1009,6 +1011,8 @@ func CICallBack(task *dal.DetectStruct) error{
 	if err2 != nil {
 		logs.Error("任务ID："+fmt.Sprint(task.ID)+",CI回调请求Create失败"+fmt.Sprint(err2))
 		utils.LarkDingOneInner("fanjuan.xqp", "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("kanghuaisong", "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("yinzhihong", "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
 		return err2
 	}
 	request.Header.Set("Content-Type", "application/json;charset=UTF-8")
@@ -1019,6 +1023,8 @@ func CICallBack(task *dal.DetectStruct) error{
 		//及时报警
 		//utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
 		utils.LarkDingOneInner("fanjuan.xqp", "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("kanghuaisong", "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("yinzhihong", "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
 		return err3
 	}
 	logs.Info("任务ID："+fmt.Sprint(task.ID)+"回调成功,回调信息："+fmt.Sprint(data)+",回调地址："+url)
