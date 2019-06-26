@@ -13,6 +13,9 @@ func InitRouter(r *ginex.Engine) {
 	api := r.GroupEX("/api")
 	//二进制包检测回调接口
 	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
+	r.POST("/addDetectItem", detect.AddDetectItem)
+	r.GET("/getSelfCheckItems", detect.GetSelfCheckItems)
+	r.POST("/deleteDetectItem", detect.DropDetectItem)
 
 	//二进制检测回调接口-----fj
 	//r.POST("/updateDetectInfosNew", detect.UpdateDetectInfosNew)
@@ -38,13 +41,13 @@ func InitRouter(r *ginex.Engine) {
 		//上传ipa和apk------fj
 		//api.POST("/uploadFileNew", detect.UploadFileNew)
 		//增加检查项
-		api.POST("/addDetectItem", detect.AddDetectItem)
+		//api.POST("/addDetectItem", detect.AddDetectItem)
 		//二进制任务查询
 		api.GET("/queryTasks", detect.QueryDetectTasks)
 		//获取任务对应的自查项
-		api.GET("/getSelfCheckItems", detect.GetSelfCheckItems)
+		//api.GET("/getSelfCheckItems", detect.GetSelfCheckItems)
 		//删除检查项
-		api.POST("/deleteDetectItem", detect.DropDetectItem)
+		//api.POST("/deleteDetectItem", detect.DropDetectItem)
 		//完成自查
 		api.POST("/confirmCheck", detect.ConfirmCheck)
 		//获取检测列表
@@ -100,22 +103,22 @@ func InitRouter(r *ginex.Engine) {
 		//确认iOS二进制检测信息
 		api.POST("/detect/confirmIOSResult", detect.ConfirmIOSBinaryResult)
 		//查询权限确认历史
-		api.POST("detect/queryIgnoreHistory",detect.QueryIgnoredHistory)
+		api.POST("detect/queryIgnoreHistory", detect.QueryIgnoredHistory)
 		//新增权限
-		api.POST("/perm/addPermission",detect.AddDetectConfig)
+		api.POST("/perm/addPermission", detect.AddDetectConfig)
 		//删除权限
 		//api.GET("/perm/deletePermission",detect.DeleteDetectConfig)
 		//修改权限
-		api.POST("/perm/editPermission",detect.EditDectecConfig)
+		api.POST("/perm/editPermission", detect.EditDectecConfig)
 		//查询权限
-		api.POST("/perm/queryPermission",detect.QueryDectecConfig)
+		api.POST("/perm/queryPermission", detect.QueryDectecConfig)
 		//根据权限查询信息
-		api.POST("/perm/queryWithPermission",detect.GetRelationsWithPermission)
+		api.POST("/perm/queryWithPermission", detect.GetRelationsWithPermission)
 		//根据App查询权限信息
-		api.POST("/perm/queryPermissionsOfApp",detect.QueryPermissionsWithApp)
+		api.POST("/perm/queryPermissionsOfApp", detect.QueryPermissionsWithApp)
 		//查询权限详情
-		api.GET("/perm/getpermDetails",detect.GetPermDetails)
+		api.GET("/perm/getpermDetails", detect.GetPermDetails)
 		//获取app的版本号---权限关联查询使用
-		api.GET("/perm/getAppVesions",detect.GetAppVersions)
+		api.GET("/perm/getAppVesions", detect.GetAppVersions)
 	}
 }

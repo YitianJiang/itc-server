@@ -833,7 +833,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "success",
 			"errorCode": 0,
-			"appId": (*task)[0].AppId,
+			"appId":     (*task)[0].AppId,
 			"data":      res,
 		})
 		return
@@ -857,7 +857,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
 		"errorCode": 0,
-		"appId": (*task)[0].AppId,
+		"appId":     (*task)[0].AppId,
 		"data":      *selected,
 	})
 }
