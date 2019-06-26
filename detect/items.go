@@ -152,6 +152,7 @@ func GetSelfCheckItems(c *gin.Context) {
 		}
 	}
 	//任务管理中展示自查项
+
 	task_id, _ := strconv.Atoi(taskId)
 	taskDetect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id": task_id,
@@ -160,7 +161,8 @@ func GetSelfCheckItems(c *gin.Context) {
 	if taskDetect != nil && len(*taskDetect) != 0 {
 		platform = (*taskDetect)[0].Platform
 	}
-	flag, data := dal.QueryTaskSelfItem(task_id)
+	flag, data := dal.QueryTaskSelfItemList(task_id)
+	//查询出错
 	if !flag {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "查询Task自查项失败！",
@@ -169,30 +171,58 @@ func GetSelfCheckItems(c *gin.Context) {
 		})
 		return
 	}
-	if flag && data == nil {
+	//查询taskItemList为空
+	if data == nil {
 		appSelf := dal.QueryAppSelfItem(map[string]interface{}{
 			"appId":    appIdParam,
 			"platform": platform,
 		})
+		var taskSelf []interface{} //task的自查项
+		//appItem检查项为空
 		if appSelf == nil || len(*appSelf) == 0 {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "success,该APP没有自查项！",
-				"errorCode": 0,
-				"data":      []interface{}{},
+			ggList := getGGItem(map[string]interface{}{
+				"is_gg":1,
+				"platform":platform,
 			})
-			return
+			if len(ggList) == 0{ //公共检查项为空
+				c.JSON(http.StatusOK, gin.H{
+					"message":   "success,该APP没有自查项！",
+					"errorCode": 0,
+					"data":      []interface{}{},
+				})
+				return
+			}
+			taskSelf = ggList //公共项不为空
+			//插入appItem
+			var taskAppItem dal.AppSelfItem
+			taskAppItem.Platform = platform
+			taskAppItem.AppId, _ = strconv.Atoi(appIdParam)
+			for _, gg := range ggList{
+				gg.(map[string]interface{})["status"] = 0
+				gg.(map[string]interface{})["confirmer"] = ""
+				gg.(map[string]interface{})["remark"] = ""
+			}
+			ggJson, _ := json.Marshal(map[string]interface{}{
+				"item":ggList,
+			})
+			taskAppItem.SelfItems = string(ggJson)
+			dal.InsertAppSelfItem(taskAppItem)
+		}else{
+			//appItem检查项不为空
+			returnSelf := (*appSelf)[0].SelfItems
+			var temp = make(map[string]interface{})
+			json.Unmarshal([]byte(returnSelf), &temp)
+			taskSelf = temp["item"].([]interface{})
 		}
-		returnSelf := (*appSelf)[0].SelfItems
-		var temp = make(map[string]interface{})
-		json.Unmarshal([]byte(returnSelf), &temp)
-		taskSelf := temp["item"].([]interface{})
+		//task插入检查项
 		for _, self := range taskSelf {
 			self.(map[string]interface{})["status"] = 0
 			self.(map[string]interface{})["confirmer"] = ""
 			self.(map[string]interface{})["remark"] = ""
 		}
-		temp["item"] = taskSelf
-		task_self, err := json.Marshal(temp)
+		task_self, err := json.Marshal(map[string]interface{}{
+			"item":taskSelf,
+		})
 		if err != nil {
 			logs.Error(err.Error())
 			c.JSON(http.StatusOK, gin.H{
@@ -280,7 +310,7 @@ func ConfirmCheck(c *gin.Context) {
 	param["taskId"] = t.TaskId
 	param["data"] = t.Data
 	param["operator"] = name
-	bool := dal.ConfirmSelfCheck(param)
+	bool, detect := dal.ConfirmSelfCheck(param)
 	if !bool {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "自查确认失败，请联系相关人员！",
@@ -288,6 +318,9 @@ func ConfirmCheck(c *gin.Context) {
 			"data":      "自查确认失败，请联系相关人员！",
 		})
 		return
+	}
+	if detect != nil && detect.Status == 1 && detect.SelfCheckStatus == 1{
+		CICallBack(detect)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",

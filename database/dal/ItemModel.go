@@ -481,7 +481,7 @@ func DeleteItemsByCondition(condition map[string]interface{}) bool {
 }
 
 //taskID确认自查项
-func ConfirmSelfCheck(param map[string]interface{}) bool {
+func ConfirmSelfCheck(param map[string]interface{}) (bool, *DetectStruct) {
 	//获取前端数据
 	operator := param["operator"]
 	taskId := param["taskId"]
@@ -490,7 +490,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
-		return false
+		return false, nil
 	}
 	defer connection.Close()
 	db := connection.Begin()
@@ -500,13 +500,13 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 	if err := db.Table(TaskSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("taskId = ?", taskId).Find(&taskSelf).Error; err != nil {
 		logs.Error("查询taskId自查项失败！", err.Error())
 		db.Rollback()
-		return false
+		return false, nil
 	}
 	taskSelfMap := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(taskSelf.SelfItems), &taskSelfMap); err != nil {
 		logs.Error("json map转换失败！", err.Error())
 		db.Rollback()
-		return false
+		return false, nil
 	}
 	taskSelfList := taskSelfMap["item"].([]interface{})
 	idArray := data.([]Self)
@@ -528,41 +528,38 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 	if err != nil {
 		logs.Error("map json转换失败！", err.Error())
 		db.Rollback()
-		return false
+		return false, nil
 	}
 	taskSelf.SelfItems = string(task_self)
 	if err := db.Table(TaskSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Save(taskSelf).Error; err != nil {
 		logs.Error(err.Error())
 		db.Rollback()
-		return false
+		return false, nil
 	}
 	//最后更新检测任务的自查状态
+	var detect DetectStruct
 	if allCheckFlag {
-		var detect DetectStruct
 		if err = db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
 			Where("id=?", taskId).Find(&detect).Error; err != nil {
 			logs.Error("%v", err)
 			db.Rollback()
-			return false
+			return false, nil
 		}
 		if &detect == nil {
 			logs.Error(err.Error())
 			db.Rollback()
-			return false
+			return false, nil
 		}
 		detect.SelfCheckStatus = 1
 		if err = db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
 			Save(detect).Error; err != nil {
 			logs.Error("%v", err)
 			db.Rollback()
-			return false
-		}
-		if detect.Status == 1 {
-			//回调接口
+			return false, nil
 		}
 	}
 	db.Commit()
-	return true
+	return true, &detect
 }
 
 //根据任务id拿到对应的自查信息
@@ -661,7 +658,7 @@ func InsertTaskSelfItem(taskItem TaskSelfItem) bool {
 }
 
 //查询taskId自查项
-func QueryTaskSelfItem(taskId int) (bool, []interface{}) {
+func QueryTaskSelfItemList(taskId int) (bool, []interface{}) {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
