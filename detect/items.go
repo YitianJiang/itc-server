@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
-	"fmt"
 
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/gopkg/logs"
