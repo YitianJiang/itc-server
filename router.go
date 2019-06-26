@@ -124,5 +124,12 @@ func InitRouter(r *ginex.Engine) {
 		connapi.GET("/testPrivatePrint",developerconnmanager.ParsePrivateKey)
 		connapi.GET("/createProvProfile",developerconnmanager.Test64DecodeToString)
 		connapi.POST("/createP8DBInfo",developerconnmanager.CreateP8DBInfoToTable)
+
+
+	}
+	accountapi:=r.Group("/v1/accountManage")
+	{
+		//accountapi.PATCH("/accountInfoUpdata",developerconnmanager.InsertAccountInfo)
+		accountapi.DELETE("/accountInfoDelete",developerconnmanager.DeleteByTeamId)
 	}
 }
