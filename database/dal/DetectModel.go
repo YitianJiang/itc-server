@@ -25,7 +25,10 @@ type DetectStruct struct {
 	SelfCheckStatus int    `gorm:"column:self_check_status"      json:"selfCheckStatus"` //0-自查未完成；1-自查完成
 	TosUrl          string `gorm:"column:tos_url"                json:"tosUrl"`
 	Status          int    `gorm:"column:status"                 json:"status"` //0---未完全确认；1---已完全确认
-	//Source 			int	   `gorm:"column:source" 				 json:"source"`//0--发布平台；1--页面
+	ExtraInfo		string `gorm:"column:extra_info" 		     json:"extraInfo"`//其他附加信息
+}
+type ExtraStruct struct {
+	CallBackAddr		string 			`json:"callBackAddr"`
 }
 type RecordTotal struct {
 	Total uint

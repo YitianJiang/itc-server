@@ -17,9 +17,6 @@ func InitRouter(r *ginex.Engine) {
 	r.GET("/getSelfCheckItems", detect.GetSelfCheckItems)
 	r.POST("/deleteDetectItem", detect.DropDetectItem)
 
-	//二进制检测回调接口-----fj
-	//r.POST("/updateDetectInfosNew", detect.UpdateDetectInfosNew)
-
 	//获取鉴权接口
 	r.GET("/t/generateToken", detect.GetToken)
 	//查询被拒案例
