@@ -168,7 +168,7 @@ func DeleteItemsByCondition(condition map[string]interface{}) bool {
 }
 
 //confirm check
-func ConfirmSelfCheck(param map[string]interface{}) bool {
+func ConfirmSelfCheck(param map[string]interface{}) (bool, *DetectStruct){
 	//获取前端数据
 	operator := param["operator"]
 	taskId := param["taskId"]
@@ -177,7 +177,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
-		return false
+		return false, nil
 	}
 	defer connection.Close()
 	db := connection.Begin()
@@ -206,7 +206,7 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 				if err = db.Table(ConfirmCheck{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&check).Error; err != nil {
 					logs.Error("insert tb_confirm_check failed, %v", err)
 					db.Rollback()
-					return false
+					return false, nil
 				}
 			} else {
 				//数据库中记录为0，无效记录，更新这条记录即可
@@ -217,23 +217,30 @@ func ConfirmSelfCheck(param map[string]interface{}) bool {
 						Update(map[string]interface{}{"status": dat.Status, "updated_at": time.Now(), "remark": dat.Remark, "operator": operator.(string)}).Error; err != nil {
 						logs.Error("insert tb_confirm_check failed, %v", err)
 						db.Rollback()
-						return false
+						return false, nil
 					}
 				}
 			}
 		}
 	}
 	//最后更新检测任务的自查状态
+	var detect DetectStruct
 	if allCheckFlag {
-		if err = db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
-			Where("id=?", taskId).Update("self_check_status", 1).Error; err != nil {
+		db := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
+		if err = db.Where("id=?", taskId).Limit(1).Find(&detect).Error; err != nil {
 			logs.Error("%v", err)
 			db.Rollback()
-			return false
+			return false, nil
+		}
+		detect.SelfCheckStatus = 1
+		if err = db.Save(detect).Error; err != nil {
+			logs.Error("%v", err)
+			db.Rollback()
+			return false, nil
 		}
 	}
 	db.Commit()
-	return true
+	return true, &detect
 }
 
 //根据任务id拿到对应的自查信息

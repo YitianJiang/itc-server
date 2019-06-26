@@ -959,6 +959,10 @@ func Alram(c *gin.Context) {
 
 
 func CICallBack(task *dal.DetectStruct) error{
+	if task.Platform == 1 && (task.SelfCheckStatus != 1 || task.Status != 1){
+		logs.Info("不满足callback条件")
+		return nil
+	}
 	var t dal.ExtraStruct
 	//兼容旧信息---无extra_info字段
 	if task.ExtraInfo == ""{

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"fmt"
 
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/gopkg/logs"
@@ -206,7 +207,7 @@ func ConfirmCheck(c *gin.Context) {
 	param["taskId"] = t.TaskId
 	param["data"] = t.Data
 	param["operator"] = name
-	bool := dal.ConfirmSelfCheck(param)
+	bool, detect := dal.ConfirmSelfCheck(param)
 	if !bool {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "自查确认失败，请联系相关人员！",
@@ -214,6 +215,9 @@ func ConfirmCheck(c *gin.Context) {
 			"data":      "自查确认失败，请联系相关人员！",
 		})
 		return
+	}
+	if detect != nil && detect.Status == 1 && detect.SelfCheckStatus == 1{
+		CICallBack(detect)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
