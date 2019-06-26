@@ -597,6 +597,35 @@ func GetSelfCheckByTaskId(condition string) (map[uint]int, map[uint]string, map[
 	}
 	return item, remark, confirmer
 }
+func QueryItem(condition map[string]interface{}) *[]ItemStruct {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return nil
+	}
+	defer connection.Close()
+	var items []ItemStruct
+	db := connection.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	if err = db.Where(condition).Find(&items).Error; err != nil {
+		logs.Error("query self check item failed, %v", err)
+		return nil
+	}
+	return &items
+}
+func InsertAppSelfItem(appItem AppSelfItem) bool {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return false
+	}
+	defer connection.Close()
+	db := connection.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	if err = db.Create(appItem).Error; err != nil {
+		logs.Error("query self check item failed, %v", err)
+		return false
+	}
+	return true
+}
 
 //查询app对应自查项
 func QueryAppSelfItem(condition map[string]interface{}) *[]AppSelfItem {

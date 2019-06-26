@@ -117,10 +117,13 @@ func GetSelfCheckItems(c *gin.Context) {
 			"appId": appIdParam,
 		})
 		if appSelfItem == nil || len(*appSelfItem) == 0 {
+			ggItemList := getGGItem(map[string]interface{}{
+				"is_gg" : 1,
+			})
 			c.JSON(http.StatusOK, gin.H{
-				"message":   "暂无检查项！",
+				"message":   "success！",
 				"errorCode": 0,
-				"data":      []interface{}{},
+				"data":      ggItemList,
 			})
 			return
 		} else {
@@ -228,6 +231,25 @@ func GetSelfCheckItems(c *gin.Context) {
 	}
 }
 
+func getGGItem(condition map[string]interface{}) []interface{}{
+	ggItem := dal.QueryItem(condition)
+	if ggItem == nil || len(*ggItem) == 0{
+		return []interface{}{}
+	}
+	var ggItemList []interface{}
+	for _, gg_item := range *ggItem{
+		itemJson, _ := json.Marshal(gg_item)
+		m := make(map[string]interface{})
+		json.Unmarshal(itemJson, &m)
+		delete(m, "ID")
+		delete(m, "CreatedAt")
+		delete(m, "DeletedAt")
+		delete(m, "UpdatedAt")
+		m["id"] = gg_item.ID
+		ggItemList = append(ggItemList, m)
+	}
+	return ggItemList
+}
 /*
  *完成自查
  */
