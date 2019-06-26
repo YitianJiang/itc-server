@@ -76,7 +76,6 @@ type DetectInfo struct {
 //敏感信息详情---fj新增
 type DetectContentDetail struct {
 	gorm.Model
-<<<<<<< HEAD
 	TaskId    			int    `json:"taskId"`
 	Status    			int    `json:"status"` //是否确认,0-未确认，1-确认通过，2-确认未通过
 	Remark    			string `json:"remark"`
@@ -92,7 +91,7 @@ type DetectContentDetail struct {
 }
 
 type DetailExtraInfo struct {
-	GPFlag			float64			`json:"gpFlag"`
+	GPFlag			int			`json:"gpFlag"`
 }
 
 type IgnoreInfoStruct struct {
@@ -854,7 +853,7 @@ type AppInfoStruct struct {
 //敏感方法json结构
 type MethodInfo struct {
 	MethodName				string						`json:"method_name"`
-	Flag 					float64						`json:"gpflag"`
+	Flag 					int							`json:"gpflag"`
 	ClassName				string						`json:"method_class_name"`
 	Desc 					string						`json:"desc"`
 	CallLocation			[]CallLocInfo				`json:"call_location"`
@@ -866,7 +865,7 @@ type PermInfo struct {
 //敏感方法json结构
 type StrInfo struct {
 	Keys 					[]string					`json:"keys"`
-	Flag 					float64						`json:"gpflag"`
+	Flag 					int							`json:"gpflag"`
 	Desc 					string						`json:"desc"`
 	CallLocation			[]CallLocInfo				`json:"call_location"`
 }
@@ -874,7 +873,7 @@ type StrInfo struct {
 type CallLocInfo struct {
 	ClassName				string						`json:"class_name"`
 	CallMethodName 			string						`json:"method_name"`
-	LineNum					interface{}						`json:"line_number"`
+	LineNum					interface{}					`json:"line_number"`
 	Key 					string						`json:"key"`
 }
 /*

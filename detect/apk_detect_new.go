@@ -17,7 +17,7 @@ func ApkJsonAnalysis_2 (info string,mapInfo map[string]int)error{
 	var fisrtResult dal.JSONResultStruct
 	err_f := json.Unmarshal([]byte(info),&fisrtResult)
 	if err_f != nil {
-		logs.Error("二进制静态包检测返回信息格式错误！,%v",err_f)
+		logs.Error("taskId:"+fmt.Sprint(mapInfo["taskId"])+",二进制静态包检测返回信息格式错误！,%v",err_f)
 		message := "taskId:"+fmt.Sprint(mapInfo["taskId"])+",二进制静态包检测返回信息格式错误，请解决;"+fmt.Sprint(err_f)
 		utils.LarkDingOneInner("fanjuan.xqp",message)
 		return err_f
@@ -131,7 +131,7 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct,detectInfo *dal.DetectInfo,index .
 
 	//判断appInfo信息是否为主要信息，只有主要信息--primary为1才会修改任务的appName和Version,或者primary为nil---只有一个信息
 	var taskUpdateFlag = false
-	if info.Primary == nil || info.Primary == 1 {
+	if info.Primary == nil || info.Primary.(float64) == 1 {
 		taskUpdateFlag = true
 	}
 	detectInfo.ApkName = info.ApkName
@@ -240,7 +240,7 @@ func permUpdate(permissionArr *[]string,detectInfo *dal.DetectInfo,detect *[]dal
 			perm_id,err := dal.InsertDetectConfig(conf)
 
 			if err != nil {
-				logs.Error("update回调时新增权限失败，%v",err)
+				logs.Error("taskId:"+fmt.Sprint(taskId)+",update回调时新增权限失败，%v",err)
 				//及时报警
 				utils.LarkDingOneInner("fanjuan.xqp","taskId:"+fmt.Sprint(taskId)+",update回调新增权限失败")
 				return "",err

@@ -15,485 +15,6 @@ import (
 )
 
 
-/**
-	安卓json检测信息分析----兼容.aab格式检测结果----json到map
- */
-
-func ApkJsonAnalysis (info string,mapInfo map[string]int){
-	var fisrtResult = make(map[string]interface{})
-	err_f := json.Unmarshal([]byte(info),&fisrtResult)
-	if err_f != nil {
-		logs.Error("二进制静态包检测返回信息格式错误！")
-		message := "taskId:"+fmt.Sprint(mapInfo["taskId"])+",二进制静态包检测返回信息格式错误，请解决;"+fmt.Sprint(err_f)
-		utils.LarkDingOneInner("fanjuan.xqp",message)
-		return
-	}
-	//获取json返回结果数组
-	results := fisrtResult["result"].([]interface{})
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id" : mapInfo["taskId"],
-	})
-	//遍历结果数组，并将每组检测结果信息插入数据库
-	for index,result := range results {
-		//结果数组中每个项是map[string]interface{}形式
-		infoMap := result.(map[string]interface{})
-
-		appInfos := infoMap["app_info"].(map[string]interface{})
-		methodsInfo := infoMap["method_sensitive_infos"].([]interface{})
-		strsInfo := infoMap["str_sensitive_infos"].([]interface{})
-
-		var detectInfo dal.DetectInfo
-		detectInfo.TaskId = mapInfo["taskId"]
-		detectInfo.ToolId = mapInfo["toolId"]
-		AppInfoAnalysis(appInfos,&detectInfo,index)
-
-		data := make(map[string]string)
-		data["appId"] = (*detect)[0].AppId
-		data["platform"] =  strconv.Itoa((*detect)[0].Platform)
-
-		//获取敏感方法和字符串的确认信息，为信息初始化做准备
-		methodInfo,strInfos,_,err := getIgnoredInfo_2(data)
-		if err != nil {
-			logs.Error("未查询到该App的增量信息，app信息为：%v",data)
-		}
-
-		//敏感method去重
-		mRepeat := make(map[string]int)
-		newMethods := make([]map[string]interface{},0)//第一层去重后的敏感方法集
-		for _, methodi := range methodsInfo {
-			method := methodi.(map[string]interface{})
-			var keystr = method["method_name"].(string)+method["method_class_name"].(string)
-			if v,ok := mRepeat[keystr]; (!ok||ok&&v==0){
-				newMethods = append(newMethods, method)
-				mRepeat[keystr]=1
-			}
-		}
-		//批量写入数据库的敏感方法struct集合
-		allMethods := make([]dal.DetectContentDetail,0)
-		for _,newMethod := range newMethods {
-			var detailContent dal.DetectContentDetail
-			var keystr = newMethod["method_class_name"].(string)+"."+newMethod["method_name"].(string)
-			if v,ok := methodInfo[keystr]; ok {
-				info := v.(map[string]interface{})
-				detailContent.Status = info["status"].(int)
-			}else{
-				detailContent.Status = 0
-			}
-			detailContent.TaskId = mapInfo["taskId"]
-			detailContent.ToolId = mapInfo["toolId"]
-			//新增兼容下标
-			detailContent.SubIndex = index
-			//MethodAnalysis(newMethod,&detailContent)
-			allMethods = append(allMethods,*MethodAnalysis_2(newMethod,&detailContent))
-		}
-		err1 := dal.InsertDetectDetailBatch(&allMethods)
-		if err1 != nil {
-			//及时报警
-			message := "taskId:"+fmt.Sprint(mapInfo["taskId"])+",敏感method写入数据库失败，请解决;"+fmt.Sprint(err)
-			utils.LarkDingOneInner("fanjuan.xqp", message)
-		}
-
-		allStrs := make([]dal.DetectContentDetail,0)
-		for _, strInfoi := range strsInfo {
-			strInfo := strInfoi.(map[string]interface{})
-			var detailContent dal.DetectContentDetail
-			detailContent.TaskId = mapInfo["taskId"]
-			detailContent.ToolId = mapInfo["toolId"]
-			detailContent.SubIndex = index
-			allStrs = append(allStrs,*StrAnalysis_2(strInfo,&detailContent,strInfos))
-		}
-		err2 := dal.InsertDetectDetailBatch(&allStrs)
-		if err2 != nil {
-			//及时报警
-			message := "taskId:"+fmt.Sprint(mapInfo["taskId"])+",敏感str写入数据库失败，请解决;"+fmt.Sprint(err)
-			utils.LarkDingOneInner("fanjuan.xqp",message)
-		}
-	}
-	//condition := "deleted_at IS NULL and task_id='" + strconv.Itoa(mapInfo["taskId"]) + "' and tool_id='" + strconv.Itoa(mapInfo["toolId"]) + "' and status= 0"
-	//counts := dal.QueryUnConfirmDetectContent(condition)
-	//
-	//perms,_ := dal.QueryPermAppRelation(map[string]interface{}{
-	//	"task_id":mapInfo["taskId"],
-	//})
-	//
-	//var permFlag = true
-	//if perms == nil || len(*perms)== 0 {
-	//	logs.Error("该任务无权限检测信息！")
-	//}else{
-	//	P:
-	//	for i:=0;i<len(*perms);i++{
-	//		permsInfoDB := (*perms)[i].PermInfos
-	//		var permList []interface{}
-	//		json.Unmarshal([]byte(permsInfoDB),&permList)
-	//
-	//		for _,m := range permList {
-	//			permInfo := m.(map[string]interface{})
-	//			if permInfo["status"].(float64) == 0 {
-	//				permFlag = false
-	//				break P
-	//			}
-	//		}
-	//	}
-	//}
-	//
-	//logs.Notice("当前确认情况，字符串和方法剩余："+fmt.Sprint(counts)+" ,权限是否全部确认："+fmt.Sprint(permFlag))
-	//if counts == 0 && permFlag {
-	//	(*detect)[0].Status = 1
-	//	err := dal.UpdateDetectModelNew((*detect)[0])
-	//	if err != nil {
-	//		logs.Error("任务确认状态更新失败！%v", err)
-	//	}else {
-	//		ConfirmCI((*detect)[0].CallBackUrl)
-	//	}
-	//}
-
-	//任务状态更新----该app无需要特别确认的敏感方法、字符串或权限
-	taskStatusUpdate(mapInfo["taskId"],mapInfo["toolId"],&(*detect)[0])
-	return
-}
-
-/**
-	appInfo解析，并写入数据库,此处包含权限的处理-------fj
-	新增了index下标，兼容.aab结果中新增sub_index，默认为0
-*/
-func AppInfoAnalysis(info map[string]interface{},detectInfo *dal.DetectInfo,index ...int){
-	//数组结果排序标识处理，默认为0
-	var realIndex int
-	if len(index) == 0 {
-		realIndex = 0
-	}else {
-		realIndex = index[0]
-	}
-
-	taskId := detectInfo.TaskId
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id" : taskId,
-	})
-	appId,_ := strconv.Atoi((*detect)[0].AppId)
-	//判断appInfo信息是否为主要信息，只有主要信息--primary为1才会修改任务的appName和Version
-	var taskUpdateFlag = false
-	if _,ok := info["primary"];ok {
-		if info["primary"].(float64) == 1 {
-			taskUpdateFlag = true
-		}
-	}else {
-		//单独测apk文件没有此字段，但是默认为主要的
-		taskUpdateFlag = true
-	}
-
-	if _,ok := info["apk_name"]; ok {
-		//(*detect)[0].AppName = info["apk_name"].(string)
-		detectInfo.ApkName = info["apk_name"].(string)
-	}
-	if _,ok := info["apk_version_name"]; ok {
-		//(*detect)[0].AppVersion = info["apk_version_name"].(string)
-		detectInfo.Version = info["apk_version_name"].(string)
-	}
-
-	if taskUpdateFlag {
-		(*detect)[0].AppName = info["apk_name"].(string)
-		(*detect)[0].AppVersion = info["apk_version_name"].(string)
-		if err := dal.UpdateDetectModelNew((*detect)[0]); err != nil {
-			message := "任务ID："+fmt.Sprint(taskId)+"，appName和Version信息更新失败，失败原因："+fmt.Sprint(err)
-			logs.Error(message)
-			utils.LarkDingOneInner("fanjuan.xqp",message)
-			return
-		}
-	}
-
-	_,ok := info["channel"]
-	if ok {
-		detectInfo.Channel = info["channel"].(string)
-	}
-	_,ok1 := info["permissions"]
-
-	var permissionArr []interface{}
-	if ok1 {
-		permissionArr = info["permissions"].([]interface{})
-	}
-
-	//更新任务的权限信息
-	perStr :=""//旧版权限信息
-	permInfos := make([]map[string]interface{},0)//新版权限信息
-	/**
-	map[string]interface{}{
-		"perm_id":int,
-		"key":string,
-		"ability":string,
-		"priority":int,
-		"state":int,//表示是否定义
-		"status":int//确认状态
-		"first_version"://引入信息
-	}
-	 */
-
-	larkPerms := ""
-	var first_history []dal.PermHistory
-	//获取app的权限操作历史map
-	impMap := GetImportedPermission(appId)
-	//判断是否属于初次引入
-	var fhflag bool
-	//权限去重map
-	permRepeatMap := make(map[string]int)
-	for _,per := range permissionArr {
-		//增加权限逐条检测后，此处注释掉
-		//perStr += per.(string) +";"
-		pers := per.(string)
-
-		//权限去重
-		if v,okp := permRepeatMap[pers]; okp&&v==1 {
-			continue
-		}
-		permRepeatMap[pers] = 1
-		//写app和perm对应关系
-		queryResult := dal.QueryDetectConfig(map[string]interface{}{
-			"key_info":pers,
-			"platform":0,
-		})
-		fhflag = false
-		permInfo := make(map[string]interface{})
-		if queryResult == nil || len(*queryResult)==0{
-			var conf dal.DetectConfigStruct
-			conf.KeyInfo = pers
-			//将该权限的优先级定为--3高危
-			conf.Priority = 3
-			//暂时定为固定人选
-			conf.Creator = "kanghuaisong"
-			conf.Platform = 0
-			perm_id,err := dal.InsertDetectConfig(conf)
-
-			if err != nil {
-				logs.Error("update回调时新增权限失败，%v",err)
-				//及时报警
-				utils.LarkDingOneInner("fanjuan.xqp","taskId:"+fmt.Sprint(taskId)+",update回调新增权限失败")
-				return
-			}else {
-				fhflag = true
-				larkPerms += "权限名为："+pers+"\n"
-				permInfo["perm_id"] = perm_id
-				permInfo["key"] = pers
-				permInfo["ability"] = ""
-				//优先级默认为3---高危
-				permInfo["priority"] = 3
-				//此处state表明该权限是自动添加，信息不全，后面query时需要重新读取相关信息
-				permInfo["state"] = 0
-				permInfo["status"] = 0
-				permInfo["first_version"] = detectInfo.Version
-			}
-		}else{
-			permInfo["perm_id"] = (*queryResult)[0].ID
-			permInfo["key"] = pers
-			permInfo["ability"] = (*queryResult)[0].Ability
-			permInfo["priority"] = (*queryResult)[0].Priority
-			permInfo["state"] = 1
-
-			//更新确认信息
-			if v,ok := impMap[int((*queryResult)[0].ID)]; !ok {
-				//logs.Error("未查询到该权限的操作历史")
-				permInfo["status"] = 0
-				permInfo["first_version"] = detectInfo.Version
-				fhflag = true
-			}else {
-				iMap := v.(map[string]interface{})
-				permInfo["status"] = iMap["status"].(int)
-				permInfo["first_version"] = iMap["version"].(string)
-			}
-		}
-		//若是初次引入,写入引入信息
-		if fhflag {
-			var hist dal.PermHistory
-			hist.Status = 0
-			hist.AppId = appId
-			hist.AppVersion = detectInfo.Version
-			hist.PermId = int(permInfo["perm_id"].(uint))
-			hist.Confirmer = (*detect)[0].Creator
-			hist.Remarks = "包检测引入该权限"
-			first_history = append(first_history,hist)
-		}
-		permInfos = append(permInfos,permInfo)
-	}
-	//若是初次引入,写入引入信息
-	if len(first_history)>0 {
-		errB := dal.BatchInsertPermHistory(&first_history)
-		if errB != nil {
-			logs.Error("taskId:"+fmt.Sprint(taskId)+",插入权限第一次引入历史失败")
-			//及时报警
-			utils.LarkDingOneInner("fanjuan.xqp","taskId:"+fmt.Sprint(taskId)+",插入权限第一次引入历史失败")
-		}
-	}
-	//lark通知创建人完善权限信息-----只发一条消息
-	if larkPerms != ""{
-		message := "你好，安卓二进制静态包检测出未知权限，请去权限配置页面完善权限信息,需要完善的权限信息有：\n"
-		message += larkPerms
-		message += "修改链接：http://cloud.bytedance.net/rocket/itc/permission?biz=13"
-		utils.LarkDingOneInner("kanghuaisong",message)
-		//测试时使用
-		//utils.LarkDingOneInner("fanjuan.xqp",message)
-		//上线时使用
-		//utils.LarkDingOneInner("lirensheng",message)
-	}
-
-	//更新权限-app-task关系表
-	var relationship dal.PermAppRelation
-	relationship.TaskId = taskId
-	relationship.AppId = appId
-	if taskUpdateFlag {
-		relationship.AppVersion = (*detect)[0].AppVersion
-	}else {
-		relationship.AppVersion = ".aab副包+"+detectInfo.Version
-	}
-	relationship.AppVersion = detectInfo.Version
-	//新增下标兼容.aab结果
-	relationship.SubIndex = realIndex
-	bytePerms,_ := json.Marshal(permInfos)
-	relationship.PermInfos = string(bytePerms)
-	//---------------------------失败时处理方式要再仔细看一下
-	err1 := dal.InsertPermAppRelation(relationship)
-	if err1 != nil {
-		utils.LarkDingOneInner("fanjuan.xqp","新增权限App关系失败！taskId:"+fmt.Sprint(taskId)+",appID="+(*detect)[0].AppId)
-	}
-	detectInfo.Permissions = perStr
-	detectInfo.SubIndex = realIndex
-	//插入appInfo信息到apk表
-	err := dal.InsertDetectInfo(*detectInfo)
-	if err != nil {
-		//及时报警
-		message := "taskId:"+fmt.Sprint(taskId)+",appInfo写入数据库失败，请解决;"+fmt.Sprint(err)
-		utils.LarkDingOneInner("fanjuan.xqp", message)
-	}
-	return
-}
-
-
-/**
-批量method解析-----fj
- */
-func MethodAnalysis_2(method map[string]interface{},detail *dal.DetectContentDetail) *dal.DetectContentDetail {
-	detail.SensiType = 1
-	//detail.Status = 0
-
-	if _,ok := method["method_name"]; ok{
-		detail.KeyInfo = method["method_name"].(string)
-	}
-	if _,ok := method["desc"]; ok {
-		detail.DescInfo = method["desc"].(string)
-	}
-
-	if _,ok := method["method_class_name"]; ok {
-		detail.ClassName = method["method_class_name"].(string)
-	}
-
-	var call []interface{}
-	if _,ok := method["call_location"]; ok {
-		call = method["call_location"].([]interface{})
-	}
-
-	callLocation := MethodRmRepeat(call)
-	detail.CallLoc = callLocation
-
-	return detail
-}
-
-/**
-apk敏感方法内容去重--------fj
-*/
-func MethodRmRepeat(callInfo []interface{}) string  {
-	repeatMap := make(map[string]int)
-	result := ""
-	for _,info1 := range callInfo {
-		info := info1.(map[string]interface{})
-		var keystr string
-		keystr = info["class_name"].(string)+info["method_name"].(string)+fmt.Sprint(info["line_number"])
-		if v,ok := repeatMap[keystr]; (!ok||(ok&&v==0)) {
-			repeatMap[keystr] = 1
-			mapInfo,_ := json.Marshal(info)
-			result += string(mapInfo)+";"
-		}
-	}
-	return result
-}
-
-
-/**
-批量str解析---------fj
- */
-func StrAnalysis_2(str map[string]interface{},detail *dal.DetectContentDetail,strInfos map[string]interface{}) *dal.DetectContentDetail {
-	detail.SensiType = 2
-	//detail.Status = 0
-
-	var keys []interface{}
-	if _, ok := str["keys"]; ok {
-		keys = str["keys"].([]interface{})
-	}
-
-	key := ""
-	//判断str是否进行状态转变
-	key2 := ""
-	//通过或不通过的状态表示，true为1，false为2
-    var	passFlag = true
-	for _,ks1 := range keys {
-		ks := ks1.(string)
-		if v,ok := strInfos[ks]; !ok {
-			key2 += ks
-		}else{
-			info := v.(map[string]interface{})
-			if info["status"].(int) == 2 && passFlag {
-				passFlag = false
-			}
-		}
-		key += ks +";"
-	}
-	detail.KeyInfo = key
-	if key2 == ""{
-		if passFlag{
-			detail.Status = 1
-		}else{
-			detail.Status = 2
-		}
-	}else {
-		detail.Status = 0
-	}
-
-	if _,ok := str["desc"]; ok {
-		detail.DescInfo = str["desc"].(string)
-	}
-
-	var callInfo []interface{}
-	if _, ok := str["call_location"]; ok {
-		callInfo = str["call_location"].([]interface{})
-	}
-
-	//敏感字段信息去重
-	call_location := StrRmRepeat(callInfo)
-	detail.CallLoc = call_location
-
-	//方法和字符串优先级都是0
-	//detail.Priority =0
-	return detail
-
-}
-
-
-/**
-apk敏感字符串去重--------fj
-*/
-func StrRmRepeat(callInfo []interface{}) string {
-	repeatMap := make(map[string]int)
-	result := ""
-	for _, info1 := range callInfo {
-		info := info1.(map[string]interface{})
-		var keystr string
-		keystr = info["class_name"].(string) + info["method_name"].(string) + info["key"].(string) + fmt.Sprint(info["line_number"])
-		if v, ok := repeatMap[keystr]; (!ok || (ok && v == 0)) {
-			repeatMap[keystr] = 1
-			mapInfo, _ := json.Marshal(info)
-			result += string(mapInfo) + ";"
-		}
-	}
-	return result
-}
-
-
 type PermSlice [] dal.Permissions
 
 func (a PermSlice) Len() int {         // 重写 Len() 方法
@@ -505,7 +26,6 @@ func (a PermSlice) Swap(i, j int){     // 重写 Swap() 方法
 func (a PermSlice) Less(i, j int) bool {    // 重写 Less() 方法， 从大到小排序
 	return a[j].Priority< a[i].Priority
 }
-
 
 /**
 	获取权限的确认历史信息------fj
@@ -852,7 +372,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context){
 	})
 	var hasPermListFlag = true//标识是否进行权限分条确认的结果标识
 	if err3 != nil || info == nil || len(*info)==0 {
-		logs.Error("未查询到该任务的权限确认信息")
+		logs.Error("taskId:"+taskId+",未查询到该任务的权限确认信息")
 		hasPermListFlag = false
 	}
 
@@ -983,7 +503,7 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context,me
 				var call_loc_json dal.MethodCallJson
 				err := json.Unmarshal([]byte(call_loc),&call_loc_json)
 				if err != nil {
-					logs.Error("callLoc数据不符合要求，%v===========%s",err,call_loc)
+					logs.Error("taskId:"+fmt.Sprint(detail.TaskId)+",callLoc数据不符合要求，%v===========%s",err,call_loc)
 					errorReturn(c,"callLoc数据不符合要求")
 					return nil,nil
 				}
@@ -1042,7 +562,7 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context,me
 				var callLoc_json dal.StrCallJson
 				err := json.Unmarshal([]byte(call_loc),&callLoc_json)
 				if err != nil {
-					logs.Error("callLoc数据不符合要求，%v========%s",err,call_loc)
+					logs.Error("taskId:"+fmt.Sprint(detail.TaskId)+",callLoc数据不符合要求，%v========%s",err,call_loc)
 					errorReturn(c,"callLoc数据不符合要求")
 					return nil,nil
 				}
@@ -1076,7 +596,7 @@ func GetTaskPermissions_2(info dal.PermAppRelation,perIgs map[int]interface{},al
 
 	var infos []interface{}
 	if err := json.Unmarshal(bytePerms,&infos); err != nil {
-		logs.Error("该任务的权限信息存储格式出错")
+		logs.Error("taskId:"+fmt.Sprint(info.TaskId)+",该任务的权限信息存储格式出错")
 		return nil,err
 	}
 
@@ -1152,7 +672,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context){
 		condition1 := "id="+strconv.Itoa(t.Id)
 		detailInfo, err := dal.QueryDetectContentDetail(condition1)
 		if err != nil || detailInfo == nil||len(*detailInfo)==0{
-			logs.Error("不存在该检测结果，ID：%d",t.Id)
+			logs.Error("taskId:"+fmt.Sprint(t.TaskId)+",不存在该检测结果，ID：%d",t.Id)
 			errorReturn(c,"不存在该检测结果")
 			return
 		}
@@ -1170,7 +690,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context){
 		data["status"] = strconv.Itoa(t.Status)
 		flag := dal.ConfirmApkBinaryResultNew(data)
 		if !flag {
-			logs.Error("二进制检测内容确认失败")
+			logs.Error("taskId:"+fmt.Sprint(t.TaskId)+",二进制检测内容确认失败")
 			errorReturn(c,"二进制检测内容确认失败")
 			return
 		}
@@ -1178,13 +698,13 @@ func ConfirmApkBinaryResultv_5(c *gin.Context){
 		//增量忽略结果录入
 		if t.Status != 0 {
 			senType := (*detailInfo)[0].SensiType
-			if senType == 1 {
+			if senType == 1 {//敏感方法
 				keyInfo := (*detailInfo)[0].ClassName+"."+(*detailInfo)[0].KeyInfo
 				//结果写入
 				if err := createIgnoreInfo(c,&t,&(*detect)[0],usernameStr,keyInfo,1); err != nil {
 					return
 				}
-			}else {
+			}else {//敏感字符串
 				keys := strings.Split((*detailInfo)[0].KeyInfo,";")
 				for _,key := range keys[0:len(keys)-1] {
 					//结果写入
@@ -1196,7 +716,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context){
 		}
 	}else {
 		if errPerm != nil || perms == nil || len(*perms) == 0 {
-			logs.Error("未查询到该任务的检测信息")
+			logs.Error("taskId:"+fmt.Sprint(t.TaskId)+",未查询到该任务的检测信息")
 			errorReturn(c,"未查询到该任务的检测信息")
 			return
 		}
@@ -1208,7 +728,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context){
 		permsInfoDB := (*perms)[t.Index-1].PermInfos
 		var permList []interface{}
 		if err := json.Unmarshal([]byte(permsInfoDB),&permList); err != nil {
-			logs.Error("该任务的权限存储信息格式出错")
+			logs.Error("taskId:"+fmt.Sprint(t.TaskId)+",该任务的权限存储信息格式出错")
 			errorReturn(c,"该任务的权限存储信息格式出错")
 			return
 		}
@@ -1225,7 +745,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context){
 		newPerms,_ := json.Marshal(permList)
 		(*perms)[t.Index-1].PermInfos = string(newPerms)
 		if err := dal.UpdataPermAppRelation(&(*perms)[t.Index-1]); err != nil {
-			logs.Error("更新任务权限确认情况失败")
+			logs.Error("taskId:"+fmt.Sprint(t.TaskId)+",更新任务权限确认情况失败")
 			errorReturn(c,"更新任务权限确认情况失败")
 			return
 		}
@@ -1239,7 +759,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context){
 		history.Confirmer = usernameStr
 		history.TaskId = t.TaskId
 		if err := dal.InsertPermOperationHistory(history); err != nil {
-			logs.Error("权限操作历史写入失败！")
+			logs.Error("taskId:"+fmt.Sprint(t.TaskId)+",权限操作历史写入失败！")
 			errorReturn(c,"权限操作历史写入失败！")
 			return
 		}
@@ -1271,7 +791,7 @@ func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct) string {
 	})
 	var permFlag = true
 	if perms == nil || len(*perms)== 0 {
-		logs.Error("该任务无权限检测信息！")
+		logs.Error("taskId:"+fmt.Sprint(taskId)+",该任务无权限检测信息！")
 	}else{
 	P:
 		for i:=0;i<len(*perms);i++{
@@ -1295,11 +815,13 @@ func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct) string {
 		detect.Status = 1
 		err := dal.UpdateDetectModelNew(*detect)
 		if err != nil {
-			logs.Error("任务确认状态更新失败！%v", err)
+			logs.Error("taskId:"+fmt.Sprint(taskId)+",任务确认状态更新失败！%v", err)
 			utils.LarkDingOneInner("fanjuan.xqp","任务ID："+fmt.Sprint(taskId)+"确认状态更新失败，失败原因："+err.Error())
 			return "任务确认状态更新失败！"
 		}
-		CICallBack(&(*detect)[0])
+		if err := CICallBack(detect); err != nil {
+			return err.Error()
+		}
 	}
 	return ""
 
@@ -1318,7 +840,7 @@ func createIgnoreInfo(c *gin.Context,t *dal.PostConfirm,detect *dal.DetectStruct
 	igInfo.Remarks = t.Remark
 	igInfo.Version = detect.AppVersion
 	igInfo.Status = t.Status
-	igInfo.TaskId = t.TaskId
+	//igInfo.TaskId = t.TaskId
 	err := dal.InsertIgnoredInfo(igInfo)
 	if err != nil {
 		errorReturn(c,"增量信息更新失败！")

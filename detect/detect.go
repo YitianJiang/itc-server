@@ -29,7 +29,7 @@ const (
 	//DETECT_URL_PRO = "10.2.9.226:9527"
 	DETECT_URL_PRO = "10.1.221.15:9527"
 	//test----fj
-	Local_URL_PRO = "10.2.221.213:9527"
+	Local_URL_PRO = "10.1.220.99:9527"
 
 	//目前apk检测接口
 	//TEST_DETECT_URL = "http://10.2.9.226:9527/apk_post/v2"
@@ -205,8 +205,8 @@ func UploadFile(c *gin.Context) {
 	}
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
-		//callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
-		callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
+		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
+		//callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -236,7 +236,7 @@ func UploadFile(c *gin.Context) {
 		}
 		response, err := toolHttp.Post(url, contentType, bodyBuffer)
 		if err != nil {
-			logs.Error("上传二进制包出错", err)
+			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",上传二进制包出错", err)
 			//及时报警
 			utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
 			utils.LarkDingOneInner("yinzhihong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
@@ -995,7 +995,7 @@ func CICallBack(task *dal.DetectStruct) error{
 	data["task_id"] = fmt.Sprint(task.ID)
 	bytesData, err1 := json.Marshal(data)
 	if err != nil {
-		logs.Error("CI回调信息转换失败"+fmt.Sprint(err1))
+		logs.Error("任务ID："+fmt.Sprint(task.ID)+",CI回调信息转换失败"+fmt.Sprint(err1))
 		utils.LarkDingOneInner("fanjuan.xqp", "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
 		return err1
 	}
@@ -1003,7 +1003,7 @@ func CICallBack(task *dal.DetectStruct) error{
 	url := urlInfos[0]
 	request, err2 := http.NewRequest("POST", url, reader)
 	if err2 != nil {
-		logs.Error("CI回调请求Create失败"+fmt.Sprint(err2))
+		logs.Error("任务ID："+fmt.Sprint(task.ID)+",CI回调请求Create失败"+fmt.Sprint(err2))
 		utils.LarkDingOneInner("fanjuan.xqp", "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
 		return err2
 	}
@@ -1011,19 +1011,20 @@ func CICallBack(task *dal.DetectStruct) error{
 	client := http.Client{}
 	resp, err3 := client.Do(request)
 	if err3 != nil {
-		logs.Error("回调CI接口失败,%v", err3)
+		logs.Error("任务ID："+fmt.Sprint(task.ID)+",回调CI接口失败,%v", err3)
 		//及时报警
 		//utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
 		utils.LarkDingOneInner("fanjuan.xqp", "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
 		return err3
 	}
+	logs.Info("任务ID："+fmt.Sprint(task.ID)+"回调成功,回调信息："+fmt.Sprint(data)+",回调地址："+url)
 	if resp != nil {
 		defer resp.Body.Close()
 		respBytes, _ := ioutil.ReadAll(resp.Body)
 		var data map[string]interface{}
 		data = make(map[string]interface{})
 		json.Unmarshal(respBytes, &data)
-		logs.Info("CI detect url's response: %+v", data)
+		logs.Info("taskId :"+fmt.Sprint(task.ID)+",CI detect url's response: %+v", data)
 	}
 	return nil
 }
