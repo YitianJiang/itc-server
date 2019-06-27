@@ -1,9 +1,9 @@
 package dal
 
 import (
-	"fmt"
+	"encoding/json"
 	"strconv"
-	"time"
+	"strings"
 
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
@@ -13,17 +13,31 @@ import (
 
 type ItemStruct struct {
 	gorm.Model
-	QuestionType  int    `json:"questionType"`
-	KeyWord       int    `json:"keyWord"`
-	FixWay        int    `json:"fixWay"`
-	CheckContent  string `json:"checkContent"`
-	Resolution    string `json:"resolution"`
-	Regulation    string `json:"regulation"`
-	RegulationUrl string `json:"regulationUrl"`
-	IsGG          int    `json:"isGg"`
-	AppId         int    `json:"appId"`
-	Platform      int    `json:"platform"`
-	Status        int    `json:"status"`
+	KeyWord       int    `gorm:"column:key_word"        json:"keyWord"`
+	FixWay        int    `gorm:"column:fix_way"         json:"fixWay"`
+	CheckContent  string `gorm:"column:check_content"   json:"checkContent"`
+	Resolution    string `gorm:"column:resolution"      json:"resolution"`
+	Regulation    string `gorm:"column:regulation"      json:"regulation"`
+	RegulationUrl string `gorm:"column:regulation_url"   json:"regulationUrl"`
+	IsGG          int    `gorm:"column:is_gg"           json:"isGg"`
+	AppId         string `gorm:"column:app_id"          json:"appId"` //支持多个appId
+	Platform      int    `gorm:"column:platform"        json:"platform"`
+	Status        int    `gorm:"column:status"          json:"status"`       //没什么用
+	QuestionType  int    `gorm:"column:question_type"   json:"questionType"` //数据库使用
+}
+type MutilitemStruct struct {
+	ID              int    `json:"Id"`
+	KeyWord         int    `json:"keyWord"`
+	FixWay          int    `json:"fixWay"`
+	CheckContent    string `json:"checkContent"`
+	Resolution      string `json:"resolution"`
+	Regulation      string `json:"regulation"`
+	RegulationUrl   string `json:"regulationUrl"`
+	IsGG            int    `json:"isGg"`
+	AppId           string `json:"appId"` //支持多个appId
+	Platform        int    `json:"platform"`
+	Status          int    `json:"status"`       //没什么用
+	QuestionTypeArr string `json:"questionType"` //传入参数支持多种问题类型
 }
 type QueryItemStruct struct {
 	ID               uint   `json:ID`
@@ -35,7 +49,7 @@ type QueryItemStruct struct {
 	Regulation       string `json:"regulation"`
 	RegulationUrl    string `json:"regulationUrl"`
 	IsGG             int    `json:"isGg"`
-	AppId            int    `json:"appId"`
+	AppId            string `json:"appId"`
 	Platform         int    `json:"platform"`
 	QuestionTypeName string `json:"questionTypeName"`
 	KeyWordName      string `json:"keyWordName"`
@@ -62,40 +76,249 @@ type Confirm struct {
 	Data   []Self `json:"data"`
 }
 
+type AppSelfItem struct {
+	gorm.Model
+	AppId     int    `gorm:"column:appId"`
+	Platform  int    `gorm:"column:platform"`
+	SelfItems string `gorm:"column:selfItem"`
+	AppName   string `gorm:"column:appname"`
+}
+type TaskSelfItem struct {
+	gorm.Model
+	TaskId    int    `gorm:"column:taskId"`
+	ToolId    int    `gorm:"column:toolId"`
+	SelfItems string `gorm:"column:selfItem"`
+}
+
 func (ConfirmCheck) TableName() string {
 	return "tb_confirm_check"
 }
 func (ItemStruct) TableName() string {
 	return "tb_item"
 }
+func (AppSelfItem) TableName() string {
+	return "tb_app_selfItem"
+}
+func (TaskSelfItem) TableName() string {
+	return "tb_task_selfItem"
+}
 
-//insert data
-func InsertItemModel(itemModel ItemStruct) uint {
+//检查项管理增加自查项
+func InsertItemModel(mutilItem MutilitemStruct) bool {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
-		return 0
+		return false
 	}
 	defer connection.Close()
-	id := itemModel.ID
-	condition := "id='" + fmt.Sprint(id) + "'"
-	var is ItemStruct
-	if err := connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).Find(&is).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			if err := connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&itemModel).Error; err != nil {
-				logs.Error("insert self check item failed, %v", err)
-				return 0
-			}
-		} else {
-			logs.Error("query self check item failed, %v", err)
-			return 0
+	db := connection.Begin()
+	//获取配置
+	configMap := make(map[int]string)
+	var configs []ItemConfig
+	err = db.Table(ItemConfig{}.TableName()).LogMode(_const.DB_LOG_MODE).Find(&configs).Error
+	if err != nil {
+		logs.Error("查询检查配置项失败！", err.Error())
+		db.Rollback()
+		return false
+	}
+	if configs != nil && len(configs) > 0 {
+		for i := 0; i < len(configs); i++ {
+			config := (configs)[i]
+			configMap[int(config.ID)] = config.Name
 		}
 	}
-	if err = connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Save(&itemModel).Error; err != nil {
-		logs.Error("update self check item failed, %v", err)
-		return 0
+	//在此之前添加的公共项
+	var ggItem []ItemStruct
+	if err := db.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("is_gg = ?", 1).Find(&ggItem).Error; err != nil {
+		logs.Error("查询公共项失败！", err.Error())
+		db.Rollback()
+		return false
 	}
-	return itemModel.ID
+	//之前的公共项
+	var perItemList []interface{}
+	if len(ggItem) != 0 {
+		for _, gg := range ggItem {
+			ggJson, _ := json.Marshal(gg)
+			ggMap := make(map[string]interface{})
+			json.Unmarshal(ggJson, &ggMap)
+			delete(ggMap, "status")
+			delete(ggMap, "appId")
+			delete(ggMap, "ID")
+			delete(ggMap, "CreatedAt")
+			delete(ggMap, "DeletedAt")
+			delete(ggMap, "UpdatedAt")
+			keyWord := ggMap["keyWord"].(float64)
+			fixWay := ggMap["fixWay"].(float64)
+			questionType := ggMap["questionType"].(float64)
+			ggMap["keyWordName"] = configMap[int(keyWord)]
+			ggMap["fixWayName"] = configMap[int(fixWay)]
+			ggMap["questionTypeName"] = configMap[int(questionType)]
+			ggMap["id"] = gg.ID
+			perItemList = append(perItemList, ggMap)
+		}
+	}
+	questionTypeArr := strings.Split(mutilItem.QuestionTypeArr, ",")
+	for _, questionType := range questionTypeArr {
+		//构造itemStruct插入数据库
+		var item ItemStruct
+		item.ID = uint(mutilItem.ID)
+		item.KeyWord = mutilItem.KeyWord
+		item.FixWay = mutilItem.FixWay
+		item.CheckContent = mutilItem.CheckContent
+		item.Resolution = mutilItem.Resolution
+		item.Regulation = mutilItem.Regulation
+		item.RegulationUrl = mutilItem.RegulationUrl
+		item.IsGG = mutilItem.IsGG
+		item.AppId = mutilItem.AppId
+		item.Platform = mutilItem.Platform
+		item.Status = 0
+		question_type, _ := strconv.Atoi(questionType)
+		item.QuestionType = question_type
+		//tb_item 处理
+		id := mutilItem.ID
+		var is ItemStruct
+		if err := db.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("id = ?", id).Find(&is).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				if err := connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&item).Error; err != nil {
+					logs.Error("insert self check item failed, %v", err)
+					db.Rollback()
+					return false
+				}
+			} else {
+				logs.Error("query self check item failed, %v", err)
+				db.Rollback()
+				return false
+			}
+		} else {
+			if err = db.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Save(&item).Error; err != nil {
+				logs.Error("update self check item failed, %v", err)
+				db.Rollback()
+				return false
+			}
+		}
+
+		// struct -> map -> json
+		//itemMap := Struct2Map(item)
+		itemJson, err := json.Marshal(item)
+		if err != nil {
+			logs.Error("struct -> json error!", err)
+			db.Rollback()
+			return false
+		}
+		itemMap := make(map[string]interface{})
+		if err := json.Unmarshal(itemJson, &itemMap); err != nil {
+			logs.Error("json -> map error!", err)
+			db.Rollback()
+			return false
+		}
+		delete(itemMap, "status")
+		delete(itemMap, "appId")
+		delete(itemMap, "ID")
+		delete(itemMap, "CreatedAt")
+		delete(itemMap, "DeletedAt")
+		delete(itemMap, "UpdatedAt")
+		keyWord := itemMap["keyWord"].(float64)
+		fixWay := itemMap["fixWay"].(float64)
+		questionType := itemMap["questionType"].(float64)
+		itemMap["keyWordName"] = configMap[int(keyWord)]
+		itemMap["fixWayName"] = configMap[int(fixWay)]
+		itemMap["questionTypeName"] = configMap[int(questionType)]
+		itemMap["id"] = item.ID
+
+		//tb_app_selfItem 处理
+		var appIdArr []string
+		//如果是非公共项，只给在appidlist中app添加
+		if item.IsGG == 0 {
+			appIdArr = strings.Split(strings.Replace(item.AppId, "，", ",", -1), ",")
+		}
+		//如果是公共项，给appItem表中所有app添加
+		if item.IsGG == 1 {
+			var apps []AppSelfItem
+			if err := db.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Select("appId").Where("platform = ?", item.Platform).Find(&apps).Error; err != nil {
+				logs.Error("查询appitem出错！", err.Error())
+				db.Rollback()
+				return false
+			}
+			isExitApp := false
+			for _, a := range apps {
+				if strconv.Itoa(a.AppId) == item.AppId {
+					isExitApp = true
+				}
+				appIdArr = append(appIdArr, strconv.Itoa(a.AppId))
+			}
+			//公共项对应的app还没有在appItem中有记录，则先添加该公共项
+			if !isExitApp {
+				appIdArr = append(appIdArr, item.AppId)
+			}
+		}
+		for _, appId := range appIdArr {
+			var appItem AppSelfItem
+			appId = strings.TrimSpace(appId)
+			app_id, _ := strconv.Atoi(appId)
+			if err := db.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("appId = ? AND platform = ?", app_id, item.Platform).Limit(1).Find(&appItem).Error; err != nil {
+				if err == gorm.ErrRecordNotFound {
+					appItem.AppId = app_id
+					appItem.Platform = item.Platform
+					perItemList = append(perItemList, itemMap)
+					app_item := map[string]interface{}{
+						"item": perItemList,
+					}
+					tem, err := json.Marshal(app_item)
+					if err != nil {
+						logs.Error("map to json error!", err.Error())
+						db.Rollback()
+						return false
+					}
+					appItem.SelfItems = string(tem)
+					if err := db.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&appItem).Error; err != nil {
+						logs.Error(err.Error())
+						db.Rollback()
+						return false
+					}
+				} else {
+					logs.Error(err.Error())
+					db.Rollback()
+					return false
+				}
+			} else {
+				//update
+				tem_item := appItem.SelfItems
+				m := make(map[string]interface{})
+				err = json.Unmarshal([]byte(tem_item), &m)
+				if err != nil {
+					logs.Error("Umarshal failed:", err.Error())
+					db.Rollback()
+					return false
+				}
+				list := m["item"].([]interface{})
+				isExit := false
+				for _, l := range list {
+					if int(l.(map[string]interface{})["id"].(float64)) == int(item.ID) {
+						isExit = true
+						l = itemMap
+					}
+				}
+				if !isExit {
+					list = append(list, itemMap)
+				}
+				m["item"] = list
+				tem, err := json.Marshal(m)
+				if err != nil {
+					logs.Error("map to json error!", err.Error())
+					db.Rollback()
+					return false
+				}
+				if err := db.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Model(&appItem).Update("selfItem", string(tem)).Error; err != nil {
+					logs.Error(err.Error())
+					db.Rollback()
+					return false
+				}
+			}
+		}
+
+	}
+	db.Commit()
+	return true
 }
 
 //query data
@@ -151,24 +374,121 @@ func QueryItemsByCondition(data map[string]interface{}) *[]QueryItemStruct {
 	return &qis
 }
 
-//delete item data
+//检查项管理删除自查项
 func DeleteItemsByCondition(condition map[string]interface{}) bool {
+	itemId, _ := strconv.Atoi(condition["id"].(string))
+	isAll, _ := strconv.Atoi(condition["isGG"].(string))
+	appId := condition["appId"] //string
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return false
 	}
 	defer connection.Close()
-	if err := connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).Delete(ItemStruct{}).Error; err != nil {
-		logs.Error("delete failed: %v", err)
+	db := connection.Begin()
+	var item ItemStruct
+	if err := db.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("id = ?", itemId).Limit(1).Find(&item).Error; err != nil {
+		logs.Error("查询tb_item出错！", err.Error())
+		db.Rollback()
 		return false
-	} else {
-		return true
 	}
+	platform := item.Platform
+	var item_appId []int
+	if isAll == 1 {
+		var appItem []AppSelfItem
+		if err := db.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Select("appId").Where("platform = ?", platform).Find(&appItem).Error; err != nil {
+			logs.Error("查询tb_item出错！", err.Error())
+			db.Rollback()
+			return false
+		}
+		for _, app := range appItem {
+			item_appId = append(item_appId, app.AppId)
+		}
+	}
+	if isAll == 0 {
+		app, _ := strconv.Atoi(appId.(string))
+		item_appId = append(item_appId, app)
+	}
+	//更新tb_app_selfItem，删除包含该itemId的app中的自查项
+	for _, app_id := range item_appId {
+		var appSelf AppSelfItem
+		if err := db.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("appId = ? AND platform = ?", app_id, platform).Limit(1).Find(&appSelf).Error; err != nil {
+			logs.Error("查询tb_app_selfItem出错！", err.Error())
+			db.Rollback()
+			return false
+		}
+		itemSelf := appSelf.SelfItems
+		m := make(map[string]interface{})
+		if err = json.Unmarshal([]byte(itemSelf), &m); err != nil {
+			logs.Error("json -> map error!", err.Error())
+			db.Rollback()
+			return false
+		}
+		items := m["item"].([]interface{})
+		var new_items []interface{}
+		for _, im := range items {
+			if int(im.(map[string]interface{})["id"].(float64)) != itemId {
+				new_items = append(new_items, im)
+			}
+		}
+		m["item"] = new_items
+		if len(new_items) == 0{
+			if err := db.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Delete(&appSelf).Error; err != nil {
+				logs.Error("删除tb_app_selfItem出错！", err.Error())
+				db.Rollback()
+				return false
+			}
+		}else{
+			item_self, err := json.Marshal(m)
+			if err != nil {
+				logs.Error("map -> json error!", err.Error())
+				db.Rollback()
+				return false
+			}
+			if err := db.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Model(&appSelf).Update("selfItem", string(item_self)).Error; err != nil {
+				logs.Error("更新tb_app_selfItem出错！", err.Error())
+				db.Rollback()
+				return false
+			}
+		}
+	}
+	//删除tb_item中该自查项
+	if isAll == 1 {
+		if err := db.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("id = ?", itemId).Delete(ItemStruct{}).Error; err != nil {
+			logs.Error("delete failed: %v", err)
+			db.Rollback()
+			return false
+		}
+	}
+	if isAll == 0 {
+		var appIds []string
+		appTemp := strings.Split(strings.Replace(item.AppId, "，", ",", -1), ",")
+		for _, app_id := range appTemp {
+			app_id = strings.TrimSpace(app_id)
+			if app_id != appId {
+				appIds = append(appIds, app_id)
+			}
+		}
+		if len(appIds) == 0 {
+			if err := db.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("id = ?", itemId).Delete(ItemStruct{}).Error; err != nil {
+				logs.Error("delete failed: %v", err)
+				db.Rollback()
+				return false
+			}
+		} else {
+			if err := db.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Model(&item).Update("app_id", strings.Join(appIds, ",")).Error; err != nil {
+				logs.Error("delete failed: %v", err)
+				db.Rollback()
+				return false
+			}
+		}
+	}
+	db.Commit()
+	return true
 }
 
-//confirm check
-func ConfirmSelfCheck(param map[string]interface{}) (bool, *DetectStruct){
+//taskID确认自查项
+func ConfirmSelfCheck(param map[string]interface{}) (bool, *DetectStruct) {
 	//获取前端数据
 	operator := param["operator"]
 	taskId := param["taskId"]
@@ -182,58 +502,64 @@ func ConfirmSelfCheck(param map[string]interface{}) (bool, *DetectStruct){
 	defer connection.Close()
 	db := connection.Begin()
 	//获取自查记录
-	condition := " task_id='" + strconv.Itoa(taskId.(int)) + "'"
-	dataMap, _, _ := GetSelfCheckByTaskId(condition)
-
 	allCheckFlag := true //自查项是否全部确认标志
+	var taskSelf TaskSelfItem
+	if err := db.Table(TaskSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("taskId = ?", taskId).Find(&taskSelf).Error; err != nil {
+		logs.Error("查询taskId自查项失败！", err.Error())
+		db.Rollback()
+		return false, nil
+	}
+	taskSelfMap := make(map[string]interface{})
+	if err := json.Unmarshal([]byte(taskSelf.SelfItems), &taskSelfMap); err != nil {
+		logs.Error("json map转换失败！", err.Error())
+		db.Rollback()
+		return false, nil
+	}
+	taskSelfList := taskSelfMap["item"].([]interface{})
 	idArray := data.([]Self)
-	for i := 0; i < len(idArray); i++ {
-		dat := idArray[i]
-		var check ConfirmCheck
-		check.ItemId = dat.Id
-		check.Status = dat.Status
-		check.TaskId = taskId.(int)
-		check.Operator = operator.(string)
-		check.Remark = dat.Remark
-		if dat.Status == 0 {
-			allCheckFlag = false //确认是否所有自查项全部被确认
-		} else {
-			status, ok := dataMap[uint(dat.Id)]
-			//数据库中不存在该确认记录，创建一条新纪录
-			if !ok {
-				check.CreatedAt = time.Now()
-				check.UpdatedAt = time.Now()
-				if err = db.Table(ConfirmCheck{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&check).Error; err != nil {
-					logs.Error("insert tb_confirm_check failed, %v", err)
-					db.Rollback()
-					return false, nil
-				}
-			} else {
-				//数据库中记录为0，无效记录，更新这条记录即可
-				if status == 0 {
-					condition := "task_id='" + strconv.Itoa(taskId.(int)) + "' and item_id='" + strconv.Itoa(dat.Id) + "'"
-					check.UpdatedAt = time.Now()
-					if err = db.Table(ConfirmCheck{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).
-						Update(map[string]interface{}{"status": dat.Status, "updated_at": time.Now(), "remark": dat.Remark, "operator": operator.(string)}).Error; err != nil {
-						logs.Error("insert tb_confirm_check failed, %v", err)
-						db.Rollback()
-						return false, nil
-					}
-				}
+	for _, self := range taskSelfList {
+		id := int(self.(map[string]interface{})["id"].(float64))
+		for _, confirmSelf := range idArray {
+			if confirmSelf.Id == id {
+				self.(map[string]interface{})["status"] = confirmSelf.Status
+				self.(map[string]interface{})["remark"] = confirmSelf.Remark
+				self.(map[string]interface{})["confirmer"] = operator
 			}
 		}
+		if self.(map[string]interface{})["status"] == 0 {
+			allCheckFlag = false
+		}
+	}
+	taskSelfMap["item"] = taskSelfList
+	task_self, err := json.Marshal(taskSelfMap)
+	if err != nil {
+		logs.Error("map json转换失败！", err.Error())
+		db.Rollback()
+		return false, nil
+	}
+	taskSelf.SelfItems = string(task_self)
+	if err := db.Table(TaskSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Save(taskSelf).Error; err != nil {
+		logs.Error(err.Error())
+		db.Rollback()
+		return false, nil
 	}
 	//最后更新检测任务的自查状态
 	var detect DetectStruct
 	if allCheckFlag {
-		db := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
-		if err = db.Where("id=?", taskId).Limit(1).Find(&detect).Error; err != nil {
+		if err = db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
+			Where("id=?", taskId).Find(&detect).Error; err != nil {
 			logs.Error("%v", err)
 			db.Rollback()
 			return false, nil
 		}
+		if &detect == nil {
+			logs.Error(err.Error())
+			db.Rollback()
+			return false, nil
+		}
 		detect.SelfCheckStatus = 1
-		if err = db.Save(detect).Error; err != nil {
+		if err = db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
+			Save(detect).Error; err != nil {
 			logs.Error("%v", err)
 			db.Rollback()
 			return false, nil
@@ -274,4 +600,91 @@ func GetSelfCheckByTaskId(condition string) (map[uint]int, map[uint]string, map[
 
 	}
 	return item, remark, confirmer
+}
+func QueryItem(condition map[string]interface{}) *[]ItemStruct {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return nil
+	}
+	defer connection.Close()
+	var items []ItemStruct
+	db := connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	if err = db.Where(condition).Find(&items).Error; err != nil {
+		logs.Error("query self check item failed, %v", err)
+		return nil
+	}
+	return &items
+}
+func InsertAppSelfItem(appItem AppSelfItem) bool {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return false
+	}
+	defer connection.Close()
+	db := connection.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	if err = db.Create(&appItem).Error; err != nil {
+		logs.Error("query self check item failed, %v", err)
+		return false
+	}
+	return true
+}
+
+//查询app对应自查项
+func QueryAppSelfItem(condition map[string]interface{}) *[]AppSelfItem {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return nil
+	}
+	defer connection.Close()
+	db := connection.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	var appSelf []AppSelfItem
+	if err = db.Where(condition).Order("platform", true).Find(&appSelf).Error; err != nil {
+		logs.Error("query self check item failed, %v", err)
+		return nil
+	}
+	return &appSelf
+
+}
+
+//插入taskId自查项
+func InsertTaskSelfItem(taskItem TaskSelfItem) bool {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return false
+	}
+	defer connection.Close()
+	if err := connection.Table(TaskSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&taskItem).Error; err != nil {
+		logs.Error(err.Error())
+		return false
+	}
+	return true
+}
+
+//查询taskId自查项
+func QueryTaskSelfItemList(taskId int) (bool, []interface{}) {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return false, nil
+	}
+	defer connection.Close()
+	var taskItem TaskSelfItem
+	if err := connection.Table(TaskSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("taskId = ?", taskId).Limit(1).Find(&taskItem).Error; err != nil {
+		if err == gorm.ErrRecordNotFound{
+			return true, nil
+		}else{
+			logs.Error(err.Error())
+			return false, nil
+		}
+	}
+	m := make(map[string]interface{})
+	if err := json.Unmarshal([]byte(taskItem.SelfItems), &m); err != nil {
+		logs.Error(err.Error())
+		return false, nil
+	}
+	return true, m["item"].([]interface{})
 }
