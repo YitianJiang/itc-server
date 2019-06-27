@@ -723,6 +723,9 @@ P:
 			logs.Error("更新任务状态失败，任务ID："+strconv.Itoa(taskId)+",错误原因:%v", err)
 			return err
 		}
+		if (*detect)[0].SelfCheckStatus == 1 && (*detect)[0].Status == 1 {
+			CICallBack(&(*detect)[0])
+		}
 	}
 	return nil
 }

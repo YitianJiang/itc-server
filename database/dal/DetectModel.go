@@ -25,7 +25,10 @@ type DetectStruct struct {
 	SelfCheckStatus int    `gorm:"column:self_check_status"      json:"selfCheckStatus"` //0-自查未完成；1-自查完成
 	TosUrl          string `gorm:"column:tos_url"                json:"tosUrl"`
 	Status          int    `gorm:"column:status"                 json:"status"` //0---未完全确认；1---已完全确认
-	//Source 			int	   `gorm:"column:source" 				 json:"source"`//0--发布平台；1--页面
+	ExtraInfo		string `gorm:"column:extra_info" 		     json:"extraInfo"`//其他附加信息
+}
+type ExtraStruct struct {
+	CallBackAddr		string 			`json:"callBackAddr"`
 }
 type RecordTotal struct {
 	Total uint
@@ -73,19 +76,22 @@ type DetectInfo struct {
 //敏感信息详情---fj新增
 type DetectContentDetail struct {
 	gorm.Model
-	TaskId    int    `json:"taskId"`
-	Status    int    `json:"status"` //是否确认,0-未确认，1-确认通过，2-确认未通过
-	Remark    string `json:"remark"`
-	Confirmer string `json:"confirmer"`
-	SensiType int    `json:"sensiType"` //敏感信息类型，1-敏感方法，2-敏感字符串
-	KeyInfo   string `json:"key"`
-	ClassName string `json:"className"`
-	DescInfo  string `json:"desc"`
-	CallLoc   string `json:"callLoc"`
-	ToolId    int    `json:"toolId"`
-	SubIndex  int    `json:"index"`
-	//OtherVersion		string			`json:"otherVersion"`
-	//Priority 			int				`json:"priority"`//0--常规，1--注意，2--危险，3--非常危险，4--未定义
+	TaskId    			int    `json:"taskId"`
+	Status    			int    `json:"status"` //是否确认,0-未确认，1-确认通过，2-确认未通过
+	Remark    			string `json:"remark"`
+	Confirmer 			string `json:"confirmer"`
+	SensiType 			int    `json:"sensiType"` //敏感信息类型，1-敏感方法，2-敏感字符串
+	KeyInfo   			string `json:"key"`
+	ClassName 			string `json:"className"`
+	DescInfo  			string `json:"desc"`
+	CallLoc   			string `json:"callLoc"`
+	ToolId    			int    `json:"toolId"`
+	SubIndex   			int	   `json:"index"`
+	ExtraInfo			string `json:"extraInfo"`//其他附加信息
+}
+
+type DetailExtraInfo struct {
+	GPFlag			int			`json:"gpFlag"`
 }
 
 type IgnoreInfoStruct struct {
@@ -125,6 +131,7 @@ type SMethod struct {
 	Desc         string           `json:"desc"`
 	CallLoc      []MethodCallJson `json:"callLoc"`
 	OtherVersion string           `json:"otherVersion"`
+	GPFlag		 int 			  `json:"gpFlag"`
 }
 type MethodCallJson struct {
 	MethodName string      `json:"method_name"`
@@ -141,6 +148,7 @@ type SStr struct {
 	Desc         string        `json:"desc"`
 	CallLoc      []StrCallJson `json:"callLoc"`
 	ConfirmInfos []ConfirmInfo `json:"confirmerInfos"`
+	GPFlag		 int 			  `json:"gpFlag"`
 }
 
 type StrCallJson struct {
@@ -188,7 +196,7 @@ type IOSDetectContent struct {
 	gorm.Model
 	TaskId          int    `gorm:"column:taskId"            json:"taskId"`
 	ToolId          int    `gorm:"column:toolId"            json:"toolId"`
-	JsonContent     string `gorm:"column:jsonContent"      json:"jsonContent"`
+	JsonContent     string `gorm:"column:jsonContent"       json:"jsonContent"`
 	Category        string `gorm:"column:category"          json:"category"`
 	CategoryName    string `gorm:"column:categoryName"      json:"categoryName"` //兼容就接口保留，后续全部完成后删除
 	CategoryContent string `gorm:"column:categoryContent"   json:"categoryContent"`
@@ -813,6 +821,61 @@ func QueryIOSDetectContent(condition map[string]interface{}) *[]IOSDetectContent
 	return &iosMiddleContenct
 }
 
+//安卓检测数据解析方式重构之-----struct和json转换
+//json返回结构
+type JSONResultStruct struct {
+	Result       []CheckResult       `json:"result"`
+}
+//数组中元素结构
+type CheckResult struct {
+	MissSearchInfos 		[]MissSearchInfo				`json:"miss_search_infos"`
+	AppInfo 				AppInfoStruct					`json:"app_info"`
+	MethodInfos				[]MethodInfo					`json:"method_sensitive_infos"`
+	PermInfos				[]PermInfo						`json:"permission_sensitive_infos"`
+	StrInfos				[]StrInfo						`json:"str_sensitive_infos"`
+}
+
+//miss_search_info结构
+type MissSearchInfo struct {
+
+}
+
+//基本信息json结构
+type AppInfoStruct struct {
+	ApkName					string 						`json:"apk_name"`
+	ApkVersionName 			string						`json:"apk_version_name"`
+	ApkVersionCode 			string						`json:"apk_version_code"`
+	Channel 				string 						`json:"channel"`
+	Primary  				interface{}					`json:"primary"`
+	PermsInAppInfo			[]string					`json:"permissions"`
+}
+
+//敏感方法json结构
+type MethodInfo struct {
+	MethodName				string						`json:"method_name"`
+	Flag 					int							`json:"gpflag"`
+	ClassName				string						`json:"method_class_name"`
+	Desc 					string						`json:"desc"`
+	CallLocation			[]CallLocInfo				`json:"call_location"`
+}
+//权限json结构
+type PermInfo struct {
+
+}
+//敏感方法json结构
+type StrInfo struct {
+	Keys 					[]string					`json:"keys"`
+	Flag 					int							`json:"gpflag"`
+	Desc 					string						`json:"desc"`
+	CallLocation			[]CallLocInfo				`json:"call_location"`
+}
+//敏感方法和字符串的callLoc结构
+type CallLocInfo struct {
+	ClassName				string						`json:"class_name"`
+	CallMethodName 			string						`json:"method_name"`
+	LineNum					interface{}					`json:"line_number"`
+	Key 					string						`json:"key"`
+}
 /*
 查询当前taskId对应app的上一次检测taskId
 */
@@ -838,3 +901,4 @@ func QueryLastTaskId(taskId int) int {
 		}
 	}
 }
+
