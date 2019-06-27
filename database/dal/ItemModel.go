@@ -2,7 +2,6 @@ package dal
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -151,9 +150,9 @@ func InsertItemModel(mutilItem MutilitemStruct) bool {
 			keyWord := ggMap["keyWord"].(float64)
 			fixWay := ggMap["fixWay"].(float64)
 			questionType := ggMap["questionType"].(float64)
-			ggMap["keyWord"] = configMap[int(keyWord)]
-			ggMap["fixWay"] = configMap[int(fixWay)]
-			ggMap["questionType"] = configMap[int(questionType)]
+			ggMap["keyWordName"] = configMap[int(keyWord)]
+			ggMap["fixWayName"] = configMap[int(fixWay)]
+			ggMap["questionTypeName"] = configMap[int(questionType)]
 			ggMap["id"] = gg.ID
 			perItemList = append(perItemList, ggMap)
 		}
@@ -221,9 +220,9 @@ func InsertItemModel(mutilItem MutilitemStruct) bool {
 		keyWord := itemMap["keyWord"].(float64)
 		fixWay := itemMap["fixWay"].(float64)
 		questionType := itemMap["questionType"].(float64)
-		itemMap["keyWord"] = configMap[int(keyWord)]
-		itemMap["fixWay"] = configMap[int(fixWay)]
-		itemMap["questionType"] = configMap[int(questionType)]
+		itemMap["keyWordName"] = configMap[int(keyWord)]
+		itemMap["fixWayName"] = configMap[int(fixWay)]
+		itemMap["questionTypeName"] = configMap[int(questionType)]
 		itemMap["id"] = item.ID
 
 		//tb_app_selfItem 处理
@@ -252,14 +251,12 @@ func InsertItemModel(mutilItem MutilitemStruct) bool {
 				appIdArr = append(appIdArr, item.AppId)
 			}
 		}
-		fmt.Println("215,", appIdArr)
 		for _, appId := range appIdArr {
 			var appItem AppSelfItem
 			appId = strings.TrimSpace(appId)
 			app_id, _ := strconv.Atoi(appId)
 			if err := db.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("appId = ? AND platform = ?", app_id, item.Platform).Limit(1).Find(&appItem).Error; err != nil {
 				if err == gorm.ErrRecordNotFound {
-					fmt.Println("206，appitem新增")
 					appItem.AppId = app_id
 					appItem.Platform = item.Platform
 					perItemList = append(perItemList, itemMap)

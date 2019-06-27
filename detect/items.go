@@ -280,6 +280,16 @@ func GetSelfCheckItems(c *gin.Context) {
 
 func getGGItem(condition map[string]interface{}) []interface{}{
 	ggItem := dal.QueryItem(condition)
+	//获取配置项
+	var configMap map[int]string
+	configMap = make(map[int]string)
+	configs := dal.QueryConfigByCondition("1=1")
+	if configs != nil && len(*configs) > 0 {
+		for i := 0; i < len(*configs); i++ {
+			config := (*configs)[i]
+			configMap[int(config.ID)] = config.Name
+		}
+	}
 	if ggItem == nil || len(*ggItem) == 0{
 		return []interface{}{}
 	}
@@ -293,6 +303,12 @@ func getGGItem(condition map[string]interface{}) []interface{}{
 		delete(m, "DeletedAt")
 		delete(m, "UpdatedAt")
 		m["id"] = gg_item.ID
+		keyWord := m["keyWord"].(float64)
+		fixWay := m["fixWay"].(float64)
+		questionType := m["questionType"].(float64)
+		m["keyWordName"] = configMap[int(keyWord)]
+		m["fixWayName"] = configMap[int(fixWay)]
+		m["questionTypeName"] = configMap[int(questionType)]
 		ggItemList = append(ggItemList, m)
 	}
 	return ggItemList
@@ -313,16 +329,15 @@ func ConfirmCheck(c *gin.Context) {
 		})
 		return
 	}
-	//name, flag := c.Get("username")
-	//if !flag {
-	//	c.JSON(http.StatusOK, gin.H{
-	//		"message":   "未获取到用户信息！",
-	//		"errorCode": -1,
-	//		"data":      "未获取到用户信息！",
-	//	})
-	//	return
-	//}
-	name := "yinzhihong"
+	name, flag := c.Get("username")
+	if !flag {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "未获取到用户信息！",
+			"errorCode": -1,
+			"data":      "未获取到用户信息！",
+		})
+		return
+	}
 	var param map[string]interface{}
 	param = make(map[string]interface{})
 	param["taskId"] = t.TaskId
@@ -361,34 +376,36 @@ func DropDetectItem(c *gin.Context) {
 		})
 		return
 	}
-	isAll := c.DefaultPostForm("isGG", "")
-	if isAll == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "参数不合法",
-			"errorCode": -2,
-			"data":      "缺少isGG！",
-		})
-		return
-	}
-	appId := c.DefaultPostForm("appId", "")
-	if appId == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "参数不合法",
-			"errorCode": -2,
-			"data":      "缺少appId！",
-		})
-		return
-	}
-	//name, flag := c.Get("username")
-	//if !flag {
+	//yixian那边没上线，暂时写死
+	//isAll := c.DefaultPostForm("isGG", "")
+	//if isAll == "" {
 	//	c.JSON(http.StatusOK, gin.H{
-	//		"message":   "未获取到用户信息！",
+	//		"message":   "参数不合法",
 	//		"errorCode": -2,
-	//		"data":      "未获取到用户信息！",
+	//		"data":      "缺少isGG！",
 	//	})
 	//	return
 	//}
-	name := "yinzhihong"
+	//appId := c.DefaultPostForm("appId", "")
+	//if appId == "" {
+	//	c.JSON(http.StatusOK, gin.H{
+	//		"message":   "参数不合法",
+	//		"errorCode": -2,
+	//		"data":      "缺少appId！",
+	//	})
+	//	return
+	//}
+	name, flag := c.Get("username")
+	if !flag {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "未获取到用户信息！",
+			"errorCode": -2,
+			"data":      "未获取到用户信息！",
+		})
+		return
+	}
+	isAll := "1"
+	appId := "13"
 	//判断用户是否有权限
 	isPrivacy := false
 	for _, people := range whiteList {

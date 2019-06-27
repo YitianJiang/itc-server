@@ -13,10 +13,6 @@ func InitRouter(r *ginex.Engine) {
 	api := r.GroupEX("/api")
 	//二进制包检测回调接口
 	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
-	r.POST("/addDetectItem", detect.AddDetectItem)
-	r.GET("/getSelfCheckItems", detect.GetSelfCheckItems)
-	r.POST("/deleteDetectItem", detect.DropDetectItem)
-	r.POST("/confirmCheck", detect.ConfirmCheck)
 
 	//获取鉴权接口
 	r.GET("/t/generateToken", detect.GetToken)
@@ -39,15 +35,15 @@ func InitRouter(r *ginex.Engine) {
 		//上传ipa和apk------fj
 		//api.POST("/uploadFileNew", detect.UploadFileNew)
 		//增加检查项
-		//api.POST("/addDetectItem", detect.AddDetectItem)
+		api.POST("/addDetectItem", detect.AddDetectItem)
 		//二进制任务查询
 		api.GET("/queryTasks", detect.QueryDetectTasks)
 		//获取任务对应的自查项
-		//api.GET("/getSelfCheckItems", detect.GetSelfCheckItems)
+		api.GET("/getSelfCheckItems", detect.GetSelfCheckItems)
 		//删除检查项
-		//api.POST("/deleteDetectItem", detect.DropDetectItem)
+		api.POST("/deleteDetectItem", detect.DropDetectItem)
 		//完成自查
-		//api.POST("/confirmCheck", detect.ConfirmCheck)
+		api.POST("/confirmCheck", detect.ConfirmCheck)
 		//获取检测列表
 		api.GET("/queryDetectTools", detect.QueryDetectTools)
 		//获取当前任务已选择的检测工具列表
