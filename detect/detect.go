@@ -29,7 +29,7 @@ const (
 	//DETECT_URL_PRO = "10.2.9.226:9527"
 	DETECT_URL_PRO = "10.1.221.15:9527"
 	//test----fj
-	Local_URL_PRO = "10.2.221.213:9527"
+	Local_URL_PRO = "10.1.220.99:9527"
 
 	//目前apk检测接口
 	//TEST_DETECT_URL = "http://10.2.9.226:9527/apk_post/v2"
@@ -236,7 +236,7 @@ func UploadFile(c *gin.Context) {
 		}
 		response, err := toolHttp.Post(url, contentType, bodyBuffer)
 		if err != nil {
-			logs.Error("上传二进制包出错", err)
+			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",上传二进制包出错", err)
 			//及时报警
 			utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
 			utils.LarkDingOneInner("yinzhihong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
@@ -304,7 +304,10 @@ func UpdateDetectInfos(c *gin.Context) {
 			mapInfo := make(map[string]int)
 			mapInfo["taskId"], _ = strconv.Atoi(taskId)
 			mapInfo["toolId"], _ = strconv.Atoi(toolId)
-			ApkJsonAnalysis(jsonContent, mapInfo)
+			errApk := ApkJsonAnalysis_2(jsonContent, mapInfo)
+			if errApk != nil {
+				return
+			}
 		} else {
 			var detectContent dal.DetectContent
 			detectContent.TaskId, _ = strconv.Atoi(taskId)
@@ -830,7 +833,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "success",
 			"errorCode": 0,
-			"appId": (*task)[0].AppId,
+			"appId":     (*task)[0].AppId,
 			"data":      res,
 		})
 		return
@@ -854,7 +857,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
 		"errorCode": 0,
-		"appId": (*task)[0].AppId,
+		"appId":     (*task)[0].AppId,
 		"data":      *selected,
 	})
 }
@@ -956,6 +959,10 @@ func Alram(c *gin.Context) {
 
 
 func CICallBack(task *dal.DetectStruct) error{
+	if task.Platform == 1 && (task.SelfCheckStatus != 1 || task.Status != 1){
+		logs.Info("不满足callback条件")
+		return nil
+	}
 	var t dal.ExtraStruct
 	//兼容旧信息---无extra_info字段
 	if task.ExtraInfo == ""{
@@ -992,35 +999,42 @@ func CICallBack(task *dal.DetectStruct) error{
 	data["task_id"] = fmt.Sprint(task.ID)
 	bytesData, err1 := json.Marshal(data)
 	if err != nil {
-		logs.Error("CI回调信息转换失败"+fmt.Sprint(err1))
+		logs.Error("任务ID："+fmt.Sprint(task.ID)+",CI回调信息转换失败"+fmt.Sprint(err1))
 		utils.LarkDingOneInner("fanjuan.xqp", "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("kanghuaisong", "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("yinzhihong", "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
 		return err1
 	}
 	reader := bytes.NewReader(bytesData)
 	url := urlInfos[0]
 	request, err2 := http.NewRequest("POST", url, reader)
 	if err2 != nil {
-		logs.Error("CI回调请求Create失败"+fmt.Sprint(err2))
+		logs.Error("任务ID："+fmt.Sprint(task.ID)+",CI回调请求Create失败"+fmt.Sprint(err2))
 		utils.LarkDingOneInner("fanjuan.xqp", "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("kanghuaisong", "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("yinzhihong", "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
 		return err2
 	}
 	request.Header.Set("Content-Type", "application/json;charset=UTF-8")
 	client := http.Client{}
 	resp, err3 := client.Do(request)
 	if err3 != nil {
-		logs.Error("回调CI接口失败,%v", err3)
+		logs.Error("任务ID："+fmt.Sprint(task.ID)+",回调CI接口失败,%v", err3)
 		//及时报警
 		//utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
 		utils.LarkDingOneInner("fanjuan.xqp", "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("kanghuaisong", "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("yinzhihong", "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
 		return err3
 	}
+	logs.Info("任务ID："+fmt.Sprint(task.ID)+"回调成功,回调信息："+fmt.Sprint(data)+",回调地址："+url)
 	if resp != nil {
 		defer resp.Body.Close()
 		respBytes, _ := ioutil.ReadAll(resp.Body)
 		var data map[string]interface{}
 		data = make(map[string]interface{})
 		json.Unmarshal(respBytes, &data)
-		logs.Info("CI detect url's response: %+v", data)
+		logs.Info("taskId :"+fmt.Sprint(task.ID)+",CI detect url's response: %+v", data)
 	}
 	return nil
 }
