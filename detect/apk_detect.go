@@ -757,7 +757,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context){
 		history.PermId = permId
 		history.Remarks = t.Remark
 		history.Confirmer = usernameStr
-		history.TaskId = t.TaskId
+		//history.TaskId = t.TaskId
 		if err := dal.InsertPermOperationHistory(history); err != nil {
 			logs.Error("taskId:"+fmt.Sprint(t.TaskId)+",权限操作历史写入失败！")
 			errorReturn(c,"权限操作历史写入失败！")
