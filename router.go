@@ -98,28 +98,27 @@ func InitRouter(r *ginex.Engine) {
 		//确认iOS二进制检测信息
 		api.POST("/detect/confirmIOSResult", detect.ConfirmIOSBinaryResult)
 		//查询权限确认历史
-		api.POST("detect/queryIgnoreHistory",detect.QueryIgnoredHistory)
+		api.POST("detect/queryIgnoreHistory", detect.QueryIgnoredHistory)
 		//新增权限
-		api.POST("/perm/addPermission",detect.AddDetectConfig)
+		api.POST("/perm/addPermission", detect.AddDetectConfig)
 		//删除权限
 		//api.GET("/perm/deletePermission",detect.DeleteDetectConfig)
 		//修改权限
-		api.POST("/perm/editPermission",detect.EditDectecConfig)
+		api.POST("/perm/editPermission", detect.EditDectecConfig)
 		//查询权限
-		api.POST("/perm/queryPermission",detect.QueryDectecConfig)
+		api.POST("/perm/queryPermission", detect.QueryDectecConfig)
 		//根据权限查询信息
-		api.POST("/perm/queryWithPermission",detect.GetRelationsWithPermission)
+		api.POST("/perm/queryWithPermission", detect.GetRelationsWithPermission)
 		//根据App查询权限信息
-		api.POST("/perm/queryPermissionsOfApp",detect.QueryPermissionsWithApp)
+		api.POST("/perm/queryPermissionsOfApp", detect.QueryPermissionsWithApp)
 		//查询权限详情
-		api.GET("/perm/getpermDetails",detect.GetPermDetails)
+		api.GET("/perm/getpermDetails", detect.GetPermDetails)
 		//获取app的版本号---权限关联查询使用
 		api.GET("/perm/getAppVesions",detect.GetAppVersions)
-		//CI回调test
-		//api.POST("/ci/callBackTest",detect.CICallBackTest)
 		//aar检测结果查询
 		api.GET("/detect/getAarDetectResults",detect.QueryAarBinaryDetectResult)
 		//aar检测结果确认
 		api.POST("/detect/confirmAarResult",detect.ConfirmAarDetectResult)
+
 	}
 }
