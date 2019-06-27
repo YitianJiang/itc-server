@@ -525,7 +525,7 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context,me
 				keys3 := ""
 				for _,keyInfo := range keys[0:len(keys)-1] {
 					var confirmInfo dal.ConfirmInfo
-					if v,ok := strIgs[keyInfo]; ok{
+					if v,ok := strIgs[keyInfo]; ok && str.Status != 0{
 						info := v.(map[string]interface{})
 						if info["status"] != 0 {
 							keys2[keyInfo] = 1
@@ -620,7 +620,7 @@ func GetTaskPermissions_2(info dal.PermAppRelation,perIgs map[int]interface{},al
 		permOut.Desc = permMap["ability"].(string)
 		permOut.OtherVersion = permMap["first_version"].(string)
 
-		if v,ok := perIgs[int(permMap["perm_id"].(float64))]; ok {
+		if v,ok := perIgs[int(permMap["perm_id"].(float64))]; ok&&permOut.Status != 0 {
 			perm := v.(map[string]interface{})
 			permOut.Status = perm["status"].(int)
 			permOut.Remark = perm["remarks"].(string)
