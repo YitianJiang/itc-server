@@ -602,7 +602,7 @@ func QueryItem(condition map[string]interface{}) *[]ItemStruct {
 	}
 	defer connection.Close()
 	var items []ItemStruct
-	db := connection.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	db := connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	if err = db.Where(condition).Find(&items).Error; err != nil {
 		logs.Error("query self check item failed, %v", err)
 		return nil

@@ -116,7 +116,6 @@ func InitRouter(r *ginex.Engine) {
 		//查询权限详情
 		api.GET("/perm/getpermDetails", detect.GetPermDetails)
 		//获取app的版本号---权限关联查询使用
-		api.GET("/perm/getAppVesions", detect.GetAppVersions)
 		api.GET("/perm/getAppVesions",detect.GetAppVersions)
 
 	}

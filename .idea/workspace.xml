@@ -2,14 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="28b34efe-95bb-426e-ae28-86ac5fb0cd5e" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/detect/apk_detect_new.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/const/const.go" beforeDir="false" afterPath="$PROJECT_DIR$/const/const.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/database/dal/DetectConfigModel.go" beforeDir="false" afterPath="$PROJECT_DIR$/database/dal/DetectConfigModel.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/database/dal/DetectModel.go" beforeDir="false" afterPath="$PROJECT_DIR$/database/dal/DetectModel.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/deployment.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/database/dal/ItemModel.go" beforeDir="false" afterPath="$PROJECT_DIR$/database/dal/ItemModel.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/detect/apk_detect.go" beforeDir="false" afterPath="$PROJECT_DIR$/detect/apk_detect.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/detect/detect.go" beforeDir="false" afterPath="$PROJECT_DIR$/detect/detect.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/detect/detect_config.go" beforeDir="false" afterPath="$PROJECT_DIR$/detect/detect_config.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/detect/items.go" beforeDir="false" afterPath="$PROJECT_DIR$/detect/items.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/router.go" beforeDir="false" afterPath="$PROJECT_DIR$/router.go" afterDir="false" />
     </list>
@@ -33,8 +28,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/router.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2886">
-              <caret line="117" column="30" selection-start-line="117" selection-start-column="30" selection-end-line="117" selection-end-column="30" />
+            <state relative-caret-position="156">
+              <caret line="12" column="28" lean-forward="true" selection-start-line="12" selection-start-column="28" selection-end-line="12" selection-end-column="28" />
             </state>
           </provider>
         </entry>
@@ -42,8 +37,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/detect/items.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="385">
-              <caret line="209" column="14" lean-forward="true" selection-start-line="209" selection-start-column="14" selection-end-line="209" selection-end-column="14" />
+            <state relative-caret-position="502">
+              <caret line="203" column="14" lean-forward="true" selection-start-line="203" selection-start-column="14" selection-end-line="203" selection-end-column="14" />
               <folding>
                 <element signature="e#16#199#0" expanded="true" />
               </folding>
@@ -63,8 +58,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/database/dal/ItemModel.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="311">
-              <caret line="611" column="5" selection-start-line="611" selection-start-column="5" selection-end-line="611" selection-end-column="5" />
+            <state relative-caret-position="278">
+              <caret line="596" column="11" selection-start-line="596" selection-start-column="11" selection-end-line="596" selection-end-column="11" />
             </state>
           </provider>
         </entry>
@@ -121,16 +116,6 @@
       </list>
     </option>
   </component>
-  <component name="ProjectConfigurationFiles">
-    <option name="files">
-      <list>
-        <option value="$PROJECT_DIR$/.idea/itc-server.iml" />
-        <option value="$PROJECT_DIR$/.idea/misc.xml" />
-        <option value="$PROJECT_DIR$/.idea/modules.xml" />
-        <option value="$PROJECT_DIR$/.idea/vcs.xml" />
-      </list>
-    </option>
-  </component>
   <component name="ProjectFrameBounds" fullScreen="true">
     <option name="x" value="1440" />
     <option name="y" value="-180" />
@@ -173,6 +158,7 @@
     </panes>
   </component>
   <component name="PropertiesComponent">
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="true" />
     <property name="go.gopath.indexing.explicitly.defined" value="true" />
     <property name="go.import.settings.migrated" value="true" />
@@ -253,13 +239,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/router.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2886">
-          <caret line="117" column="30" selection-start-line="117" selection-start-column="30" selection-end-line="117" selection-end-column="30" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/vendor/code.byted.org/gopkg/gorm/model.go">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="234">
@@ -291,17 +270,24 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/router.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="156">
+          <caret line="12" column="28" lean-forward="true" selection-start-line="12" selection-start-column="28" selection-end-line="12" selection-end-column="28" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/database/dal/ItemModel.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="311">
-          <caret line="611" column="5" selection-start-line="611" selection-start-column="5" selection-end-line="611" selection-end-column="5" />
+        <state relative-caret-position="278">
+          <caret line="596" column="11" selection-start-line="596" selection-start-column="11" selection-end-line="596" selection-end-column="11" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/detect/items.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="385">
-          <caret line="209" column="14" lean-forward="true" selection-start-line="209" selection-start-column="14" selection-end-line="209" selection-end-column="14" />
+        <state relative-caret-position="502">
+          <caret line="203" column="14" lean-forward="true" selection-start-line="203" selection-start-column="14" selection-end-line="203" selection-end-column="14" />
           <folding>
             <element signature="e#16#199#0" expanded="true" />
           </folding>

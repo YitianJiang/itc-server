@@ -152,7 +152,6 @@ func GetSelfCheckItems(c *gin.Context) {
 		}
 	}
 	//任务管理中展示自查项
-
 	task_id, _ := strconv.Atoi(taskId)
 	taskDetect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id": task_id,
@@ -194,19 +193,14 @@ func GetSelfCheckItems(c *gin.Context) {
 			}
 			taskSelf = ggList //公共项不为空
 			//插入appItem
-			var taskAppItem dal.AppSelfItem
-			taskAppItem.Platform = platform
-			taskAppItem.AppId, _ = strconv.Atoi(appIdParam)
-			for _, gg := range ggList{
-				gg.(map[string]interface{})["status"] = 0
-				gg.(map[string]interface{})["confirmer"] = ""
-				gg.(map[string]interface{})["remark"] = ""
-			}
+			var appGGSelf dal.AppSelfItem
+			appGGSelf.Platform = platform
+			appGGSelf.AppId, _ = strconv.Atoi(appIdParam)
 			ggJson, _ := json.Marshal(map[string]interface{}{
 				"item":ggList,
 			})
-			taskAppItem.SelfItems = string(ggJson)
-			dal.InsertAppSelfItem(taskAppItem)
+			appGGSelf.SelfItems = string(ggJson)
+			dal.InsertAppSelfItem(appGGSelf)
 		}else{
 			//appItem检查项不为空
 			returnSelf := (*appSelf)[0].SelfItems
@@ -214,6 +208,8 @@ func GetSelfCheckItems(c *gin.Context) {
 			json.Unmarshal([]byte(returnSelf), &temp)
 			taskSelf = temp["item"].([]interface{})
 		}
+		//兼容之前的taskID
+
 		//task插入检查项
 		for _, self := range taskSelf {
 			self.(map[string]interface{})["status"] = 0
