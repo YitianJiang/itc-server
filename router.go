@@ -16,6 +16,7 @@ func InitRouter(r *ginex.Engine) {
 	r.POST("/addDetectItem", detect.AddDetectItem)
 	r.GET("/getSelfCheckItems", detect.GetSelfCheckItems)
 	r.POST("/deleteDetectItem", detect.DropDetectItem)
+	r.POST("/confirmCheck", detect.ConfirmCheck)
 
 	//获取鉴权接口
 	r.GET("/t/generateToken", detect.GetToken)
@@ -46,7 +47,7 @@ func InitRouter(r *ginex.Engine) {
 		//删除检查项
 		//api.POST("/deleteDetectItem", detect.DropDetectItem)
 		//完成自查
-		api.POST("/confirmCheck", detect.ConfirmCheck)
+		//api.POST("/confirmCheck", detect.ConfirmCheck)
 		//获取检测列表
 		api.GET("/queryDetectTools", detect.QueryDetectTools)
 		//获取当前任务已选择的检测工具列表

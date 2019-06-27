@@ -209,12 +209,33 @@ func GetSelfCheckItems(c *gin.Context) {
 			taskSelf = temp["item"].([]interface{})
 		}
 		//兼容之前的taskID
-
+		itemMap, remarkMap, confirmerMap := dal.GetSelfCheckByTaskId( "task_id='" + taskId + "'")
 		//task插入检查项
 		for _, self := range taskSelf {
-			self.(map[string]interface{})["status"] = 0
-			self.(map[string]interface{})["confirmer"] = ""
-			self.(map[string]interface{})["remark"] = ""
+			var item_id uint
+			switch self.(map[string]interface{})["id"].(type){
+			case uint:
+				item_id = self.(map[string]interface{})["id"].(uint)
+			case float64:
+				item_id = uint(self.(map[string]interface{})["id"].(float64))
+			case int:
+				item_id = uint(self.(map[string]interface{})["id"].(int))
+			}
+			if status, ok := itemMap[item_id]; ok {
+				self.(map[string]interface{})["status"] = status
+			}else{
+				self.(map[string]interface{})["status"] = 0
+			}
+			if confirmer, ok := confirmerMap[item_id]; ok {
+				self.(map[string]interface{})["confirmer"] = confirmer
+			}else{
+				self.(map[string]interface{})["confirmer"] = ""
+			}
+			if remark, ok := remarkMap[item_id]; ok {
+				self.(map[string]interface{})["remark"] = remark
+			}else{
+				self.(map[string]interface{})["remark"] = ""
+			}
 		}
 		task_self, err := json.Marshal(map[string]interface{}{
 			"item":taskSelf,
@@ -292,15 +313,16 @@ func ConfirmCheck(c *gin.Context) {
 		})
 		return
 	}
-	name, flag := c.Get("username")
-	if !flag {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "未获取到用户信息！",
-			"errorCode": -1,
-			"data":      "未获取到用户信息！",
-		})
-		return
-	}
+	//name, flag := c.Get("username")
+	//if !flag {
+	//	c.JSON(http.StatusOK, gin.H{
+	//		"message":   "未获取到用户信息！",
+	//		"errorCode": -1,
+	//		"data":      "未获取到用户信息！",
+	//	})
+	//	return
+	//}
+	name := "yinzhihong"
 	var param map[string]interface{}
 	param = make(map[string]interface{})
 	param["taskId"] = t.TaskId
@@ -357,15 +379,16 @@ func DropDetectItem(c *gin.Context) {
 		})
 		return
 	}
-	name, flag := c.Get("username")
-	if !flag {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "未获取到用户信息！",
-			"errorCode": -2,
-			"data":      "未获取到用户信息！",
-		})
-		return
-	}
+	//name, flag := c.Get("username")
+	//if !flag {
+	//	c.JSON(http.StatusOK, gin.H{
+	//		"message":   "未获取到用户信息！",
+	//		"errorCode": -2,
+	//		"data":      "未获取到用户信息！",
+	//	})
+	//	return
+	//}
+	name := "yinzhihong"
 	//判断用户是否有权限
 	isPrivacy := false
 	for _, people := range whiteList {

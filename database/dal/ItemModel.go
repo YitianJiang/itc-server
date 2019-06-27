@@ -230,7 +230,7 @@ func InsertItemModel(mutilItem MutilitemStruct) bool {
 		var appIdArr []string
 		//如果是非公共项，只给在appidlist中app添加
 		if item.IsGG == 0 {
-			appIdArr = strings.Split(item.AppId, ",")
+			appIdArr = strings.Split(strings.Replace(item.AppId, "，", ",", -1), ",")
 		}
 		//如果是公共项，给appItem表中所有app添加
 		if item.IsGG == 1 {
@@ -255,6 +255,7 @@ func InsertItemModel(mutilItem MutilitemStruct) bool {
 		fmt.Println("215,", appIdArr)
 		for _, appId := range appIdArr {
 			var appItem AppSelfItem
+			appId = strings.TrimSpace(appId)
 			app_id, _ := strconv.Atoi(appId)
 			if err := db.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("appId = ? AND platform = ?", app_id, item.Platform).Limit(1).Find(&appItem).Error; err != nil {
 				if err == gorm.ErrRecordNotFound {
@@ -434,16 +435,24 @@ func DeleteItemsByCondition(condition map[string]interface{}) bool {
 			}
 		}
 		m["item"] = new_items
-		item_self, err := json.Marshal(m)
-		if err != nil {
-			logs.Error("map -> json error!", err.Error())
-			db.Rollback()
-			return false
-		}
-		if err := db.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Model(&appSelf).Update("selfItem", string(item_self)).Error; err != nil {
-			logs.Error("更新tb_app_selfItem出错！", err.Error())
-			db.Rollback()
-			return false
+		if len(new_items) == 0{
+			if err := db.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Delete(&appSelf).Error; err != nil {
+				logs.Error("删除tb_app_selfItem出错！", err.Error())
+				db.Rollback()
+				return false
+			}
+		}else{
+			item_self, err := json.Marshal(m)
+			if err != nil {
+				logs.Error("map -> json error!", err.Error())
+				db.Rollback()
+				return false
+			}
+			if err := db.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Model(&appSelf).Update("selfItem", string(item_self)).Error; err != nil {
+				logs.Error("更新tb_app_selfItem出错！", err.Error())
+				db.Rollback()
+				return false
+			}
 		}
 	}
 	//删除tb_item中该自查项
@@ -456,8 +465,9 @@ func DeleteItemsByCondition(condition map[string]interface{}) bool {
 	}
 	if isAll == 0 {
 		var appIds []string
-		appTemp := strings.Split(item.AppId, ",")
+		appTemp := strings.Split(strings.Replace(item.AppId, "，", ",", -1), ",")
 		for _, app_id := range appTemp {
+			app_id = strings.TrimSpace(app_id)
 			if app_id != appId {
 				appIds = append(appIds, app_id)
 			}
@@ -511,7 +521,7 @@ func ConfirmSelfCheck(param map[string]interface{}) (bool, *DetectStruct) {
 	taskSelfList := taskSelfMap["item"].([]interface{})
 	idArray := data.([]Self)
 	for _, self := range taskSelfList {
-		id := self.(map[string]interface{})["id"].(int)
+		id := int(self.(map[string]interface{})["id"].(float64))
 		for _, confirmSelf := range idArray {
 			if confirmSelf.Id == id {
 				self.(map[string]interface{})["status"] = confirmSelf.Status
@@ -617,7 +627,7 @@ func InsertAppSelfItem(appItem AppSelfItem) bool {
 	}
 	defer connection.Close()
 	db := connection.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	if err = db.Create(appItem).Error; err != nil {
+	if err = db.Create(&appItem).Error; err != nil {
 		logs.Error("query self check item failed, %v", err)
 		return false
 	}
@@ -650,7 +660,7 @@ func InsertTaskSelfItem(taskItem TaskSelfItem) bool {
 		return false
 	}
 	defer connection.Close()
-	if err := connection.Table(TaskSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(taskItem).Error; err != nil {
+	if err := connection.Table(TaskSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&taskItem).Error; err != nil {
 		logs.Error(err.Error())
 		return false
 	}
@@ -667,11 +677,12 @@ func QueryTaskSelfItemList(taskId int) (bool, []interface{}) {
 	defer connection.Close()
 	var taskItem TaskSelfItem
 	if err := connection.Table(TaskSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("taskId = ?", taskId).Limit(1).Find(&taskItem).Error; err != nil {
-		logs.Error(err.Error())
-		return false, nil
-	}
-	if &taskItem == nil {
-		return true, nil
+		if err == gorm.ErrRecordNotFound{
+			return true, nil
+		}else{
+			logs.Error(err.Error())
+			return false, nil
+		}
 	}
 	m := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(taskItem.SelfItems), &m); err != nil {
