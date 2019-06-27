@@ -196,7 +196,7 @@ type IOSDetectContent struct {
 	gorm.Model
 	TaskId          int    `gorm:"column:taskId"            json:"taskId"`
 	ToolId          int    `gorm:"column:toolId"            json:"toolId"`
-	JsonContent     string `gorm:"column:jsonContent"      json:"jsonContent"`
+	JsonContent     string `gorm:"column:jsonContent"       json:"jsonContent"`
 	Category        string `gorm:"column:category"          json:"category"`
 	CategoryName    string `gorm:"column:categoryName"      json:"categoryName"` //兼容就接口保留，后续全部完成后删除
 	CategoryContent string `gorm:"column:categoryContent"   json:"categoryContent"`

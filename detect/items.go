@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/gopkg/logs"
@@ -17,7 +18,7 @@ import (
 func AddDetectItem(c *gin.Context) {
 
 	param, _ := ioutil.ReadAll(c.Request.Body)
-	var t dal.ItemStruct
+	var t dal.MutilitemStruct
 	err := json.Unmarshal(param, &t)
 	if err != nil {
 		logs.Error("参数格式错误!, ", err)
@@ -28,11 +29,13 @@ func AddDetectItem(c *gin.Context) {
 		})
 		return
 	}
+	//输入参数判断处理
 	//regulationUrl := t.RegulationUrl
-	ggFlag := t.IsGG
+	ggFlag := t.IsGG //是否公共,0-否；1-是
 	platform := t.Platform
-	appId := t.AppId
-	//platform
+	appIdArr := strings.Split(t.AppId, ",")              //支持多个app
+	QuestionArr := strings.Split(t.QuestionTypeArr, ",") //支持多种问题类型
+	//参数判断
 	if platform != 0 && platform != 1 {
 		logs.Error("platform参数不合法！")
 		c.JSON(http.StatusOK, gin.H{
@@ -42,16 +45,24 @@ func AddDetectItem(c *gin.Context) {
 		})
 		return
 	}
-	//是否公共,0-否；1-是
 	if ggFlag != 0 && ggFlag != 1 {
-		ggFlag = 1
+		ggFlag = 0 //没有勾选是否公共，以当前appId作为检查项归属app
 	}
-	if ggFlag == 0 && appId == 0 {
+	if len(appIdArr) == 0 {
 		logs.Error("缺失参数appId！")
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "缺失参数appId！",
 			"errorCode": -2,
 			"data":      "缺失参数appId！",
+		})
+		return
+	}
+	if len(QuestionArr) == 0 {
+		logs.Error("缺失参数QuestionType！")
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "缺失参数QuestionType！",
+			"errorCode": -2,
+			"data":      "缺失参数QuestionType！",
 		})
 		return
 	}
@@ -66,9 +77,8 @@ func AddDetectItem(c *gin.Context) {
 		})
 		return
 	}*/
-	t.Status = 0
 	itemModelId := dal.InsertItemModel(t)
-	if itemModelId == 0 {
+	if itemModelId == false {
 		logs.Error("新增检查项失败")
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "新增检查项失败，请联系相关人员！",
@@ -77,7 +87,6 @@ func AddDetectItem(c *gin.Context) {
 		})
 		return
 	} else {
-		logs.Error("新增检查项成功")
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "success",
 			"errorCode": 0,
@@ -103,79 +112,207 @@ func GetSelfCheckItems(c *gin.Context) {
 		return
 	}
 	taskId, bool := c.GetQuery("taskId")
-	condition := "1=1"
-	if bool {
-		condition += " and id='" + taskId + "'"
-	}
-	var param map[string]interface{}
-	var data map[string]interface{}
-	param = make(map[string]interface{})
-	data = make(map[string]interface{})
-	itemCondition := ""
-	if bool {
-		param["condition"] = condition
-		tasks, _ := dal.QueryTasksByCondition(param)
-		if len(*tasks) > 0 {
-			appId := (*tasks)[0].AppId
-			platform := (*tasks)[0].Platform
-			itemCondition = "(platform='" + strconv.Itoa(platform) + "')" + "and ((is_gg='1') or (is_gg='0' and app_id='" + appId + "'))"
+	if !bool { //检查项管理中返回和appID相关检查项，
+		appSelfItem := dal.QueryAppSelfItem(map[string]interface{}{
+			"appId": appIdParam,
+		})
+		if appSelfItem == nil || len(*appSelfItem) == 0 {
+			ggItemList := getGGItem(map[string]interface{}{
+				"is_gg" : 1,
+			})
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "success！",
+				"errorCode": 0,
+				"data":      ggItemList,
+			})
+			return
+		} else {
+			var appItemList []interface{}
+			for _, appSelf := range *appSelfItem {
+				appMap := make(map[string]interface{})
+				if err := json.Unmarshal([]byte(appSelf.SelfItems), &appMap); err != nil {
+					logs.Error(err.Error())
+					c.JSON(http.StatusOK, gin.H{
+						"message":   "解析json出错！",
+						"errorCode": -1,
+						"data":      []interface{}{},
+					})
+					return
+				}
+				for _, i := range appMap["item"].([]interface{}) {
+					appItemList = append(appItemList, i)
+				}
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "success！",
+				"errorCode": 0,
+				"data":      appItemList,
+			})
+			return
 		}
-	} else {
-		itemCondition = "((is_gg='1') or (is_gg='0' and app_id='" + appIdParam + "'))"
 	}
-	data["condition"] = itemCondition
-	items := dal.QueryItemsByCondition(data)
-	if items == nil || len(*items) == 0 {
-		logs.Error("未查询到自查项信息！")
-		var res [0]dal.QueryItemStruct
+	//任务管理中展示自查项
+	task_id, _ := strconv.Atoi(taskId)
+	taskDetect := dal.QueryDetectModelsByMap(map[string]interface{}{
+		"id": task_id,
+	})
+	var platform int
+	if taskDetect != nil && len(*taskDetect) != 0 {
+		platform = (*taskDetect)[0].Platform
+	}
+	flag, data := dal.QueryTaskSelfItemList(task_id)
+	//查询出错
+	if !flag {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "查询Task自查项失败！",
+			"errorCode": -1,
+			"data":      []interface{}{},
+		})
+		return
+	}
+	//查询taskItemList为空
+	if data == nil {
+		appSelf := dal.QueryAppSelfItem(map[string]interface{}{
+			"appId":    appIdParam,
+			"platform": platform,
+		})
+		var taskSelf []interface{} //task的自查项
+		//appItem检查项为空
+		if appSelf == nil || len(*appSelf) == 0 {
+			ggList := getGGItem(map[string]interface{}{
+				"is_gg":1,
+				"platform":platform,
+			})
+			if len(ggList) == 0{ //公共检查项为空
+				c.JSON(http.StatusOK, gin.H{
+					"message":   "success,该APP没有自查项！",
+					"errorCode": 0,
+					"data":      []interface{}{},
+				})
+				return
+			}
+			taskSelf = ggList //公共项不为空
+			//插入appItem
+			var appGGSelf dal.AppSelfItem
+			appGGSelf.Platform = platform
+			appGGSelf.AppId, _ = strconv.Atoi(appIdParam)
+			ggJson, _ := json.Marshal(map[string]interface{}{
+				"item":ggList,
+			})
+			appGGSelf.SelfItems = string(ggJson)
+			dal.InsertAppSelfItem(appGGSelf)
+		}else{
+			//appItem检查项不为空
+			returnSelf := (*appSelf)[0].SelfItems
+			var temp = make(map[string]interface{})
+			json.Unmarshal([]byte(returnSelf), &temp)
+			taskSelf = temp["item"].([]interface{})
+		}
+		//兼容之前的taskID
+		itemMap, remarkMap, confirmerMap := dal.GetSelfCheckByTaskId( "task_id='" + taskId + "'")
+		//task插入检查项
+		for _, self := range taskSelf {
+			var item_id uint
+			switch self.(map[string]interface{})["id"].(type){
+			case uint:
+				item_id = self.(map[string]interface{})["id"].(uint)
+			case float64:
+				item_id = uint(self.(map[string]interface{})["id"].(float64))
+			case int:
+				item_id = uint(self.(map[string]interface{})["id"].(int))
+			}
+			if status, ok := itemMap[item_id]; ok {
+				self.(map[string]interface{})["status"] = status
+			}else{
+				self.(map[string]interface{})["status"] = 0
+			}
+			if confirmer, ok := confirmerMap[item_id]; ok {
+				self.(map[string]interface{})["confirmer"] = confirmer
+			}else{
+				self.(map[string]interface{})["confirmer"] = ""
+			}
+			if remark, ok := remarkMap[item_id]; ok {
+				self.(map[string]interface{})["remark"] = remark
+			}else{
+				self.(map[string]interface{})["remark"] = ""
+			}
+		}
+		task_self, err := json.Marshal(map[string]interface{}{
+			"item":taskSelf,
+		})
+		if err != nil {
+			logs.Error(err.Error())
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "map json转换出错！",
+				"errorCode": -1,
+				"data":      []interface{}{},
+			})
+			return
+		}
+		var taskSelfItem dal.TaskSelfItem
+		taskSelfItem.SelfItems = string(task_self)
+		taskSelfItem.TaskId = task_id
+		isInsert := dal.InsertTaskSelfItem(taskSelfItem)
+		if !isInsert {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "Task自查项插入数据库失败",
+				"errorCode": -1,
+				"data":      []interface{}{},
+			})
+			return
+		} else {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "success！",
+				"errorCode": 0,
+				"data":      taskSelf,
+			})
+			return
+		}
+	}
+	if flag && data != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "success！",
 			"errorCode": 0,
-			"data":      res,
-		})
-		return
-	}
-	if !bool {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "success",
-			"errorCode": 0,
-			"data":      *items,
-		})
-		return
-	}
-	tj := "task_id='" + taskId + "'"
-	itemMap, remarkMap, confirmerMap := dal.GetSelfCheckByTaskId(tj)
-	var filterItem []dal.QueryItemStruct
-	if itemMap == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "success",
-			"errorCode": 0,
-			"data":      *items,
-		})
-	} else {
-		for i := 0; i < len(*items); i++ {
-			item := (*items)[i]
-			if _, ok := itemMap[item.ID]; ok {
-				status := itemMap[item.ID]
-				item.Status = status
-				item.Remark = remarkMap[item.ID]
-				item.Confirmer = confirmerMap[item.ID]
-			} else {
-				item.Status = 0
-				item.Remark = ""
-				item.Confirmer = ""
-			}
-			(*items)[i] = item
-			filterItem = append(filterItem, item)
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "success",
-			"errorCode": 0,
-			"data":      filterItem,
+			"data":      data,
 		})
 	}
 }
 
+func getGGItem(condition map[string]interface{}) []interface{}{
+	ggItem := dal.QueryItem(condition)
+	//获取配置项
+	var configMap map[int]string
+	configMap = make(map[int]string)
+	configs := dal.QueryConfigByCondition("1=1")
+	if configs != nil && len(*configs) > 0 {
+		for i := 0; i < len(*configs); i++ {
+			config := (*configs)[i]
+			configMap[int(config.ID)] = config.Name
+		}
+	}
+	if ggItem == nil || len(*ggItem) == 0{
+		return []interface{}{}
+	}
+	var ggItemList []interface{}
+	for _, gg_item := range *ggItem{
+		itemJson, _ := json.Marshal(gg_item)
+		m := make(map[string]interface{})
+		json.Unmarshal(itemJson, &m)
+		delete(m, "ID")
+		delete(m, "CreatedAt")
+		delete(m, "DeletedAt")
+		delete(m, "UpdatedAt")
+		m["id"] = gg_item.ID
+		keyWord := m["keyWord"].(float64)
+		fixWay := m["fixWay"].(float64)
+		questionType := m["questionType"].(float64)
+		m["keyWordName"] = configMap[int(keyWord)]
+		m["fixWayName"] = configMap[int(fixWay)]
+		m["questionTypeName"] = configMap[int(questionType)]
+		ggItemList = append(ggItemList, m)
+	}
+	return ggItemList
+}
 /*
  *完成自查
  */
@@ -187,7 +324,7 @@ func ConfirmCheck(c *gin.Context) {
 		logs.Error("参数不合法!, ", err)
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "参数不合法",
-			"errorCode": -5,
+			"errorCode": -2,
 			"data":      "参数不合法",
 		})
 		return
@@ -210,7 +347,7 @@ func ConfirmCheck(c *gin.Context) {
 	if !bool {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "自查确认失败，请联系相关人员！",
-			"errorCode": -3,
+			"errorCode": -1,
 			"data":      "自查确认失败，请联系相关人员！",
 		})
 		return
@@ -235,10 +372,29 @@ func DropDetectItem(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "参数不合法",
 			"errorCode": -2,
-			"data":      "参数不合法,请重新输入！",
+			"data":      "缺少itemId！",
 		})
 		return
 	}
+	//yixian那边没上线，暂时写死
+	//isAll := c.DefaultPostForm("isGG", "")
+	//if isAll == "" {
+	//	c.JSON(http.StatusOK, gin.H{
+	//		"message":   "参数不合法",
+	//		"errorCode": -2,
+	//		"data":      "缺少isGG！",
+	//	})
+	//	return
+	//}
+	//appId := c.DefaultPostForm("appId", "")
+	//if appId == "" {
+	//	c.JSON(http.StatusOK, gin.H{
+	//		"message":   "参数不合法",
+	//		"errorCode": -2,
+	//		"data":      "缺少appId！",
+	//	})
+	//	return
+	//}
 	name, flag := c.Get("username")
 	if !flag {
 		c.JSON(http.StatusOK, gin.H{
@@ -248,6 +404,8 @@ func DropDetectItem(c *gin.Context) {
 		})
 		return
 	}
+	isAll := "1"
+	appId := "13"
 	//判断用户是否有权限
 	isPrivacy := false
 	for _, people := range whiteList {
@@ -255,27 +413,31 @@ func DropDetectItem(c *gin.Context) {
 			isPrivacy = true
 		}
 	}
-	if isPrivacy {
-		if dal.DeleteItemsByCondition(map[string]interface{}{
-			"id": itemId,
-		}) {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "success",
-				"errorCode": 0,
-				"data":      "success",
-			})
-		} else {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "删除自查项失败！",
-				"errorCode": -1,
-				"data":      "删除自查项失败！",
-			})
-		}
-	} else {
+	is_all, _ := strconv.Atoi(isAll)
+	if !isPrivacy && is_all == 1 {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "该用户没有删除权限",
 			"errorCode": -3,
 			"data":      "该用户没有删除权限",
 		})
+		return
 	}
+	if dal.DeleteItemsByCondition(map[string]interface{}{
+		"id":    itemId,
+		"isGG":  isAll,
+		"appId": appId,
+	}) {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "success",
+			"errorCode": 0,
+			"data":      "success",
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "删除自查项失败！",
+			"errorCode": -1,
+			"data":      "删除自查项失败！",
+		})
+	}
+
 }
