@@ -119,6 +119,8 @@ func InitRouter(r *ginex.Engine) {
 		api.GET("/detect/getAarDetectResults",detect.QueryAarBinaryDetectResult)
 		//aar检测结果确认
 		api.POST("/detect/confirmAarResult",detect.ConfirmAarDetectResult)
+		//aar任务列表查询
+		api.POST("/detect/getAarTaskList",detect.GetOtherDetectTaskList)
 
 	}
 }

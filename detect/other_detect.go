@@ -18,6 +18,9 @@ import (
 	"time"
 )
 
+/**
+	aar新建检测任务接口
+ */
 func NewOtherDetect(c *gin.Context){
 
 	url := ""
@@ -62,19 +65,12 @@ func NewOtherDetect(c *gin.Context){
 	checkItem := c.DefaultPostForm("checkItem", "")
 	logs.Info("checkItem: ", checkItem)
 
-	//增加回调地址
-	//callBackAddr := c.DefaultPostForm("callBackAddr","")
-	//var extraInfo dal.ExtraStruct
-	//extraInfo.CallBackAddr = callBackAddr
-
-
-	//检验文件格式是否是apk或者ipa
+	//检验文件格式是否是aar
 	flag := strings.HasSuffix(filename, ".aar")
 	if !flag {
 		errorFormatFile(c)
 		return
 	}
-	//检验文件与platform是否匹配，0-安卓apk，1-iOS ipa
 	url  = "http://" + Local_URL_PRO + "/apk_post/v2"
 	_tmpDir := "./tmp"
 	exist, err := PathExists(_tmpDir)
@@ -192,7 +188,9 @@ func NewOtherDetect(c *gin.Context){
 	})
 
 }
-
+/**
+	aar检测成功结果回调接口
+ */
 func UpdateOtherDetectInfos(c *gin.Context)  {
 	logs.Info("回调开始，更新aar检测信息～～～")
 	taskId := c.Request.FormValue("task_ID")
@@ -262,62 +260,74 @@ func UpdateOtherDetectInfos(c *gin.Context)  {
 	}
 }
 
-func OtherJsonAnalysis_2(info string,mapInfo map[string]int) error  {
-	logs.Info("aar安卓解析开始～～～～")
-	var fisrtResult dal.JSONResultStruct
-	err_f := json.Unmarshal([]byte(info),&fisrtResult)
-	if err_f != nil {
-		logs.Error("taskId:"+fmt.Sprint(mapInfo["taskId"])+",arr包检测返回信息格式错误！,%v",err_f)
-		message := "taskId:"+fmt.Sprint(mapInfo["taskId"])+",arr包检测返回信息格式错误，请解决;"+fmt.Sprint(err_f)
-		utils.LarkDingOneInner("fanjuan.xqp",message)
-		return err_f
+/**
+	查询aar检测任务列表接口
+ */
+func GetOtherDetectTaskList(c *gin.Context)  {
+	type queryStruct struct {
+		PageSize 		int			`json:"pageSize"`
+		Page 			int			`json:"page"`
+		Info    		string		`json:"info"`
+		Creator 		string		`json:"creator"`
 	}
-
-	infos := make([]dal.OtherDetailInfoStruct,0)
-	for index,result := range fisrtResult.Result {
-		appInfos := result.AppInfo
-		methodsInfo := result.MethodInfos
-		strsInfo := result.StrInfos
-		//missCalls := result.MissSearchInfos
-		basicInfos,errB := otherBasicInfoAna(appInfos,mapInfo,index)
-		if errB != nil {
-			return errB
-		}
-		infos = append(infos,basicInfos)
-
-		//敏感method解析----先外层去重
-		mRepeat := make(map[string]int)
-		newMethods := make([]dal.MethodInfo,0)//第一层去重后的敏感方法集
-		for _, method := range methodsInfo {
-			var keystr = method.MethodName+method.ClassName
-			if v,ok := mRepeat[keystr]; (!ok||ok&&v==0){
-				newMethods = append(newMethods, method)
-				mRepeat[keystr]=1
-			}
-		}
-		infos = append(infos,otherMethodAna(&newMethods,mapInfo,index))
-		infos = append(infos,otherStrAna(&strsInfo,mapInfo,index))
-
-		otherPerms, errP := otherPermAna(&appInfos.PermsInAppInfo,mapInfo,index)
-		if errP != nil {
-			return errP
-		}
-		infos = append(infos,otherPerms)
-	}
-	err := dal.InsertOtherDetectDetailBatch(&infos)
+	var t queryStruct
+	param,_ := ioutil.ReadAll(c.Request.Body)
+	err := json.Unmarshal(param,&t)
 	if err != nil {
-		message := "taskId:"+fmt.Sprint(mapInfo["taskId"])+",arr包检测入库格式错误！,"+fmt.Sprint(err)
-		logs.Error(message)
-		utils.LarkDingOneInner("fanjuan.xqp",message)
-		return err
+		logs.Error("query detectConfig 传入参数不合法！%v",err)
+		errorReturn(c,"传入参数不合法！")
+		return
 	}
-	if !updateAarTaskStatus(mapInfo["taskId"]) {
-		utils.LarkDingOneInner("fanjuan.xqp","更新任务状态失败，任务ID："+fmt.Sprint(mapInfo["taskId"]))
-		return fmt.Errorf("更新任务状态失败，任务ID："+fmt.Sprint(mapInfo["taskId"]))
+	if t.Page <= 0 || t.PageSize <= 0 {
+		logs.Error("分页参数不合法!")
+		errorReturn(c,"分页参数不合法")
+		return
 	}
-	return nil
+	pageInfo := make(map[string]int)
+	pageInfo["pageSize"] = t.PageSize
+	pageInfo["page"]= t.Page
+
+	condition := "1=1"
+	if t.Creator != "" {
+		condition += " and `creator` ='"+t.Creator+"'"
+	}
+	if t.Info != "" {
+		condition += " and `other_name` like '%"+t.Info+"%'"
+	}
+	list,count,errL := dal.QueryOtherDetctModelOfList(pageInfo,condition)
+	if errL != nil {
+		logs.Error("查询aar任务列表数据库操作失败，查询信息：%v,错误信息：%v",t,errL)
+		errorReturn(c,"查询aar任务列表数据库操作失败")
+		return
+	}
+	if list == nil || len(*list)== 0 {
+		logs.Error("无对应aar任务，查询信息：%v",t)
+		c.JSON(http.StatusOK,gin.H{
+			"errorCode":0,
+			"message":"success",
+			"data":map[string]interface{}{
+				"count":count,
+				"result":make([]dal.OtherDetectModel,0),
+			},
+		})
+	}else {
+		logs.Info("查询aar列表成功")
+		c.JSON(http.StatusOK,gin.H{
+			"errorCode":0,
+			"message":"success",
+			"data":map[string]interface{}{
+				"count":count,
+				"result":(*list),
+			},
+		})
+	}
+	return
 }
 
+
+/**
+	查询aar检测详情接口
+ */
 func QueryAarBinaryDetectResult(c *gin.Context)  {
 	taskId := c.DefaultQuery("taskId", "")
 	if taskId == "" {
@@ -360,7 +370,9 @@ func QueryAarBinaryDetectResult(c *gin.Context)  {
 	})
 	return
 }
-
+/**
+	确认aar信息接口---无diff
+ */
 func ConfirmAarDetectResult(c *gin.Context)  {
 	param, _ := ioutil.ReadAll(c.Request.Body)
 	var t dal.PostConfirm//t.Type为0敏感方法，1敏感字符串，2权限
@@ -450,6 +462,69 @@ func ConfirmAarDetectResult(c *gin.Context)  {
 		"errorCode":0,
 	})
 }
+
+/**
+	aar结果解析
+*/
+func OtherJsonAnalysis_2(info string,mapInfo map[string]int) error  {
+	logs.Info("aar安卓解析开始～～～～")
+	var fisrtResult dal.JSONResultStruct
+	err_f := json.Unmarshal([]byte(info),&fisrtResult)
+	if err_f != nil {
+		logs.Error("taskId:"+fmt.Sprint(mapInfo["taskId"])+",arr包检测返回信息格式错误！,%v",err_f)
+		message := "taskId:"+fmt.Sprint(mapInfo["taskId"])+",arr包检测返回信息格式错误，请解决;"+fmt.Sprint(err_f)
+		utils.LarkDingOneInner("fanjuan.xqp",message)
+		return err_f
+	}
+
+	infos := make([]dal.OtherDetailInfoStruct,0)
+	for index,result := range fisrtResult.Result {
+		appInfos := result.AppInfo
+		methodsInfo := result.MethodInfos
+		strsInfo := result.StrInfos
+		//missCalls := result.MissSearchInfos
+		basicInfos,errB := otherBasicInfoAna(appInfos,mapInfo,index)
+		if errB != nil {
+			return errB
+		}
+		infos = append(infos,basicInfos)
+
+		//敏感method解析----先外层去重
+		mRepeat := make(map[string]int)
+		newMethods := make([]dal.MethodInfo,0)//第一层去重后的敏感方法集
+		for _, method := range methodsInfo {
+			var keystr = method.MethodName+method.ClassName
+			if v,ok := mRepeat[keystr]; (!ok||ok&&v==0){
+				newMethods = append(newMethods, method)
+				mRepeat[keystr]=1
+			}
+		}
+		infos = append(infos,otherMethodAna(&newMethods,mapInfo,index))
+		infos = append(infos,otherStrAna(&strsInfo,mapInfo,index))
+
+		otherPerms, errP := otherPermAna(&appInfos.PermsInAppInfo,mapInfo,index)
+		if errP != nil {
+			return errP
+		}
+		infos = append(infos,otherPerms)
+	}
+	err := dal.InsertOtherDetectDetailBatch(&infos)
+	if err != nil {
+		message := "taskId:"+fmt.Sprint(mapInfo["taskId"])+",arr包检测入库格式错误！,"+fmt.Sprint(err)
+		logs.Error(message)
+		utils.LarkDingOneInner("fanjuan.xqp",message)
+		return err
+	}
+	if !updateAarTaskStatus(mapInfo["taskId"]) {
+		utils.LarkDingOneInner("fanjuan.xqp","更新任务状态失败，任务ID："+fmt.Sprint(mapInfo["taskId"]))
+		return fmt.Errorf("更新任务状态失败，任务ID："+fmt.Sprint(mapInfo["taskId"]))
+	}
+	return nil
+}
+
+/**
+	确认信息下标是否越界
+ */
 func judgeOutOfRange(c *gin.Context,id int,length int) bool {
 	if id>length {
 		logs.Error("确认信息ID越界"+fmt.Sprint(id))
@@ -459,6 +534,9 @@ func judgeOutOfRange(c *gin.Context,id int,length int) bool {
 	return true
 }
 
+/**
+	更新任务状态
+ */
 func updateAarTaskStatus(taskId int) bool {
 	details := dal.QueryOtherDetectDetail(map[string]interface{}{
 		"task_id":taskId,
@@ -711,6 +789,7 @@ func strRmRepeat_other(callInfo *[]dal.CallLocInfo) *[]dal.StrCallJson {
 	}
 	return &result
 }
+
 /**
 	解析权限信息
  */
