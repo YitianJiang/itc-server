@@ -63,6 +63,15 @@ func UploadFile(c *gin.Context) {
 		logs.Error("未选择上传的文件！")
 		return
 	}
+	//问题文件提前排查（大小<1m）
+	if header.Size < (1 << 20) {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "上传的文件有问题（文件大小异常），请排查！",
+			"errorCode": -2,
+		})
+		logs.Error("上传的文件有问题（文件大小异常）")
+		return
+	}
 	defer file.Close()
 	filename := header.Filename
 	//发送lark消息到个人

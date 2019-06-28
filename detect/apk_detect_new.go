@@ -285,6 +285,7 @@ func permUpdate(permissionArr *[]string,detectInfo *dal.DetectInfo,detect *[]dal
 			hist.PermId = int(permInfo["perm_id"].(uint))
 			hist.Confirmer = (*detect)[0].Creator
 			hist.Remarks = "包检测引入该权限"
+			hist.TaskId = taskId
 			first_history = append(first_history,hist)
 		}
 		permInfos = append(permInfos,permInfo)

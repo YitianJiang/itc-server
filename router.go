@@ -33,7 +33,7 @@ func InitRouter(r *ginex.Engine) {
 	{
 		//上传ipa和apk
 		api.POST("/uploadFile", detect.UploadFile)
-		//上传ipa和apk------fj
+		//上传aar------fj
 		api.POST("/uploadFileOther", detect.NewOtherDetect)
 		//增加检查项
 		api.POST("/addDetectItem", detect.AddDetectItem)
