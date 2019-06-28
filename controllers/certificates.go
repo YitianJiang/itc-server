@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"code.byted.org/clientQA/itc-server/detect"
 
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
@@ -208,7 +209,7 @@ func AddCertificate(c *gin.Context) {
 	}
 	//查询证书过期日期
 	response := func() (resp *http.Response) {
-		upstreamUrl := "http://10.2.9.226:9527/query_certificate_expire_date" //过期日期访问地址
+		upstreamUrl := "http://"+detect.DETECT_URL_PRO+"/query_certificate_expire_date" //过期日期访问地址
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
 		part, err := writer.CreateFormFile("certificate", certificateFileName)
