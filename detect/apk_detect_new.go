@@ -226,6 +226,7 @@ func permUpdate(permissionArr *[]string,detectInfo *dal.DetectInfo,detect *[]dal
 		queryResult := dal.QueryDetectConfig(map[string]interface{}{
 			"key_info":pers,
 			"platform":0,
+			"check_type":0,
 		})
 		fhflag = false
 		permInfo := make(map[string]interface{})

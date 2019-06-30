@@ -131,8 +131,8 @@ func UploadFile(c *gin.Context) {
 			url = "http://" + DETECT_URL_PRO + "/apk_post"
 		} else {
 			//新服务url
-			//url = "http://"+Local_URL_PRO +"/apk_post/v2"
-			url = "http://" + DETECT_URL_PRO + "/apk_post/v2"
+			url = "http://"+Local_URL_PRO +"/apk_post/v2"
+			//url = "http://" + DETECT_URL_PRO + "/apk_post/v2"
 		}
 		//url = "http://" + DETECT_URL_PRO + "/apk_post"
 
@@ -214,8 +214,8 @@ func UploadFile(c *gin.Context) {
 	}
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
-		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
-		//callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
+		//callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
+		callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -382,6 +382,9 @@ func UpdateDetectInfos(c *gin.Context) {
 	}
 
 	//进行lark消息提醒
+	detect = dal.QueryDetectModelsByMap(map[string]interface{}{
+		"id": taskId,
+	})
 	var message string
 	creators := (*detect)[0].ToLarker
 	larkList := strings.Split(creators, ",")
@@ -393,7 +396,15 @@ func UpdateDetectInfos(c *gin.Context) {
 	} else {
 		message += "iOS包"
 	}
-	message += "完成二进制检测，请及时对每条未确认信息进行确认！\n"
+
+	message += "  完成二进制检测，"
+	if (*detect)[0].Status == 0 {
+		message += "有未确认检测项，请及时对每条未确认信息进行确认！\n"
+	}else {
+		message += "本次检测未发现新增权限、敏感方法或敏感字符串，不需要进行确认\n"
+	}
+	message += "注意：若是IOS包，请及时确认自查项！\n"
+	//message += " 完成二进制检测，请及时对每条未确认信息进行确认！\n"
 	//message += "如果安卓选择了GooglePlay检测和隐私检测，两个检测结果都需要进行确认，请不要遗漏！！！\n"
 	appId := (*detect)[0].AppId
 	appIdInt, _ := strconv.Atoi(appId)

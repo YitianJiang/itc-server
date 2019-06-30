@@ -13,6 +13,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -427,6 +428,12 @@ func ConfirmAarDetectResult(c *gin.Context)  {
 		p[t.Id-1].Status = t.Status
 		p[t.Id-1].Confirmer = usernameStr
 		p[t.Id-1].Remark = t.Remark
+		//每个字符串的确认信息
+		for i := 0; i<len(p[t.Id-1].ConfirmInfos);i++ {
+			p[t.Id-1].ConfirmInfos[i].Status = t.Status
+			p[t.Id-1].ConfirmInfos[i].Confirmer = usernameStr
+			p[t.Id-1].ConfirmInfos[i].Remark = t.Remark
+		}
 		newInfos,_ = json.Marshal(p)
 	}else if t.Type == 2 {
 		var p []dal.Permissions
@@ -639,7 +646,17 @@ func getOtherDetectDetail (c *gin.Context, infos *[]dal.OtherDetailInfoStruct,ta
 					errorReturn(c,"arr敏感方法存储格式错误，taskID："+fmt.Sprint(task.ID))
 					return nil
 				}
-				finalResult[i].SMethods = t
+				var result []dal.SMethod
+				var result_con []dal.SMethod
+				for _,method := range t {
+					if method.Status == 0 {
+						result = append(result,method)
+					}else {
+						result_con = append(result_con,method)
+					}
+				}
+				result = append(result,result_con...)
+				finalResult[i].SMethods = result
 			}else if detailOne.DetailType == 1 {
 				var t []dal.SStr
 				if err := json.Unmarshal([]byte(detailOne.DetectInfos),&t);err != nil {
@@ -647,7 +664,17 @@ func getOtherDetectDetail (c *gin.Context, infos *[]dal.OtherDetailInfoStruct,ta
 					errorReturn(c,"arr敏感字符串存储格式错误，taskID："+fmt.Sprint(task.ID))
 					return nil
 				}
-				finalResult[i].SStrs_new = t
+				var result []dal.SStr
+				var result_con []dal.SStr
+				for _,str := range t {
+					if str.Status == 0 {
+						 result= append(result,str)
+					}else {
+						result_con = append(result_con,str)
+					}
+				}
+				result = append(result,result_con...)
+				finalResult[i].SStrs_new = result
 				finalResult[i].SStrs = make([]dal.SStr,0)
 			}else if detailOne.DetailType == 2 {
 				var t []dal.Permissions
@@ -656,7 +683,20 @@ func getOtherDetectDetail (c *gin.Context, infos *[]dal.OtherDetailInfoStruct,ta
 					errorReturn(c,"arr权限信息存储格式错误，taskID："+fmt.Sprint(task.ID))
 					return nil
 				}
-				finalResult[i].Permissions_2 = t
+				//权限排序
+				var result PermSlice
+				var result_con PermSlice
+				for _,perm := range t {
+					if perm.Status == 0 {
+						result = append(result,perm)
+					}else {
+						result_con = append(result_con,perm)
+					}
+				}
+				sort.Sort(PermSlice(result))
+				sort.Sort(PermSlice(result_con))
+				result = append(result,result_con...)
+				finalResult[i].Permissions_2 = result
 			}
 		}
 	}
@@ -761,6 +801,7 @@ func otherStrAna(info *[]dal.StrInfo,mapInfo map[string]int, index int) dal.Othe
 			con.Status = 0
 			t.ConfirmInfos = append(t.ConfirmInfos,con)
 		}
+		t.Keys = keys
 		t.Desc = str.Desc
 		t.GPFlag = str.Flag
 		t.CallLoc = *strRmRepeat_other(&str.CallLocation)
@@ -823,6 +864,7 @@ func otherPermAna(perms *[]string,mapInfo map[string]int,index int) (dal.OtherDe
 		queryResult := dal.QueryDetectConfig(map[string]interface{}{
 			"key_info":pers,
 			"platform":0,
+			"check_type":0,
 		})
 		if queryResult == nil || len(*queryResult)==0{
 			var conf dal.DetectConfigStruct
