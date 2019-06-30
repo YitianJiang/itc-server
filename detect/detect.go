@@ -131,8 +131,8 @@ func UploadFile(c *gin.Context) {
 			url = "http://" + DETECT_URL_PRO + "/apk_post"
 		} else {
 			//新服务url
-			url = "http://"+Local_URL_PRO +"/apk_post/v2"
-			//url = "http://" + DETECT_URL_PRO + "/apk_post/v2"
+			//url = "http://"+Local_URL_PRO +"/apk_post/v2"
+			url = "http://" + DETECT_URL_PRO + "/apk_post/v2"
 		}
 		//url = "http://" + DETECT_URL_PRO + "/apk_post"
 
@@ -192,10 +192,8 @@ func UploadFile(c *gin.Context) {
 	dbDetectModel.AppId = appId
 	//增加状态字段，0---未完全确认；1---已完全确认
 	dbDetectModel.Status = 0
-	if callBackAddr != "" {
-		byteExtraInfo,_ := json.Marshal(extraInfo)
-		dbDetectModel.ExtraInfo = string(byteExtraInfo)
-	}
+	byteExtraInfo,_ := json.Marshal(extraInfo)
+	dbDetectModel.ExtraInfo = string(byteExtraInfo)
 	dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
 	if checkItem == "" {
@@ -216,8 +214,8 @@ func UploadFile(c *gin.Context) {
 	}
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
-		//callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
-		callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
+		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
+		//callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
