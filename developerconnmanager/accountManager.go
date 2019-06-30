@@ -108,11 +108,7 @@ func InsertAccount(c *gin.Context)  {
 		if !dbResult {
 			logs.Error("往数据库中插入数据失败")
 			c.JSON(http.StatusOK, gin.H{
-<<<<<<< Updated upstream
 				"errorCode": -1,
-=======
-				"errorCode": -2,
->>>>>>> Stashed changes
 				"errorInfo": "往数据库中插入数据失败！",
 			})
 			return
@@ -123,11 +119,7 @@ func InsertAccount(c *gin.Context)  {
 		})
 	}else{
 		c.JSON(http.StatusOK, gin.H{
-<<<<<<< Updated upstream
 			"errorCode": -2,
-=======
-			"errorCode": -3,
->>>>>>> Stashed changes
 			"errorInfo": "请求参数绑定失败",
 		})
 	}
