@@ -77,3 +77,8 @@ func PostLocalFileWithParams(params map[string]string, postfilename string, file
 	}
 	return string(resp_body), nil
 }
+func RecordError(message string, err error) {
+	if err != nil {
+		logs.Error(message+"%v", err)
+	}
+}

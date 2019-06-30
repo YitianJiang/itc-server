@@ -150,6 +150,14 @@ func QueryDectecConfig(c *gin.Context)  {
 	pageInfo["pageSize"] = t.PageSize
 	pageInfo["page"]= t.Page
 
+	//权限判断
+	var operRight = 1
+	username,_ := c.Get("username")
+	//权限配置页面操作人员判断
+	if v,ok := permToModify[username.(string)]; !ok || v!=1 {
+		operRight = 0
+	}
+
 	condition := "1=1"
 	if t.Info != ""{
 		condition += " and (ability like '%"+t.Info+"%' or key_info like '%"+t.Info+"%')"

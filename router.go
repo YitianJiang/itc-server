@@ -4,6 +4,7 @@ import (
 	"code.byted.org/clientQA/itc-server/casemanage"
 	"code.byted.org/clientQA/itc-server/controllers"
 	"code.byted.org/clientQA/itc-server/detect"
+	"code.byted.org/clientQA/itc-server/developerconnmanager"
 	"code.byted.org/clientQA/itc-server/middleware"
 	"code.byted.org/gin/ginex"
 )
@@ -121,6 +122,25 @@ func InitRouter(r *ginex.Engine) {
 		api.POST("/detect/confirmAarResult",detect.ConfirmAarDetectResult)
 		//aar任务列表查询
 		api.POST("/detect/getAarTaskList",detect.GetOtherDetectTaskList)
+
+	}
+	//todo 巩锐开始开发证书体系监管后台API
+	connapi := r.Group("/v1/devConnManage")
+	{
+		//connapi.GET("/bundleIdSearch",developerconnmanager.TestAskBundleId)
+		connapi.GET("/getBundleIdsList",developerconnmanager.GetBunldIdsObj)
+		connapi.GET("/testPrivatePrint",developerconnmanager.ParsePrivateKey)
+		connapi.GET("/createProvProfile",developerconnmanager.Test64DecodeToString)
+		connapi.POST("/createP8DBInfo",developerconnmanager.CreateP8DBInfoToTable)
+
+
+	}
+	accountapi:=r.Group("/v1/accountManage")
+	{
+		accountapi.PATCH ("/accountInfoUpdate",developerconnmanager.UpdateAccount)
+		accountapi.GET("/accountInfoGet",developerconnmanager.QueryAccount)
+		accountapi.POST("/accountInfoWriter",developerconnmanager.InsertAccount)
+		accountapi.DELETE("/accountInfoDelete",developerconnmanager.DeleteByTeamId)
 
 	}
 }
