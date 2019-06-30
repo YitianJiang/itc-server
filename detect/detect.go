@@ -183,8 +183,10 @@ func UploadFile(c *gin.Context) {
 	dbDetectModel.AppId = appId
 	//增加状态字段，0---未完全确认；1---已完全确认
 	dbDetectModel.Status = 0
-	byteExtraInfo,_ := json.Marshal(extraInfo)
-	dbDetectModel.ExtraInfo = string(byteExtraInfo)
+	if callBackAddr != "" {
+		byteExtraInfo,_ := json.Marshal(extraInfo)
+		dbDetectModel.ExtraInfo = string(byteExtraInfo)
+	}
 	dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
 	if checkItem == "" {
