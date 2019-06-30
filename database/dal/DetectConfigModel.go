@@ -69,7 +69,7 @@ type PermHistory struct {
 	Confirmer			string				`json:"confirmer"`
 	AppId				int					`json:"appId"`
 	AppVersion			string				`json:"appVersion"`
-	//TaskId				int					`json:"taskId"`
+	TaskId				int					`json:"taskId"`
 }
 /**
 	权限和app、task关系数据库表结构
