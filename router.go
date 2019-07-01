@@ -4,6 +4,7 @@ import (
 	"code.byted.org/clientQA/itc-server/casemanage"
 	"code.byted.org/clientQA/itc-server/controllers"
 	"code.byted.org/clientQA/itc-server/detect"
+	"code.byted.org/clientQA/itc-server/developerconnmanager"
 	"code.byted.org/clientQA/itc-server/middleware"
 	"code.byted.org/gin/ginex"
 )
@@ -13,6 +14,7 @@ func InitRouter(r *ginex.Engine) {
 	api := r.GroupEX("/api")
 	//二进制包检测回调接口
 	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
+	r.POST("/updateOtherDetectInfos",detect.UpdateOtherDetectInfos)
 
 	//获取鉴权接口
 	r.GET("/t/generateToken", detect.GetToken)
@@ -32,8 +34,8 @@ func InitRouter(r *ginex.Engine) {
 	{
 		//上传ipa和apk
 		api.POST("/uploadFile", detect.UploadFile)
-		//上传ipa和apk------fj
-		//api.POST("/uploadFileNew", detect.UploadFileNew)
+		//上传aar------fj
+		api.POST("/uploadFileOther", detect.NewOtherDetect)
 		//增加检查项
 		api.POST("/addDetectItem", detect.AddDetectItem)
 		//二进制任务查询
@@ -114,6 +116,31 @@ func InitRouter(r *ginex.Engine) {
 		api.GET("/perm/getpermDetails", detect.GetPermDetails)
 		//获取app的版本号---权限关联查询使用
 		api.GET("/perm/getAppVesions",detect.GetAppVersions)
+		//aar检测结果查询
+		api.GET("/detect/getAarDetectResults",detect.QueryAarBinaryDetectResult)
+		//aar检测结果确认
+		api.POST("/detect/confirmAarResult",detect.ConfirmAarDetectResult)
+		//aar任务列表查询
+		api.POST("/detect/getAarTaskList",detect.GetOtherDetectTaskList)
+
+	}
+	//todo 巩锐开始开发证书体系监管后台API
+	connapi := r.Group("/v1/devConnManage")
+	{
+		//connapi.GET("/bundleIdSearch",developerconnmanager.TestAskBundleId)
+		connapi.GET("/getBundleIdsList",developerconnmanager.GetBunldIdsObj)
+		connapi.GET("/testPrivatePrint",developerconnmanager.ParsePrivateKey)
+		connapi.GET("/createProvProfile",developerconnmanager.Test64DecodeToString)
+		connapi.POST("/createP8DBInfo",developerconnmanager.CreateP8DBInfoToTable)
+
+
+	}
+	accountapi:=r.Group("/v1/accountManage")
+	{
+		accountapi.PATCH ("/accountInfoUpdate",developerconnmanager.UpdateAccount)
+		accountapi.GET("/accountInfoGet",developerconnmanager.QueryAccount)
+		accountapi.POST("/accountInfoWriter",developerconnmanager.InsertAccount)
+		accountapi.DELETE("/accountInfoDelete",developerconnmanager.DeleteByTeamId)
 
 	}
 }

@@ -338,10 +338,16 @@ func ConfirmCheck(c *gin.Context) {
 		})
 		return
 	}
+	var realData = make([]dal.Self,0)
+	for _,da := range t.Data {
+		if da.Status != 0 {
+			realData = append(realData,da)
+		}
+	}
 	var param map[string]interface{}
 	param = make(map[string]interface{})
 	param["taskId"] = t.TaskId
-	param["data"] = t.Data
+	param["data"] = realData
 	param["operator"] = name
 	bool, detect := dal.ConfirmSelfCheck(param)
 	if !bool {

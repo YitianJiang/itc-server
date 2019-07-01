@@ -757,7 +757,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context){
 		history.PermId = permId
 		history.Remarks = t.Remark
 		history.Confirmer = usernameStr
-		//history.TaskId = t.TaskId
+		history.TaskId = t.TaskId
 		if err := dal.InsertPermOperationHistory(history); err != nil {
 			logs.Error("taskId:"+fmt.Sprint(t.TaskId)+",权限操作历史写入失败！")
 			errorReturn(c,"权限操作历史写入失败！")
@@ -840,7 +840,7 @@ func createIgnoreInfo(c *gin.Context,t *dal.PostConfirm,detect *dal.DetectStruct
 	igInfo.Remarks = t.Remark
 	igInfo.Version = detect.AppVersion
 	igInfo.Status = t.Status
-	//igInfo.TaskId = t.TaskId
+	igInfo.TaskId = t.TaskId
 	err := dal.InsertIgnoredInfo(igInfo)
 	if err != nil {
 		errorReturn(c,"增量信息更新失败！")
