@@ -2,7 +2,9 @@ package utils
 
 import (
 	"bytes"
+	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/gopkg/logs"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -81,4 +83,47 @@ func RecordError(message string, err error) {
 	if err != nil {
 		logs.Error(message+"%v", err)
 	}
+}
+
+func NewGetAppMap() map[int]string  {
+	var mapInfo map[string]interface{}
+	appMaps := Get(_const.ROCKET_URL)
+	if appMaps == nil {
+		return make(map[int]string)
+	}
+	json.Unmarshal(appMaps,&mapInfo)
+	appList := mapInfo["data"].([]interface{})
+	var AppIdMap = make(map[int]string)
+	for _,appI := range appList{
+		app := appI.(map[string]interface{})
+		AppIdMap[int(app["AppId"].(float64))] = app["appName"].(string)
+	}
+	//fmt.Sprint(AppIdMap)
+	return AppIdMap
+}
+
+//获取get请求
+func Get(url string) []byte {
+	client := &http.Client{}
+	request,err := http.NewRequest("GET",url,nil)
+	request.Header.Add("token",_const.ROCKETTOKEN)
+	if err != nil {
+		logs.Error("获取rocket项目信息失败,%v",err)
+		LarkDingOneInner("fanjuan.xqp","获取rocket项目信息失败")
+		LarkDingOneInner("kanghuaisong","获取rocket项目信息失败")
+		LarkDingOneInner("yinzhihong","获取rocket项目信息失败")
+		return nil
+	}
+	resp,err2 := client.Do(request)
+	if err2 != nil {
+		logs.Error("获取rocket项目信息失败,%v",err)
+		LarkDingOneInner("fanjuan.xqp","获取rocket项目信息失败")
+		LarkDingOneInner("kanghuaisong","获取rocket项目信息失败")
+		LarkDingOneInner("yinzhihong","获取rocket项目信息失败")
+		return nil
+	}
+	defer resp.Body.Close()
+	body,_ := ioutil.ReadAll(resp.Body)
+	//logs.Notice("获取app返回信息："+fmt.Sprint(string(body)))
+	return  body
 }

@@ -1,8 +1,8 @@
 package detect
 
 import (
-	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 	"encoding/json"
 	"fmt"
@@ -648,7 +648,7 @@ func GetRelationsWithPermission(c *gin.Context)  {
 	}
 
 	//获取APPIDMap
-	appIdMap := _const.NewGetAppMap()
+	appIdMap := utils.NewGetAppMap()
 	//分页
 	count := len(*result_1)
 	first := (t.Page-1)*t.PageSize
