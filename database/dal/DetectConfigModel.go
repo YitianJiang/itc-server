@@ -305,7 +305,7 @@ func QueryPermAppRelationWithGroup(data map[string]interface{}) (*[]PermAppRelat
 	defer connection.Close()
 	db := connection.Table(PermAppRelation{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var result []PermAppRelation
-	if err := db.Where(data).Group("app_version").Find(&result).Error; err != nil {
+	if err := db.Where(data).Group("app_version").Order("app_version DESC").Find(&result).Error; err != nil {
 		logs.Error("query permission-app relationship failed,%v",err)
 		return nil ,err
 	}
