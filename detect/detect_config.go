@@ -1,8 +1,8 @@
 package detect
 
 import (
-	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 	"encoding/json"
 	"fmt"
@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -634,7 +635,7 @@ func GetRelationsWithPermission(c *gin.Context)  {
 
 	finalData := make ([]AppPermInfo,0)
 	if result_1 == nil || len(*result_1) == 0 {
-		logs.Error("没有查询到相关权限的App使用数据")
+		logs.Error("没有查询到相关权限的App使用数据,permId:"+fmt.Sprint(t.Id))
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": 0,
 			"message":   "没有查询到该权限数据",
@@ -647,7 +648,7 @@ func GetRelationsWithPermission(c *gin.Context)  {
 	}
 
 	//获取APPIDMap
-	appIdMap := _const.GetAPPMAP()
+	appIdMap := utils.NewGetAppMap()
 	//分页
 	count := len(*result_1)
 	first := (t.Page-1)*t.PageSize
@@ -662,23 +663,35 @@ func GetRelationsWithPermission(c *gin.Context)  {
 			},
 		})
 	}else {
+		var realCount = count //去除测试数据内容
 		for i:= first;i<last&&i<count;i++{
 			var data AppPermInfo
 			data.AppId = (*result_1)[i].AppId
 			data.AppVersion = (*result_1)[i].AppVersion
 			if _,okv := appIdMap[data.AppId]; okv {
 				data.AppName = appIdMap[data.AppId]
+				finalData = append(finalData,data)
 			}else{
-				data.AppName = "该App未命名"
+				realCount -= 1
 			}
-			finalData = append(finalData,data)
 		}
+		//增加appName接口返回错误信息判断
+		if len(finalData)==0 {
+			logs.Error("获取rocket内app信息错误")
+			c.JSON(http.StatusOK,gin.H{
+				"errorCode":-1,
+				"message":"获取app信息错误，请联系预审平台相关人员",
+				"data":"failed",
+			})
+			return
+		}
+
 		logs.Info("query permission's used situation success!")
 		c.JSON(http.StatusOK,gin.H{
 			"message":"success",
 			"errorCode":0,
 			"data":map[string]interface{}{
-				"count":count,
+				"count":realCount,
 				"result":finalData,
 			},
 		})
@@ -734,6 +747,7 @@ func GetAppVersions(c *gin.Context)  {
 	for _,pp := range (*p_a) {
 		result = append(result,pp.AppVersion)
 	}
+	sort.Sort(StringSlice(result))
 	logs.Info("查询app的权限版本成功！")
 	c.JSON(http.StatusOK,gin.H{
 		"message":"success",
@@ -741,6 +755,35 @@ func GetAppVersions(c *gin.Context)  {
 		"data": result,
 	})
 	return
+}
+
+//安卓app版本排序相关
+type StringSlice [] string
+
+func (a StringSlice) Len() int {         // 重写 Len() 方法
+	return len(a)
+}
+func (a StringSlice) Swap(i, j int){     // 重写 Swap() 方法
+	a[i], a[j] = a[j], a[i]
+}
+func (a StringSlice) Less(i, j int) bool {    // 重写 Less() 方法， 从大到小排序
+	var m int
+	aa := strings.Split(a[i],".")
+	bb := strings.Split(a[j],".")
+	for m=0; m< len(aa)&&m <len(bb);m++{
+		ai,_ := strconv.Atoi(aa[m])
+		bi,_ := strconv.Atoi(bb[m])
+		if ai == bi {
+			continue
+		}else {
+			return bi < ai
+		}
+	}
+	if m>=len(aa){
+		return false
+	}else {
+		return true
+	}
 }
 
 
