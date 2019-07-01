@@ -651,28 +651,31 @@ func GetRelationsWithPermission(c *gin.Context)  {
 	appIdMap := utils.NewGetAppMap()
 	//分页
 	count := len(*result_1)
+	var realPermAppRelationship = make([]dal.QueryInfoWithPerm,0)
+	for m:= 0;m<count;m++{
+		if _,okv := appIdMap[(*result_1)[m].AppId]; okv {
+			realPermAppRelationship = append(realPermAppRelationship,(*result_1)[m])
+		}
+	}
 	first := (t.Page-1)*t.PageSize
 	last := t.Page*t.PageSize
-	if first >= count {
+	if first >= len(realPermAppRelationship) {
 		c.JSON(http.StatusOK,gin.H{
 			"message":"success",
 			"errorCode":0,
 			"data":map[string]interface{}{
-				"count":count,
+				"count":len(realPermAppRelationship),
 				"result":finalData,
 			},
 		})
 	}else {
-		var realCount = count //去除测试数据内容
-		for i:= first;i<last&&i<count;i++{
+		for i:= first;i<last&&i<len(realPermAppRelationship);i++{
 			var data AppPermInfo
-			data.AppId = (*result_1)[i].AppId
-			data.AppVersion = (*result_1)[i].AppVersion
+			data.AppId = realPermAppRelationship[i].AppId
+			data.AppVersion = realPermAppRelationship[i].AppVersion
 			if _,okv := appIdMap[data.AppId]; okv {
 				data.AppName = appIdMap[data.AppId]
 				finalData = append(finalData,data)
-			}else{
-				realCount -= 1
 			}
 		}
 		//增加appName接口返回错误信息判断
@@ -691,7 +694,7 @@ func GetRelationsWithPermission(c *gin.Context)  {
 			"message":"success",
 			"errorCode":0,
 			"data":map[string]interface{}{
-				"count":realCount,
+				"count":len(realPermAppRelationship),
 				"result":finalData,
 			},
 		})
