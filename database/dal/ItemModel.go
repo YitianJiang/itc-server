@@ -538,7 +538,7 @@ func ConfirmSelfCheck(param map[string]interface{}) (bool, *DetectStruct) {
 		return false, nil
 	}
 	taskSelf.SelfItems = string(task_self)
-	if err := db.Table(TaskSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Save(taskSelf).Error; err != nil {
+	if err := db.Table(TaskSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Save(&taskSelf).Error; err != nil {
 		logs.Error(err.Error())
 		db.Rollback()
 		return false, nil
@@ -559,7 +559,7 @@ func ConfirmSelfCheck(param map[string]interface{}) (bool, *DetectStruct) {
 		}
 		detect.SelfCheckStatus = 1
 		if err = db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
-			Save(detect).Error; err != nil {
+			Save(&detect).Error; err != nil {
 			logs.Error("%v", err)
 			db.Rollback()
 			return false, nil
