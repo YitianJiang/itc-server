@@ -31,7 +31,7 @@ type DBOptional struct {
 func GetDefaultDBOptional() DBOptional {
 	return DBOptional{
 		DriverName:   "mysql",
-		Timeout:      "100ms",
+		Timeout:      "500ms",
 		ReadTimeout:  "2.0s",
 		WriteTimeout: "5.0s",
 		DBHostname:   "localhost",

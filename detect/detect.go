@@ -27,7 +27,7 @@ import (
 const (
 	DETECT_URL_DEV = "10.2.209.202:9527"
 	//DETECT_URL_PRO = "10.2.9.226:9527"
-	DETECT_URL_PRO = "10.1.221.15:9527"
+	DETECT_URL_PRO = "10.1.221.188:9527"
 	//test----fj
 	Local_URL_PRO = "10.1.220.99:9527"
 
@@ -61,6 +61,15 @@ func UploadFile(c *gin.Context) {
 			"errorCode": -2,
 		})
 		logs.Error("未选择上传的文件！")
+		return
+	}
+	//问题文件提前排查（大小<1m）
+	if header.Size < (1 << 20) {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "上传的文件有问题（文件大小异常），请排查！",
+			"errorCode": -2,
+		})
+		logs.Error("上传的文件有问题（文件大小异常）")
 		return
 	}
 	defer file.Close()
@@ -373,6 +382,9 @@ func UpdateDetectInfos(c *gin.Context) {
 	}
 
 	//进行lark消息提醒
+	detect = dal.QueryDetectModelsByMap(map[string]interface{}{
+		"id": taskId,
+	})
 	var message string
 	creators := (*detect)[0].ToLarker
 	larkList := strings.Split(creators, ",")
@@ -384,7 +396,15 @@ func UpdateDetectInfos(c *gin.Context) {
 	} else {
 		message += "iOS包"
 	}
-	message += "完成二进制检测，请及时对每条未确认信息进行确认！\n"
+
+	message += "  完成二进制检测，"
+	if (*detect)[0].Status == 0 {
+		message += "有未确认检测项，请及时对每条未确认信息进行确认！\n"
+	}else {
+		message += "本次检测未发现新增权限、敏感方法或敏感字符串，不需要进行确认\n"
+	}
+	message += "注意：若是IOS包，请及时确认自查项！\n"
+	//message += " 完成二进制检测，请及时对每条未确认信息进行确认！\n"
 	//message += "如果安卓选择了GooglePlay检测和隐私检测，两个检测结果都需要进行确认，请不要遗漏！！！\n"
 	appId := (*detect)[0].AppId
 	appIdInt, _ := strconv.Atoi(appId)

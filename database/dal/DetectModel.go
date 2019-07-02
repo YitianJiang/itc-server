@@ -104,6 +104,7 @@ type IgnoreInfoStruct struct {
 	Remarks   string `json:"remarks"`
 	Confirmer string `json:"confirmer"`
 	Status    int    `json:"status"` //1-确认通过，2-确认未通过
+	TaskId 	  int 	 `json:"taskId"`
 }
 
 /**
@@ -837,7 +838,21 @@ type CheckResult struct {
 
 //miss_search_info结构
 type MissSearchInfo struct {
-
+	PrivacyLeaks 			[]LeakInfos						`json:"privacy_leaks"`
+	PMethodName				string							`json:"privacy_method_name"`
+	PClassName				string							`json:"privacy_class_name"`
+	Desc 					string							`json:"desc"`
+}
+type LeakInfos struct {
+	MissCalls 				[]MissCallInfo					`json:"miss_calls"`
+	LineNum					 string							`json:"line_number"`
+	CallMethodName			string							`json:"call_method_name"`
+	CallClassName			string							`json:"call_class_name"`
+}
+type MissCallInfo struct {
+	ClassName				string							`json:"class_name"`
+	MethodName				string							`json:"method_name"`
+	Desc 					string							`json:"desc"`
 }
 
 //基本信息json结构
