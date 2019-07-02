@@ -26,7 +26,7 @@ type ItemStruct struct {
 	QuestionType  int    `gorm:"column:question_type"   json:"questionType"` //数据库使用
 }
 type MutilitemStruct struct {
-	ID              int    `json:"Id"`
+	ID              int    `json:"id"`
 	KeyWord         int    `json:"keyWord"`
 	FixWay          int    `json:"fixWay"`
 	CheckContent    string `json:"checkContent"`
@@ -129,7 +129,7 @@ func InsertItemModel(mutilItem MutilitemStruct) bool {
 	}
 	//在此之前添加的公共项
 	var ggItem []ItemStruct
-	if err := db.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("is_gg = ?", 1).Find(&ggItem).Error; err != nil {
+	if err := db.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("is_gg = ? AND platform = ?", 1, mutilItem.Platform).Find(&ggItem).Error; err != nil {
 		logs.Error("查询公共项失败！", err.Error())
 		db.Rollback()
 		return false
@@ -142,7 +142,6 @@ func InsertItemModel(mutilItem MutilitemStruct) bool {
 			ggMap := make(map[string]interface{})
 			json.Unmarshal(ggJson, &ggMap)
 			delete(ggMap, "status")
-			delete(ggMap, "appId")
 			delete(ggMap, "ID")
 			delete(ggMap, "CreatedAt")
 			delete(ggMap, "DeletedAt")
@@ -212,7 +211,6 @@ func InsertItemModel(mutilItem MutilitemStruct) bool {
 			return false
 		}
 		delete(itemMap, "status")
-		delete(itemMap, "appId")
 		delete(itemMap, "ID")
 		delete(itemMap, "CreatedAt")
 		delete(itemMap, "DeletedAt")
@@ -224,7 +222,6 @@ func InsertItemModel(mutilItem MutilitemStruct) bool {
 		itemMap["fixWayName"] = configMap[int(fixWay)]
 		itemMap["questionTypeName"] = configMap[int(questionType)]
 		itemMap["id"] = item.ID
-
 		//tb_app_selfItem 处理
 		var appIdArr []string
 		//如果是非公共项，只给在appidlist中app添加
@@ -259,9 +256,10 @@ func InsertItemModel(mutilItem MutilitemStruct) bool {
 				if err == gorm.ErrRecordNotFound {
 					appItem.AppId = app_id
 					appItem.Platform = item.Platform
-					perItemList = append(perItemList, itemMap)
+					appItemList := perItemList
+					appItemList = append(appItemList, itemMap)
 					app_item := map[string]interface{}{
-						"item": perItemList,
+						"item": appItemList,
 					}
 					tem, err := json.Marshal(app_item)
 					if err != nil {
@@ -292,10 +290,10 @@ func InsertItemModel(mutilItem MutilitemStruct) bool {
 				}
 				list := m["item"].([]interface{})
 				isExit := false
-				for _, l := range list {
+				for i, l := range list {
 					if int(l.(map[string]interface{})["id"].(float64)) == int(item.ID) {
 						isExit = true
-						l = itemMap
+						list[i] = itemMap
 					}
 				}
 				if !isExit {
@@ -610,7 +608,7 @@ func QueryItem(condition map[string]interface{}) *[]ItemStruct {
 	defer connection.Close()
 	var items []ItemStruct
 	db := connection.Table(ItemStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	if err = db.Where(condition).Find(&items).Error; err != nil {
+	if err = db.Where(condition).Order("platform", true).Find(&items).Error; err != nil {
 		logs.Error("query self check item failed, %v", err)
 		return nil
 	}

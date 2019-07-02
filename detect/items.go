@@ -395,6 +395,8 @@ func DropDetectItem(c *gin.Context) {
 	//	})
 	//	return
 	//}
+	isAll := "1"
+	appId := "13"
 	name, flag := c.Get("username")
 	if !flag {
 		c.JSON(http.StatusOK, gin.H{
@@ -404,8 +406,6 @@ func DropDetectItem(c *gin.Context) {
 		})
 		return
 	}
-	isAll := "1"
-	appId := "13"
 	//判断用户是否有权限
 	isPrivacy := false
 	for _, people := range whiteList {
