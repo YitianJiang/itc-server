@@ -138,11 +138,19 @@ func GetCertificates(c *gin.Context) {
 	}
 	certificate := dal.QueryLikeCertificate(queryMap)
 	//查询符合条件的数据,Json转换返回标准形式
+	var downloadWhitePeople = map[string]int{ //下载白名单
+		"zhangshuai.02":1,
+		"gongrui":1,
+		"kanghuaisong":1,
+		"yinzhihong":1}
 	var data []map[string]interface{}
 	for _, cer := range *certificate {
 		certificateTemp, err1 := json.Marshal(cer)
 		certificateRes := make(map[string]interface{})
 		err2 := json.Unmarshal(certificateTemp, &certificateRes)
+		if _, ok:= downloadWhitePeople[name.(string)]; name.(string) != certificateRes["creator"] && !ok{
+			certificateRes["certificateFile"] = "***"//不在白名单中隐藏下载url
+		}
 		data = append(data, certificateRes)
 		if err1 != nil || err2 != nil {
 			logs.Error("数据库结果转成json转成map出错！", err1.Error(), err2.Error())
