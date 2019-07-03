@@ -235,6 +235,12 @@
 			"revisionTime": "2019-02-03T06:38:37Z"
 		},
 		{
+			"checksumSHA1": "7ta2Y7iJn/58+//jB16UAjeMIn4=",
+			"path": "code.byted.org/gopkg/logs/utils",
+			"revision": "a55b38f1bff9e9762dc8d13bf54a5e5ac5b4db9b",
+			"revisionTime": "2019-04-22T03:19:57Z"
+		},
+		{
 			"checksumSHA1": "bqnplDbI5al6ZMRErKg1kncuy78=",
 			"path": "code.byted.org/gopkg/metrics",
 			"revision": "0f3eb1e5d61cd091cffdbac5da654dd3830ff3cd",
@@ -538,11 +544,23 @@
 			"revisionTime": "2019-02-20T07:51:40Z"
 		},
 		{
+			"checksumSHA1": "SsTF968SV17AZRhLCFokvNzRMqo=",
+			"path": "code.byted.org/yinzhihong/uploaduserdata",
+			"revision": "15c9dd15a2cb934f49924463cbed1580470ece3a",
+			"revisionTime": "2019-07-03T09:28:02Z"
+		},
+		{
 			"checksumSHA1": "1qAq9A25apESKVBobU7Ta+MJDPY=",
 			"origin": "code.byted.org/clientQA/pkg/vendor/code.byted.org/zhangwanlong/go-lark",
 			"path": "code.byted.org/zhangwanlong/go-lark",
 			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
 			"revisionTime": "2019-03-05T12:29:18Z"
+		},
+		{
+			"checksumSHA1": "vhI3tzO5WLWc6ZHmjxR00g5nkPU=",
+			"path": "github.com/astaxie/beego/logs",
+			"revision": "206a7ed1fcb754f4294689dd514797c044439e1b",
+			"revisionTime": "2019-05-27T09:07:52Z"
 		},
 		{
 			"checksumSHA1": "BftuY1poE77Mld2VA/6DuYcC5wI=",
@@ -788,6 +806,12 @@
 			"path": "github.com/rubyist/circuitbreaker",
 			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
 			"revisionTime": "2019-03-05T12:29:18Z"
+		},
+		{
+			"checksumSHA1": "v5CCEZdC63TIkIL8TUeURBcZzNc=",
+			"path": "github.com/shiena/ansicolor",
+			"revision": "a422bbe96644373c5753384a59d678f7d261ff10",
+			"revisionTime": "2015-11-19T15:19:21Z"
 		},
 		{
 			"checksumSHA1": "4xiFcTuGN52sL6Cu9CLSIq48RT8=",
