@@ -150,6 +150,7 @@ func GetCertificates(c *gin.Context) {
 		err2 := json.Unmarshal(certificateTemp, &certificateRes)
 		if _, ok:= downloadWhitePeople[name.(string)]; name.(string) != certificateRes["creator"] && !ok{
 			certificateRes["certificateFile"] = "***"//不在白名单中隐藏下载url
+			certificateRes["password"] = "***"//不在白名单中隐藏密码
 		}
 		data = append(data, certificateRes)
 		if err1 != nil || err2 != nil {
