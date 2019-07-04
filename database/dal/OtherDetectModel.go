@@ -114,7 +114,7 @@ func QueryOtherDetctModelOfList(pageInfo map[string]int, condition string) (*[]O
 	}
 	var detect []OtherDetectModel
 
-	if err := db.Where(condition).Offset((pageInfo["page"]-1)*pageInfo["pageSize"]).Limit(pageInfo["pageSize"]).Find(&detect).Error;err != nil {
+	if err := db.Where(condition).Offset((pageInfo["page"]-1)*pageInfo["pageSize"]).Limit(pageInfo["pageSize"]).Order("id DESC").Find(&detect).Error;err != nil {
 		logs.Error("query aar detect List failed,%v",err)
 		return nil,0, err
 	}
