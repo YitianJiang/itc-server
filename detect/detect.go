@@ -394,9 +394,9 @@ func UpdateDetectInfos(c *gin.Context) {
 	message = "你好，" + (*detect)[0].AppName + " " + (*detect)[0].AppVersion
 	platform := (*detect)[0].Platform
 	if platform == 0 {
-		message += "安卓包"
+		message += " 安卓包"
 	} else {
-		message += "iOS包"
+		message += " iOS包"
 	}
 
 	message += "  完成二进制检测，"
@@ -405,7 +405,10 @@ func UpdateDetectInfos(c *gin.Context) {
 	}else {
 		message += "本次检测未发现新增权限、敏感方法或敏感字符串，不需要进行确认\n"
 	}
-	message += "注意：若是IOS包，请及时确认自查项！\n"
+	if platform == 1 {
+		message += "注意：请及时确认自查项！\n"
+	}
+
 	//message += " 完成二进制检测，请及时对每条未确认信息进行确认！\n"
 	//message += "如果安卓选择了GooglePlay检测和隐私检测，两个检测结果都需要进行确认，请不要遗漏！！！\n"
 	appId := (*detect)[0].AppId
