@@ -56,20 +56,20 @@ func QueryDetectReports(c *gin.Context){
 
 }
 
-/**
-	组织检测数据报表返回数据---检测数量+确认
- */
-func getTaskChartsData(infos *[]dal.DetectStruct, t dal.QueryReportInfo) []map[string]interface{}{
-
-
-}
-
-/**
-	组织权限数据报表返回数据
- */
-func getPermChartsData(infos *[]dal.DetectConfigStruct,t dal.QueryReportInfo) []map[string]interface{}{
-
-}
+///**
+//	组织检测数据报表返回数据---检测数量+确认
+// */
+//func getTaskChartsData(infos *[]dal.DetectStruct, t dal.QueryReportInfo) []map[string]interface{}{
+//
+//
+//}
+//
+///**
+//	组织权限数据报表返回数据
+// */
+//func getPermChartsData(infos *[]dal.DetectConfigStruct,t dal.QueryReportInfo) []map[string]interface{}{
+//
+//}
 
 /**
 	请求错误信息返回统一格式
