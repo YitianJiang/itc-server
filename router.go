@@ -14,18 +14,10 @@ func InitRouter(r *ginex.Engine) {
 	api := r.GroupEX("/api")
 	//二进制包检测回调接口
 	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
-	r.POST("/updateOtherDetectInfos",detect.UpdateOtherDetectInfos)
+	r.POST("/updateOtherDetectInfos", detect.UpdateOtherDetectInfos)
 
 	//获取鉴权接口
 	r.GET("/t/generateToken", detect.GetToken)
-	//查询被拒案例
-	api.GET("/casemanage/queryRejCases", casemanage.GetRejCasesByConditions)
-	//新增被拒案例
-	api.POST("/casemanage/addRejCase", casemanage.AddRejCase)
-	//删除被拒案例
-	api.POST("/casemanage/deleteRejCase", casemanage.DeleteRejCase)
-	//更新被拒案例
-	api.POST("/casemanage/updateRejCase", casemanage.EditRejCaseofSolution)
 
 	//检测服务检测异常报警接口
 	api.POST("/check_server/alarm", detect.Alram)
@@ -94,6 +86,8 @@ func InitRouter(r *ginex.Engine) {
 		api.GET("/certificates", controllers.GetCertificates)
 		//过期证书提醒
 		api.GET("/certificates/controller", controllers.CertificateController)
+		//证书删除
+		api.POST("/certificate/delete", controllers.DeteleCertificate)
 		//获取iOS当前任务的二进制工具检测内容
 		api.GET("/task/queryIOSBinaryContent", detect.QueryIOSTaskBinaryCheckContent)
 		//确认iOS二进制检测信息
@@ -115,32 +109,39 @@ func InitRouter(r *ginex.Engine) {
 		//查询权限详情
 		api.GET("/perm/getpermDetails", detect.GetPermDetails)
 		//获取app的版本号---权限关联查询使用
-		api.GET("/perm/getAppVesions",detect.GetAppVersions)
+		api.GET("/perm/getAppVesions", detect.GetAppVersions)
 		//aar检测结果查询
-		api.GET("/detect/getAarDetectResults",detect.QueryAarBinaryDetectResult)
+		api.GET("/detect/getAarDetectResults", detect.QueryAarBinaryDetectResult)
 		//aar检测结果确认
-		api.POST("/detect/confirmAarResult",detect.ConfirmAarDetectResult)
+		api.POST("/detect/confirmAarResult", detect.ConfirmAarDetectResult)
 		//aar任务列表查询
-		api.POST("/detect/getAarTaskList",detect.GetOtherDetectTaskList)
+		api.POST("/detect/getAarTaskList", detect.GetOtherDetectTaskList)
+		//查询被拒案例
+		api.GET("/casemanage/queryRejCases", casemanage.GetRejCasesByConditions)
+		//新增被拒案例
+		api.POST("/casemanage/addRejCase", casemanage.AddRejCase)
+		//删除被拒案例
+		api.POST("/casemanage/deleteRejCase", casemanage.DeleteRejCase)
+		//更新被拒案例
+		api.POST("/casemanage/updateRejCase", casemanage.EditRejCaseofSolution)
 
 	}
 	//todo 巩锐开始开发证书体系监管后台API
 	connapi := r.Group("/v1/devConnManage")
 	{
 		//connapi.GET("/bundleIdSearch",developerconnmanager.TestAskBundleId)
-		connapi.GET("/getBundleIdsList",developerconnmanager.GetBunldIdsObj)
-		connapi.GET("/testPrivatePrint",developerconnmanager.ParsePrivateKey)
-		connapi.GET("/createProvProfile",developerconnmanager.Test64DecodeToString)
-		connapi.POST("/createP8DBInfo",developerconnmanager.CreateP8DBInfoToTable)
-
+		connapi.GET("/getBundleIdsList", developerconnmanager.GetBunldIdsObj)
+		connapi.GET("/testPrivatePrint", developerconnmanager.ParsePrivateKey)
+		connapi.GET("/createProvProfile", developerconnmanager.Test64DecodeToString)
+		connapi.POST("/createP8DBInfo", developerconnmanager.CreateP8DBInfoToTable)
 
 	}
-	accountapi:=r.Group("/v1/accountManage")
+	accountapi := r.Group("/v1/accountManage")
 	{
-		accountapi.PATCH ("/accountInfoUpdate",developerconnmanager.UpdateAccount)
-		accountapi.GET("/accountInfoGet",developerconnmanager.QueryAccount)
-		accountapi.POST("/accountInfoWriter",developerconnmanager.InsertAccount)
-		accountapi.DELETE("/accountInfoDelete",developerconnmanager.DeleteByTeamId)
+		accountapi.PATCH("/accountInfoUpdate", developerconnmanager.UpdateAccount)
+		accountapi.GET("/accountInfoGet", developerconnmanager.QueryAccount)
+		accountapi.POST("/accountInfoWriter", developerconnmanager.InsertAccount)
+		accountapi.DELETE("/accountInfoDelete", developerconnmanager.DeleteByTeamId)
 
 	}
 }

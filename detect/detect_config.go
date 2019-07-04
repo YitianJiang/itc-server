@@ -657,6 +657,18 @@ func GetRelationsWithPermission(c *gin.Context)  {
 			realPermAppRelationship = append(realPermAppRelationship,(*result_1)[m])
 		}
 	}
+
+	//增加appName接口返回错误信息判断
+	if len(realPermAppRelationship)==0 {
+		logs.Error("获取rocket内app信息错误")
+		c.JSON(http.StatusOK,gin.H{
+			"errorCode":-1,
+			"message":"获取app信息错误，请联系预审平台相关人员",
+			"data":"failed",
+		})
+		return
+	}
+
 	first := (t.Page-1)*t.PageSize
 	last := t.Page*t.PageSize
 	if first >= len(realPermAppRelationship) {
@@ -677,16 +689,6 @@ func GetRelationsWithPermission(c *gin.Context)  {
 				data.AppName = appIdMap[data.AppId]
 				finalData = append(finalData,data)
 			}
-		}
-		//增加appName接口返回错误信息判断
-		if len(finalData)==0 {
-			logs.Error("获取rocket内app信息错误")
-			c.JSON(http.StatusOK,gin.H{
-				"errorCode":-1,
-				"message":"获取app信息错误，请联系预审平台相关人员",
-				"data":"failed",
-			})
-			return
 		}
 
 		logs.Info("query permission's used situation success!")
