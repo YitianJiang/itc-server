@@ -86,6 +86,8 @@ func InitRouter(r *ginex.Engine) {
 		api.GET("/certificates", controllers.GetCertificates)
 		//过期证书提醒
 		api.GET("/certificates/controller", controllers.CertificateController)
+		//证书删除
+		api.POST("/certificate/delete", controllers.DeteleCertificate)
 		//获取iOS当前任务的二进制工具检测内容
 		api.GET("/task/queryIOSBinaryContent", detect.QueryIOSTaskBinaryCheckContent)
 		//确认iOS二进制检测信息
