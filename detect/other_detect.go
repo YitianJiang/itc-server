@@ -248,7 +248,7 @@ func UpdateOtherDetectInfos(c *gin.Context)  {
 	message += " aar包完成二进制检测！\n"
 
 	//此处测试时注释掉
-	larkUrl := "http://rocket.bytedance.net/rocket/itc/basic?showAarDetaill=1&aarTaskId=" + taskId
+	larkUrl := "http://rocket.bytedance.net/rocket/itc/basic?showAarDetail=1&aarTaskId=" + taskId
 	message += "地址链接：" + larkUrl
 	for _, creator := range larkList {
 		utils.LarkDingOneInner(creator, message)
