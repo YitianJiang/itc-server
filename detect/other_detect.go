@@ -72,7 +72,8 @@ func NewOtherDetect(c *gin.Context){
 		errorFormatFile(c)
 		return
 	}
-	url  = "http://" + Local_URL_PRO + "/apk_post/v2"
+	url  =  "http://" + DETECT_URL_PRO + "/apk_post/v2"
+	//url  = "http://" + Local_URL_PRO + "/apk_post/v2"
 	_tmpDir := "./tmp"
 	exist, err := PathExists(_tmpDir)
 	if !exist {
@@ -131,8 +132,8 @@ func NewOtherDetect(c *gin.Context){
 	}
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
-		//callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
-		callBackUrl := "http://10.224.13.149:6789/updateOtherDetectInfos"
+		callBackUrl := "https://itc.bytedance.net/updateOtherDetectInfos"
+		//callBackUrl := "http://10.224.13.149:6789/updateOtherDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -237,15 +238,18 @@ func UpdateOtherDetectInfos(c *gin.Context)  {
 
 	//进行lark消息提醒
 	var message string
+	detect = dal.QueryOtherDetectModelsByMap(map[string]interface{}{
+		"id": taskId,
+	})
 	creators := (*detect)[0].ToLarker
 	larkList := strings.Split(creators, ",")
 	//for _,creator := range larkList {
 	message = "你好，" + (*detect)[0].OtherName + " " + (*detect)[0].OtherVersion
-	message += "aar包完成二进制检测！\n"
+	message += " aar包完成二进制检测！\n"
 
 	//此处测试时注释掉
-	//larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
-	//message += "地址链接：" + larkUrl
+	larkUrl := "http://rocket.bytedance.net/rocket/itc/basic?showAarDetail=1&aarTaskId=" + taskId
+	message += "地址链接：" + larkUrl
 	for _, creator := range larkList {
 		utils.LarkDingOneInner(creator, message)
 	}
@@ -366,7 +370,7 @@ func QueryAarBinaryDetectResult(c *gin.Context)  {
 	logs.Info("查询aar检测结果成果！")
 	c.JSON(http.StatusOK,gin.H{
 		"message":"success",
-		"errCode":0,
+		"errorCode":0,
 		"data":*finalResult,
 	})
 	return
@@ -897,7 +901,7 @@ func otherPermAna(perms *[]string,mapInfo map[string]int,index int) (dal.OtherDe
 	detailInfo.DetectInfos = string(param)
 	//lark通知创建人完善权限信息-----只发一条消息
 	if larkPerms != ""{
-		message := "你好，安卓二进制静态包检测出未知权限，请去权限配置页面完善权限信息,需要完善的权限信息有：\n"
+		message := "你好，aar包检测出未知权限，请去权限配置页面完善权限信息,需要完善的权限信息有：\n"
 		message += larkPerms
 		message += "修改链接：http://cloud.bytedance.net/rocket/itc/permission?biz=13"
 		utils.LarkDingOneInner("kanghuaisong",message)
