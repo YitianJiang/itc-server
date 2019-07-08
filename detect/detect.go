@@ -1022,47 +1022,57 @@ func CICallBack(task *dal.DetectStruct) error{
 	data["job_id"] = job_id
 	data["statsu"] = "2"
 	data["task_id"] = fmt.Sprint(task.ID)
+	url := urlInfos[0]
+	return PostInfos(url,data)
+}
+
+/**
+	预审发送post信息
+ */
+func PostInfos(url string,data map[string]string) error {
+	taskId := data["task_id"]
 	bytesData, err1 := json.Marshal(data)
-	if err != nil {
-		logs.Error("任务ID："+fmt.Sprint(task.ID)+",CI回调信息转换失败"+fmt.Sprint(err1))
-		utils.LarkDingOneInner("fanjuan.xqp", "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("kanghuaisong", "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("yinzhihong", "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+	if err1 != nil {
+		logs.Error("任务ID："+taskId+",CI回调信息转换失败"+fmt.Sprint(err1))
+		utils.LarkDingOneInner("fanjuan.xqp", "CI回调信息转换失败，请及时进行检查！任务ID："+taskId)
+		utils.LarkDingOneInner("kanghuaisong", "CI回调信息转换失败，请及时进行检查！任务ID："+taskId)
+		utils.LarkDingOneInner("yinzhihong", "CI回调信息转换失败，请及时进行检查！任务ID："+taskId)
 		return err1
 	}
 	reader := bytes.NewReader(bytesData)
-	url := urlInfos[0]
+
 	request, err2 := http.NewRequest("POST", url, reader)
 	if err2 != nil {
-		logs.Error("任务ID："+fmt.Sprint(task.ID)+",CI回调请求Create失败"+fmt.Sprint(err2))
-		utils.LarkDingOneInner("fanjuan.xqp", "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("kanghuaisong", "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("yinzhihong", "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		logs.Error("任务ID："+taskId+",CI回调请求Create失败"+fmt.Sprint(err2))
+		utils.LarkDingOneInner("fanjuan.xqp", "CI回调请求Create失败，请及时进行检查！任务ID："+taskId)
+		utils.LarkDingOneInner("kanghuaisong", "CI回调请求Create失败，请及时进行检查！任务ID："+taskId)
+		utils.LarkDingOneInner("yinzhihong", "CI回调请求Create失败，请及时进行检查！任务ID："+taskId)
 		return err2
 	}
 	request.Header.Set("Content-Type", "application/json;charset=UTF-8")
 	client := http.Client{}
 	resp, err3 := client.Do(request)
 	if err3 != nil {
-		logs.Error("任务ID："+fmt.Sprint(task.ID)+",回调CI接口失败,%v", err3)
+		logs.Error("任务ID："+taskId+",回调CI接口失败,%v", err3)
 		//及时报警
 		//utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("fanjuan.xqp", "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("kanghuaisong", "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("yinzhihong", "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("fanjuan.xqp", "CI回调请求发送失败，请及时进行检查！任务ID："+taskId)
+		utils.LarkDingOneInner("kanghuaisong", "CI回调请求发送失败，请及时进行检查！任务ID："+taskId)
+		utils.LarkDingOneInner("yinzhihong", "CI回调请求发送失败，请及时进行检查！任务ID："+taskId)
 		return err3
 	}
-	logs.Info("任务ID："+fmt.Sprint(task.ID)+"回调成功,回调信息："+fmt.Sprint(data)+",回调地址："+url)
+	logs.Info("任务ID："+taskId+"回调成功,回调信息："+fmt.Sprint(data)+",回调地址："+url)
 	if resp != nil {
 		defer resp.Body.Close()
 		respBytes, _ := ioutil.ReadAll(resp.Body)
 		var data map[string]interface{}
 		data = make(map[string]interface{})
 		json.Unmarshal(respBytes, &data)
-		logs.Info("taskId :"+fmt.Sprint(task.ID)+",CI detect url's response: %+v", data)
+		logs.Info("taskId :"+taskId+",CI detect url's response: %+v", data)
 	}
 	return nil
 }
+
 /**
 	获取URL信息
  */
