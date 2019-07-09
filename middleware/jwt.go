@@ -1,13 +1,21 @@
 package middleware
 
 import (
-	"code.byted.org/clientQA/itc-server/const"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"code.byted.org/yinzhihong/uploaduserdata"
+
+	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/gopkg/logs"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
+
 var jwtSecret = []byte("itc_jwt_secret")
+
 type Claims struct {
 	Username string `json:"username"`
 	jwt.StandardClaims
@@ -42,13 +50,14 @@ func JWTCheck() gin.HandlerFunc {
 		if header == nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"errorCode": _const.ERROR_AUTH_CHECK_TOKEN_FAIL,
-				"message":  _const.GetMsg(code),
-				"data": _const.GetMsg(code),
+				"message":   _const.GetMsg(code),
+				"data":      _const.GetMsg(code),
 			})
 			c.Abort()
 			return
 		}
 		token := header.Get("Authorization")
+		var username string
 		if token == "" {
 			code = _const.ERROR_AUTH_CHECK_TOKEN_FAIL
 		} else {
@@ -56,18 +65,33 @@ func JWTCheck() gin.HandlerFunc {
 			if !flag {
 				code = _const.ERROR_AUTH_CHECK_TOKEN_FAIL
 			} else {
-				username := claim["name"].(string)
+				username = claim["name"].(string)
 				c.Set("username", username)
 			}
 		}
 		if code != _const.SUCCESS {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"errorCode": code,
-				"message":  _const.GetMsg(code),
-				"data": data,
+				"message":   _const.GetMsg(code),
+				"data":      data,
 			})
 			c.Abort()
 			return
+		}
+		//日志上报
+		uploadMap := map[string]string{
+			"time":     strconv.FormatInt(time.Now().Unix(), 10),
+			"action":   "enter",
+			"ip":       c.ClientIP(),
+			"username": username,
+			"domain":   header.Get("Origin"),
+			"ua":       header.Get("User-Agent"),
+			"path":     strings.Trim(header.Get("Referer"), header.Get("Origin")),
+			"title":    "预审平台",
+			"psm":      "toutiao.clientqa.itcserver",
+		}
+		if err := uploaduserdata.UploadLog(uploadMap); err != nil {
+			logs.Error("日志上报出错！", err.Error())
 		}
 		c.Next()
 	}

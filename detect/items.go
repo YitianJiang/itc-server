@@ -113,43 +113,78 @@ func GetSelfCheckItems(c *gin.Context) {
 	}
 	taskId, bool := c.GetQuery("taskId")
 	if !bool { //检查项管理中返回和appID相关检查项，
-		appSelfItem := dal.QueryAppSelfItem(map[string]interface{}{
-			"appId": appIdParam,
+		var ItemList []interface{}
+		appSelfItem_A := dal.QueryAppSelfItem(map[string]interface{}{
+			"appId":    appIdParam,
+			"platform": 0,
 		})
-		if appSelfItem == nil || len(*appSelfItem) == 0 {
-			ggItemList := getGGItem(map[string]interface{}{
-				"is_gg" : 1,
+		appSelfItem_O := dal.QueryAppSelfItem(map[string]interface{}{
+			"appId":    appIdParam,
+			"platform": 1,
+		})
+		var androidItemList []interface{}
+		if appSelfItem_A == nil || len(*appSelfItem_A) == 0 {
+			androidItemList = getGGItem(map[string]interface{}{
+				"is_gg":    1,
+				"platform": 0,
 			})
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "success！",
-				"errorCode": 0,
-				"data":      ggItemList,
-			})
-			return
 		} else {
-			var appItemList []interface{}
-			for _, appSelf := range *appSelfItem {
-				appMap := make(map[string]interface{})
-				if err := json.Unmarshal([]byte(appSelf.SelfItems), &appMap); err != nil {
-					logs.Error(err.Error())
-					c.JSON(http.StatusOK, gin.H{
-						"message":   "解析json出错！",
-						"errorCode": -1,
-						"data":      []interface{}{},
-					})
-					return
-				}
-				for _, i := range appMap["item"].([]interface{}) {
-					appItemList = append(appItemList, i)
-				}
+			androidMap := make(map[string]interface{})
+			if err := json.Unmarshal([]byte((*appSelfItem_A)[0].SelfItems), &androidMap); err != nil {
+				logs.Error(err.Error())
+				c.JSON(http.StatusOK, gin.H{
+					"message":   "解析json出错！",
+					"errorCode": -1,
+					"data":      []interface{}{},
+				})
+				return
 			}
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "success！",
-				"errorCode": 0,
-				"data":      appItemList,
-			})
-			return
+			for _, i := range androidMap["item"].([]interface{}) {
+				androidItemList = append(androidItemList, i)
+			}
 		}
+		var iOSItemList []interface{}
+		if appSelfItem_O == nil || len(*appSelfItem_O) == 0 {
+			iOSItemList = getGGItem(map[string]interface{}{
+				"is_gg":    1,
+				"platform": 1,
+			})
+		} else {
+			iosMap := make(map[string]interface{})
+			if err := json.Unmarshal([]byte((*appSelfItem_O)[0].SelfItems), &iosMap); err != nil {
+				logs.Error(err.Error())
+				c.JSON(http.StatusOK, gin.H{
+					"message":   "解析json出错！",
+					"errorCode": -1,
+					"data":      []interface{}{},
+				})
+				return
+			}
+			for _, i := range iosMap["item"].([]interface{}) {
+				iOSItemList = append(iOSItemList, i)
+			}
+		}
+		//Android和iOS list合并
+		if len(androidItemList) == 0 && len(iOSItemList) == 0 {
+			ItemList = []interface{}{}
+		} else if len(androidItemList) == 0 && len(iOSItemList) != 0 {
+			ItemList = iOSItemList
+		} else if len(androidItemList) != 0 && len(iOSItemList) == 0 {
+			ItemList = androidItemList
+		} else {
+			for _, a := range androidItemList {
+				ItemList = append(ItemList, a)
+			}
+			for _, o := range iOSItemList {
+				ItemList = append(ItemList, o)
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "success！",
+			"errorCode": 0,
+			"data":      ItemList,
+		})
+		return
 	}
 	//任务管理中展示自查项
 	task_id, _ := strconv.Atoi(taskId)
@@ -180,10 +215,10 @@ func GetSelfCheckItems(c *gin.Context) {
 		//appItem检查项为空
 		if appSelf == nil || len(*appSelf) == 0 {
 			ggList := getGGItem(map[string]interface{}{
-				"is_gg":1,
-				"platform":platform,
+				"is_gg":    1,
+				"platform": platform,
 			})
-			if len(ggList) == 0{ //公共检查项为空
+			if len(ggList) == 0 { //公共检查项为空
 				c.JSON(http.StatusOK, gin.H{
 					"message":   "success,该APP没有自查项！",
 					"errorCode": 0,
@@ -197,11 +232,11 @@ func GetSelfCheckItems(c *gin.Context) {
 			appGGSelf.Platform = platform
 			appGGSelf.AppId, _ = strconv.Atoi(appIdParam)
 			ggJson, _ := json.Marshal(map[string]interface{}{
-				"item":ggList,
+				"item": ggList,
 			})
 			appGGSelf.SelfItems = string(ggJson)
 			dal.InsertAppSelfItem(appGGSelf)
-		}else{
+		} else {
 			//appItem检查项不为空
 			returnSelf := (*appSelf)[0].SelfItems
 			var temp = make(map[string]interface{})
@@ -209,11 +244,11 @@ func GetSelfCheckItems(c *gin.Context) {
 			taskSelf = temp["item"].([]interface{})
 		}
 		//兼容之前的taskID
-		itemMap, remarkMap, confirmerMap := dal.GetSelfCheckByTaskId( "task_id='" + taskId + "'")
+		itemMap, remarkMap, confirmerMap := dal.GetSelfCheckByTaskId("task_id='" + taskId + "'")
 		//task插入检查项
 		for _, self := range taskSelf {
 			var item_id uint
-			switch self.(map[string]interface{})["id"].(type){
+			switch self.(map[string]interface{})["id"].(type) {
 			case uint:
 				item_id = self.(map[string]interface{})["id"].(uint)
 			case float64:
@@ -223,22 +258,22 @@ func GetSelfCheckItems(c *gin.Context) {
 			}
 			if status, ok := itemMap[item_id]; ok {
 				self.(map[string]interface{})["status"] = status
-			}else{
+			} else {
 				self.(map[string]interface{})["status"] = 0
 			}
 			if confirmer, ok := confirmerMap[item_id]; ok {
 				self.(map[string]interface{})["confirmer"] = confirmer
-			}else{
+			} else {
 				self.(map[string]interface{})["confirmer"] = ""
 			}
 			if remark, ok := remarkMap[item_id]; ok {
 				self.(map[string]interface{})["remark"] = remark
-			}else{
+			} else {
 				self.(map[string]interface{})["remark"] = ""
 			}
 		}
 		task_self, err := json.Marshal(map[string]interface{}{
-			"item":taskSelf,
+			"item": taskSelf,
 		})
 		if err != nil {
 			logs.Error(err.Error())
@@ -278,7 +313,7 @@ func GetSelfCheckItems(c *gin.Context) {
 	}
 }
 
-func getGGItem(condition map[string]interface{}) []interface{}{
+func getGGItem(condition map[string]interface{}) []interface{} {
 	ggItem := dal.QueryItem(condition)
 	//获取配置项
 	var configMap map[int]string
@@ -290,11 +325,11 @@ func getGGItem(condition map[string]interface{}) []interface{}{
 			configMap[int(config.ID)] = config.Name
 		}
 	}
-	if ggItem == nil || len(*ggItem) == 0{
+	if ggItem == nil || len(*ggItem) == 0 {
 		return []interface{}{}
 	}
 	var ggItemList []interface{}
-	for _, gg_item := range *ggItem{
+	for _, gg_item := range *ggItem {
 		itemJson, _ := json.Marshal(gg_item)
 		m := make(map[string]interface{})
 		json.Unmarshal(itemJson, &m)
@@ -313,6 +348,7 @@ func getGGItem(condition map[string]interface{}) []interface{}{
 	}
 	return ggItemList
 }
+
 /*
  *完成自查
  */
@@ -338,10 +374,16 @@ func ConfirmCheck(c *gin.Context) {
 		})
 		return
 	}
+	var realData = make([]dal.Self, 0)
+	for _, da := range t.Data {
+		if da.Status != 0 {
+			realData = append(realData, da)
+		}
+	}
 	var param map[string]interface{}
 	param = make(map[string]interface{})
 	param["taskId"] = t.TaskId
-	param["data"] = t.Data
+	param["data"] = realData
 	param["operator"] = name
 	bool, detect := dal.ConfirmSelfCheck(param)
 	if !bool {
@@ -352,7 +394,7 @@ func ConfirmCheck(c *gin.Context) {
 		})
 		return
 	}
-	if detect != nil && detect.Status == 1 && detect.SelfCheckStatus == 1{
+	if detect != nil && detect.Status == 1 && detect.SelfCheckStatus == 1 {
 		CICallBack(detect)
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -376,25 +418,25 @@ func DropDetectItem(c *gin.Context) {
 		})
 		return
 	}
-	//yixian那边没上线，暂时写死
-	//isAll := c.DefaultPostForm("isGG", "")
-	//if isAll == "" {
-	//	c.JSON(http.StatusOK, gin.H{
-	//		"message":   "参数不合法",
-	//		"errorCode": -2,
-	//		"data":      "缺少isGG！",
-	//	})
-	//	return
-	//}
-	//appId := c.DefaultPostForm("appId", "")
-	//if appId == "" {
-	//	c.JSON(http.StatusOK, gin.H{
-	//		"message":   "参数不合法",
-	//		"errorCode": -2,
-	//		"data":      "缺少appId！",
-	//	})
-	//	return
-	//}
+
+	isAll := c.DefaultPostForm("isGG", "")
+	if isAll == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "参数不合法",
+			"errorCode": -2,
+			"data":      "缺少isGG！",
+		})
+		return
+	}
+	appId := c.DefaultPostForm("appId", "")
+	if appId == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "参数不合法",
+			"errorCode": -2,
+			"data":      "缺少appId！",
+		})
+		return
+	}
 	name, flag := c.Get("username")
 	if !flag {
 		c.JSON(http.StatusOK, gin.H{
@@ -404,8 +446,6 @@ func DropDetectItem(c *gin.Context) {
 		})
 		return
 	}
-	isAll := "1"
-	appId := "13"
 	//判断用户是否有权限
 	isPrivacy := false
 	for _, people := range whiteList {

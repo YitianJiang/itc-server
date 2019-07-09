@@ -1,8 +1,8 @@
 package developerconnmanager
 
 import (
-	"code.byted.org/clientQA/ClusterManager/utils"
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"

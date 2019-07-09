@@ -1,9 +1,9 @@
 package dal
 
 import (
-	"code.byted.org/clientQA/ClusterManager/utils"
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
+	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 )
 
