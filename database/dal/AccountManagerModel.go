@@ -1,14 +1,15 @@
 package dal
 
 import (
-	"code.byted.org/clientQA/ClusterManager/utils"
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
+	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 )
 
 type AccountInfo struct {
-	Id int
+	gorm.Model
 	TeamId 			    string `gorm:"team_id"              form:"team_id"`
 	IssueId 			string `gorm:"issue_id"             form:"issue_id"`
 	KeyId 				string `gorm:"key_id"               form:"key_id"`
@@ -19,8 +20,36 @@ type AccountInfo struct {
 	UserName 			string `gorm:"user_name"            form:"user_name"`
 }
 
+type RetValueWithP8 struct {
+	TeamId 			    string      `json:"team_id"`
+	AccountName 		string      `json:"account_name"`
+	AccountType 		string      `json:"account_type"`
+	UserName 			string      `json:"user_name"`
+	AccountP8fileName   string      `json:"account_p8file_name"`
+	AccountP8file 		string      `json:"account_p8file"`
+	PermissionAction    []string    `json:"permission_action"`
+}
+
+type RetValueWithoutP8 struct {
+	TeamId 			    string      `json:"team_id"`
+	AccountName 		string      `json:"account_name"`
+	AccountType 		string      `json:"account_type"`
+	UserName 			string      `json:"user_name"`
+	PermissionAction    []string    `json:"permission_action"`
+}
+
+type AccountExistRel struct {
+	IsExisted   bool //标识是否带权限
+	AccountInfo AccountInfo
+	Permissions []string
+}
+
+type AccountQueryRet struct {
+	Data []interface{} `json:"data"`
+}
+
 func (AccountInfo) TableName() string{
-	return  "tt_account"
+	return  "tt_apple_conn_account"
 }
 func DeleteAccountInfo(teamId string) bool {
 	connection, err := database.GetConneection()

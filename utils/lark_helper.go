@@ -1,9 +1,12 @@
 package utils
 
 import (
+	"bytes"
 	"code.byted.org/gopkg/logs"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"strings"
 )
 
@@ -105,3 +108,107 @@ func GetUserChannelID(token string, userid string) string {
 	}
 	return retstr
 }
+
+//建群发收参数结构体
+type CreateGroupParams struct{
+	Name            string             `json:"name"`
+	Description     string             `json:"description"`
+	OpenIds         []string           `json:"open_ids"`
+	EmployeeIds     []string           `json:"employee_ids"`
+}
+
+type CreateGroupRet struct {
+	Code                int         `json:"code"`
+	Msg                 string      `json:"msg"`
+	OpenChatId          string      `json:"open_chat_id"`
+	InvalidOpenIds      []string    `json:"invalid_open_ids"`
+	InvalidEmployeeIds  []string    `json:"invalid_employee_ids"`
+}
+
+//获取用户ID发收参数结构体
+type GetUserIdsParams struct {
+	Email       string      `json:"email"`
+}
+
+type GetUserIdsRet struct {
+	Code            int     `json:"code"`
+	OpenId          string  `json:"open_id"`
+	EmployeeId      string  `json:"employee_id"`
+}
+
+//拉用户进群发收参数结构体
+type PullUserParams struct {
+	OpenChatId      string      `json:"open_chat_id"`
+	OpenIds         []string    `json:"open_ids"`
+	EmployeeIds     []string    `json:"employee_ids"`
+}
+
+type PullUserRet struct {
+	Code                int         `json:"code"`
+	Msg                 string      `json:"msg"`
+	InvalidOpenIds      string      `json:"invalid_open_ids"`
+	InvalidEmployeeIds  string      `json:"invalid_employee_ids"`
+}
+
+//发消息结构体
+type SendMsgParams struct {
+	OpenChatId      string      `json:"open_chat_id"`
+	MsgType         string      `json:"msg_type"`
+	Content         Content     `json:"content"`
+}
+
+type Content struct {
+	Text    string      `json:"text"`
+}
+
+type SendMsgRet struct {
+	Code                int         `json:"code"`
+	Msg                 string      `json:"msg"`
+	OpenMessageId       string      `json:"open_message_id"`
+}
+
+type GetTokenParams struct {
+	AppId                string      `json:"app_id"`
+	AppSecret            string      `json:"app_secret"`
+}
+
+type GetTokenRet struct {
+	Code                int         `json:"code"`
+	Msg                 string      `json:"msg"`
+	TenantAccessToken   string      `json:"tenant_access_token"`
+	Expire              int         `json:"expire"`
+}
+
+const (
+	CREATE_GROUP_URL="https://open.feishu.cn/open-apis/chat/v3/create/"
+	GET_USER_IDS_URL="https://open.feishu.cn/open-apis/user/v3/email2id"
+	PULL_USER_TO_GROUP_URL="https://open.feishu.cn/open-apis/chat/v3/chatter/add/"
+	SEND_MESSAGE_URL="https://open.feishu.cn/open-apis/message/v3/send/"
+	GET_Tenant_Access_Token_URL="https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal/"
+	APP_ID="cli_9a2d72678bb8d102"
+	APP_SECRET="7aprfnGu8mU3KOTqV4RiSjhIde2gsvAM"
+)
+
+func PushGetLarkParams(url string,token string,paramsIn interface{} ,paramsOut interface{} ) {
+	bodyByte, _ := json.Marshal(paramsIn)
+	rbodyByte := bytes.NewReader(bodyByte)
+	client := &http.Client{}
+	request, err := http.NewRequest("POST", url,rbodyByte)
+	if err != nil {
+		logs.Info("新建request对象失败")
+	}
+	request.Header.Set("Authorization", token)
+	request.Header.Set("Content-Type", "application/json")
+	response, err := client.Do(request)
+	if err != nil {
+		logs.Info("发送post请求失败")
+	}
+	defer response.Body.Close()
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		logs.Info("读取respose的body内容失败")
+	}
+	json.Unmarshal(body, paramsOut)
+}
+
+
