@@ -2,6 +2,11 @@ package middleware
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"code.byted.org/yinzhihong/uploaduserdata"
 
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/gopkg/logs"
@@ -74,23 +79,20 @@ func JWTCheck() gin.HandlerFunc {
 			return
 		}
 		//日志上报
-		//uploadMap := map[string]string{
-		//	"time":   strconv.FormatInt(time.Now().Unix(), 10),
-		//	"action": "enter",
-		//	"ip":     c.ClientIP(),
-		//	//"username": username,
-		//	"username": "yinzhihong",
-		//	"domain":   header.Get("Origin"),
-		//	"ua":       header.Get("User-Agent"),
-		//	"path":     strings.Trim(header.Get("Referer"), header.Get("Origin")),
-		//	"title":    "预审平台",
-		//	"psm":      "toutiao.clientqa.itcserver",
-		//}
-		//if err := uploaduserdata.UploadLog(uploadMap); err != nil {
-		//	logs.Error(err.Error())
-		//	//c.Abort()
-		//	//return
-		//}
+		uploadMap := map[string]string{
+			"time":     strconv.FormatInt(time.Now().Unix(), 10),
+			"action":   "enter",
+			"ip":       c.ClientIP(),
+			"username": username,
+			"domain":   header.Get("Origin"),
+			"ua":       header.Get("User-Agent"),
+			"path":     strings.Trim(header.Get("Referer"), header.Get("Origin")),
+			"title":    "预审平台",
+			"psm":      "toutiao.clientqa.itcserver",
+		}
+		if err := uploaduserdata.UploadLog(uploadMap); err != nil {
+			logs.Error("日志上报出错！", err.Error())
+		}
 		c.Next()
 	}
 }

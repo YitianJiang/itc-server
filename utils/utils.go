@@ -149,7 +149,7 @@ func PostJsonHttp2(rbody []byte) bool {
 		logs.Error("读取返回body出错！", err.Error())
 		return false
 	}
-	if m["errorCode"].(int) == 0 {
+	if int(m["errorCode"].(float64)) == 0 {
 		return true
 	} else {
 		return false

@@ -217,7 +217,7 @@ func UploadFile(c *gin.Context) {
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
 		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
-		//callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
+		//callBackUrl := "http://10.224.14.220:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -375,9 +375,10 @@ func UpdateDetectInfos(c *gin.Context) {
 		if res && warnFlag {
 			tips := "Notice: " + (*detect)[0].AppName + " " + (*detect)[0].AppVersion + " iOS包完成二进制检测，检测黑名单中itms-services不为空，请及时关注！！！！\n"
 			larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + strconv.Itoa(toolId) + "&showItcDetail=1&itcTaskId=" + strconv.Itoa(taskId)
-			tips += "地址链接：" + larkUrl
+			//tips += "地址链接：" + larkUrl
 			for _, lark_people := range _const.MiddleLarkPeople {
-				utils.LarkDingOneInner(lark_people, tips)
+				//utils.LarkDingOneInner(lark_people, tips)
+				utils.LarkDingOneInnerWithUrl(lark_people, tips, "点击跳转检测详情", larkUrl)
 			}
 		}
 	}
@@ -398,15 +399,17 @@ func UpdateDetectInfos(c *gin.Context) {
 		message += " iOS包"
 	}
 
-	message += "  完成二进制检测，"
+	message += "  已完成二进制检测。\n"
 	if (*detect)[0].Status == 0 {
-		message += "有未确认检测项，请及时对每条未确认信息进行确认！\n"
+		message += "检测项待确认，请及时对每条未确认检测信息进行确认！\n"
 	} else {
-		message += "本次检测未发现新增权限、敏感方法或敏感字符串，不需要进行确认\n"
+		message += "本次检测未发现新增权限、敏感方法或敏感字符串，不需要进行确认!\n"
 	}
 	if platform == 1 {
-		message += "注意：请及时确认自查项！\n"
+		message += "注意：请通知相关人员及时确认自查项！\n"
 	}
+
+	message += "\n预审平台检测结果确认人建议：\n\t检测项:值班RD BM逐条确认\n\t自查项:\n\t  Binary:值班QA BM逐条确认\n\t  Metadata:负责提审或产品线UG对接人逐条确认"
 
 	//message += " 完成二进制检测，请及时对每条未确认信息进行确认！\n"
 	//message += "如果安卓选择了GooglePlay检测和隐私检测，两个检测结果都需要进行确认，请不要遗漏！！！\n"
@@ -451,11 +454,12 @@ func UpdateDetectInfos(c *gin.Context) {
 	LARK_MSG_CALL_MAP[key] = ticker
 	//此处测试时注释掉
 	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
-	message += "地址链接：" + larkUrl
 	for _, creator := range larkList {
-		utils.LarkDingOneInner(creator, message)
+		//utils.LarkDingOneInner(creator, message)
+		utils.LarkDingOneInnerWithUrl(creator, message, "点击跳转检测详情", larkUrl)
 	}
-	//给群ID对应群发送消息
+	//发给群消息沿用旧的机器人，给群ID对应群发送消息
+	message += "地址链接：" + larkUrl
 	toGroupID := (*detect)[0].ToGroup
 	if toGroupID != "" {
 		group := strings.Replace(toGroupID, "，", ",", -1) //中文逗号切换成英文逗号
