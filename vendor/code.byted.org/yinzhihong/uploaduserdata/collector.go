@@ -122,7 +122,7 @@ func Publish(callback Callback, msg map[string]string, psm string, ts int64) err
 	request.Header.Add("PSM", psm)
 	request.Header.Add("TOKEN", token)
 	// 设置timeout
-	client := http.Client{Timeout: 100 * time.Millisecond}
+	client := http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(request)
 	defer resp.Body.Close()
 	if err != nil {

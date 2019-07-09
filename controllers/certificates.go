@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"bytes"
-	"code.byted.org/clientQA/itc-server/detect"
 	"context"
 	"encoding/json"
 	"io"
@@ -15,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"code.byted.org/clientQA/itc-server/detect"
 
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
@@ -43,10 +44,9 @@ func CertificateController(c *gin.Context) {
 				//发送过期信息的用户列表
 				var newMails []string
 				newMails = append(newMails, strings.Replace(creator, " ", "", -1))
-				newMails = append(newMails, "gongrui")
-				newMails = append(newMails, "chenyujun")
-				newMails = append(newMails, "kanghuaisong")
-				newMails = append(newMails, "zhangshuai.02")
+				for _, lark_people := range _const.HighLarkPeople {
+					newMails = append(newMails, lark_people)
+				}
 				itemMap := map[string]interface{}{
 					"appname":     appName,
 					"usage":       usage,
@@ -89,10 +89,10 @@ appid    APP ID
 */
 //查询符合条件的数据,Json转换返回标准形式
 var whitePeople = map[string]int{ //下载白名单
-	"zhangshuai.02":1,
-	"gongrui":1,
-	"kanghuaisong":1,
-	"yinzhihong":1,
+	"zhangshuai.02": 1,
+	"gongrui":       1,
+	"kanghuaisong":  1,
+	"yinzhihong":    1,
 }
 
 func GetCertificates(c *gin.Context) {
@@ -151,9 +151,9 @@ func GetCertificates(c *gin.Context) {
 		certificateTemp, err1 := json.Marshal(cer)
 		certificateRes := make(map[string]interface{})
 		err2 := json.Unmarshal(certificateTemp, &certificateRes)
-		if _, ok:= whitePeople[name.(string)]; name.(string) != certificateRes["creator"] && !ok{
-			certificateRes["certificateFile"] = "***"//不在白名单中隐藏下载url
-			certificateRes["password"] = "***"//不在白名单中隐藏密码
+		if _, ok := whitePeople[name.(string)]; name.(string) != certificateRes["creator"] && !ok {
+			certificateRes["certificateFile"] = "***" //不在白名单中隐藏下载url
+			certificateRes["password"] = "***"        //不在白名单中隐藏密码
 		}
 		data = append(data, certificateRes)
 		if err1 != nil || err2 != nil {
@@ -221,7 +221,7 @@ func AddCertificate(c *gin.Context) {
 	}
 	//查询证书过期日期
 	response := func() (resp *http.Response) {
-		upstreamUrl := "http://"+detect.DETECT_URL_PRO+"/query_certificate_expire_date" //过期日期访问地址
+		upstreamUrl := "http://" + detect.DETECT_URL_PRO + "/query_certificate_expire_date" //过期日期访问地址
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
 		part, err := writer.CreateFormFile("certificate", certificateFileName)
@@ -369,7 +369,7 @@ func uploadTos(path string) string {
 	return returnUrl
 }
 
-func DeteleCertificate(c *gin.Context){
+func DeteleCertificate(c *gin.Context) {
 	name, f := c.Get("username")
 	if !f {
 		c.JSON(http.StatusOK, gin.H{
@@ -379,38 +379,38 @@ func DeteleCertificate(c *gin.Context){
 		return
 	}
 	id := c.PostForm("ID")
-	certificate := dal.QueryCertificate(map[string]interface{}{"id":id})
-	if certificate == nil || len(*certificate) == 0{
+	certificate := dal.QueryCertificate(map[string]interface{}{"id": id})
+	if certificate == nil || len(*certificate) == 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "没有该证书ID！",
 			"errorCode": -1,
-			"data":"没有该证书ID！",
+			"data":      "没有该证书ID！",
 		})
 		return
 	}
 	creator := (*certificate)[0].Creator
-	if _, ok:= whitePeople[name.(string)];ok || creator == name.(string){
-		isDelete := dal.DeleteCertificate(map[string]interface{}{"id":id})
-		if !isDelete{
+	if _, ok := whitePeople[name.(string)]; ok || creator == name.(string) {
+		isDelete := dal.DeleteCertificate(map[string]interface{}{"id": id})
+		if !isDelete {
 			c.JSON(http.StatusOK, gin.H{
 				"message":   "删除失败！",
 				"errorCode": -1,
-				"data":"删除失败！",
+				"data":      "删除失败！",
 			})
 			return
-		}else{
+		} else {
 			c.JSON(http.StatusOK, gin.H{
 				"message":   "success！",
 				"errorCode": 0,
-				"data":"success！",
+				"data":      "success！",
 			})
 			return
 		}
-	}else{
+	} else {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "该用户没有权限！",
 			"errorCode": -2,
-			"data":"该用户没有权限！",
+			"data":      "该用户没有权限！",
 		})
 	}
 }
