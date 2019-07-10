@@ -1,10 +1,11 @@
 package utils
 
 import (
-	"code.byted.org/gopkg/logs"
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"code.byted.org/gopkg/logs"
 )
 
 const (
@@ -13,6 +14,7 @@ const (
 	myToken = "u-725a4ebd-483d-4175-9ca1-16920f94dc17"
 	larkAPI = "https://oapi.zjurl.cn/open-apis/api/v2/message"
 )
+
 type LarkUser struct {
 	Ok     bool   `json:"ok"`
 	UserID string `json:"user_id"`
@@ -24,6 +26,7 @@ type IM struct {
 type IMChannel struct {
 	Id string `json:"id"`
 }
+
 /*
  *获取用户的id，不然不知道给谁发消息，如果出了问题，肯定返回的是空串了
  */
@@ -48,15 +51,30 @@ func GetUserIDinLark(token string, emailPrefix string) string {
 	}
 	return retstr
 }
+
 /*
  *lark机器人发消息给个人，内部调用
  */
 func LarkDingOneInner(member string, msg string) {
 	// 获取user的larkID和会话ID
-	userLarkID := GetUserIDinLark(myToken, member)
-	channelID := GetUserChannelID(robotToken, userLarkID)
-	go DoLark(msg, larkAPI, channelID, robotToken)
+	//userLarkID := GetUserIDinLark(myToken, member)
+	//channelID := GetUserChannelID(robotToken, userLarkID)
+	//go DoLark(msg, larkAPI, channelID, robotToken)
+	m := map[string]interface{}{
+		"appID":        "cli_9d8a78c3eff61101",
+		"appSecret":    "3kYDkS2M0obuzaEWrArGIc6NOJU6ZVeF",
+		"title":        "预审平台消息通知",
+		"information":  msg,
+		"informMember": member,
+		"isAt":         "1",
+	}
+	if post_body, err := json.Marshal(m); err != nil {
+		logs.Error(err.Error())
+	} else {
+		PostJsonHttp2(post_body)
+	}
 }
+
 /*
  *发送lark消息，chatId为个人id或者群组id
  */
@@ -69,12 +87,14 @@ func DoLark(msg string, api string, chatId string, token string) {
 	bodyByte, _ := json.Marshal(body)
 	PostJsonHttp(api, bodyByte)
 }
+
 /**
  * 发送lark群消息
  */
-func LarkGroup(msg string, groupId string){
+func LarkGroup(msg string, groupId string) {
 	go DoLark(msg, larkAPI, groupId, robotToken)
 }
+
 /**
  *发送lark富文本消息
  */
@@ -87,6 +107,7 @@ func DoRichLark(chatId string, token string, msg string, title string) {
 	bodyByte, _ := json.Marshal(body)
 	PostJsonHttp(larkAPI, bodyByte)
 }
+
 /*
  *获取和用户会话的channel id
  */
@@ -104,4 +125,28 @@ func GetUserChannelID(token string, userid string) string {
 		fmt.Println("打开私聊会话失败，如果是0，问题在于Lark平台" + fmt.Sprint(num))
 	}
 	return retstr
+}
+
+/*
+ *lark机器人发消息给个人，内部调用
+ */
+func LarkDingOneInnerWithUrl(member string, msg string, urlTitle string, larkUrl string) {
+	titleArr := strings.Split(urlTitle, ",")
+	urlArr := strings.Split(larkUrl, ",")
+	m := map[string]interface{}{
+		"appID":        "cli_9d8a78c3eff61101",
+		"appSecret":    "3kYDkS2M0obuzaEWrArGIc6NOJU6ZVeF",
+		"title":        "预审平台消息通知",
+		"information":  msg,
+		"informMember": member,
+		"hyper":        titleArr,
+		"hyperLink":    urlArr,
+		"isAt":         "1",
+	}
+	if post_body, err := json.Marshal(m); err != nil {
+		logs.Error(err.Error())
+	} else {
+		PostJsonHttp2(post_body)
+	}
+
 }

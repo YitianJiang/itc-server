@@ -9,11 +9,12 @@ import (
 	"fmt"
 )
 
-var(
+var (
 	dboptional dbconf.DBOptional
 )
 
 func InitDB(){
+
 
 	// online
 	//线上采用mysql gdpr
@@ -31,12 +32,11 @@ func InitDB(){
 	//dboptional = dbconf.GetDbConf(ssConf, "qa_ee", dbconf.Write)
 }
 
-func GetConneection()(*gorm.DB, error){
+func GetConneection() (*gorm.DB, error) {
 	handler := gormdb.NewDBHandler()
 	err := handler.ConnectDB(&dboptional)
-	if err != nil{
+	if err != nil {
 		return nil, fmt.Errorf("Connect DB failed: %v", err)
 	}
 	return handler.GetConnection()
 }
-

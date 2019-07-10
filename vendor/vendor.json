@@ -470,6 +470,12 @@
 			"revisionTime": "2019-02-20T07:51:40Z"
 		},
 		{
+			"checksumSHA1": "3SVcuqMM6E4AkRmzrcGSVsXOleM=",
+			"path": "code.byted.org/yinzhihong/uploaduserdata",
+			"revision": "2ca0af0fc76931b2073a5a019b64c7f17d6978cb",
+			"revisionTime": "2019-07-09T08:03:38Z"
+		},
+		{
 			"checksumSHA1": "UwR/g7IGkJnBDuJu0cKAY5yvxUs=",
 			"path": "github.com/cespare/xxhash",
 			"revision": "3767db7a7e183c0ad3395680d460d0b61534ae7b",
