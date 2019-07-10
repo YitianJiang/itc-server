@@ -85,7 +85,7 @@ type Data struct {
 	Type        string          `json:"type"`
 	Attributes  Attributes2     `json:"attributes"`
 }
-
+//todo 这1，2都是和谁学的？！！！！
 type Attributes2 struct {
 	CsrContent          string      `json:"csrContent"`
 	CertificateType     string      `json:"certificateType"`
@@ -125,7 +125,7 @@ func InsertCertInfo(CertInfo CertInfo) bool {
 	utils.RecordError("Insert into DB Failed: ", db.Error)
 	return true
 }
-
+//todo 注释里面写清楚表名称！！！
 //先根据条件到表1中筛选证书，再根据筛选出来的证书id到表2中查询受影响的app
 func QueryCertInfo(condition map[string]interface{}) map[CertInfo][]string {
 	conn, err := database.GetConneection()
@@ -137,7 +137,9 @@ func QueryCertInfo(condition map[string]interface{}) map[CertInfo][]string {
 	var CertInfos []CertInfo
 	db:=conn.LogMode(_const.DB_LOG_MODE).Table(CertInfo{}.TableName()).Where(condition).Find(&CertInfos)
 	utils.RecordError("Query from DB Failed: ", db.Error)
+	//todo certRelatedInfosMap这个玩意到底是啥？在定义个新struct（用CertInfo类型做为新struct其中一列），再新增一列effectAppList不行？最后返回一个[]struct不行？有好好思考？
 	certRelatedInfosMap:=make(map[CertInfo][]string)
+	//todo 在这玩啥呢，appAccountCerts需要整个塞入取数据嘛，这个不是只取app_name的list作为effectAppList？？不知道你要干啥！！！
 	var appAccountCerts []AppAccountCert
 	for _,certInfo:=range CertInfos{
 		db=conn.LogMode(_const.DB_LOG_MODE).Table(AppAccountCert{}.TableName()).Where("cert_id=?",certInfo.CertId).Find(&appAccountCerts)
@@ -148,9 +150,10 @@ func QueryCertInfo(condition map[string]interface{}) map[CertInfo][]string {
 		}
 		certRelatedInfosMap[certInfo]=effectAppList
 	}
+	//todo 大的object的传递应该用啥？
 	return certRelatedInfosMap
 }
-
+//todo 注释里面写清楚表名称！！！
 //先根据条件到表1中筛选要过期的证书，再根据筛选出来的证书id到表2中查询受影响的app
 func QueryExpiredCertInfos() map[CertInfo][]string {
 	conn, err := database.GetConneection()
@@ -168,7 +171,9 @@ func QueryExpiredCertInfos() map[CertInfo][]string {
 			expiredCertInfos=append(expiredCertInfos, certInfo)
 		}
 	}
+	//todo certRelatedInfosMap这个玩意到底是啥？在定义个新struct（用CertInfo类型做为新struct其中一列），再新增一列effectAppList不行？最后返回一个[]struct不行？有好好思考？
 	certRelatedInfosMap:=make(map[CertInfo][]string)
+	//todo 在这玩啥呢，appAccountCerts需要整个塞入取数据嘛，这个不是只取app_name的list作为effectAppList？？不知道你要干啥！！！
 	var appAccountCerts []AppAccountCert
 	for _,expiredCertInfo:=range expiredCertInfos{
 		db=conn.LogMode(_const.DB_LOG_MODE).Table(AppAccountCert{}.TableName()).Where("cert_id=?",expiredCertInfo.CertId).Find(&appAccountCerts)
@@ -181,6 +186,7 @@ func QueryExpiredCertInfos() map[CertInfo][]string {
 			certRelatedInfosMap[expiredCertInfo]=effectAppList
 		}
 	}
+	//todo 大的object的传递应该用啥？
 	return certRelatedInfosMap
 }
 

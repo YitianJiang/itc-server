@@ -76,8 +76,11 @@ func QueryResPerms(userName string,resourceKey string) int{
 
 func QueryCertificatesInfo(c *gin.Context){
 	logs.Info("从数据库中查询证书信息")
+	//todo accountName不需要传了，也不需要处理了
 	accountName:=c.DefaultQuery("account_name","")
+	//todo 为什么这些数据不用ShouldBindQuery？看看梦琪的ClusterManager代码怎么处理的，且绑定失败是怎么处理的？
 	teamId:=c.DefaultQuery("team_id","")
+	//todo expireSoon传上来非"0"即"1"，1代表你要去数据库过滤近一个月过期的证书，"0"代表不处理
 	expireSoon:=c.DefaultQuery("expire_soon","")
 	userName:=c.DefaultQuery("user_name","")
 	if teamId=="" {
@@ -106,17 +109,20 @@ func QueryCertificatesInfo(c *gin.Context){
 	permsResult:=QueryResPerms(userName,resourceKey)
 	if permsResult==3{
 		c.JSON(http.StatusOK, gin.H{
+			//todo data怎么又变字符串了呢？空值要不就不返回，要么就返回对应约定的格式！！！
 			"data":      "",
 			"errorCode": "无权限查看",
 			"errorInfo": "无权限查看",
 		})
 		return
 	}
+	//todo certRelatedInfosMap这玩意是啥，把一个对象当key是怎么思考的？
 	var certRelatedInfosMap map[dal.CertInfo][]string
 	if permsResult==1{
 		certRelatedInfosMap=dal.QueryCertInfo(condition)
 	}
 	if permsResult==2{
+		//todo IOS_DEVELOPMENT这种类型不应该定义在const中么？
 		condition["cert_type"] = "IOS_DEVELOPMENT"
 		certRelatedInfosMap=dal.QueryCertInfo(condition)
 	}
@@ -129,6 +135,7 @@ func QueryCertificatesInfo(c *gin.Context){
 		return
 	}
 	//Todo 表3建完后补上effect_app_list
+	//todo GetCertRelatedInfos这一步还需要？
 	certRelatedInfos:=GetCertRelatedInfos(certRelatedInfosMap)
 	c.JSON(http.StatusOK, gin.H{
 		"data":      certRelatedInfos,
@@ -202,8 +209,11 @@ func GetCsrContent()string {
 
 func CreateCertInApple(tokenString string)dal.RecvCert{
 	var certCreate dal.CertCreate
+	//todo const是用来干啥的？
 	certCreate.Data.Type="certificates"
+	//todo 测试的时候让你写死IOS_DEVELOPMENT，你现在都提交代码了，还在这hard code写死CertificateType？
 	certCreate.Data.Attributes.CertificateType= "IOS_DEVELOPMENT"
+	//todo tos不能直接读数据？GetObject，需要通过GetCsrContent client.Do下载？
 	certCreate.Data.Attributes.CsrContent=GetCsrContent()
 	bodyByte, _ := json.Marshal(certCreate)
 	rbodyByte := bytes.NewReader(bodyByte)
@@ -232,6 +242,7 @@ func CreateCertInApple(tokenString string)dal.RecvCert{
 		}
 		json.Unmarshal(body, &certInfo)
 	}
+	//todo 用object做返回值？数据要很大怎么办？
 	return  certInfo
 }
 
@@ -243,7 +254,7 @@ func CertInfoGetValues(certInfo *dal.CertInfo,recvCert dal.RecvCert){
 	certInfo.PrivKeyUrl=_const.PRIVATE_KEY_URL
 	certInfo.CsrFileUrl=_const.CSR_FILE_URL
 }
-
+//todo 看看我的Test64DecodeToString（bundleIdManager.go文件中第12行）方法，证书这个东西也不需要这么多处理啊？
 func FormatCertContent(certContent string) []byte{
 	start:=0
 	end:=64
@@ -268,6 +279,7 @@ func FormatCertContent(certContent string) []byte{
 }
 
 func UploadTos(certContent []byte,tosFilePath string) bool {
+	//todo staticanalysisresult C5V4TROQGXMCTPXLIJFT hard code?要const干啥用
 	var tosBucket = tos.WithAuth("staticanalysisresult", "C5V4TROQGXMCTPXLIJFT")
 	context, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
@@ -337,6 +349,7 @@ func InsertCertificate(c *gin.Context){
 	logs.Info("从数据库中查询证书信息")
 	var body dal.RecvParamsInsertCert
 	CheckParams(c,&body)
+	//todo 解释下GetTokenStringByTeamId2方法为啥要带"2"
 	tokenString:=GetTokenStringByTeamId2(body.TeamId)
 	recvCert:=CreateCertInApple(tokenString)
 	if recvCert.Data.Attributes.CertificateContent==""{
@@ -351,12 +364,14 @@ func InsertCertificate(c *gin.Context){
 	var certInfo dal.CertInfo
 	certInfo.TeamId=body.TeamId
 	certInfo.AccountName=body.AccountName
+	//todo 怎么一会传地址，一会传对象obj？
 	CertInfoGetValues(&certInfo,recvCert)
 	tosFilePath:="appleConnectFile/"+string(certInfo.TeamId)+"/"+certInfo.CertType+"/"+certInfo.CertId+"/"+DealCertName(certInfo.CertName)+".cer"
 	UploadTos(formatedCert,tosFilePath)
 	certInfo.CertDownloadUrl=_const.TOS_BUCKET_URL+tosFilePath
 	dal.InsertCertInfo(certInfo)
 	condition:=make(map[string]interface{})
+	//todo 这块有修改，新增证书接口没有effect_app_list，因为证书新生成的，还没有app用到证书，不需要返回effect_app_list
 	condition["cert_Id"]=certInfo.CertId
 	certRelatedInfosMap:=dal.QueryCertInfo(condition)
 	if certRelatedInfosMap==nil{
@@ -408,6 +423,8 @@ func GetTokenStringByCertId(CertId string)string{
 
 func DeleteCertificate(c *gin.Context){
 	logs.Info("根据cert_id删除证书")
+	//todo 为什么这些数据不用ShouldBindQuery？看看梦琪的ClusterManager代码怎么处理的，且绑定失败是怎么处理的？
+	//todo 这里再让前端传一个team_id，就不用去数据库查找了team_id了
 	certId:=c.Query("cert_id")
 	condition:=make(map[string]interface{})
 	condition["cert_id"]=certId
@@ -537,6 +554,7 @@ func UploadPrivKey(c *gin.Context){
 	checkResult:=CheckUpdateParams(c,&certInfo)
 	if  checkResult {
 		tosFilePath:="appleConnectFile/"+string(certInfo.TeamId)+"/"+certInfo.CertType+"/"+certInfo.CertId+"/"+p12filename
+		//todo ？？？print？
 		println(tosFilePath)
 		uploadResult:=UploadTos(p12FileCont,tosFilePath)
 		if !uploadResult {
@@ -559,6 +577,7 @@ func UploadPrivKey(c *gin.Context){
 			})
 			return
 		}
+		//todo 这块有修改，新增证书接口没有effect_app_list，因为证书新生成的，还没有app用到证书，不需要返回effect_app_list
 		certRelatedInfosMap:=dal.QueryCertInfo(condition)
 		if certRelatedInfosMap==nil{
 			logs.Error("从数据库中查询证书相关信息失败")

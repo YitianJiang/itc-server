@@ -15,6 +15,7 @@ import (
 
 func DeleteByTeamId(c *gin.Context)  {
 	logs.Info("根据team_id参数将数据从数据库中删除")
+	//todo 为什么不用ShouldBindQuery？看看梦琪的ClusterManager代码怎么处理的，绑定失败是怎么处理的？
 	teamId:=c.Query("team_id")
 	dbResult:=dal.DeleteAccountInfo(teamId)
 	if !dbResult{
@@ -40,6 +41,7 @@ func GetQueryAccountRet(userName string) dal.AccountQueryRet{
 		keyStr:=key.String()
 		teamIdsWithPerms=append(teamIdsWithPerms,keyStr[:len(keyStr)-14])
 	}
+	//todo nil是随便传的么，nil这个东西要慎用，传空map不可以？
 	allAccountsInfo:=dal.QueryAccountInfo(nil)
 	allAccountInfosMap:=make(map[string]dal.AccountExistRel)
 	for _,accountsInfo:=range *allAccountsInfo{
