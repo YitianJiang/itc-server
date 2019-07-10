@@ -1,6 +1,7 @@
 package database
 
 import (
+	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/utils"
 	dbconf "code.byted.org/gopkg/dbutil/conf"
 	"code.byted.org/gopkg/dbutil/gormdb"
@@ -15,16 +16,15 @@ var (
 
 func InitDB(){
 
-
 	// online
 	//线上采用mysql gdpr
 	var err error
 	dboptional,err = dbconf.GetDBOptionalByConsulName("toutiao.mysql.itcserver_write")
 	if err != nil {
 		logs.Error("mysql gdpr failed,%v",err)
-		utils.LarkDingOneInner("fanjuan.xqp","mysql gdpr failed")
-		utils.LarkDingOneInner("kanghuaisong","mysql gdpr failed")
-		utils.LarkDingOneInner("yinzhihong","mysql gdpr failed")
+		for _, lark_people := range _const.LowLarkPeople {
+			utils.LarkDingOneInner(lark_people, "mysql gdpr failed！")
+		}
 	}
 
 	//test
