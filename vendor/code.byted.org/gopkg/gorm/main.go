@@ -147,6 +147,15 @@ func (s *DB) NewScope(value interface{}) *Scope {
 	return s.NewScopeWithKind(value, ScopeUnkown)
 }
 
+// QueryExpr returns the query as expr object
+func (s *DB) QueryExpr() *expr {
+	scope := s.NewScope(s.Value)
+	scope.InstanceSet("skip_bindvar", true)
+	scope.prepareQuerySQL()
+
+	return Expr(scope.SQL, scope.SQLVars...)
+}
+
 // CommonDB return the underlying `*sql.DB` or `*sql.Tx` instance, mainly intended to allow coexistence with legacy non-GORM code.
 func (s *DB) CommonDB() sqlCommon {
 	return s.db

@@ -217,7 +217,7 @@ func UploadFile(c *gin.Context) {
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
 		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
-		//callBackUrl := "http://10.224.14.220:6789/updateDetectInfos"
+		//callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -401,7 +401,7 @@ func UpdateDetectInfos(c *gin.Context) {
 
 	message += "  已完成二进制检测。\n"
 	if (*detect)[0].Status == 0 {
-		message += "检测项待确认，请及时对每条未确认检测信息进行确认！\n"
+		message += "本次检测存在静态检测项待确认，请及时对每条未确认检测信息进行确认！\n"
 	} else {
 		message += "本次检测未发现新增权限、敏感方法或敏感字符串，不需要进行确认!\n"
 	}
@@ -792,6 +792,11 @@ func QueryDetectTasks(c *gin.Context) {
 	data.Total = total
 	data.NowPage = uint(page)
 	data.Tasks = *items
+	if appId == "1319" {
+		for i:=0 ;i<len(*items);i++{
+			(*items)[i].AppName = "皮皮虾"
+		}
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
 		"errorCode": 0,
@@ -860,6 +865,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 		var res [0]dal.DetectContent
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "success",
+			"platform":platform,
 			"errorCode": 0,
 			"appId":     (*task)[0].AppId,
 			"data":      res,
@@ -884,6 +890,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 	selected := dal.QueryBinaryToolsByCondition(toolCondition)
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
+		"platform":platform,
 		"errorCode": 0,
 		"appId":     (*task)[0].AppId,
 		"data":      *selected,
@@ -1024,21 +1031,30 @@ func CICallBack(task *dal.DetectStruct) error {
 	data["job_id"] = job_id
 	data["statsu"] = "2"
 	data["task_id"] = fmt.Sprint(task.ID)
+	url := urlInfos[0]
+	return PostInfos(url,data)
+}
+
+/**
+	预审发送post信息
+ */
+func PostInfos(url string,data map[string]string) error {
+	taskId := data["task_id"]
 	bytesData, err1 := json.Marshal(data)
-	if err != nil {
-		logs.Error("任务ID：" + fmt.Sprint(task.ID) + ",CI回调信息转换失败" + fmt.Sprint(err1))
+	if err1 != nil {
+		logs.Error("任务ID：" + fmt.Sprint(taskId) + ",CI回调信息转换失败" + fmt.Sprint(err1))
 		for _, lark_people := range _const.LowLarkPeople {
-			utils.LarkDingOneInner(lark_people, "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+			utils.LarkDingOneInner(lark_people, "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(taskId))
 		}
 		return err1
 	}
 	reader := bytes.NewReader(bytesData)
-	url := urlInfos[0]
+
 	request, err2 := http.NewRequest("POST", url, reader)
 	if err2 != nil {
-		logs.Error("任务ID：" + fmt.Sprint(task.ID) + ",CI回调请求Create失败" + fmt.Sprint(err2))
+		logs.Error("任务ID：" + fmt.Sprint(taskId) + ",CI回调请求Create失败" + fmt.Sprint(err2))
 		for _, lark_people := range _const.LowLarkPeople {
-			utils.LarkDingOneInner(lark_people, "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+			utils.LarkDingOneInner(lark_people, "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(taskId))
 		}
 		return err2
 	}
@@ -1046,22 +1062,22 @@ func CICallBack(task *dal.DetectStruct) error {
 	client := http.Client{}
 	resp, err3 := client.Do(request)
 	if err3 != nil {
-		logs.Error("任务ID："+fmt.Sprint(task.ID)+",回调CI接口失败,%v", err3)
+		logs.Error("任务ID："+taskId+",回调CI接口失败,%v", err3)
 		//及时报警
 		//utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
 		for _, lark_people := range _const.LowLarkPeople {
-			utils.LarkDingOneInner(lark_people, "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+			utils.LarkDingOneInner(lark_people, "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(taskId))
 		}
 		return err3
 	}
-	logs.Info("任务ID：" + fmt.Sprint(task.ID) + "回调成功,回调信息：" + fmt.Sprint(data) + ",回调地址：" + url)
+	logs.Info("任务ID：" + fmt.Sprint(taskId) + "回调成功,回调信息：" + fmt.Sprint(data) + ",回调地址：" + url)
 	if resp != nil {
 		defer resp.Body.Close()
 		respBytes, _ := ioutil.ReadAll(resp.Body)
 		var data map[string]interface{}
 		data = make(map[string]interface{})
 		json.Unmarshal(respBytes, &data)
-		logs.Info("taskId :"+fmt.Sprint(task.ID)+",CI detect url's response: %+v", data)
+		logs.Info("taskId :"+taskId+",CI detect url's response: %+v", data)
 	}
 	return nil
 }

@@ -15,6 +15,8 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"math/big"
+	"net"
 )
 
 func cloneTLSConfig(c *tls.Config) *tls.Config {
@@ -46,4 +48,10 @@ func mapIsolationLevel(level driver.IsolationLevel) (string, error) {
 	default:
 		return "", errors.New("mysql: unsupported isolation level: " + string(level))
 	}
+}
+
+func InetAtoN(ipstr string) uint32 {
+	ret := big.NewInt(0)
+	ret.SetBytes(net.ParseIP(ipstr).To4())
+	return uint32(ret.Uint64())
 }
