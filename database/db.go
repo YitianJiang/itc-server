@@ -1,11 +1,11 @@
 package database
 
 import (
-	"code.byted.org/clientQA/itc-server/conf"
-	"code.byted.org/golf/ssconf"
+	"code.byted.org/clientQA/itc-server/utils"
 	dbconf "code.byted.org/gopkg/dbutil/conf"
 	"code.byted.org/gopkg/dbutil/gormdb"
 	"code.byted.org/gopkg/gorm"
+	"code.byted.org/gopkg/logs"
 	"fmt"
 )
 
@@ -14,11 +14,20 @@ var(
 )
 
 func InitDB(){
-	ssConf, _ := ssconf.LoadSsConfFile(conf.Configuration.MysqlConfigPath)
+
 	// online
-	dboptional = dbconf.GetDbConf(ssConf, "itcserver", dbconf.Write)
+	//线上采用mysql gdpr
+	var err error
+	dboptional,err = dbconf.GetDBOptionalByConsulName("toutiao.mysql.itcserver_write")
+	if err != nil {
+		logs.Error("mysql gdpr failed,%v",err)
+		utils.LarkDingOneInner("fanjuan.xqp","mysql gdpr failed")
+		utils.LarkDingOneInner("kanghuaisong","mysql gdpr failed")
+		utils.LarkDingOneInner("yinzhihong","mysql gdpr failed")
+	}
 
 	//test
+	//ssConf, _ := ssconf.LoadSsConfFile(conf.Configuration.MysqlConfigPath)
 	//dboptional = dbconf.GetDbConf(ssConf, "qa_ee", dbconf.Write)
 }
 

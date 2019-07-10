@@ -5,8 +5,9 @@ import (
 	"strconv"
 	"time"
 
-	"code.byted.org/gopkg/metrics"
 	"database/sql/driver"
+
+	"code.byted.org/gopkg/metrics"
 )
 
 var (
@@ -32,9 +33,14 @@ func doMetrics(sql string, cfg *Config, cost time.Duration, err error) {
 	tags := map[string]string{
 		"to":           to,
 		"method":       operation,
+		"mode":         Mode,
 		"from_cluster": serviceCluster,
 		"to_cluster":   "default",
-		"table":        getTableName(operation, sql),
+		"table":        "unknow",
+		"toHost":       cfg.Addr,
+	}
+	if tabel := getTableName(operation, sql); len(tabel) != 0 {
+		tags["table"] = tabel
 	}
 
 	var throughputMetrics, latencyMetrics string

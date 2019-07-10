@@ -45,7 +45,6 @@ func InitRouter(r *ginex.Engine) {
 		//获取当前任务的二进制工具检测内容
 		api.GET("/task/queryBinaryContent", detect.QueryTaskBinaryCheckContent)
 		//获取当前任务的apk二进制工具检测内容
-		//api.GET("/task/queryApkBinaryContent", detect.QueryTaskApkBinaryCheckContentWithIgnorance_2)
 		api.GET("/task/queryApkBinaryContent", detect.QueryTaskApkBinaryCheckContentWithIgnorance_3)
 		//新增二进制检测工具
 		api.POST("/tool/insert", detect.InsertBinaryTool)
@@ -58,10 +57,7 @@ func InitRouter(r *ginex.Engine) {
 		//确认二进制包检测信息
 		api.POST("/detect/confirmResult", detect.ConfirmBinaryResult)
 		//确认apk二进制包检测信息
-		//api.POST("/detect/confirmApkResult", detect.ConfirmApkBinaryResultv_4)
 		api.POST("/detect/confirmApkResult", detect.ConfirmApkBinaryResultv_5)
-		////确认apk二进制包权限检测信息------fj
-		//api.POST("/detect/confirmApk_2", detect.ConfirmApkBinaryResultv_4)
 		//根据platform获取配置的问题类型
 		api.GET("/config/queryProblemConfigs", detect.QueryProblemConfigs)
 		//增加配置项

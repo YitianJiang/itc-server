@@ -24,7 +24,7 @@ var (
 )
 
 func init() {
-	if env.PSM() != "" {
+	if (env.PSM() != "") {
 		OpenInterpolation(env.PSM())
 	}
 }

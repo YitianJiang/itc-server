@@ -31,7 +31,7 @@ type DBOptional struct {
 func GetDefaultDBOptional() DBOptional {
 	return DBOptional{
 		DriverName:   "mysql",
-		Timeout:      "500ms",
+		Timeout:      "100ms",
 		ReadTimeout:  "2.0s",
 		WriteTimeout: "5.0s",
 		DBHostname:   "localhost",
@@ -48,16 +48,30 @@ func GetDefaultDBOptional() DBOptional {
        GetDBOptionalByConsul("toutiao.mysql.****_write","p.s.m","********") 线下测试 其他环境跑 都不为空
 */
 func GetDBOptionalByConsul(mysqlConsul string, servicePsm string, authKey string) (DBOptional, error) {
-	if mysqlConsul == "" || !isConsulName(mysqlConsul) {
-		return DBOptional{}, fmt.Errorf("GetDBOptionalByConsul Unsupport mysqlConsul [%s],expect toutiao.mysql.***_write/read/offline", mysqlConsul)
-	}
-	if servicePsm != "" && !isConsulName(servicePsm) {
-		return DBOptional{}, fmt.Errorf("GetDBOptionalByConsul Unsupport servicePsm [%s],expect p.s.m", servicePsm)
-	}
 	opt := GetDefaultDBOptional()
 	opt.DBHostname = mysqlConsul
 	opt.User = servicePsm
 	opt.Password = authKey
+	opt.DBName = ""
+	opt.DBPort = ""
+	opt.DriverName = "mysql2"
+	return opt, nil
+}
+
+/**
+* 初始化通过数据库授权的服务 mysqlConsul 数据库consul信息 toutiao.mysql.****_write,这个接口测试上线需要把 TCE_PSM/TOUTIAO_MYSQL_*****WRITE_AUTHKEY 注入环境变量
+   GetDBOptionalByConsul("toutiao.mysql.****_write") TCE 环境
+*/
+
+func GetDBOptionalByConsulName(mysqlConsul string) (DBOptional, error) {
+	if mysqlConsul == "" || !isConsulName(mysqlConsul) {
+		return DBOptional{}, fmt.Errorf("GetDBOptionalByConsul Unsupport mysqlConsul [%s],expect toutiao.mysql.***_write/read/offline", mysqlConsul)
+	}
+
+	opt := GetDefaultDBOptional()
+	opt.DBHostname = mysqlConsul
+	opt.User = ""
+	opt.Password = ""
 	opt.DBName = ""
 	opt.DBPort = ""
 	opt.DriverName = "mysql2"
@@ -96,7 +110,7 @@ func (optional *DBOptional) GenerateConfig() string {
 func isConsulName(name string) bool {
 	// is a P.S.M
 	tmp := strings.Split(name, ".")
-	return len(tmp) == 3
+	return len(tmp) == 3 || len(tmp) == 5
 }
 
 var db = make(map[string]DBOptional)

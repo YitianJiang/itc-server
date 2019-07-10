@@ -789,6 +789,11 @@ func QueryDetectTasks(c *gin.Context) {
 	data.Total = total
 	data.NowPage = uint(page)
 	data.Tasks = *items
+	if appId == "1319" {
+		for i:=0 ;i<len(*items);i++{
+			(*items)[i].AppName = "皮皮虾"
+		}
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
 		"errorCode": 0,

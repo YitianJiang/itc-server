@@ -920,39 +920,39 @@ func otherPermAna(perms *[]string,mapInfo map[string]int,index int) (dal.OtherDe
 
 }
 
-/**
-	组件平台回调
- */
-
-func CallBackOfAARs (taskId int) {
-	var methodNum,strNum,permTNum,perDNum int
-	data := map[string]interface{}{
-		"task_id":taskId,
-	}
-	details := dal.QueryOtherDetectDetail(data)
-	if details == nil || len(*details) == 0 {
-
-	}
-	for _,detail := range (*details) {
-		if detail.DetailType == 0 {
-			var methods = make([]dal.SMethod,0)
-			json.Unmarshal([]byte(detail.DetectInfos),&methods)
-			methodNum += len(methods)
-		}else if detail.DetailType == 1{
-			var strs = make ([]dal.SStr,0)
-			json.Unmarshal([]byte(detail.DetectInfos),&strs)
-			strNum += len(strs)
-		}else if detail.DetailType == 2 {
-			var perms = make([]dal.Permissions,0)
-			json.Unmarshal([]byte(detail.DetectInfos),&perms)
-			for _,perm := range perms {
-				if perm.Priority == 3 {
-					perDNum += 1
-				}
-			}
-			permTNum += len(perms)
-		}
-	}
-
-}
+///**
+//	组件平台回调---等待组件平台需求
+// */
+//
+//func CallBackOfAARs (taskId int) {
+//	var methodNum,strNum,permTNum,perDNum int
+//	data := map[string]interface{}{
+//		"task_id":taskId,
+//	}
+//	details := dal.QueryOtherDetectDetail(data)
+//	if details == nil || len(*details) == 0 {
+//
+//	}
+//	for _,detail := range (*details) {
+//		if detail.DetailType == 0 {
+//			var methods = make([]dal.SMethod,0)
+//			json.Unmarshal([]byte(detail.DetectInfos),&methods)
+//			methodNum += len(methods)
+//		}else if detail.DetailType == 1{
+//			var strs = make ([]dal.SStr,0)
+//			json.Unmarshal([]byte(detail.DetectInfos),&strs)
+//			strNum += len(strs)
+//		}else if detail.DetailType == 2 {
+//			var perms = make([]dal.Permissions,0)
+//			json.Unmarshal([]byte(detail.DetectInfos),&perms)
+//			for _,perm := range perms {
+//				if perm.Priority == 3 {
+//					perDNum += 1
+//				}
+//			}
+//			permTNum += len(perms)
+//		}
+//	}
+//
+//}
 

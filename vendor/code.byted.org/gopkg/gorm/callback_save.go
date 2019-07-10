@@ -1,8 +1,8 @@
 package gorm
 
 import (
-	"fmt"
 	"reflect"
+	"fmt"
 )
 
 func beginTransactionCallback(scope *Scope) {

@@ -16,6 +16,9 @@ var (
 
 	ErrForbiddenByDegradation     = errors.New("forbidden by degradation")
 	ErrForbiddenByDegradationCode = 104 // see http://golang.byted.org/book/kite/_book/errorcode/errorcode.html
+
+	ErrNotAllowedByServiceCB     = errors.New("not allowed by service cb")
+	ErrNotAllowedByServiceCBCode = 101
 )
 
 var (
@@ -199,20 +202,35 @@ func getMysqlErrCode(err error) int {
 		return ErrForbiddenByDegradationCode
 	}
 
+	if err == ErrNotAllowedByServiceCB {
+		return ErrNotAllowedByServiceCBCode
+	}
+
 	if mysqlErr, ok := err.(*MySQLError); ok {
 		return int(mysqlErr.Number)
 	}
 	return ErrUnAssignedErrorCode
 }
 
-func toutiaoSQLBefore(ctx context.Context, sql string, cfg *Config) error {
-	if doDegradation(sql, cfg) {
+func toutiaoSQLBefore(ctx context.Context, sql string, cfg *Config, mc *mysqlConn) error {
+	r := getMysqlRPCMeta(ctx, cfg, sql)
+
+	if doDegradationNew(r) {
 		return ErrForbiddenByDegradation
 	}
+
+	if cbOpen(r) {
+		return ErrNotAllowedByServiceCB
+	}
+
+	opentracingMW.ProcessRequest(ctx, &r, cfg, sql, mc)
 	return nil
 }
 
-func toutiaoSQLAfter(ctx context.Context, sql string, cfg *Config, cost time.Duration, err error) {
+func toutiaoSQLAfter(ctx context.Context, sql string, cfg *Config, cost time.Duration, err error, mc *mysqlConn) {
+	r := getMysqlRPCMeta(ctx, cfg, sql)
+	opentracingMW.ProcessResponse(ctx, sql, cfg, err, mc, &r, cost)
 	doMetrics(sql, cfg, cost, err)
 	doSlowSQLLog(ctx, sql, cfg, cost, err)
+	doCBMetrics(ctx, r, err)
 }
