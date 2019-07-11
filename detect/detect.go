@@ -240,7 +240,10 @@ func UploadFile(c *gin.Context) {
 		contentType := bodyWriter.FormDataContentType()
 		err = bodyWriter.Close()
 		logs.Info("url: ", url)
-		tr := http.Transport{DisableKeepAlives: true}
+		tr := http.Transport{
+			DisableKeepAlives:   true,
+			MaxIdleConnsPerHost: 0,
+		}
 		toolHttp := &http.Client{
 			Timeout:   300 * time.Second,
 			Transport: &tr,
@@ -309,13 +312,17 @@ func UpdateDetectInfos(c *gin.Context) {
 	}
 	toolIdInt, _ := strconv.Atoi(toolId)
 
+	//消息通知条数--检测项+自查项
+	var unConfirms int
+	var unSelfCheck = 0
 	if (*detect)[0].Platform == 0 {
 		if toolIdInt == 6 { //安卓兼容新版本
 			//安卓检测信息分析，并将检测信息写库-----fj
 			mapInfo := make(map[string]int)
 			mapInfo["taskId"], _ = strconv.Atoi(taskId)
 			mapInfo["toolId"], _ = strconv.Atoi(toolId)
-			errApk := ApkJsonAnalysis_2(jsonContent, mapInfo)
+			var errApk error
+			errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, mapInfo)
 			if errApk != nil {
 				return
 			}
@@ -793,7 +800,7 @@ func QueryDetectTasks(c *gin.Context) {
 	data.NowPage = uint(page)
 	data.Tasks = *items
 	if appId == "1319" {
-		for i:=0 ;i<len(*items);i++{
+		for i := 0; i < len(*items); i++ {
 			(*items)[i].AppName = "皮皮虾"
 		}
 	}
@@ -865,7 +872,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 		var res [0]dal.DetectContent
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "success",
-			"platform":platform,
+			"platform":  platform,
 			"errorCode": 0,
 			"appId":     (*task)[0].AppId,
 			"data":      res,
@@ -890,7 +897,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 	selected := dal.QueryBinaryToolsByCondition(toolCondition)
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
-		"platform":platform,
+		"platform":  platform,
 		"errorCode": 0,
 		"appId":     (*task)[0].AppId,
 		"data":      *selected,
@@ -1032,13 +1039,13 @@ func CICallBack(task *dal.DetectStruct) error {
 	data["statsu"] = "2"
 	data["task_id"] = fmt.Sprint(task.ID)
 	url := urlInfos[0]
-	return PostInfos(url,data)
+	return PostInfos(url, data)
 }
 
 /**
-	预审发送post信息
- */
-func PostInfos(url string,data map[string]string) error {
+预审发送post信息
+*/
+func PostInfos(url string, data map[string]string) error {
 	taskId := data["task_id"]
 	bytesData, err1 := json.Marshal(data)
 	if err1 != nil {
