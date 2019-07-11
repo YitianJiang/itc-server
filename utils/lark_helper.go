@@ -110,14 +110,14 @@ func GetUserChannelID(token string, userid string) string {
 }
 
 //建群发收参数结构体
-type CreateGroupParams struct{
+type CreateGroupRequest struct{
 	Name            string             `json:"name"`
 	Description     string             `json:"description"`
 	OpenIds         []string           `json:"open_ids"`
 	EmployeeIds     []string           `json:"employee_ids"`
 }
 
-type CreateGroupRet struct {
+type CreateGroupResponse struct {
 	Code                int         `json:"code"`
 	Msg                 string      `json:"msg"`
 	OpenChatId          string      `json:"open_chat_id"`
@@ -126,11 +126,11 @@ type CreateGroupRet struct {
 }
 
 //获取用户ID发收参数结构体
-type GetUserIdsParams struct {
+type GetUserIdsRequest struct {
 	Email       string      `json:"email"`
 }
 
-type GetUserIdsRet struct {
+type GetUserIdsResponse struct {
 	Code            int     `json:"code"`
 	OpenId          string  `json:"open_id"`
 	EmployeeId      string  `json:"employee_id"`
@@ -189,7 +189,7 @@ const (
 	APP_SECRET="7aprfnGu8mU3KOTqV4RiSjhIde2gsvAM"
 )
 
-func PushGetLarkParams(url string,token string,paramsIn interface{} ,paramsOut interface{} ) {
+func CallLarkAPI(url string,token string,paramsIn interface{} ,paramsOut interface{} ) {
 	bodyByte, _ := json.Marshal(paramsIn)
 	rbodyByte := bytes.NewReader(bodyByte)
 	client := &http.Client{}

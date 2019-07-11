@@ -10,32 +10,37 @@ import (
 	"time"
 )
 
-type RecvCert struct {
+type CertInfo struct {
+	gorm.Model
+	AccountName         string      `gorm:"column:account_name"            json:"account_name,omitempty"`
+	TeamId              string      `gorm:"column:team_id"                 json:"team_id,omitempty"`
+	CertName            string      `gorm:"column:cert_name"               json:"cert_name"`
+	CertId              string      `gorm:"column:cert_id"                 json:"cert_id"`
+	CertExpireDate      string      `gorm:"column:cert_expire_date"        json:"cert_expire_date"`
+	CertType            string      `gorm:"column:cert_type"               json:"cert_type"`
+	CertDownloadUrl     string      `gorm:"column:cert_download_url"       json:"cert_download_url"`
+	PrivKeyUrl          string      `gorm:"column:priv_key_url"            json:"priv_key_url"`
+	CsrFileUrl          string      `gorm:"column:csr_file_url"            json:"csr_file_url,omitempty"`
+	EffectAppList       []string    `gorm:"-"                              json:"effect_app_list,omitempty"`
+}
+
+//创建证书响应
+type CreCertResponse struct {
 	Data                OutLayer        `json:"data"`
 	Links               Links           `json:"links"`
 }
-type CertsInfo struct {
-	Data                []OutLayer      `json:"data"`
-	Links               Links           `json:"links"`
-	Meta                Meta            `json:"meta"`
-}
-type Meta struct {
-	Paging Paging   `json:"paging"`
-}
-type Paging struct {
-	Limit int       `json:"limit"`
-	Total int       `json:"total"`
-}
 
-type Links struct {
-	Self string     `json:"self"`
-}
 type OutLayer struct{
 	Type                string              `json:"type"`
 	Id                  string              `json:"id"`
 	Attributes          Attributes          `json:"attributes"`
 	Links               Links               `json:"links"`
 }
+
+type Links struct {
+	Self string     `json:"self"`
+}
+
 type Attributes struct{
 	SerialNumber        string      `json:"serialNumber"`
 	CertificateContent  string      `json:"certificateContent"`
@@ -46,55 +51,45 @@ type Attributes struct{
 	ExpirationDate      string      `json:"expirationDate"`
 	CertificateType     string      `json:"certificateType"`
 }
-type CertInfo struct {
-	gorm.Model
-	AccountName         string `gorm:"column:account_name"            json:"account_name"`
-	TeamId              string `gorm:"column:team_id"                 json:"team_id"`
-	CertName            string `gorm:"column:cert_name"               json:"cert_name"`
-	CertId              string `gorm:"column:cert_id"                 json:"cert_id"`
-	CertExpireDate      string `gorm:"column:cert_expire_date"        json:"cert_expire_date"`
-	CertType            string `gorm:"column:cert_type"               json:"cert_type"`
-	CertDownloadUrl     string `gorm:"column:cert_download_url"       json:"cert_download_url"`
-	PrivKeyUrl          string `gorm:"column:priv_key_url"            json:"priv_key_url"`
-	CsrFileUrl          string `gorm:"column:csr_file_url"            json:"csr_file_url"`
-}
 
-//用来给前端返回证书相关信息
-type CertRelatedInfo struct {
-	CertName            string      `json:"cert_name"`
-	CertId              string      `json:"cert_id"`
-	CertExpireDate      string      `json:"cert_expire_date"`
-	CertType            string      `json:"cert_type"`
-	CertDownloadUrl     string      `json:"cert_download_url"`
-	PrivKeyUrl          string      `json:"priv_key_url"`
-	EffectAppList       []string    `json:"effect_app_list"`
-}
-
-type RecvParamsInsertCert struct {
+//新增证书请求
+type InsertCertRequest struct {
 	AccountName        string      `json:"account_name"`
 	TeamId             string      `json:"team_id"`
 	CertName           string      `json:"cert_name"`
 	CertType           string      `json:"cert_type"`
 }
 
-type CertCreate struct {
+//创建苹果证书请求
+type CreAppleCertReq struct {
 	Data Data       `json:"data"`
 }
 
 type Data struct {
 	Type        string          `json:"type"`
-	Attributes  Attributes2     `json:"attributes"`
+	Attributes  AttributesSend  `json:"attributes"`
 }
 //todo 这1，2都是和谁学的？！！！！
-type Attributes2 struct {
+type AttributesSend struct {
 	CsrContent          string      `json:"csrContent"`
 	CertificateType     string      `json:"certificateType"`
 }
-
-type ResourcePermissions struct {
-	Data map[string][]string   `json:"data"`
-	Errno int       `json:"errno"`
-	Message string  `json:"message"`
+//获取权限请求
+type GetPermsResponse struct {
+	Data map[string][]string    `json:"data"`
+	Errno   int                 `json:"errno"`
+	Message string              `json:"message"`
+}
+//删除证书请求
+type DelCertRequest struct {
+	CertId   string  `form:"cert_id"`
+	TeamId   string  `form:"team_id"`
+}
+//查询证书请求
+type QueryCertRequest struct {
+	TeamId         string      `form:"team_id"      json:"team_id"`
+	ExpireSoon     string      `form:"expire_soon"  json:"expire_soon"`
+	UserName       string      `form:"user_name"    json:"user_name"`
 }
 
 func (CertInfo) TableName() string{
@@ -125,37 +120,45 @@ func InsertCertInfo(CertInfo CertInfo) bool {
 	utils.RecordError("Insert into DB Failed: ", db.Error)
 	return true
 }
+
+type RecAppName struct {
+	AppName string
+}
 //todo 注释里面写清楚表名称！！！
-//先根据条件到表1中筛选证书，再根据筛选出来的证书id到表2中查询受影响的app
-func QueryCertInfo(condition map[string]interface{}) map[CertInfo][]string {
+//先根据条件到表tt_apple_conn_account中筛选证书，再根据筛选出来的证书id到表tt_apple_certificate中查询受影响的app
+func QueryCertInfo(condition map[string]interface{},expireSoon string) *[]CertInfo {
 	conn, err := database.GetConneection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return nil
 	}
 	defer conn.Close()
-	var CertInfos []CertInfo
-	db:=conn.LogMode(_const.DB_LOG_MODE).Table(CertInfo{}.TableName()).Where(condition).Find(&CertInfos)
+	var certInfos []CertInfo
+	db:=conn.LogMode(_const.DB_LOG_MODE).Table(CertInfo{}.TableName()).Where(condition).Find(&certInfos)
 	utils.RecordError("Query from DB Failed: ", db.Error)
 	//todo certRelatedInfosMap这个玩意到底是啥？在定义个新struct（用CertInfo类型做为新struct其中一列），再新增一列effectAppList不行？最后返回一个[]struct不行？有好好思考？
-	certRelatedInfosMap:=make(map[CertInfo][]string)
-	//todo 在这玩啥呢，appAccountCerts需要整个塞入取数据嘛，这个不是只取app_name的list作为effectAppList？？不知道你要干啥！！！
-	var appAccountCerts []AppAccountCert
-	for _,certInfo:=range CertInfos{
-		db=conn.LogMode(_const.DB_LOG_MODE).Table(AppAccountCert{}.TableName()).Where("cert_id=?",certInfo.CertId).Find(&appAccountCerts)
+	//todo 在这玩啥呢，appAccountCerts需要整个塞入取数据嘛，这个不是只取app_name的list作为effectAppList？？不知道你要干啥！！
+	var ret []CertInfo
+	for i:=0;i<len(certInfos);i++{
+		var recAppNames []RecAppName
+		db=conn.LogMode(_const.DB_LOG_MODE).Table(AppAccountCert{}.TableName()).Where("cert_id=?",certInfos[i].CertId).Select("app_name").Find(&recAppNames)
 		utils.RecordError("Update DB Failed: ", db.Error)
-		var effectAppList []string
-		for _,appAccountCert:=range appAccountCerts{
-			effectAppList=append(effectAppList, appAccountCert.AppName)
+		for _,recAppName:=range recAppNames{
+			certInfos[i].EffectAppList=append(certInfos[i].EffectAppList, recAppName.AppName)
 		}
-		certRelatedInfosMap[certInfo]=effectAppList
+		if expireSoon=="1"&&isExpired(certInfos[i])==true{
+			ret=append(ret, certInfos[i])
+		}
+		if expireSoon=="0"{
+			ret=append(ret, certInfos[i])
+		}
 	}
 	//todo 大的object的传递应该用啥？
-	return certRelatedInfosMap
+	return &ret
 }
 //todo 注释里面写清楚表名称！！！
-//先根据条件到表1中筛选要过期的证书，再根据筛选出来的证书id到表2中查询受影响的app
-func QueryExpiredCertInfos() map[CertInfo][]string {
+//先根据条件到表tt_apple_conn_account中筛选要过期的证书，再根据筛选出来的证书id到表tt_apple_certificate中查询受影响的app
+func QueryExpiredCertInfos() *[]CertInfo {
 	conn, err := database.GetConneection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
@@ -166,28 +169,24 @@ func QueryExpiredCertInfos() map[CertInfo][]string {
 	db:=conn.LogMode(_const.DB_LOG_MODE).Table(CertInfo{}.TableName()).Find(&certInfos)
 	utils.RecordError("Query from DB Failed: ", db.Error)
 	var expiredCertInfos []CertInfo
+	var recAppNames []RecAppName
 	for _,certInfo:=range certInfos{
 		if isExpired(certInfo)==true{
+			db=conn.LogMode(_const.DB_LOG_MODE).Table(AppAccountCert{}.TableName()).Select("app_name").Where("cert_id=?",certInfo.CertId).Scan(&recAppNames)
+			utils.RecordError("Update DB Failed: ", db.Error)
+			if len(recAppNames)==0{
+				continue
+			}
+			for _,recAppName:=range recAppNames{
+				certInfo.EffectAppList=append(certInfo.EffectAppList, recAppName.AppName)
+			}
 			expiredCertInfos=append(expiredCertInfos, certInfo)
 		}
 	}
 	//todo certRelatedInfosMap这个玩意到底是啥？在定义个新struct（用CertInfo类型做为新struct其中一列），再新增一列effectAppList不行？最后返回一个[]struct不行？有好好思考？
-	certRelatedInfosMap:=make(map[CertInfo][]string)
 	//todo 在这玩啥呢，appAccountCerts需要整个塞入取数据嘛，这个不是只取app_name的list作为effectAppList？？不知道你要干啥！！！
-	var appAccountCerts []AppAccountCert
-	for _,expiredCertInfo:=range expiredCertInfos{
-		db=conn.LogMode(_const.DB_LOG_MODE).Table(AppAccountCert{}.TableName()).Where("cert_id=?",expiredCertInfo.CertId).Find(&appAccountCerts)
-		utils.RecordError("Update DB Failed: ", db.Error)
-		var effectAppList []string
-		for _,appAccountCert:=range appAccountCerts{
-			effectAppList=append(effectAppList, appAccountCert.AppName)
-		}
-		if len(effectAppList)!=0{
-			certRelatedInfosMap[expiredCertInfo]=effectAppList
-		}
-	}
 	//todo 大的object的传递应该用啥？
-	return certRelatedInfosMap
+	return &expiredCertInfos
 }
 
 func CountDays(y int, m int, d int) int{
@@ -251,18 +250,6 @@ func QueryEffectAppList(condition map[string]interface{}) []string{
 	return appList
 }
 
-func QueryTeamId(condition map[string]interface{}) string{
-	conn, err := database.GetConneection()
-	if err != nil {
-		utils.RecordError("Get DB Connection Failed: ", err)
-		return ""
-	}
-	defer conn.Close()
-	var  certInfo CertInfo
-	db:=conn.LogMode(_const.DB_LOG_MODE).Table(CertInfo{}.TableName()).Where(condition).Find(&certInfo)
-	utils.RecordError("Query from DB Failed: ", db.Error)
-	return certInfo.TeamId
-}
 //根据app名称来查找用户名
 func QueryUserNameAccAppName(appList []string) []string{
 	conn, err := database.GetConneection()

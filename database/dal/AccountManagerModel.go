@@ -10,47 +10,36 @@ import (
 
 type AccountInfo struct {
 	gorm.Model
-	TeamId 			    string `gorm:"team_id"              form:"team_id"`
-	IssueId 			string `gorm:"issue_id"             form:"issue_id"`
-	KeyId 				string `gorm:"key_id"               form:"key_id"`
-	AccountName 		string `gorm:"account_name"         form:"account_name"`
-	AccountType 		string `gorm:"account_type"         form:"account_type"`
-	AccountP8fileName   string `gorm:"account_p8file_name"  form:"account_p8file_name"`
-	AccountP8file 		string `gorm:"account_p8file"`
-	UserName 			string `gorm:"user_name"            form:"user_name"`
+	TeamId 			    string      `gorm:"team_id"              form:"team_id"                 json:"team_id"`
+	IssueId 			string      `gorm:"issue_id"             form:"issue_id"                json:"issue_id,omitempty"`
+	KeyId 				string      `gorm:"key_id"               form:"key_id"                  json:"key_id,omitempty"`
+	AccountName 		string      `gorm:"account_name"         form:"account_name"            json:"account_name"`
+	AccountType 		string      `gorm:"account_type"         form:"account_type"            json:"account_type"`
+	AccountP8fileName   string      `gorm:"account_p8file_name"  form:"account_p8file_name"     json:"account_p8file_name,omitempty"`
+	AccountP8file 		string      `gorm:"account_p8file"                                      json:"account_p8file,omitempty"`
+	UserName 			string      `gorm:"user_name"            form:"user_name"               json:"user_name"`
+	PermissionAction   []string     `gorm:"-"                                                   json:"permission_action"`
+}
+type DelAccRequest struct {
+	TeamId string `json:"team_id"`
 }
 
-type RetValueWithP8 struct {
-	TeamId 			    string      `json:"team_id"`
-	AccountName 		string      `json:"account_name"`
-	AccountType 		string      `json:"account_type"`
-	UserName 			string      `json:"user_name"`
-	AccountP8fileName   string      `json:"account_p8file_name"`
-	AccountP8file 		string      `json:"account_p8file"`
-	PermissionAction    []string    `json:"permission_action"`
+//创建资源请求
+type CreResRequest struct {
+	ResourceName    string      `json:"resourceName"`
+	ResourceKey     string      `json:"resourceKey"`
+	CreatorKey      string      `json:"creatorKey"`
+	ResourceType    int         `json:"resourceType"`
 }
 
-type RetValueWithoutP8 struct {
-	TeamId 			    string      `json:"team_id"`
-	AccountName 		string      `json:"account_name"`
-	AccountType 		string      `json:"account_type"`
-	UserName 			string      `json:"user_name"`
-	PermissionAction    []string    `json:"permission_action"`
-}
-
-type AccountExistRel struct {
-	IsExisted   bool //标识是否带权限
-	AccountInfo AccountInfo
-	Permissions []string
-}
-
-type AccountQueryRet struct {
-	Data []interface{} `json:"data"`
+type CreResResponse struct {
+	Errno   int      `json:"errno"`
 }
 
 func (AccountInfo) TableName() string{
 	return  "tt_apple_conn_account"
 }
+
 func DeleteAccountInfo(teamId string) bool {
 	connection, err := database.GetConneection()
 	if err != nil {

@@ -134,7 +134,6 @@ func InitRouter(r *ginex.Engine) {
 		accountapi.GET("/accountInfoGet",developerconnmanager.QueryAccount)
 		accountapi.POST("/accountInfoWriter",developerconnmanager.InsertAccount)
 		accountapi.DELETE("/accountInfoDelete",developerconnmanager.DeleteByTeamId)
-		accountapi.GET("/getTokenString",developerconnmanager.GetTokenStringByTeamId)
 	}
 	certificateapi:=r.Group("/v1/appleConnManage/")
 	{

@@ -15,5 +15,5 @@ type AppAccountCert struct {
 }
 
 func (AppAccountCert) TableName()string{
-	return "app_account_cert"
+	return "tt_app_account_cert"
 }
