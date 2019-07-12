@@ -153,6 +153,7 @@ func LarkDingOneInnerWithUrl(member string, msg string, urlTitle string, larkUrl
 
 //yy add
 type LarkCardMessage struct {
+	ChatID  string      `json:"open_chat_id"`
 	Email   string      `json:"email"`
 	MsgType string      `json:"msg_type"`
 	Content LarkContent `json:"content"`
@@ -194,7 +195,7 @@ type FieldInner struct {
 }
 
 //初始化消息中的不变量
-func initLarkStruct(lark_people, lark_message, detect_num, self_item_num, url string) LarkCardMessage {
+func initLarkStruct(lark_people, lark_message, detect_num, self_item_num, url string, groupFlag bool) LarkCardMessage {
 	//分割线
 	var divid LarkText
 	divid.Tag = "text"
@@ -330,20 +331,33 @@ func initLarkStruct(lark_people, lark_message, detect_num, self_item_num, url st
 	//消息
 	var message LarkCardMessage
 	message.MsgType = "interactive"
-	message.Email = lark_people + "@bytedance.com"
+	if groupFlag {
+		message.ChatID = lark_people
+	} else {
+		message.Email = lark_people + "@bytedance.com"
+	}
 	message.Content = larkCC
 
 	return message
 }
 
-func LarkDetectResult(lark_people, lark_message, url string, detect_num, self_item_num int) bool {
+func LarkDetectResult(lark_people, lark_message, url string, detect_num, self_item_num int, groupFlag bool) bool {
 	detect := strconv.Itoa(detect_num)
 	self := strconv.Itoa(self_item_num)
-	larkStruct := initLarkStruct(lark_people, lark_message, detect, self, url)
+	larkStruct := initLarkStruct(lark_people, lark_message, detect, self, url, groupFlag)
 	larkBody, err := json.Marshal(larkStruct)
 	if err != nil {
-		fmt.Println("error", err)
+		logs.Error(err.Error())
 		return false
+	}
+	if groupFlag {
+		m := make(map[string]interface{})
+		json.Unmarshal(larkBody, &m)
+		delete(m, "email")
+		larkBody, err = json.Marshal(m)
+		if err != nil {
+			logs.Error(err.Error())
+		}
 	}
 	token := GetLarkToken()
 	res := PostJsonHttp3(larkBody, token)
