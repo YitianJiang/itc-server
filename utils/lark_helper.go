@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"code.byted.org/gopkg/logs"
@@ -335,15 +336,16 @@ func initLarkStruct(lark_people, lark_message, detect_num, self_item_num, url st
 	return message
 }
 
-func LarkDetectResult(lark_people, lark_message, detect_num, self_item_num, url string) bool {
-	larkStruct := initLarkStruct(lark_people, lark_message, detect_num, self_item_num, url)
+func LarkDetectResult(lark_people, lark_message, url string, detect_num, self_item_num int) bool {
+	detect := strconv.Itoa(detect_num)
+	self := strconv.Itoa(self_item_num)
+	larkStruct := initLarkStruct(lark_people, lark_message, detect, self, url)
 	larkBody, err := json.Marshal(larkStruct)
 	if err != nil {
 		fmt.Println("error", err)
 		return false
 	}
 	token := GetLarkToken()
-	fmt.Println(string(larkBody))
 	res := PostJsonHttp3(larkBody, token)
 	return res
 }
