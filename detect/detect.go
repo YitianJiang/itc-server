@@ -458,17 +458,21 @@ func UpdateDetectInfos(c *gin.Context) {
 	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
 	for _, creator := range larkList {
 		//new lark卡片通知形式
-		utils.LarkDetectResult(creator, message, larkUrl, unConfirms, unSelfCheck)
+		utils.LarkDetectResult(creator, message, larkUrl, unConfirms, unSelfCheck, false)
 	}
 	//发给群消息沿用旧的机器人，给群ID对应群发送消息
-	message += "地址链接：" + larkUrl
 	toGroupID := (*detect)[0].ToGroup
 	if toGroupID != "" {
 		group := strings.Replace(toGroupID, "，", ",", -1) //中文逗号切换成英文逗号
 		groupArr := strings.Split(group, ",")
 		for _, group_id := range groupArr {
 			to_lark_group := strings.Trim(group_id, " ")
-			utils.LarkGroup(message, to_lark_group)
+			//新样式
+			if utils.LarkDetectResult(to_lark_group, message, larkUrl, unConfirms, unSelfCheck, true) == false {
+				message += message + larkUrl
+				utils.LarkGroup(message, to_lark_group)
+			}
+
 		}
 	}
 
