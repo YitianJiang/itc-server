@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -150,6 +151,49 @@ func PostJsonHttp2(rbody []byte) bool {
 		return false
 	}
 	if int(m["errorCode"].(float64)) == 0 {
+		return true
+	} else {
+		return false
+	}
+}
+func GetLarkToken() string {
+	resp, err := http.PostForm("https://open.feishu.cn/open-apis/auth/v3/app_access_token/internal/",
+		url.Values{"app_id": {"cli_9d8a78c3eff61101"}, "app_secret": {"3kYDkS2M0obuzaEWrArGIc6NOJU6ZVeF"}})
+	if err != nil {
+		logs.Error("请求lark token出错！", err.Error())
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logs.Error("lark token读取返回出错！", err.Error())
+	}
+	m := make(map[string]interface{})
+	json.Unmarshal(body, &m)
+	return m["tenant_access_token"].(string)
+}
+
+//发送http post请求，其中rbody是一个json串
+func PostJsonHttp3(rbody []byte, token string) bool {
+	client := &http.Client{}
+	//提交请求
+	reqest, err := http.NewRequest("POST", _const.OFFICE_LARK_URL, bytes.NewBuffer(rbody))
+	//增加header选项
+	newToken := "Bearer " + token
+	reqest.Header.Add("Authorization", newToken)
+	if err != nil {
+		logs.Error("lark官方API rocket发送消息失败！", err.Error())
+		return false
+	}
+	//处理返回结果
+	response, _ := client.Do(reqest)
+	defer response.Body.Close()
+	body, _ := ioutil.ReadAll(response.Body)
+	m := make(map[string]interface{})
+	if err := json.Unmarshal(body, &m); err != nil {
+		logs.Error("读取返回body出错！", err.Error())
+		return false
+	}
+	if m["msg"].(string) == "ok" {
 		return true
 	} else {
 		return false

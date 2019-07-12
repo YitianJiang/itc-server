@@ -14,6 +14,7 @@ const (
 const ROCKETTOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJOYW1lIjoiZmFuanVhbi54cXAiLCJGdWxsX25hbWUiOiLmqIrlqJ8iLCJleHAiOjE1OTM0ODg2NDgsImlzcyI6InJvY2tldDMuMCIsIm5iZiI6MTU2MTk1MTY0OH0.sBcaZ2mxvxVYb05Z6yD4Wr1asalEYLErSD2qf06NTNY"
 const ROCKET_URL = "https://rocket-api.bytedance.net/api/v1/products/query"
 const LARK_URL = "https://rocket-api.bytedance.net/api/v1/robot/person/send"
+const OFFICE_LARK_URL = "https://open.feishu.cn/open-apis/message/v3/send/"
 
 var LowLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong"}
 var MiddleLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong", "gongrui", "zhangshuai.02"}

@@ -217,7 +217,7 @@ func UploadFile(c *gin.Context) {
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
 		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
-		//callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
+		//callBackUrl := "http://10.224.14.220:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -240,7 +240,10 @@ func UploadFile(c *gin.Context) {
 		contentType := bodyWriter.FormDataContentType()
 		err = bodyWriter.Close()
 		logs.Info("url: ", url)
-		tr := http.Transport{DisableKeepAlives: true}
+		tr := http.Transport{
+			DisableKeepAlives:   true,
+			MaxIdleConnsPerHost: 0,
+		}
 		toolHttp := &http.Client{
 			Timeout:   300 * time.Second,
 			Transport: &tr,
@@ -309,13 +312,17 @@ func UpdateDetectInfos(c *gin.Context) {
 	}
 	toolIdInt, _ := strconv.Atoi(toolId)
 
+	//消息通知条数--检测项+自查项
+	var unConfirms int
+	var unSelfCheck = 0
 	if (*detect)[0].Platform == 0 {
 		if toolIdInt == 6 { //安卓兼容新版本
 			//安卓检测信息分析，并将检测信息写库-----fj
 			mapInfo := make(map[string]int)
 			mapInfo["taskId"], _ = strconv.Atoi(taskId)
 			mapInfo["toolId"], _ = strconv.Atoi(toolId)
-			errApk := ApkJsonAnalysis_2(jsonContent, mapInfo)
+			var errApk error
+			errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, mapInfo)
 			if errApk != nil {
 				return
 			}
@@ -367,7 +374,8 @@ func UpdateDetectInfos(c *gin.Context) {
 		taskId, _ := strconv.Atoi(taskId)
 		toolId, _ := strconv.Atoi(toolId)
 		appId, _ := strconv.Atoi((*detect)[0].AppId)
-		res, warnFlag := iOSResultClassify(taskId, toolId, appId, jsonContent) //检测结果处理
+		res, warnFlag, detectNo := iOSResultClassify(taskId, toolId, appId, jsonContent) //检测结果处理
+		unConfirms = detectNo
 		if res == false {
 			logs.Error("iOS 新增new detect content失败！！！") //防止影响现有用户，出错后暂不return
 		}
@@ -381,8 +389,12 @@ func UpdateDetectInfos(c *gin.Context) {
 				utils.LarkDingOneInnerWithUrl(lark_people, tips, "点击跳转检测详情", larkUrl)
 			}
 		}
+		//获取未确认自查项数目
+		isRight, selfNum := GetIOSSelfNum(appId, taskId)
+		if isRight {
+			unSelfCheck = selfNum
+		}
 	}
-
 	//进行lark消息提醒
 	detect = dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id": taskId,
@@ -394,22 +406,12 @@ func UpdateDetectInfos(c *gin.Context) {
 	message = "你好，" + (*detect)[0].AppName + " " + (*detect)[0].AppVersion
 	platform := (*detect)[0].Platform
 	if platform == 0 {
-		message += " 安卓包"
+		message += " Android包"
 	} else {
 		message += " iOS包"
 	}
 
-	message += "  已完成二进制检测。\n"
-	if (*detect)[0].Status == 0 {
-		message += "本次检测存在静态检测项待确认，请及时对每条未确认检测信息进行确认！\n"
-	} else {
-		message += "本次检测未发现新增权限、敏感方法或敏感字符串，不需要进行确认!\n"
-	}
-	if platform == 1 {
-		message += "注意：请通知相关人员及时确认自查项！\n"
-	}
-
-	message += "\n预审平台检测结果确认人建议：\n\t检测项:值班RD BM逐条确认\n\t自查项:\n\t  Binary:值班QA BM逐条确认\n\t  Metadata:负责提审或产品线UG对接人逐条确认"
+	message += "  检测已经完成"
 
 	//message += " 完成二进制检测，请及时对每条未确认信息进行确认！\n"
 	//message += "如果安卓选择了GooglePlay检测和隐私检测，两个检测结果都需要进行确认，请不要遗漏！！！\n"
@@ -455,8 +457,8 @@ func UpdateDetectInfos(c *gin.Context) {
 	//此处测试时注释掉
 	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
 	for _, creator := range larkList {
-		//utils.LarkDingOneInner(creator, message)
-		utils.LarkDingOneInnerWithUrl(creator, message, "点击跳转检测详情", larkUrl)
+		//new lark卡片通知形式
+		utils.LarkDetectResult(creator, message, larkUrl, unConfirms, unSelfCheck)
 	}
 	//发给群消息沿用旧的机器人，给群ID对应群发送消息
 	message += "地址链接：" + larkUrl
@@ -793,7 +795,7 @@ func QueryDetectTasks(c *gin.Context) {
 	data.NowPage = uint(page)
 	data.Tasks = *items
 	if appId == "1319" {
-		for i:=0 ;i<len(*items);i++{
+		for i := 0; i < len(*items); i++ {
 			(*items)[i].AppName = "皮皮虾"
 		}
 	}
@@ -865,7 +867,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 		var res [0]dal.DetectContent
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "success",
-			"platform":platform,
+			"platform":  platform,
 			"errorCode": 0,
 			"appId":     (*task)[0].AppId,
 			"data":      res,
@@ -890,7 +892,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 	selected := dal.QueryBinaryToolsByCondition(toolCondition)
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
-		"platform":platform,
+		"platform":  platform,
 		"errorCode": 0,
 		"appId":     (*task)[0].AppId,
 		"data":      *selected,
@@ -1032,13 +1034,13 @@ func CICallBack(task *dal.DetectStruct) error {
 	data["statsu"] = "2"
 	data["task_id"] = fmt.Sprint(task.ID)
 	url := urlInfos[0]
-	return PostInfos(url,data)
+	return PostInfos(url, data)
 }
 
 /**
-	预审发送post信息
- */
-func PostInfos(url string,data map[string]string) error {
+预审发送post信息
+*/
+func PostInfos(url string, data map[string]string) error {
 	taskId := data["task_id"]
 	bytesData, err1 := json.Marshal(data)
 	if err1 != nil {
