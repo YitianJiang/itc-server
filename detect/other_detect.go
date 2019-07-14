@@ -66,7 +66,10 @@ func NewOtherDetect(c *gin.Context) {
 	appId := c.DefaultPostForm("appId", "")
 
 	checkItem := c.DefaultPostForm("checkItem", "")
-	logs.Info("checkItem: ", checkItem)
+	//增加回调地址
+	callBackAddr := c.DefaultPostForm("callBackAddr","")
+	var extraInfo dal.ExtraStruct
+	extraInfo.CallBackAddr = callBackAddr
 
 	//检验文件格式是否是aar
 	flag := strings.HasSuffix(filename, ".aar")
@@ -113,7 +116,11 @@ func NewOtherDetect(c *gin.Context) {
 	dbDetectModel.Platform, _ = strconv.Atoi(platform)
 	dbDetectModel.AppId = appId
 	dbDetectModel.FileType = "aar"
-	dbDetectModel.Status = 0 //增加状态字段，0---未完全确认；1---已完全确认
+	dbDetectModel.Status = 0//增加状态字段，0---未完全确认；1---已完全确认
+	if callBackAddr != "" {
+		byteExtraInfo,_ := json.Marshal(extraInfo)
+		dbDetectModel.ExtraInfo = string(byteExtraInfo)
+	}
 	dbDetectModelId := dal.InsertOtherDetect(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
 	if checkItem == "" {
@@ -234,7 +241,7 @@ func UpdateOtherDetectInfos(c *gin.Context) {
 			return
 		}
 	}
-	//ios新检测内容存储
+	//预留IOS检测
 	if (*detect)[0].Platform == 1 {
 
 	}
@@ -246,7 +253,6 @@ func UpdateOtherDetectInfos(c *gin.Context) {
 	})
 	creators := (*detect)[0].ToLarker
 	larkList := strings.Split(creators, ",")
-	//for _,creator := range larkList {
 	message = "你好，" + (*detect)[0].OtherName + " " + (*detect)[0].OtherVersion
 	message += " aar包完成二进制检测！\n"
 
@@ -915,3 +921,39 @@ func otherPermAna(perms *[]string, mapInfo map[string]int, index int) (dal.Other
 	return detailInfo, nil
 
 }
+
+///**
+//	组件平台回调---等待组件平台需求
+// */
+//
+//func CallBackOfAARs (taskId int) {
+//	var methodNum,strNum,permTNum,perDNum int
+//	data := map[string]interface{}{
+//		"task_id":taskId,
+//	}
+//	details := dal.QueryOtherDetectDetail(data)
+//	if details == nil || len(*details) == 0 {
+//
+//	}
+//	for _,detail := range (*details) {
+//		if detail.DetailType == 0 {
+//			var methods = make([]dal.SMethod,0)
+//			json.Unmarshal([]byte(detail.DetectInfos),&methods)
+//			methodNum += len(methods)
+//		}else if detail.DetailType == 1{
+//			var strs = make ([]dal.SStr,0)
+//			json.Unmarshal([]byte(detail.DetectInfos),&strs)
+//			strNum += len(strs)
+//		}else if detail.DetailType == 2 {
+//			var perms = make([]dal.Permissions,0)
+//			json.Unmarshal([]byte(detail.DetectInfos),&perms)
+//			for _,perm := range perms {
+//				if perm.Priority == 3 {
+//					perDNum += 1
+//				}
+//			}
+//			permTNum += len(perms)
+//		}
+//	}
+//
+//}

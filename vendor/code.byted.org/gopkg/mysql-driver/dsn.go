@@ -622,6 +622,11 @@ func parseDSNParams(cfg *Config, params string) (err error) {
 			if err != nil {
 				return
 			}
+		case "disableMesh":
+			//current dont do anything just pull out this key
+			if err != nil {
+				return
+			}
 		default:
 			// lazy init
 			if cfg.Params == nil {

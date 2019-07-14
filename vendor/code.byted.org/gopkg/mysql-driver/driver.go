@@ -63,6 +63,10 @@ func (d MySQLDriver) Open(dsn string) (driver.Conn, error) {
 		return nil, err
 	}
 
+	if consulName != "" {
+		cfg.toutiaoConsulName = consulName
+	}
+
 	if cfg.Net != "tcp" {
 		return d.openWithCfg(cfg)
 	}
@@ -72,18 +76,13 @@ func (d MySQLDriver) Open(dsn string) (driver.Conn, error) {
 
 	// connect to these hosts randomly
 	var errs error
-	defer func(begin time.Time) {
-		toutiaoSQLAfter(nil, "conn", cfg, time.Now().Sub(begin), errs)
-	}(time.Now())
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for len(addrs) > 0 {
 		index := r.Intn(len(addrs))
 		cfg.Addr = addrs[index]
 
-		if consulName != "" {
-			cfg.toutiaoConsulName = consulName
-		} else { // if no consulName, convert host to consulName
+		if cfg.toutiaoConsulName == "" { // if no consulName, convert host to consulName
 			cfg.toutiaoConsulName = addrToConsulName(addrs[index])
 		}
 
@@ -101,6 +100,14 @@ func (d MySQLDriver) Open(dsn string) (driver.Conn, error) {
 
 func (d MySQLDriver) openWithCfg(cfg *Config) (driver.Conn, error) {
 	var err error
+
+	defer func(begin time.Time) {
+		toutiaoSQLAfter(nil, "conn", cfg, time.Now().Sub(begin), err, nil)
+	}(time.Now())
+
+	if err = toutiaoSQLBefore(nil, "conn", cfg, nil); err != nil {
+		return nil, err
+	}
 
 	// New mysqlConn
 	mc := &mysqlConn{
@@ -128,6 +135,7 @@ func (d MySQLDriver) openWithCfg(cfg *Config) (driver.Conn, error) {
 		mc.cleanup()
 		return nil, err
 	}
+	mc.netConn = &ConnWithPkgSize{ Conn: mc.netConn }
 
 	// Enable TCP Keepalives on TCP connections
 	if tc, ok := mc.netConn.(*net.TCPConn); ok {

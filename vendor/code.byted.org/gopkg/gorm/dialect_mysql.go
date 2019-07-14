@@ -17,6 +17,12 @@ type mysql struct {
 func init() {
 	RegisterDialect("mysql", &mysql{})
 	RegisterDialect("mysql2", &mysql{})
+
+	/*
+	btrace code.byted.org/gopkg/mysql-driver
+	See: https://code.byted.org/sre/btrace-module-sql/ttmysql
+	*/
+	RegisterDialect("btrace/ttmysql", &mysql{})
 }
 
 func (mysql) GetName() string {

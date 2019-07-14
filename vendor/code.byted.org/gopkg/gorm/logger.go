@@ -22,7 +22,7 @@ type logger interface {
 }
 
 // Logger default logger
-type Logger struct {
+type Logger struct{
 	extLogger *logs.Logger
 }
 
