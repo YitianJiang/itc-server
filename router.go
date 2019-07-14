@@ -140,4 +140,8 @@ func InitRouter(r *ginex.Engine) {
 		accountapi.DELETE("/accountInfoDelete", developerconnmanager.DeleteByTeamId)
 
 	}
+	usermanagerapi := r.Group("/v1/userManage")
+	{
+		usermanagerapi.GET("/getCapabilitiesInfo",developerconnmanager.GetBundleIdCapabilitiesInfo)
+	}
 }

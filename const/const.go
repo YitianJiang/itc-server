@@ -19,3 +19,16 @@ const OFFICE_LARK_URL = "https://open.feishu.cn/open-apis/message/v3/send/"
 var LowLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong"}
 var MiddleLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong", "gongrui", "zhangshuai.02"}
 var HighLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong", "gongrui", "zhangshuai.02", "chenyujun"}
+
+
+//苹果apple connect后台管理常参
+const (
+	ICLOUD  = "ICLOUD"
+	DATA_PROTECTION = "DATA_PROTECTION"
+)
+var IOSSelectCapabilities = []string{ "ACCESS_WIFI_INFORMATION", "APP_GROUPS", "ASSOCIATED_DOMAINS", "AUTOFILL_CREDENTIAL_PROVIDER", "CLASSKIT", "GAME_CENTER",
+	"HEALTHKIT", "HOMEKIT", "HOT_SPOT", "IN_APP_PURCHASE", "INTER_APP_AUDIO", "MULTIPATH", "NETWORK_EXTENSIONS", "NFC_TAG_READING", "PERSONAL_VPN",
+	"PUSH_NOTIFICATIONS", "SIRIKIT", "WALLET", "WIRELESS_ACCESSORY_CONFIGURATION" }
+var MacSelectCapabilities = []string{ "ASSOCIATED_DOMAINS", "NETWORK_EXTENSIONS", "PERSONAL_VPN", "PUSH_NOTIFICATIONS" }
+var CloudSettings = []string{"XCODE_6","XCODE_5"}
+var ProtectionSettings = []string{"COMPLETE_PROTECTION","PROTECTED_UNLESS_OPEN","PROTECTED_UNTIL_FIRST_USER_AUTH"}
