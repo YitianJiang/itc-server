@@ -13,11 +13,11 @@ import (
 type CertInfo struct {
 	gorm.Model
 	AccountName         string      `gorm:"column:account_name"            json:"account_name,omitempty"`
-	TeamId              string      `gorm:"column:team_id"                 json:"team_id,omitempty"`
+	TeamId              string      `gorm:"column:team_id"                 json:"team_id,omitempty"             form:"team_id"    binding:"required"`
 	CertName            string      `gorm:"column:cert_name"               json:"cert_name"`
-	CertId              string      `gorm:"column:cert_id"                 json:"cert_id"`
+	CertId              string      `gorm:"column:cert_id"                 json:"cert_id"                       form:"cert_id"    binding:"required"`
 	CertExpireDate      string      `gorm:"column:cert_expire_date"        json:"cert_expire_date"`
-	CertType            string      `gorm:"column:cert_type"               json:"cert_type"`
+	CertType            string      `gorm:"column:cert_type"               json:"cert_type"                     form:"cert_type"  binding:"required"`
 	CertDownloadUrl     string      `gorm:"column:cert_download_url"       json:"cert_download_url"`
 	PrivKeyUrl          string      `gorm:"column:priv_key_url"            json:"priv_key_url"`
 	CsrFileUrl          string      `gorm:"column:csr_file_url"            json:"csr_file_url,omitempty"`
@@ -54,10 +54,10 @@ type Attributes struct{
 
 //新增证书请求
 type InsertCertRequest struct {
-	AccountName        string      `json:"account_name"`
-	TeamId             string      `json:"team_id"`
-	CertName           string      `json:"cert_name"`
-	CertType           string      `json:"cert_type"`
+	AccountName        string      `json:"account_name" binding:"required"`
+	TeamId             string      `json:"team_id"      binding:"required"`
+	CertName           string      `json:"cert_name"    binding:"required"`
+	CertType           string      `json:"cert_type"    binding:"required"`
 }
 
 //创建苹果证书请求
@@ -84,12 +84,18 @@ type GetPermsResponse struct {
 type DelCertRequest struct {
 	CertId   string  `form:"cert_id"`
 	TeamId   string  `form:"team_id"`
+	CertType string  `form:"cert_type"`
 }
 //查询证书请求
 type QueryCertRequest struct {
 	TeamId         string      `form:"team_id"      json:"team_id"`
 	ExpireSoon     string      `form:"expire_soon"  json:"expire_soon"`
 	UserName       string      `form:"user_name"    json:"user_name"`
+}
+
+//根据app名称来查找用户名
+type UserName struct {
+	UserName string
 }
 
 func (CertInfo) TableName() string{
@@ -126,7 +132,7 @@ type RecAppName struct {
 }
 //todo 注释里面写清楚表名称！！！
 //先根据条件到表tt_apple_conn_account中筛选证书，再根据筛选出来的证书id到表tt_apple_certificate中查询受影响的app
-func QueryCertInfo(condition map[string]interface{},expireSoon string) *[]CertInfo {
+func QueryCertInfo(condition map[string]interface{},expireSoon string,permsResult int) *[]CertInfo {
 	conn, err := database.GetConneection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
@@ -134,15 +140,27 @@ func QueryCertInfo(condition map[string]interface{},expireSoon string) *[]CertIn
 	}
 	defer conn.Close()
 	var certInfos []CertInfo
-	db:=conn.LogMode(_const.DB_LOG_MODE).Table(CertInfo{}.TableName()).Where(condition).Find(&certInfos)
-	utils.RecordError("Query from DB Failed: ", db.Error)
+	if permsResult==2 {
+		db := conn.LogMode(_const.DB_LOG_MODE).
+			Table(CertInfo{}.TableName()).
+			Where(condition).
+			Where("cert_type =? or cert_type=?", _const.CERT_TYPE_IOS_DEV, _const.CERT_TYPE_MAC_DEV).
+			Find(&certInfos)
+		utils.RecordError("Query from DB Failed: ", db.Error)
+	}
+	if permsResult==1{
+		db := conn.LogMode(_const.DB_LOG_MODE).
+			Table(CertInfo{}.TableName()).
+			Where(condition).
+			Find(&certInfos)
+		utils.RecordError("Query from DB Failed: ", db.Error)
+	}
 	//todo certRelatedInfosMap这个玩意到底是啥？在定义个新struct（用CertInfo类型做为新struct其中一列），再新增一列effectAppList不行？最后返回一个[]struct不行？有好好思考？
 	//todo 在这玩啥呢，appAccountCerts需要整个塞入取数据嘛，这个不是只取app_name的list作为effectAppList？？不知道你要干啥！！
 	var ret []CertInfo
 	for i:=0;i<len(certInfos);i++{
 		var recAppNames []RecAppName
-		db=conn.LogMode(_const.DB_LOG_MODE).Table(AppAccountCert{}.TableName()).Where("cert_id=?",certInfos[i].CertId).Select("app_name").Find(&recAppNames)
-		utils.RecordError("Update DB Failed: ", db.Error)
+		recAppNames=GetAppNamesByCertId(conn,certInfos[i].CertType,certInfos[i].CertId)
 		for _,recAppName:=range recAppNames{
 			certInfos[i].EffectAppList=append(certInfos[i].EffectAppList, recAppName.AppName)
 		}
@@ -156,6 +174,26 @@ func QueryCertInfo(condition map[string]interface{},expireSoon string) *[]CertIn
 	//todo 大的object的传递应该用啥？
 	return &ret
 }
+
+func GetAppNamesByCertId(conn *gorm.DB ,certType string,certId string)[]RecAppName {
+	var recAppNames []RecAppName
+	if certType==_const.CERT_TYPE_IOS_DEV||certType==_const.CERT_TYPE_MAC_DEV {
+		db := conn.LogMode(_const.DB_LOG_MODE).
+			Table(AppAccountCert{}.TableName()).
+			Where("dev_cert_id=?", certId).
+			Select("app_name").Find(&recAppNames)
+		utils.RecordError("Query from DB Failed: ", db.Error)
+	}
+	if certType==_const.CERT_TYPE_IOS_DIST||certType==_const.CERT_TYPE_MAC_DIST {
+		db := conn.LogMode(_const.DB_LOG_MODE).
+			Table(AppAccountCert{}.TableName()).
+			Where("dist_cert_id=?", certId).
+			Select("app_name").Find(&recAppNames)
+		utils.RecordError("Query from DB Failed: ", db.Error)
+	}
+	return recAppNames
+}
+
 //todo 注释里面写清楚表名称！！！
 //先根据条件到表tt_apple_conn_account中筛选要过期的证书，再根据筛选出来的证书id到表tt_apple_certificate中查询受影响的app
 func QueryExpiredCertInfos() *[]CertInfo {
@@ -172,8 +210,7 @@ func QueryExpiredCertInfos() *[]CertInfo {
 	var recAppNames []RecAppName
 	for _,certInfo:=range certInfos{
 		if isExpired(certInfo)==true{
-			db=conn.LogMode(_const.DB_LOG_MODE).Table(AppAccountCert{}.TableName()).Select("app_name").Where("cert_id=?",certInfo.CertId).Scan(&recAppNames)
-			utils.RecordError("Update DB Failed: ", db.Error)
+			recAppNames=GetAppNamesByCertId(conn,certInfo.CertType,certInfo.CertId)
 			if len(recAppNames)==0{
 				continue
 			}
@@ -233,25 +270,23 @@ func isExpired(certInfo CertInfo) bool{
 	return false
 }
 
-func QueryEffectAppList(condition map[string]interface{}) []string{
+func QueryEffectAppList(certId string,certType string) []string{
 	conn, err := database.GetConneection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return nil
 	}
 	defer conn.Close()
-	var  appAccountCerts []AppAccountCert
-	db:=conn.LogMode(_const.DB_LOG_MODE).Table(AppAccountCert{}.TableName()).Where(condition).Find(&appAccountCerts)
-	utils.RecordError("Query from DB Failed: ", db.Error)
+	var recAppNames []RecAppName
+	recAppNames=GetAppNamesByCertId(conn,certType,certId)
 	var appList []string
-	for _,appAccountCert:=range appAccountCerts{
-		appList=append(appList, appAccountCert.AppName)
+	for _,recAppName:=range recAppNames{
+		appList=append(appList, recAppName.AppName)
 	}
 	return appList
 }
 
-//根据app名称来查找用户名
-func QueryUserNameAccAppName(appList []string) []string{
+func QueryUserNameByAppName(appList []string) []string{
 	conn, err := database.GetConneection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
@@ -260,12 +295,25 @@ func QueryUserNameAccAppName(appList []string) []string{
 	defer conn.Close()
 	var userNames []string
 	for _,appName:=range appList {
-		var appAccountCert AppAccountCert
-		db := conn.LogMode(_const.DB_LOG_MODE).Table(AppAccountCert{}.TableName()).Where("app_name=?",appName).Find(&appAccountCert)
-		userNames= append(userNames, appAccountCert.UserName)
+		var userName UserName
+		db := conn.LogMode(_const.DB_LOG_MODE).Table(AppAccountCert{}.TableName()).Where("app_name=?",appName).Select("user_name").Find(&userName)
+		userNames= append(userNames, userName.UserName)
 		utils.RecordError("Query from DB Failed: ", db.Error)
 	}
 	return userNames
+}
+
+func QueryCertInfoByCertId(certId string)*CertInfo{
+	conn, err := database.GetConneection()
+	if err != nil {
+		utils.RecordError("Get DB Connection Failed: ", err)
+		return nil
+	}
+	defer conn.Close()
+	var certInfo CertInfo
+	db:=conn.LogMode(_const.DB_LOG_MODE).Table(CertInfo{}.TableName()).Where("cert_id=?",certId).Find(&certInfo)
+	utils.RecordError("Update DB Failed: ", db.Error)
+	return &certInfo
 }
 
 func UpdateCertInfo(condition map[string]interface{},priv_key_url string) bool {

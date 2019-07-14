@@ -136,22 +136,8 @@ type GetUserIdsResponse struct {
 	EmployeeId      string  `json:"employee_id"`
 }
 
-//拉用户进群发收参数结构体
-type PullUserParams struct {
-	OpenChatId      string      `json:"open_chat_id"`
-	OpenIds         []string    `json:"open_ids"`
-	EmployeeIds     []string    `json:"employee_ids"`
-}
-
-type PullUserRet struct {
-	Code                int         `json:"code"`
-	Msg                 string      `json:"msg"`
-	InvalidOpenIds      string      `json:"invalid_open_ids"`
-	InvalidEmployeeIds  string      `json:"invalid_employee_ids"`
-}
-
 //发消息结构体
-type SendMsgParams struct {
+type SendMsgRequest struct {
 	OpenChatId      string      `json:"open_chat_id"`
 	MsgType         string      `json:"msg_type"`
 	Content         Content     `json:"content"`
@@ -161,18 +147,18 @@ type Content struct {
 	Text    string      `json:"text"`
 }
 
-type SendMsgRet struct {
+type SendMsgResponse struct {
 	Code                int         `json:"code"`
 	Msg                 string      `json:"msg"`
 	OpenMessageId       string      `json:"open_message_id"`
 }
-
-type GetTokenParams struct {
+//获取token结构体
+type GetTokenRequest struct {
 	AppId                string      `json:"app_id"`
 	AppSecret            string      `json:"app_secret"`
 }
 
-type GetTokenRet struct {
+type GetTokenResponse struct {
 	Code                int         `json:"code"`
 	Msg                 string      `json:"msg"`
 	TenantAccessToken   string      `json:"tenant_access_token"`
@@ -182,7 +168,6 @@ type GetTokenRet struct {
 const (
 	CREATE_GROUP_URL="https://open.feishu.cn/open-apis/chat/v3/create/"
 	GET_USER_IDS_URL="https://open.feishu.cn/open-apis/user/v3/email2id"
-	PULL_USER_TO_GROUP_URL="https://open.feishu.cn/open-apis/chat/v3/chatter/add/"
 	SEND_MESSAGE_URL="https://open.feishu.cn/open-apis/message/v3/send/"
 	GET_Tenant_Access_Token_URL="https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal/"
 	APP_ID="cli_9a2d72678bb8d102"

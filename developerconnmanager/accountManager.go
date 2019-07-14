@@ -54,7 +54,7 @@ func QueryAccount(c *gin.Context)  {
 		return
 	}
 	var resPerms dal.GetPermsResponse
-	url:=_const.USER_ALL_RESOURCES_PERMS+"userName="+userName
+	url:=_const.USER_ALL_RESOURCES_PERMS_URL+"userName="+userName
 	QueryPerms(url,&resPerms)
 	//todo nil是随便传的么，nil这个东西要慎用，传空map不可以？
 	allAccountsInfo:=dal.QueryAccountInfo(map[string]interface{}{})

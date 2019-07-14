@@ -120,14 +120,8 @@ func QueryCertificatesInfo(c *gin.Context){
 	}
 	//todo certRelatedInfosMap这玩意是啥，把一个对象当key是怎么思考的？
 	var certsInfo *[]dal.CertInfo
-	if permsResult==1{
-		certsInfo=dal.QueryCertInfo(condition,expireSoon)
-	}
-	if permsResult==2{
-		//todo IOS_DEVELOPMENT这种类型不应该定义在const中么？
-		condition["cert_type"] = _const.CERT_TYPE_IOS_DEV
-		certsInfo=dal.QueryCertInfo(condition,expireSoon)
-	}
+	certsInfo=dal.QueryCertInfo(condition,expireSoon,permsResult)
+	//todo IOS_DEVELOPMENT这种类型不应该定义在const中么？
 	if certsInfo==nil{
 		logs.Error("从数据库中查询证书相关信息失败")
 		c.JSON(http.StatusOK, gin.H{
@@ -159,7 +153,6 @@ func FilterCert(certInfo *dal.CertInfo){
 		(*certInfo).AccountName=""
 		(*certInfo).CsrFileUrl=""
 		(*certInfo).EffectAppList=nil
-
 }
 
 func CutCsrContent(csrContent string) string{
@@ -183,6 +176,17 @@ func CutCsrContent(csrContent string) string{
 	return csrContent[start:end+1]
 }
 
+func GetSufix(certType string) string{
+	var pos int
+	for i:=len(certType)-1;i>=0;i--{
+		if certType[i]=='_'{
+			pos=i+1
+			break
+		}
+	}
+	return certType[pos:]
+}
+
 func CreateCertInApple(tokenString string,certType string) *dal.CreCertResponse{
 	var creAppleCertReq dal.CreAppleCertReq
 	//todo const是用来干啥的？
@@ -190,8 +194,15 @@ func CreateCertInApple(tokenString string,certType string) *dal.CreCertResponse{
 	//todo 测试的时候让你写死IOS_DEVELOPMENT，你现在都提交代码了，还在这hard code写死CertificateType？
 	creAppleCertReq.Data.Attributes.CertificateType= certType
 	//todo tos不能直接读数据？GetObject，需要通过GetCsrContent client.Do下载？
-	csrContent:=DownloadTos(_const.TOS_CSR_FILE_KEY)
-	creAppleCertReq.Data.Attributes.CsrContent=CutCsrContent(csrContent)
+	certTypeSufix:=GetSufix(certType)
+	var csrContent string
+	if certTypeSufix=="DEVELOPMENT"{
+		csrContent=DownloadTos(_const.TOS_CSR_FILE_FOR_DEV_KEY)
+	}
+	if certTypeSufix=="DISTRIBUTION"{
+		csrContent=DownloadTos(_const.TOS_CSR_FILE_FOR_DIST_KEY)
+	}
+	creAppleCertReq.Data.Attributes.CsrContent=CutCsrContent(string(csrContent))
 	bodyByte, _ := json.Marshal(creAppleCertReq)
 	rbodyByte := bytes.NewReader(bodyByte)
 	client := &http.Client{}
@@ -253,43 +264,57 @@ func DownloadTos(tosFilePath string) string{
 	return string(content)
 }
 
-func CheckParams(c *gin.Context,bodyAddr *dal.InsertCertRequest){
+func DeleteTosCert(tosFilePath string) bool{
+	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME_JYT, _const.TOS_BUCKET_TOKEN_JYT)
+	context, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	client, err := tos.NewTos(tosBucket)
+	err= client.DelObject(context,tosFilePath)
+	if err != nil {
+		fmt.Println("Error Delete Tos Object:", err)
+		return false
+	}
+	return true
+}
+
+func CheckParams(c *gin.Context,bodyAddr *dal.InsertCertRequest)bool{
 	err:=c.ShouldBindJSON(bodyAddr)
 	if err!=nil{
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode" : -1,
-			"errorInfo" : "获取前端传过来的参数格式不对！",
+			"errorInfo" : "请求参数绑定失败！",
 		})
-		return
+		return false
 	}
 	if bodyAddr.CertName=="" {
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode" : -2,
 			"errorInfo" : "cert_name为空！",
 		})
-		return
+		return false
 	}
 	if bodyAddr.CertType=="" {
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode" : -3,
 			"errorInfo" : "cert_type为空！",
 		})
-		return
+		return false
 	}
 	if bodyAddr.AccountName=="" {
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode" : -4,
 			"errorInfo" : "account_name为空！",
 		})
-		return
+		return false
 	}
 	if bodyAddr.TeamId=="" {
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode" : -5,
 			"errorInfo" : "team_id为空！",
 		})
-		return
+		return false
 	}
+	return true
 }
 
 func DealCertName(certName string) string{
@@ -309,7 +334,10 @@ func DealCertName(certName string) string{
 func InsertCertificate(c *gin.Context){
 	logs.Info("从数据库中查询证书信息")
 	var body dal.InsertCertRequest
-	CheckParams(c,&body)
+	checkResult:=CheckParams(c,&body)
+	if !checkResult{
+		return
+	}
 	//todo 解释下GetTokenStringByTeamId2方法为啥要带"2"
 	tokenString:=GetTokenStringByTeamId(body.TeamId)
 	creCertResponse:=CreateCertInApple(tokenString,body.CertType)
@@ -339,8 +367,15 @@ func InsertCertificate(c *gin.Context){
 	certInfo.CertType=creCertResponse.Data.Attributes.CertificateType
 	certInfo.CertName=creCertResponse.Data.Attributes.Name
 	certInfo.CertExpireDate=creCertResponse.Data.Attributes.ExpirationDate
-	certInfo.PrivKeyUrl=_const.TOS_PRIVATE_KEY_URL
-	certInfo.CsrFileUrl=_const.TOS_CSR_FILE_URL
+	certTypeSufix:=GetSufix(certInfo.CertType)
+	if certTypeSufix=="DEVELOPMENT"{
+		certInfo.PrivKeyUrl=_const.TOS_PRIVATE_KEY_URL_DEV
+		certInfo.CsrFileUrl=_const.TOS_CSR_FILE_URL_DEV
+	}
+	if certTypeSufix=="DISTRIBUTION"{
+		certInfo.PrivKeyUrl=_const.TOS_PRIVATE_KEY_URL_DIST
+		certInfo.CsrFileUrl=_const.TOS_CSR_FILE_URL_DIST
+	}
 	tosFilePath:="appleConnectFile/"+string(certInfo.TeamId)+"/"+certInfo.CertType+"/"+certInfo.CertId+"/"+DealCertName(certInfo.CertName)+".cer"
 	uploadResult:=UploadTos(encryptedCert,tosFilePath)
 	if !uploadResult{
@@ -409,6 +444,7 @@ func DeleteCertificate(c *gin.Context){
 	}
 	certId:=delCertRequest.CertId
 	teamId:=delCertRequest.TeamId
+	certType:=delCertRequest.CertType
 	if teamId=="" {
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode" : -2,
@@ -423,25 +459,43 @@ func DeleteCertificate(c *gin.Context){
 		})
 		return
 	}
+	if certType=="" {
+		c.JSON(http.StatusOK, gin.H{
+			"errorCode": -4,
+			"errorInfo": "cert_type为空！",
+		})
+		return
+	}
 	condition:=make(map[string]interface{})
 	condition["cert_id"]=delCertRequest.CertId
-	appList:=dal.QueryEffectAppList(condition)
+	appList:=dal.QueryEffectAppList(certId,certType)
 	if len(appList)==0{
 		tokenString:=GetTokenStringByTeamId(teamId)
 		delResult:=DeleteCertInApple(tokenString,certId)
 		if !delResult{
 			c.JSON(http.StatusOK,gin.H{
 				"message": "delete fail",
-				"errorCode": "-4",
+				"errorCode": "-5",
 				"errorInfo": "在苹果开发者网站删除对应证书失败",
 			})
 			return
 		}
-		dbRet:=dal.DeleteCertInfo(condition)
-		if !dbRet {
+		certInfo:=dal.QueryCertInfoByCertId(certId)
+		tosFilePath:="appleConnectFile/"+string(teamId)+"/"+certType+"/"+certId+"/"+DealCertName(certInfo.CertName)+".cer"
+		delResult=DeleteTosCert(tosFilePath)
+		if !delResult{
+			c.JSON(http.StatusOK,gin.H{
+				"message": "delete fail",
+				"errorCode": "-6",
+				"errorInfo": "删除tos上的证书失败",
+			})
+			return
+		}
+		delResult=dal.DeleteCertInfo(condition)
+		if !delResult {
 			c.JSON(http.StatusOK, gin.H{
 				"message":   "delete fail",
-				"errorCode": "-5",
+				"errorCode": "-7",
 				"errorInfo": "从数据库中删除cert_id对应的证书失败",
 			})
 			return
@@ -453,7 +507,7 @@ func DeleteCertificate(c *gin.Context){
 		})
 	}else {
 		//todo lark拉群拉对应app的负责人，通知换绑证书
-		userNames:=dal.QueryUserNameAccAppName(appList)
+		userNames:=dal.QueryUserNameByAppName(appList)
 		var appListStr string
 		for _,appName:=range appList{
 			appListStr+=appName
@@ -474,7 +528,7 @@ func CheckCertExpireDate(c *gin.Context){
 	})
 	//todo 需要新建lark群（不同证书建立不同群），拉app负责人进群，同步群里，证书即将过期。
 	for _,expiredCertInfo:=range *expiredCertInfos{
-		userNames:=dal.QueryUserNameAccAppName(expiredCertInfo.EffectAppList)
+		userNames:=dal.QueryUserNameByAppName(expiredCertInfo.EffectAppList)
 		LarkNotifyUsers("证书将要过期提醒",userNames,"证书"+expiredCertInfo.CertId+"即将过期")
 	}
 
@@ -514,32 +568,38 @@ func UploadPrivKey(c *gin.Context){
 		return
 	}
 	var certInfo dal.CertInfo
-	certInfo.TeamId = c.DefaultPostForm("team_id", "")
+	bindError:=c.ShouldBind(&certInfo)
+	if bindError!=nil{
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "请求参数绑定失败",
+			"errorCode": "-2",
+			"errorInfo": "请求参数绑定失败",
+		})
+		return
+	}
 	if certInfo.TeamId == "" {
 		logs.Error("缺少team_id参数")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少team_id参数",
-			"errorCode" : -2,
+			"errorCode" : -3,
 			"data" : "缺少team_id参数",
 		})
 		return
 	}
-	certInfo.CertType = c.DefaultPostForm("cert_type", "")
 	if certInfo.CertType == "" {
 		logs.Error("缺少cert_type参数")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少cert_type参数",
-			"errorCode" : -3,
+			"errorCode" : -4,
 			"data" : "缺少cert_type参数",
 		})
 		return
 	}
-	certInfo.CertId = c.DefaultPostForm("cert_id", "")
 	if certInfo.CertId == "" {
 		logs.Error("缺少cert_id参数")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少cert_id参数",
-			"errorCode" : -4,
+			"errorCode" : -5,
 			"data" : "缺少cert_id参数",
 		})
 		return
@@ -550,7 +610,7 @@ func UploadPrivKey(c *gin.Context){
 	if !uploadResult {
 		logs.Error("上传p12文件到tos失败！")
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -5,
+			"errorCode": -6,
 			"errorInfo": "上传p12文件到tos失败！",
 		})
 		return
@@ -562,40 +622,40 @@ func UploadPrivKey(c *gin.Context){
 	if !dbResult {
 		logs.Error("更新数据库中的证书信息失败！")
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -6,
+			"errorCode": -7,
 			"errorInfo": "更新数据库中的证书信息失败！",
 		})
 		return
 	}
 	//todo 这块有修改，新增证书接口没有effect_app_list，因为证书新生成的，还没有app用到证书，不需要返回effect_app_list
-	certInfos:=dal.QueryCertInfo(condition,"0")
-	if certInfos==nil{
+	certInfoNew:=dal.QueryCertInfoByCertId(certInfo.CertId)
+	if certInfoNew==nil{
 		logs.Error("从数据库中查询证书相关信息失败")
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode" : -7,
+			"errorCode" : -8,
 			"errorInfo" : "从数据库中查询证书相关信息失败！",
 		})
 		return
 	}
-	FilterCert(&(*certInfos)[0])
+	FilterCert(certInfoNew)
 	c.JSON(http.StatusOK,gin.H{
-		"data":certInfos,
+		"data":*certInfoNew,
 		"errorCode": "0",
 		"errorInfo": "",
 	})
 }
 
 func LarkNotifyUsers(groupName string,userNames []string,message string) bool{
-	var getTokenParams utils.GetTokenParams
-	getTokenParams.AppId=utils.APP_ID
-	getTokenParams.AppSecret=utils.APP_SECRET
-	var getTokenRet utils.GetTokenRet
-	utils.CallLarkAPI(utils.GET_Tenant_Access_Token_URL,"",getTokenParams,&getTokenRet)
-	if getTokenRet.Code!=0{
+	var getTokenRequest utils.GetTokenRequest
+	getTokenRequest.AppId=utils.APP_ID
+	getTokenRequest.AppSecret=utils.APP_SECRET
+	var getTokenResponse utils.GetTokenResponse
+	utils.CallLarkAPI(utils.GET_Tenant_Access_Token_URL,"",getTokenRequest,&getTokenResponse)
+	if getTokenResponse.Code!=0{
 		logs.Error("获取tenant_access_token失败")
 		return false
 	}
-	token:="Bearer "+getTokenRet.TenantAccessToken
+	token:="Bearer "+getTokenResponse.TenantAccessToken
 
 	var getUserIdsRequest utils.GetUserIdsRequest
 	var getUserIdsResponse utils.GetUserIdsResponse
@@ -625,13 +685,13 @@ func LarkNotifyUsers(groupName string,userNames []string,message string) bool{
 		return false
 	}
 
-	var sendMsgParams utils.SendMsgParams
-	var sendMsgRet utils.SendMsgRet
-	sendMsgParams.OpenChatId=openChatId
-	sendMsgParams.Content.Text=message
-	sendMsgParams.MsgType="text"
-	utils.CallLarkAPI(utils.SEND_MESSAGE_URL,token,sendMsgParams,&sendMsgRet)
-	if sendMsgRet.Code!=0{
+	var sendMsgRequest utils.SendMsgRequest
+	var sendMsgResponse utils.SendMsgResponse
+	sendMsgRequest.OpenChatId=openChatId
+	sendMsgRequest.Content.Text=message
+	sendMsgRequest.MsgType="text"
+	utils.CallLarkAPI(utils.SEND_MESSAGE_URL,token,sendMsgRequest,&sendMsgResponse)
+	if sendMsgResponse.Code!=0{
 		logs.Error("往群里面发送消息失败")
 		return false
 	}

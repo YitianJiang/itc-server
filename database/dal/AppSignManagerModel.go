@@ -11,7 +11,8 @@ type AppAccountCert struct {
 	TeamId                  string `gorm:"column:team_id"                   json:"team_id"`
 	AccountVerifyStatus     string `gorm:"column:account_verify_status"     json:"account_verify_status"`
 	AccountVerifyUser       string `gorm:"column:account_verify_user"       json:"account_verify_user"`
-	CertId                  string `gorm:"column:cert_id"                   json:"cert_id"`
+	DevCertId               string `gorm:"column:dev_cert_id"               json:"dev_cert_id"`
+	DistCertId              string `gorm:"column:dist_cert_id"              json:"dist_cert_id"`
 }
 
 func (AppAccountCert) TableName()string{

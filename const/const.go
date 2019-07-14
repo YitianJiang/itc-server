@@ -19,21 +19,26 @@ const(
 	APPLE_CREATE_CERT_URL="https://api.appstoreconnect.apple.com/v1/certificates"
 	APPLE_RECEIVED_DATA_TYPE="certificates"
 	CERT_TYPE_IOS_DEV="IOS_DEVELOPMENT"
+	CERT_TYPE_IOS_DIST="IOS_DISTRIBUTION"
+	CERT_TYPE_MAC_DEV="MAC_APP_DEVELOPMENT"
+	CERT_TYPE_MAC_DIST="MAC_APP_DISTRIBUTION"
 )
 
 const (
+	TOS_BUCKET_URL="http://tosv.byted.org/obj/staticanalysisresult/"
 	TOS_BUCKET_NAME_JYT = "staticanalysisresult"
 	TOS_BUCKET_TOKEN_JYT = "C5V4TROQGXMCTPXLIJFT"
-	TOS_BUCKET_URL="http://tosv.byted.org/obj/staticanalysisresult/"
-	TOS_CSR_FILE_KEY="appleConnectFile/fullFileAccept/CertificateSigningRequest.certSigningRequest"
-	TOS_PRIVATE_KEY_URL="http://tosv.byted.org/obj/staticanalysisresult/appleConnectFile/fullFileAccept/bytedancett_ies_priv.p12"
-	TOS_CSR_FILE_URL="http://tosv.byted.org/obj/staticanalysisresult/appleConnectFile/fullFileAccept/CertificateSigningRequest.certSigningRequest"
-
+	TOS_PRIVATE_KEY_URL_DEV="http://tosv.byted.org/obj/staticanalysisresult/appleConnectFile/fullFileDevAccept/bytedancett_ies_dev.p12"
+	TOS_PRIVATE_KEY_URL_DIST="http://tosv.byted.org/obj/staticanalysisresult/appleConnectFile/fullFileAccept/bytedancett_ies_priv.p12"
+	TOS_CSR_FILE_FOR_DEV_KEY="appleConnectFile/fullFileDevAccept/CertificateSigningRequest.certSigningRequest"
+	TOS_CSR_FILE_FOR_DIST_KEY="appleConnectFile/fullFileAccept/CertificateSigningRequest.certSigningRequest"
+	TOS_CSR_FILE_URL_DEV="http://tosv.byted.org/obj/staticanalysisresult/appleConnectFile/fullFileDevAccept/CertificateSigningRequest.certSigningRequest"
+	TOS_CSR_FILE_URL_DIST="http://tosv.byted.org/obj/staticanalysisresult/appleConnectFile/fullFileAccept/CertificateSigningRequest.certSigningRequest"
 )
 
 const (
 	Certain_Resource_All_PERMS_URL="http://pmc.bytedance.net/v1/config/permission/query/use/resource?"
-	USER_ALL_RESOURCES_PERMS="http://pmc.bytedance.net/v1/config/permission/query/user/all?"
+	USER_ALL_RESOURCES_PERMS_URL="http://pmc.bytedance.net/v1/config/permission/query/user/all?"
 	Create_RESOURCE_URL="http://pmc.bytedance.net/v1/config/resource/create"
 )
 
