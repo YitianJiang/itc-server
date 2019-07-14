@@ -143,5 +143,6 @@ func InitRouter(r *ginex.Engine) {
 	usermanagerapi := r.Group("/v1/userManage")
 	{
 		usermanagerapi.GET("/getCapabilitiesInfo",developerconnmanager.GetBundleIdCapabilitiesInfo)
+		usermanagerapi.POST("/assertBunldCapabilities",developerconnmanager.AssertBunldIDInfo)
 	}
 }
