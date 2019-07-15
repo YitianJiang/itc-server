@@ -16,7 +16,6 @@ import (
 
 func DeleteByTeamId(c *gin.Context)  {
 	logs.Info("根据team_id参数将数据从数据库中删除")
-	//todo 为什么不用ShouldBindQuery？看看梦琪的ClusterManager代码怎么处理的，绑定失败是怎么处理的？
 	var delAccRequest dal.DelAccRequest
 	bindQueryError:=c.ShouldBindQuery(&delAccRequest)
 	if bindQueryError!=nil{
@@ -62,7 +61,6 @@ func QueryAccount(c *gin.Context)  {
 		})
 		return
 	}
-	//todo nil是随便传的么，nil这个东西要慎用，传空map不可以？
 	var accountsInfo *[]dal.AccountInfo
 	accountsInfo=dal.QueryAccInfoWithAuth(&resPerms)
 	if accountsInfo==nil{
@@ -186,6 +184,7 @@ func InsertAccount(c *gin.Context)  {
 	}
 	var creResRequest dal.CreResRequest
 	creResRequest.CreatorKey=accountInfo.UserName
+	//todo 大小写？而且资源是不是已经存在有没有判断？
 	creResRequest.ResourceKey=accountInfo.TeamId+"_space_account"
 	creResRequest.ResourceName=accountInfo.TeamId+"_space_account"
 	creResRequest.ResourceType=0

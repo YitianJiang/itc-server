@@ -69,7 +69,7 @@ type Data struct {
 	Type        string          `json:"type"`
 	Attributes  AttributesSend  `json:"attributes"`
 }
-//todo 这1，2都是和谁学的？！！！！
+
 type AttributesSend struct {
 	CsrContent          string      `json:"csrContent"`
 	CertificateType     string      `json:"certificateType"`
@@ -130,7 +130,7 @@ func InsertCertInfo(CertInfo CertInfo) bool {
 type RecAppName struct {
 	AppName string
 }
-//todo 注释里面写清楚表名称！！！
+
 //先根据条件到表tt_apple_conn_account中筛选证书，再根据筛选出来的证书id到表tt_apple_certificate中查询受影响的app
 func QueryCertInfo(condition map[string]interface{},expireSoon string,permsResult int) *[]CertInfo {
 	conn, err := database.GetConneection()
@@ -155,8 +155,6 @@ func QueryCertInfo(condition map[string]interface{},expireSoon string,permsResul
 			Find(&certInfos)
 		utils.RecordError("Query from DB Failed: ", db.Error)
 	}
-	//todo certRelatedInfosMap这个玩意到底是啥？在定义个新struct（用CertInfo类型做为新struct其中一列），再新增一列effectAppList不行？最后返回一个[]struct不行？有好好思考？
-	//todo 在这玩啥呢，appAccountCerts需要整个塞入取数据嘛，这个不是只取app_name的list作为effectAppList？？不知道你要干啥！！
 	var ret []CertInfo
 	for i:=0;i<len(certInfos);i++{
 		var recAppNames []RecAppName
@@ -171,7 +169,6 @@ func QueryCertInfo(condition map[string]interface{},expireSoon string,permsResul
 			ret=append(ret, certInfos[i])
 		}
 	}
-	//todo 大的object的传递应该用啥？
 	return &ret
 }
 
@@ -194,7 +191,6 @@ func GetAppNamesByCertId(conn *gorm.DB ,certType string,certId string)[]RecAppNa
 	return recAppNames
 }
 
-//todo 注释里面写清楚表名称！！！
 //先根据条件到表tt_apple_conn_account中筛选要过期的证书，再根据筛选出来的证书id到表tt_apple_certificate中查询受影响的app
 func QueryExpiredCertInfos() *[]CertInfo {
 	conn, err := database.GetConneection()
@@ -220,9 +216,6 @@ func QueryExpiredCertInfos() *[]CertInfo {
 			expiredCertInfos=append(expiredCertInfos, certInfo)
 		}
 	}
-	//todo certRelatedInfosMap这个玩意到底是啥？在定义个新struct（用CertInfo类型做为新struct其中一列），再新增一列effectAppList不行？最后返回一个[]struct不行？有好好思考？
-	//todo 在这玩啥呢，appAccountCerts需要整个塞入取数据嘛，这个不是只取app_name的list作为effectAppList？？不知道你要干啥！！！
-	//todo 大的object的传递应该用啥？
 	return &expiredCertInfos
 }
 

@@ -78,9 +78,6 @@ func QueryResPerms(userName string,resourceKey string) int{
 
 func QueryCertificatesInfo(c *gin.Context){
 	logs.Info("从数据库中查询证书信息")
-	//todo accountName不需要传了，也不需要处理了
-	//todo 为什么这些数据不用ShouldBindQuery？看看梦琪的ClusterManager代码怎么处理的，且绑定失败是怎么处理的？
-	//todo expireSoon传上来非"0"即"1"，1代表你要去数据库过滤近一个月过期的证书，"0"代表不处理
 	var queryCertRequest dal.QueryCertRequest
 	bindQueryError:=c.ShouldBindQuery(&queryCertRequest)
 	if bindQueryError!=nil{
@@ -91,6 +88,7 @@ func QueryCertificatesInfo(c *gin.Context){
 		})
 		return
 	}
+	//todo queryCertRequest这个数据绑定好了，就是让你取值用的，你又定义teamId、userName、expireSoon目的是啥？
 	teamId:=queryCertRequest.TeamId
 	userName:=queryCertRequest.UserName
 	expireSoon:=queryCertRequest.ExpireSoon
@@ -115,7 +113,6 @@ func QueryCertificatesInfo(c *gin.Context){
 	permsResult:=QueryResPerms(userName,resourceKey)
 	if permsResult==-1{
 		c.JSON(http.StatusOK, gin.H{
-			//todo data怎么又变字符串了呢？空值要不就不返回，要么就返回对应约定的格式！！！
 			"errorCode": "-4",
 			"errorInfo": "查询权限失败",
 		})
@@ -123,16 +120,13 @@ func QueryCertificatesInfo(c *gin.Context){
 	}
 	if permsResult==3{
 		c.JSON(http.StatusOK, gin.H{
-			//todo data怎么又变字符串了呢？空值要不就不返回，要么就返回对应约定的格式！！！
 			"errorCode": "无权限查看",
 			"errorInfo": "无权限查看",
 		})
 		return
 	}
-	//todo certRelatedInfosMap这玩意是啥，把一个对象当key是怎么思考的？
 	var certsInfo *[]dal.CertInfo
 	certsInfo=dal.QueryCertInfo(condition,expireSoon,permsResult)
-	//todo IOS_DEVELOPMENT这种类型不应该定义在const中么？
 	if certsInfo==nil{
 		logs.Error("从数据库中查询证书相关信息失败")
 		c.JSON(http.StatusOK, gin.H{
@@ -141,8 +135,7 @@ func QueryCertificatesInfo(c *gin.Context){
 		})
 		return
 	}
-	//Todo 表3建完后补上effect_app_list
-	//todo GetCertRelatedInfos这一步还需要？
+	//todo FilterCerts别这么搞，这代表又进行一次循环，不合理
 	FilterCerts(certsInfo)
 	c.JSON(http.StatusOK, gin.H{
 		"data":      certsInfo,
@@ -200,11 +193,9 @@ func GetSufix(certType string) string{
 
 func CreateCertInApple(tokenString string,certType string) *dal.CreCertResponse{
 	var creAppleCertReq dal.CreAppleCertReq
-	//todo const是用来干啥的？
 	creAppleCertReq.Data.Type=_const.APPLE_RECEIVED_DATA_TYPE
-	//todo 测试的时候让你写死IOS_DEVELOPMENT，你现在都提交代码了，还在这hard code写死CertificateType？
 	creAppleCertReq.Data.Attributes.CertificateType= certType
-	//todo tos不能直接读数据？GetObject，需要通过GetCsrContent client.Do下载？
+	//todo GetSufix是不是太笨了，了解下strings.Split方法
 	certTypeSufix:=GetSufix(certType)
 	var csrContent string
 	if certTypeSufix=="DEVELOPMENT"{
@@ -241,14 +232,10 @@ func CreateCertInApple(tokenString string,certType string) *dal.CreCertResponse{
 		}
 		json.Unmarshal(body, &certInfo)
 	}
-	//todo 用object做返回值？数据要很大怎么办？
 	return  &certInfo
 }
 
-//todo 看看我的Test64DecodeToString（bundleIdManager.go文件中第12行）方法，证书这个东西也不需要这么多处理啊？
-
 func UploadTos(certContent []byte,tosFilePath string) bool {
-	//todo staticanalysisresult C5V4TROQGXMCTPXLIJFT hard code?要const干啥用
 	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME_JYT, _const.TOS_BUCKET_TOKEN_JYT)
 	context, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
@@ -349,7 +336,6 @@ func InsertCertificate(c *gin.Context){
 	if !checkResult{
 		return
 	}
-	//todo 解释下GetTokenStringByTeamId2方法为啥要带"2"
 	tokenString:=GetTokenStringByTeamId(body.TeamId)
 	creCertResponse:=CreateCertInApple(tokenString,body.CertType)
 	certContent:=creCertResponse.Data.Attributes.CertificateContent
@@ -373,11 +359,11 @@ func InsertCertificate(c *gin.Context){
 	var certInfo dal.CertInfo
 	certInfo.TeamId=body.TeamId
 	certInfo.AccountName=body.AccountName
-	//todo 怎么一会传地址，一会传对象obj？
 	certInfo.CertId=creCertResponse.Data.Id
 	certInfo.CertType=creCertResponse.Data.Attributes.CertificateType
 	certInfo.CertName=creCertResponse.Data.Attributes.Name
 	certInfo.CertExpireDate=creCertResponse.Data.Attributes.ExpirationDate
+	//todo GetSufix是不是太笨了，了解下strings.Split方法，而且为啥GetSufix需要调用两次？CreateCertInApple里面也调用了一次，你是咋设计的
 	certTypeSufix:=GetSufix(certInfo.CertType)
 	if certTypeSufix=="DEVELOPMENT"{
 		certInfo.PrivKeyUrl=_const.TOS_PRIVATE_KEY_URL_DEV
@@ -407,7 +393,6 @@ func InsertCertificate(c *gin.Context){
 		})
 		return
 	}
-	//todo 这块有修改，新增证书接口没有effect_app_list，因为证书新生成的，还没有app用到证书，不需要返回effect_app_list
 	FilterCert(&certInfo)
 	c.JSON(http.StatusOK,gin.H{
 		"data":certInfo,
@@ -441,8 +426,7 @@ func DeleteCertInApple(tokenString string,certId string)bool{
 
 func DeleteCertificate(c *gin.Context){
 	logs.Info("根据cert_id删除证书")
-	//todo 为什么这些数据不用ShouldBindQuery？看看梦琪的ClusterManager代码怎么处理的，且绑定失败是怎么处理的？
-	//todo 这里再让前端传一个team_id，就不用去数据库查找了team_id了
+	//todo DelCertRequest bind时不需要有相应的"require"？
 	var delCertRequest dal.DelCertRequest
 	bindQueryError:=c.ShouldBindQuery(&delCertRequest)
 	if bindQueryError!=nil{
@@ -453,9 +437,11 @@ func DeleteCertificate(c *gin.Context){
 		})
 		return
 	}
+	//todo queryCertRequest这个数据绑定好了，就是让你取值用的，你又定义teamId、certId、certType目的是啥？
 	certId:=delCertRequest.CertId
 	teamId:=delCertRequest.TeamId
 	certType:=delCertRequest.CertType
+	//todo 做判空单独抽出一个函数，别放在这个主流程函数下，你自己看看占了多少行
 	if teamId=="" {
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode" : -2,
@@ -531,6 +517,7 @@ func DeleteCertificate(c *gin.Context){
 func CheckCertExpireDate(c *gin.Context){
 	logs.Info("检查过期证书")
 	expiredCertInfos:=dal.QueryExpiredCertInfos()
+	//todo FilterCerts别这么搞，这代表又进行一次循环，不合理
 	FilterCerts(expiredCertInfos)
 	c.JSON(http.StatusOK,gin.H{
 		"data":expiredCertInfos,
@@ -580,6 +567,7 @@ func UploadPrivKey(c *gin.Context){
 	}
 	var certInfo dal.CertInfo
 	bindError:=c.ShouldBind(&certInfo)
+	//todo 做判空单独抽出一个函数，别放在这个主流程函数下，你自己看看占了多少行
 	if bindError!=nil{
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "请求参数绑定失败",
@@ -616,7 +604,6 @@ func UploadPrivKey(c *gin.Context){
 		return
 	}
 	tosFilePath:="appleConnectFile/"+string(certInfo.TeamId)+"/"+certInfo.CertType+"/"+certInfo.CertId+"/"+p12filename
-	//todo ？？？print？
 	uploadResult:=UploadTos(p12FileCont,tosFilePath)
 	if !uploadResult {
 		logs.Error("上传p12文件到tos失败！")
@@ -638,7 +625,6 @@ func UploadPrivKey(c *gin.Context){
 		})
 		return
 	}
-	//todo 这块有修改，新增证书接口没有effect_app_list，因为证书新生成的，还没有app用到证书，不需要返回effect_app_list
 	certInfoNew:=dal.QueryCertInfoByCertId(certInfo.CertId)
 	if certInfoNew==nil{
 		logs.Error("从数据库中查询证书相关信息失败")
