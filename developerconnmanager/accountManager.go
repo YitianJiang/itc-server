@@ -132,7 +132,7 @@ func UpdateAccount(c *gin.Context)  {
 }
 
 
-func CreateResource(creResRequest dal.CreResRequest) bool{
+func CreateResource(creResRequest dal.CreateResourceRequest) bool{
 	bodyByte, _ := json.Marshal(creResRequest)
 	rbodyByte := bytes.NewReader(bodyByte)
 	client := &http.Client{}
