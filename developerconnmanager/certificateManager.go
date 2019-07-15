@@ -89,17 +89,14 @@ func QueryCertificatesInfo(c *gin.Context){
 		return
 	}
 	//todo queryCertRequest这个数据绑定好了，就是让你取值用的，你又定义teamId、userName、expireSoon目的是啥？
-	teamId:=queryCertRequest.TeamId
-	userName:=queryCertRequest.UserName
-	expireSoon:=queryCertRequest.ExpireSoon
-	if teamId=="" {
+	if queryCertRequest.TeamId=="" {
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode" : -2,
 			"errorInfo" : "team_id为空！",
 		})
 		return
 	}
-	if userName=="" {
+	if queryCertRequest.UserName=="" {
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode" : -3,
 			"errorInfo" : "user_name为空！",
@@ -107,10 +104,10 @@ func QueryCertificatesInfo(c *gin.Context){
 		return
 	}
 	condition:=make(map[string]interface{})
-	condition["team_id"]=teamId
-	teamId=strings.ToLower(teamId)        //权限平台上的权限名称都是小写
-	resourceKey:=teamId+"_space_account"
-	permsResult:=QueryResPerms(userName,resourceKey)
+	condition["team_id"]=queryCertRequest.TeamId
+	teamIdLower:=strings.ToLower(queryCertRequest.TeamId)        //权限平台上的权限名称都是小写
+	resourceKey:=teamIdLower+"_space_account"
+	permsResult:=QueryResPerms(queryCertRequest.UserName,resourceKey)
 	if permsResult==-1{
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": "-4",
@@ -126,7 +123,7 @@ func QueryCertificatesInfo(c *gin.Context){
 		return
 	}
 	var certsInfo *[]dal.CertInfo
-	certsInfo=dal.QueryCertInfo(condition,expireSoon,permsResult)
+	certsInfo=dal.QueryCertInfo(condition,queryCertRequest.ExpireSoon,permsResult)
 	if certsInfo==nil{
 		logs.Error("从数据库中查询证书相关信息失败")
 		c.JSON(http.StatusOK, gin.H{
@@ -136,27 +133,11 @@ func QueryCertificatesInfo(c *gin.Context){
 		return
 	}
 	//todo FilterCerts别这么搞，这代表又进行一次循环，不合理
-	FilterCerts(certsInfo)
 	c.JSON(http.StatusOK, gin.H{
 		"data":      certsInfo,
 		"errorCode": "0",
 		"errorInfo": "",
 	})
-}
-
-func FilterCerts(certsInfo *[]dal.CertInfo){
-	for i:=0;i<len(*certsInfo);i++{
-		(*certsInfo)[i].TeamId=""
-		(*certsInfo)[i].AccountName=""
-		(*certsInfo)[i].CsrFileUrl=""
-	}
-}
-
-func FilterCert(certInfo *dal.CertInfo){
-		(*certInfo).TeamId=""
-		(*certInfo).AccountName=""
-		(*certInfo).CsrFileUrl=""
-		(*certInfo).EffectAppList=nil
 }
 
 func CutCsrContent(csrContent string) string{
@@ -191,12 +172,11 @@ func GetSufix(certType string) string{
 	return certType[pos:]
 }
 
-func CreateCertInApple(tokenString string,certType string) *dal.CreCertResponse{
+func CreateCertInApple(tokenString string,certType string,certTypeSufix string) *dal.CreCertResponse{
 	var creAppleCertReq dal.CreAppleCertReq
 	creAppleCertReq.Data.Type=_const.APPLE_RECEIVED_DATA_TYPE
 	creAppleCertReq.Data.Attributes.CertificateType= certType
 	//todo GetSufix是不是太笨了，了解下strings.Split方法
-	certTypeSufix:=GetSufix(certType)
 	var csrContent string
 	if certTypeSufix=="DEVELOPMENT"{
 		csrContent=DownloadTos(_const.TOS_CSR_FILE_FOR_DEV_KEY)
@@ -337,7 +317,9 @@ func InsertCertificate(c *gin.Context){
 		return
 	}
 	tokenString:=GetTokenStringByTeamId(body.TeamId)
-	creCertResponse:=CreateCertInApple(tokenString,body.CertType)
+	strs:=strings.Split(body.CertType,"_")
+	certTypeSufix:=strs[len(strs)-1]
+	creCertResponse:=CreateCertInApple(tokenString,body.CertType,certTypeSufix)
 	certContent:=creCertResponse.Data.Attributes.CertificateContent
 	if certContent==""{
 		logs.Error("从苹果获取证书失败")
@@ -364,7 +346,6 @@ func InsertCertificate(c *gin.Context){
 	certInfo.CertName=creCertResponse.Data.Attributes.Name
 	certInfo.CertExpireDate=creCertResponse.Data.Attributes.ExpirationDate
 	//todo GetSufix是不是太笨了，了解下strings.Split方法，而且为啥GetSufix需要调用两次？CreateCertInApple里面也调用了一次，你是咋设计的
-	certTypeSufix:=GetSufix(certInfo.CertType)
 	if certTypeSufix=="DEVELOPMENT"{
 		certInfo.PrivKeyUrl=_const.TOS_PRIVATE_KEY_URL_DEV
 		certInfo.CsrFileUrl=_const.TOS_CSR_FILE_URL_DEV
@@ -401,6 +382,12 @@ func InsertCertificate(c *gin.Context){
 	})
 }
 
+func FilterCert(certInfo *dal.CertInfo){
+	certInfo.TeamId=""
+	certInfo.AccountName=""
+	certInfo.CsrFileUrl=""
+}
+
 func DeleteCertInApple(tokenString string,certId string)bool{
 	client := &http.Client{}
 	request, err := http.NewRequest("DELETE", _const.APPLE_CERT_DELETE_ADDR+certId,nil)
@@ -423,6 +410,30 @@ func DeleteCertInApple(tokenString string,certId string)bool{
 	return false
 }
 
+func CheckDelCertRequest(c *gin.Context,delCertRequest *dal.DelCertRequest) bool{
+	if delCertRequest.TeamId=="" {
+		c.JSON(http.StatusOK, gin.H{
+			"errorCode" : -2,
+			"errorInfo" : "team_id为空！",
+		})
+		return false
+	}
+	if delCertRequest.CertId=="" {
+		c.JSON(http.StatusOK, gin.H{
+			"errorCode": -3,
+			"errorInfo": "cert_id为空！",
+		})
+		return false
+	}
+	if delCertRequest.CertType=="" {
+		c.JSON(http.StatusOK, gin.H{
+			"errorCode": -4,
+			"errorInfo": "cert_type为空！",
+		})
+		return false
+	}
+	return true
+}
 
 func DeleteCertificate(c *gin.Context){
 	logs.Info("根据cert_id删除证书")
@@ -438,37 +449,17 @@ func DeleteCertificate(c *gin.Context){
 		return
 	}
 	//todo queryCertRequest这个数据绑定好了，就是让你取值用的，你又定义teamId、certId、certType目的是啥？
-	certId:=delCertRequest.CertId
-	teamId:=delCertRequest.TeamId
-	certType:=delCertRequest.CertType
 	//todo 做判空单独抽出一个函数，别放在这个主流程函数下，你自己看看占了多少行
-	if teamId=="" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode" : -2,
-			"errorInfo" : "team_id为空！",
-		})
-		return
-	}
-	if certId=="" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -3,
-			"errorInfo": "cert_id为空！",
-		})
-		return
-	}
-	if certType=="" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -4,
-			"errorInfo": "cert_type为空！",
-		})
+	checkResult:=CheckDelCertRequest(c,&delCertRequest)
+	if !checkResult{
 		return
 	}
 	condition:=make(map[string]interface{})
 	condition["cert_id"]=delCertRequest.CertId
-	appList:=dal.QueryEffectAppList(certId,certType)
+	appList:=dal.QueryEffectAppList(delCertRequest.CertId,delCertRequest.CertType)
 	if len(appList)==0{
-		tokenString:=GetTokenStringByTeamId(teamId)
-		delResult:=DeleteCertInApple(tokenString,certId)
+		tokenString:=GetTokenStringByTeamId(delCertRequest.TeamId)
+		delResult:=DeleteCertInApple(tokenString,delCertRequest.CertId)
 		if !delResult{
 			c.JSON(http.StatusOK,gin.H{
 				"message": "delete fail",
@@ -477,8 +468,8 @@ func DeleteCertificate(c *gin.Context){
 			})
 			return
 		}
-		certInfo:=dal.QueryCertInfoByCertId(certId)
-		tosFilePath:="appleConnectFile/"+string(teamId)+"/"+certType+"/"+certId+"/"+DealCertName(certInfo.CertName)+".cer"
+		certInfo:=dal.QueryCertInfoByCertId(delCertRequest.CertId)
+		tosFilePath:="appleConnectFile/"+string(delCertRequest.TeamId)+"/"+delCertRequest.CertType+"/"+delCertRequest.CertId+"/"+DealCertName(certInfo.CertName)+".cer"
 		delResult=DeleteTosCert(tosFilePath)
 		if !delResult{
 			c.JSON(http.StatusOK,gin.H{
@@ -509,8 +500,8 @@ func DeleteCertificate(c *gin.Context){
 		for _,appName:=range appList{
 			appListStr+=appName
 		}
-		message:="证书"+certId+"将要被删除,"+"与该证书关联的app:"+appListStr+" 需要换绑新的证书"
-		LarkNotifyUsers("证书"+certId+"已被删除",userNames,message)
+		message:="证书"+delCertRequest.CertId+"将要被删除,"+"与该证书关联的app:"+appListStr+" 需要换绑新的证书"
+		LarkNotifyUsers("证书"+delCertRequest.CertId+"将要被删除",userNames,message)
 	}
 }
 
@@ -518,7 +509,6 @@ func CheckCertExpireDate(c *gin.Context){
 	logs.Info("检查过期证书")
 	expiredCertInfos:=dal.QueryExpiredCertInfos()
 	//todo FilterCerts别这么搞，这代表又进行一次循环，不合理
-	FilterCerts(expiredCertInfos)
 	c.JSON(http.StatusOK,gin.H{
 		"data":expiredCertInfos,
 		"errorCode": "0",
@@ -553,6 +543,36 @@ func ReceiveP12file(c *gin.Context) ([]byte,string){
 	return p12ByteInfo,header.Filename
 }
 
+func CheckUploadRequest(c *gin.Context,certInfo *dal.CertInfo) bool{
+	if certInfo.TeamId == "" {
+		logs.Error("缺少team_id参数")
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "缺少team_id参数",
+			"errorCode" : -3,
+			"data" : "缺少team_id参数",
+		})
+		return false
+	}
+	if certInfo.CertType == "" {
+		logs.Error("缺少cert_type参数")
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "缺少cert_type参数",
+			"errorCode" : -4,
+			"data" : "缺少cert_type参数",
+		})
+		return false
+	}
+	if certInfo.CertId == "" {
+		logs.Error("缺少cert_id参数")
+		c.JSON(http.StatusOK, gin.H{
+			"message" : "缺少cert_id参数",
+			"errorCode" : -5,
+			"data" : "缺少cert_id参数",
+		})
+		return false
+	}
+	return true
+}
 
 func UploadPrivKey(c *gin.Context){
 	p12FileCont,p12filename:=ReceiveP12file(c)
@@ -576,31 +596,8 @@ func UploadPrivKey(c *gin.Context){
 		})
 		return
 	}
-	if certInfo.TeamId == "" {
-		logs.Error("缺少team_id参数")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少team_id参数",
-			"errorCode" : -3,
-			"data" : "缺少team_id参数",
-		})
-		return
-	}
-	if certInfo.CertType == "" {
-		logs.Error("缺少cert_type参数")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少cert_type参数",
-			"errorCode" : -4,
-			"data" : "缺少cert_type参数",
-		})
-		return
-	}
-	if certInfo.CertId == "" {
-		logs.Error("缺少cert_id参数")
-		c.JSON(http.StatusOK, gin.H{
-			"message" : "缺少cert_id参数",
-			"errorCode" : -5,
-			"data" : "缺少cert_id参数",
-		})
+	CheckResult:=CheckUploadRequest(c,&certInfo)
+	if !CheckResult{
 		return
 	}
 	tosFilePath:="appleConnectFile/"+string(certInfo.TeamId)+"/"+certInfo.CertType+"/"+certInfo.CertId+"/"+p12filename

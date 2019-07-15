@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -61,7 +62,7 @@ func QueryAccount(c *gin.Context)  {
 		})
 		return
 	}
-	var accountsInfo *[]dal.AccountInfo
+	var accountsInfo *[]interface{}
 	accountsInfo=dal.QueryAccInfoWithAuth(&resPerms)
 	if accountsInfo==nil{
 		c.JSON(http.StatusOK,gin.H{
@@ -151,8 +152,11 @@ func CreateResource(creResRequest dal.CreResRequest) bool{
 		logs.Info("读取respose的body内容失败")
 	}
 	json.Unmarshal(body, &creResResponse)
-	if creResResponse.Errno==0{
+	if creResResponse.Errno==0{      //资源创建成功
 		return  true
+	}
+	if creResResponse.Errno==500{    //资源重复创建会创建不成功，返回错误码500
+		return false
 	}
 	return  false
 }
@@ -182,11 +186,12 @@ func InsertAccount(c *gin.Context)  {
 		})
 		return
 	}
-	var creResRequest dal.CreResRequest
+	var creResRequest dal.CreateResourceRequest
 	creResRequest.CreatorKey=accountInfo.UserName
 	//todo 大小写？而且资源是不是已经存在有没有判断？
-	creResRequest.ResourceKey=accountInfo.TeamId+"_space_account"
-	creResRequest.ResourceName=accountInfo.TeamId+"_space_account"
+	teamIdLower:=strings.ToLower(accountInfo.TeamId)
+	creResRequest.ResourceKey=teamIdLower+"_space_account"
+	creResRequest.ResourceName=teamIdLower+"_space_account"
 	creResRequest.ResourceType=0
 	creResult:=CreateResource(creResRequest)
 	if !creResult{

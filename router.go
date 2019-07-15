@@ -136,7 +136,7 @@ func InitRouter(r *ginex.Engine) {
 		accountapi.DELETE("/accountInfoDelete",developerconnmanager.DeleteByTeamId)
 	}
 	//todo appleConnManage改名叫appleCertManage，并且把api文档更新下
-	certificateapi:=r.Group("/v1/appleConnManage/")
+	certificateapi:=r.Group("/v1/appleCertManage/")
 	{
 		certificateapi.GET("/certificateInfoGet",developerconnmanager.QueryCertificatesInfo)
 		certificateapi.POST("/certificateCreate",developerconnmanager.InsertCertificate)

@@ -21,12 +21,31 @@ type AccountInfo struct {
 	UserName 			string      `gorm:"user_name"            form:"user_name"               json:"user_name"`
 	PermissionAction   []string     `gorm:"-"                                                   json:"permission_action"`
 }
+//用于返回带权限的账号信息
+type AccInfoWithAuth struct {
+	TeamId 			    string      `gorm:"team_id"`
+	AccountName 		string      `gorm:"account_name"`
+	AccountType 		string      `gorm:"account_type"`
+	AccountP8fileName   string      `gorm:"account_p8file_name"`
+	AccountP8file 		string      `gorm:"account_p8file"`
+	UserName 			string      `gorm:"user_name"`
+	PermissionAction   []string
+}
+//用于返回不带权限的账号信息
+type AccInfoWithoutAuth struct {
+	TeamId 			    string      `gorm:"team_id"`
+	AccountName 		string      `gorm:"account_name"`
+	AccountType 		string      `gorm:"account_type"`
+	UserName 			string      `gorm:"user_name"`
+	PermissionAction   []string
+}
+
 type DelAccRequest struct {
 	TeamId string `json:"team_id"`
 }
 
 //创建资源请求
-type CreResRequest struct {
+type CreateResourceRequest struct {
 	ResourceName    string      `json:"resourceName"`
 	ResourceKey     string      `json:"resourceKey"`
 	CreatorKey      string      `json:"creatorKey"`
@@ -85,38 +104,40 @@ func QueryAccountInfo(condition map[string]interface{} ) *[]AccountInfo {
 	return &accountInfos
 }
 
-func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]AccountInfo{
+func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]interface{}{
 	conn, err := database.GetConneection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return nil
 	}
 	defer conn.Close()
-	var accountsInfo []AccountInfo
+	var accountsInfo []interface{}
 	var teamIds []TeamID
 	db:=conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).Select("team_id").Find(&teamIds)
 	utils.RecordError("Query from DB Failed: ", db.Error)
 	for _,teamId:=range teamIds{
-		accountInfo:=AccountInfo{}
 		perms:=resPerms.Data[strings.ToLower(teamId.TeamId)+"_space_account"]
 		if len(perms)==0{
+			accInfoWithoutAuth:=AccInfoWithoutAuth{}
 			db:=conn.LogMode(_const.DB_LOG_MODE).
 				Table(AccountInfo{}.TableName()).
 				Select("team_id,account_name,account_type,user_name").
 				Where("team_id = ?",teamId.TeamId).
-				Find(&accountInfo)
+				Find(&accInfoWithoutAuth)
 			utils.RecordError("Query from DB Failed: ", db.Error)
-			accountInfo.PermissionAction=[]string{}
+			accInfoWithoutAuth.PermissionAction=[]string{}
+			accountsInfo=append(accountsInfo, accInfoWithoutAuth)
 		}else{
+			accInfoWithAuth:=AccInfoWithAuth{}
 			db:=conn.LogMode(_const.DB_LOG_MODE).
 				Table(AccountInfo{}.TableName()).
 				Select("team_id,account_name,account_type,user_name,account_p8file_name,account_p8file").
 				Where("team_id =?",teamId.TeamId).
-				Find(&accountInfo)
+				Find(&accInfoWithAuth)
 			utils.RecordError("Query from DB Failed: ", db.Error)
-			accountInfo.PermissionAction=perms
+			accInfoWithAuth.PermissionAction=perms
+			accountsInfo=append(accountsInfo, accInfoWithAuth)
 		}
-		accountsInfo=append(accountsInfo, accountInfo)
 	}
 	return &accountsInfo
 }
@@ -132,4 +153,3 @@ func UpdateAccountInfo(accountInfo AccountInfo) bool {
 	utils.RecordError("Update DB Failed: ", db.Error)
 	return true
 }
-

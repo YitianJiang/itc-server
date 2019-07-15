@@ -82,9 +82,9 @@ type GetPermsResponse struct {
 }
 //删除证书请求
 type DelCertRequest struct {
-	CertId   string  `form:"cert_id"`
-	TeamId   string  `form:"team_id"`
-	CertType string  `form:"cert_type"`
+	CertId   string  `form:"cert_id"        binding:"required"`
+	TeamId   string  `form:"team_id"        binding:"required"`
+	CertType string  `form:"cert_type"      binding:"required"`
 }
 //查询证书请求
 type QueryCertRequest struct {
@@ -95,7 +95,11 @@ type QueryCertRequest struct {
 
 //根据app名称来查找用户名
 type UserName struct {
-	UserName string
+	UserName string `gorm:"user_name"`
+}
+
+type RecAppName struct {
+	AppName string  `gorm:"app_name"`
 }
 
 func (CertInfo) TableName() string{
@@ -125,10 +129,6 @@ func InsertCertInfo(CertInfo CertInfo) bool {
 	db:= conn.LogMode(_const.DB_LOG_MODE).Table(CertInfo.TableName()).Create(&CertInfo)
 	utils.RecordError("Insert into DB Failed: ", db.Error)
 	return true
-}
-
-type RecAppName struct {
-	AppName string
 }
 
 //先根据条件到表tt_apple_conn_account中筛选证书，再根据筛选出来的证书id到表tt_apple_certificate中查询受影响的app
@@ -162,6 +162,9 @@ func QueryCertInfo(condition map[string]interface{},expireSoon string,permsResul
 		for _,recAppName:=range recAppNames{
 			certInfos[i].EffectAppList=append(certInfos[i].EffectAppList, recAppName.AppName)
 		}
+		certInfos[i].TeamId=""
+		certInfos[i].AccountName=""
+		certInfos[i].CsrFileUrl=""
 		if expireSoon=="1"&&isExpired(certInfos[i])==true{
 			ret=append(ret, certInfos[i])
 		}
@@ -213,6 +216,9 @@ func QueryExpiredCertInfos() *[]CertInfo {
 			for _,recAppName:=range recAppNames{
 				certInfo.EffectAppList=append(certInfo.EffectAppList, recAppName.AppName)
 			}
+			certInfo.TeamId=""
+			certInfo.AccountName=""
+			certInfo.CsrFileUrl=""
 			expiredCertInfos=append(expiredCertInfos, certInfo)
 		}
 	}
