@@ -19,37 +19,40 @@ import (
 )
 
 
-func QueryPerms(url string,resPerms *dal.GetPermsResponse) int{
+func QueryPerms(url string,resPerms *dal.GetPermsResponse) bool{
 	client := &http.Client{}
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		logs.Info("新建request对象失败")
-		return -1
+		return false
 	}
 	response, err := client.Do(request)
 	if err != nil {
 		logs.Info("发送get请求失败")
-		return -2
+		return false
 	}
 	defer response.Body.Close()
 	if response.StatusCode != 200 {
 		logs.Info(string(response.StatusCode))
-		return -3
+		return false
 	} else {
 		response, err := ioutil.ReadAll(response.Body)
 		if err != nil {
 			logs.Info("读取respose的body内容失败")
-			return -4
+			return false
 		}
 		json.Unmarshal(response, resPerms)
-		return 0
+		return true
 	}
 }
 //查询个人拥有的某一资源的所有权限
 func QueryResPerms(userName string,resourceKey string) int{
 	var resPerms dal.GetPermsResponse
 	url:=_const.Certain_Resource_All_PERMS_URL+"employeeKey="+userName+"&"+"resourceKeys="+resourceKey
-	QueryPerms(url,&resPerms)
+	result:=QueryPerms(url,&resPerms)
+	if !result{
+		return -1
+	}
 	hasAdmin:=false
 	hasAllCertManager:=false
 	hasDevCertManager:=false
@@ -110,6 +113,14 @@ func QueryCertificatesInfo(c *gin.Context){
 	teamId=strings.ToLower(teamId)        //权限平台上的权限名称都是小写
 	resourceKey:=teamId+"_space_account"
 	permsResult:=QueryResPerms(userName,resourceKey)
+	if permsResult==-1{
+		c.JSON(http.StatusOK, gin.H{
+			//todo data怎么又变字符串了呢？空值要不就不返回，要么就返回对应约定的格式！！！
+			"errorCode": "-4",
+			"errorInfo": "查询权限失败",
+		})
+		return
+	}
 	if permsResult==3{
 		c.JSON(http.StatusOK, gin.H{
 			//todo data怎么又变字符串了呢？空值要不就不返回，要么就返回对应约定的格式！！！
@@ -125,7 +136,7 @@ func QueryCertificatesInfo(c *gin.Context){
 	if certsInfo==nil{
 		logs.Error("从数据库中查询证书相关信息失败")
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode" : -4,
+			"errorCode" : -5,
 			"errorInfo" : "从数据库中查询证书相关信息失败！",
 		})
 		return

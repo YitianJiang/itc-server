@@ -6,6 +6,7 @@ import (
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
+	"strings"
 )
 
 type AccountInfo struct {
@@ -34,6 +35,11 @@ type CreResRequest struct {
 
 type CreResResponse struct {
 	Errno   int      `json:"errno"`
+}
+
+type TeamID struct {
+	gorm.Model
+	TeamId string `gorm:"team_id"`
 }
 
 func (AccountInfo) TableName() string{
@@ -77,6 +83,42 @@ func QueryAccountInfo(condition map[string]interface{} ) *[]AccountInfo {
 	db:=conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).Where(condition).Find(&accountInfos)
 	utils.RecordError("Query from DB Failed: ", db.Error)
 	return &accountInfos
+}
+
+func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]AccountInfo{
+	conn, err := database.GetConneection()
+	if err != nil {
+		utils.RecordError("Get DB Connection Failed: ", err)
+		return nil
+	}
+	defer conn.Close()
+	var accountsInfo []AccountInfo
+	var teamIds []TeamID
+	db:=conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).Select("team_id").Find(&teamIds)
+	utils.RecordError("Query from DB Failed: ", db.Error)
+	for _,teamId:=range teamIds{
+		accountInfo:=AccountInfo{}
+		perms:=resPerms.Data[strings.ToLower(teamId.TeamId)+"_space_account"]
+		if len(perms)==0{
+			db:=conn.LogMode(_const.DB_LOG_MODE).
+				Table(AccountInfo{}.TableName()).
+				Select("team_id,account_name,account_type,user_name").
+				Where("team_id = ?",teamId.TeamId).
+				Find(&accountInfo)
+			utils.RecordError("Query from DB Failed: ", db.Error)
+			accountInfo.PermissionAction=[]string{}
+		}else{
+			db:=conn.LogMode(_const.DB_LOG_MODE).
+				Table(AccountInfo{}.TableName()).
+				Select("team_id,account_name,account_type,user_name,account_p8file_name,account_p8file").
+				Where("team_id =?",teamId.TeamId).
+				Find(&accountInfo)
+			utils.RecordError("Query from DB Failed: ", db.Error)
+			accountInfo.PermissionAction=perms
+		}
+		accountsInfo=append(accountsInfo, accountInfo)
+	}
+	return &accountsInfo
 }
 
 func UpdateAccountInfo(accountInfo AccountInfo) bool {

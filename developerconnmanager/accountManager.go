@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -43,7 +42,6 @@ func DeleteByTeamId(c *gin.Context)  {
 	})
 }
 
-
 func QueryAccount(c *gin.Context)  {
 	logs.Info("从数据库中查询账户信息")
 	userName:=c.DefaultQuery("user_name","")
@@ -56,39 +54,39 @@ func QueryAccount(c *gin.Context)  {
 	}
 	var resPerms dal.GetPermsResponse
 	url:=_const.USER_ALL_RESOURCES_PERMS_URL+"userName="+userName
-	QueryPerms(url,&resPerms)
+	result:=QueryPerms(url,&resPerms)
+	if !result{
+		c.JSON(http.StatusOK,gin.H{
+			"errcode" : "-2",
+			"errinfo" : "查询权限失败",
+		})
+		return
+	}
 	//todo nil是随便传的么，nil这个东西要慎用，传空map不可以？
-	allAccountsInfo:=dal.QueryAccountInfo(map[string]interface{}{})
-	for i:=0;i<len(*allAccountsInfo);i++{
-		teamId:=strings.ToLower((*allAccountsInfo)[i].TeamId)
-		perms:=resPerms.Data[teamId+"_space_account"]
-		if len(perms)==0{
-			(*allAccountsInfo)[i].AccountP8fileName=""
-			(*allAccountsInfo)[i].AccountP8file=""
-			(*allAccountsInfo)[i].IssueId=""
-			(*allAccountsInfo)[i].KeyId=""
-			(*allAccountsInfo)[i].PermissionAction=[]string{}
-		}else{
-			(*allAccountsInfo)[i].IssueId=""
-			(*allAccountsInfo)[i].KeyId=""
-			(*allAccountsInfo)[i].PermissionAction=perms
-		}
+	var accountsInfo *[]dal.AccountInfo
+	accountsInfo=dal.QueryAccInfoWithAuth(&resPerms)
+	if accountsInfo==nil{
+		c.JSON(http.StatusOK,gin.H{
+			"errcode" : "-3",
+			"errinfo" : "从数据库中查询数据失败",
+		})
+		return
 	}
 	c.JSON(http.StatusOK,gin.H{
-		"data":allAccountsInfo,
+		"data":accountsInfo,
 		"errcode" : "0",
 		"errinfo" : "",
 	})
 }
 
-func ReceiveP8file(c *gin.Context,accountInfo *dal.AccountInfo){
+func ReceiveP8file(c *gin.Context,accountInfo *dal.AccountInfo) bool{
 	file, header, _ :=c.Request.FormFile("account_p8file")
 	if header==nil {
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": -1,
 			"errorInfo":   "没有文件上传",
 		})
-		return
+		return false
 	}
 	logs.Info("打印File Name：" + header.Filename)
 	p8ByteInfo,err := ioutil.ReadAll(file)
@@ -97,15 +95,19 @@ func ReceiveP8file(c *gin.Context,accountInfo *dal.AccountInfo){
 			"errorCode": -2,
 			"errorInfo":   "error read p8 file",
 		})
-		return
+		return false
 	}
 	accountInfo.AccountP8file= string(p8ByteInfo)
+	return true
 }
 
 func UpdateAccount(c *gin.Context)  {
 	logs.Info("更新数据库中的账户信息")
 	var accountInfo dal.AccountInfo
-	ReceiveP8file(c,&accountInfo)
+	recResult:=ReceiveP8file(c,&accountInfo)
+	if !recResult{
+		return
+	}
 	bindError:=c.ShouldBind(&accountInfo)
 	utils.RecordError("请求参数绑定错误: ", bindError)
 	if bindError!=nil {
@@ -160,7 +162,10 @@ func CreateResource(creResRequest dal.CreResRequest) bool{
 func InsertAccount(c *gin.Context)  {
 	logs.Info("往数据库中添加账户信息")
 	var accountInfo =dal.AccountInfo{}
-	ReceiveP8file(c,&accountInfo)
+	recResult:=ReceiveP8file(c,&accountInfo)
+	if !recResult{
+		return
+	}
 	bindError:=c.ShouldBind(&accountInfo)
 	utils.RecordError("请求参数绑定错误: ", bindError)
 	if bindError!=nil{
