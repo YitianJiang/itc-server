@@ -3,8 +3,12 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"strconv"
 	"strings"
+
+	_const "code.byted.org/clientQA/itc-server/const"
 
 	"code.byted.org/gopkg/logs"
 )
@@ -195,7 +199,7 @@ type FieldInner struct {
 }
 
 //初始化消息中的不变量
-func initLarkStruct(lark_people, lark_message, detect_num, self_item_num, url string, groupFlag bool) LarkCardMessage {
+func initLarkStruct(lark_people, rd_bm, qa_bm, lark_message, detect_num, self_item_num, url string, groupFlag bool) LarkCardMessage {
 	//分割线
 	var divid LarkText
 	divid.Tag = "text"
@@ -248,73 +252,90 @@ func initLarkStruct(lark_people, lark_message, detect_num, self_item_num, url st
 	arr1 = append(arr1, lark_field)
 	//content第二部分
 	var arr2 []interface{}
-	var text2 LarkText
-	text2.Tag = "text"
-	text2.Text = "预审平台结果确认建议\n"
-	text2.Style = "width: 100%; fontSize: 15"
-	arr2 = append(arr2, divid)
-	arr2 = append(arr2, text2)
-	var fields5 Field
-	fields5.Title.Tag = "text"
-	fields5.Title.Text = "检测结果"
-	fields5.Title.Lines = 1
-	fields5.Value.Tag = "text"
-	fields5.Value.Text = "静态检查项"
-	fields5.Value.Lines = 1
-	fields5.Short = true
-	var fields6 Field
-	fields6.Title.Tag = "text"
-	fields6.Title.Text = "确认人"
-	fields6.Title.Lines = 1
-	fields6.Value.Tag = "text"
-	fields6.Value.Text = "RD BM"
-	fields6.Value.Lines = 1
-	fields6.Short = true
-	var fields7 Field
-	fields7.Title.Tag = "text"
-	fields7.Title.Text = "检测结果"
-	fields7.Title.Lines = 1
-	fields7.Value.Tag = "text"
-	fields7.Value.Text = "自查项 Binary"
-	fields7.Value.Lines = 1
-	fields7.Short = true
-	var fields8 Field
-	fields8.Title.Tag = "text"
-	fields8.Title.Text = "确认人"
-	fields8.Title.Lines = 1
-	fields8.Value.Tag = "text"
-	fields8.Value.Text = "QA BM"
-	fields8.Value.Lines = 1
-	fields8.Short = true
-	var fields9 Field
-	fields9.Title.Tag = "text"
-	fields9.Title.Text = "检测结果"
-	fields9.Title.Lines = 1
-	fields9.Value.Tag = "text"
-	fields9.Value.Text = "自查项 Metedate"
-	fields9.Value.Lines = 1
-	fields9.Short = true
-	var fields10 Field
-	fields10.Title.Tag = "text"
-	fields10.Title.Text = "确认人"
-	fields10.Title.Lines = 1
-	fields10.Value.Tag = "text"
-	fields10.Value.Text = "产品线提审负责人"
-	fields10.Value.Lines = 1
-	fields10.Short = true
-	var notice Field
-	notice.Title.Tag = "text"
-	notice.Title.Text = "---------------------------------------------\n"
-	notice.Title.Lines = 1
-	notice.Value.Tag = "text"
-	notice.Value.Text = "！！！点击卡片跳转详情页！！！"
-	notice.Value.Lines = 1
-	notice.Short = false
-	fieldArr2 := []Field{fields5, fields6, fields7, fields8, fields9, fields10, notice}
-	var lark_field2 LarkField
-	lark_field2.Tag = "field"
-	lark_field2.Fields = fieldArr2
-	arr2 = append(arr2, lark_field2)
+	if detect_num == "0" && self_item_num == "0" {
+		var noConfirm LarkText
+		noConfirm.Tag = "text"
+		noConfirm.Text = "本次检测未发现新增危险项！\n业务方无需点击确认~\n"
+		noConfirm.Style = "width: 100%; fontSize: 15; color:#6495ED"
+		arr2 = append(arr2, divid)
+		arr2 = append(arr2, noConfirm)
+	} else {
+		var text2 LarkText
+		text2.Tag = "text"
+		text2.Text = "预审平台结果确认建议\n"
+		text2.Style = "width: 100%; fontSize: 15"
+		arr2 = append(arr2, divid)
+		arr2 = append(arr2, text2)
+		var fields5 Field
+		fields5.Title.Tag = "text"
+		fields5.Title.Text = "检测结果"
+		fields5.Title.Lines = 1
+		fields5.Value.Tag = "text"
+		fields5.Value.Text = "静态检查项"
+		fields5.Value.Lines = 1
+		fields5.Short = true
+		var fields6 Field
+		fields6.Title.Tag = "text"
+		fields6.Title.Text = "确认人"
+		fields6.Title.Lines = 1
+		fields6.Value.Tag = "text"
+		if rd_bm != "" {
+			fields6.Value.Text = "RD BM" + "(" + rd_bm + ")"
+		} else {
+			fields6.Value.Text = "RD BM"
+		}
+		fields6.Value.Lines = 1
+		fields6.Short = true
+		var fields7 Field
+		fields7.Title.Tag = "text"
+		fields7.Title.Text = "检测结果"
+		fields7.Title.Lines = 1
+		fields7.Value.Tag = "text"
+		fields7.Value.Text = "自查项 Binary"
+		fields7.Value.Lines = 1
+		fields7.Short = true
+		var fields8 Field
+		fields8.Title.Tag = "text"
+		fields8.Title.Text = "确认人"
+		fields8.Title.Lines = 1
+		fields8.Value.Tag = "text"
+		if qa_bm != "" {
+			fields8.Value.Text = "QA BM" + "(" + qa_bm + ")"
+		} else {
+			fields8.Value.Text = "QA BM"
+		}
+		fields8.Value.Lines = 1
+		fields8.Short = true
+		var fields9 Field
+		fields9.Title.Tag = "text"
+		fields9.Title.Text = "检测结果"
+		fields9.Title.Lines = 1
+		fields9.Value.Tag = "text"
+		fields9.Value.Text = "自查项 Metedate"
+		fields9.Value.Lines = 1
+		fields9.Short = true
+		var fields10 Field
+		fields10.Title.Tag = "text"
+		fields10.Title.Text = "确认人"
+		fields10.Title.Lines = 1
+		fields10.Value.Tag = "text"
+		fields10.Value.Text = "产品线提审负责人"
+		fields10.Value.Lines = 1
+		fields10.Short = true
+		var notice Field
+		notice.Title.Tag = "text"
+		notice.Title.Text = "---------------------------------------------\n"
+		notice.Title.Lines = 1
+		notice.Value.Tag = "text"
+		notice.Value.Text = "！！！点击卡片跳转详情页！！！"
+		notice.Value.Lines = 1
+		notice.Short = false
+		fieldArr2 := []Field{fields5, fields6, fields7, fields8, fields9, fields10, notice}
+		var lark_field2 LarkField
+		lark_field2.Tag = "field"
+		lark_field2.Fields = fieldArr2
+		arr2 = append(arr2, lark_field2)
+	}
 	//卡片
 	var card LarkCard
 	card.Link.Herf = url
@@ -341,10 +362,10 @@ func initLarkStruct(lark_people, lark_message, detect_num, self_item_num, url st
 	return message
 }
 
-func LarkDetectResult(lark_people, lark_message, url string, detect_num, self_item_num int, groupFlag bool) bool {
+func LarkDetectResult(lark_people, rd_bm, qa_bm, lark_message, url string, detect_num, self_item_num int, groupFlag bool) bool {
 	detect := strconv.Itoa(detect_num)
 	self := strconv.Itoa(self_item_num)
-	larkStruct := initLarkStruct(lark_people, lark_message, detect, self, url, groupFlag)
+	larkStruct := initLarkStruct(lark_people, rd_bm, qa_bm, lark_message, detect, self, url, groupFlag)
 	larkBody, err := json.Marshal(larkStruct)
 	if err != nil {
 		logs.Error(err.Error())
@@ -360,6 +381,41 @@ func LarkDetectResult(lark_people, lark_message, url string, detect_num, self_it
 		}
 	}
 	token := GetLarkToken()
-	res := PostJsonHttp3(larkBody, token)
+	res, _ := PostJsonHttp3(larkBody, token, _const.OFFICE_LARK_URL)
 	return res
+}
+
+func GetUserOpenId(email string) string {
+	requestMap := map[string]interface{}{
+		"email": email,
+	}
+	requestBody, _ := json.Marshal(requestMap)
+	isPost, response := PostJsonHttp3(requestBody, GetLarkToken(), _const.LARK_Email2Id_URL)
+	if isPost {
+		m := make(map[string]interface{})
+		json.Unmarshal([]byte(response), &m)
+		if m != nil {
+			return m["open_id"].(string)
+		}
+	}
+	return ""
+}
+
+func GetUserAllInfo(open_id string) string {
+	client := &http.Client{}
+	requestUrl := "https://open.feishu.cn/open-apis/user/v3/info"
+	reqest, err := http.NewRequest("GET", requestUrl, nil)
+	token := "Bearer " + GetLarkToken()
+	reqest.Header.Add("Authorization", token)
+	q := reqest.URL.Query()
+	q.Add("open_id", open_id)
+	reqest.URL.RawQuery = q.Encode()
+	resp, _ := client.Do(reqest)
+	if err != nil {
+		logs.Error("获取version info出错！", err.Error())
+		return ""
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	return string(body)
 }
