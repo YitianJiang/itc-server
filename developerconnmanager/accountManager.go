@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -59,7 +60,8 @@ func QueryAccount(c *gin.Context)  {
 	//todo nil是随便传的么，nil这个东西要慎用，传空map不可以？
 	allAccountsInfo:=dal.QueryAccountInfo(map[string]interface{}{})
 	for i:=0;i<len(*allAccountsInfo);i++{
-		perms:=resPerms.Data[(*allAccountsInfo)[i].TeamId+"_space_account"]
+		teamId:=strings.ToLower((*allAccountsInfo)[i].TeamId)
+		perms:=resPerms.Data[teamId+"_space_account"]
 		if len(perms)==0{
 			(*allAccountsInfo)[i].AccountP8fileName=""
 			(*allAccountsInfo)[i].AccountP8file=""
