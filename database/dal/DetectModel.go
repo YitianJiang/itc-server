@@ -916,7 +916,7 @@ func QueryLastTaskId(taskId int) int {
 			logs.Error(err.Error())
 			return -1
 		} else {
-			if len(lastDetect) == 0 && (&lastDetect == nil) {
+			if len(lastDetect) == 0 {
 				logs.Error("首次提交，不需要diff")
 				return -1
 			}
