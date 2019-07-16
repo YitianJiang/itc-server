@@ -188,7 +188,6 @@ func InsertAccount(c *gin.Context)  {
 	}
 	var creResRequest dal.CreateResourceRequest
 	creResRequest.CreatorKey=accountInfo.UserName
-	//todo 大小写？而且资源是不是已经存在有没有判断？
 	teamIdLower:=strings.ToLower(accountInfo.TeamId)
 	creResRequest.ResourceKey=teamIdLower+"_space_account"
 	creResRequest.ResourceName=teamIdLower+"_space_account"

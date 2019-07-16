@@ -88,7 +88,6 @@ func QueryCertificatesInfo(c *gin.Context){
 		})
 		return
 	}
-	//todo queryCertRequest这个数据绑定好了，就是让你取值用的，你又定义teamId、userName、expireSoon目的是啥？
 	if queryCertRequest.TeamId=="" {
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode" : -2,
@@ -132,7 +131,6 @@ func QueryCertificatesInfo(c *gin.Context){
 		})
 		return
 	}
-	//todo FilterCerts别这么搞，这代表又进行一次循环，不合理
 	c.JSON(http.StatusOK, gin.H{
 		"data":      certsInfo,
 		"errorCode": "0",
@@ -176,7 +174,6 @@ func CreateCertInApple(tokenString string,certType string,certTypeSufix string) 
 	var creAppleCertReq dal.CreAppleCertReq
 	creAppleCertReq.Data.Type=_const.APPLE_RECEIVED_DATA_TYPE
 	creAppleCertReq.Data.Attributes.CertificateType= certType
-	//todo GetSufix是不是太笨了，了解下strings.Split方法
 	var csrContent string
 	if certTypeSufix=="DEVELOPMENT"{
 		csrContent=DownloadTos(_const.TOS_CSR_FILE_FOR_DEV_KEY)
@@ -345,7 +342,6 @@ func InsertCertificate(c *gin.Context){
 	certInfo.CertType=creCertResponse.Data.Attributes.CertificateType
 	certInfo.CertName=creCertResponse.Data.Attributes.Name
 	certInfo.CertExpireDate=creCertResponse.Data.Attributes.ExpirationDate
-	//todo GetSufix是不是太笨了，了解下strings.Split方法，而且为啥GetSufix需要调用两次？CreateCertInApple里面也调用了一次，你是咋设计的
 	if certTypeSufix=="DEVELOPMENT"{
 		certInfo.PrivKeyUrl=_const.TOS_PRIVATE_KEY_URL_DEV
 		certInfo.CsrFileUrl=_const.TOS_CSR_FILE_URL_DEV
@@ -437,7 +433,6 @@ func CheckDelCertRequest(c *gin.Context,delCertRequest *dal.DelCertRequest) bool
 
 func DeleteCertificate(c *gin.Context){
 	logs.Info("根据cert_id删除证书")
-	//todo DelCertRequest bind时不需要有相应的"require"？
 	var delCertRequest dal.DelCertRequest
 	bindQueryError:=c.ShouldBindQuery(&delCertRequest)
 	if bindQueryError!=nil{
@@ -448,8 +443,6 @@ func DeleteCertificate(c *gin.Context){
 		})
 		return
 	}
-	//todo queryCertRequest这个数据绑定好了，就是让你取值用的，你又定义teamId、certId、certType目的是啥？
-	//todo 做判空单独抽出一个函数，别放在这个主流程函数下，你自己看看占了多少行
 	checkResult:=CheckDelCertRequest(c,&delCertRequest)
 	if !checkResult{
 		return
@@ -508,7 +501,6 @@ func DeleteCertificate(c *gin.Context){
 func CheckCertExpireDate(c *gin.Context){
 	logs.Info("检查过期证书")
 	expiredCertInfos:=dal.QueryExpiredCertInfos()
-	//todo FilterCerts别这么搞，这代表又进行一次循环，不合理
 	c.JSON(http.StatusOK,gin.H{
 		"data":expiredCertInfos,
 		"errorCode": "0",
@@ -587,7 +579,6 @@ func UploadPrivKey(c *gin.Context){
 	}
 	var certInfo dal.CertInfo
 	bindError:=c.ShouldBind(&certInfo)
-	//todo 做判空单独抽出一个函数，别放在这个主流程函数下，你自己看看占了多少行
 	if bindError!=nil{
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "请求参数绑定失败",
