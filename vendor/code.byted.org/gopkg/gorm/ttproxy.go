@@ -1,8 +1,8 @@
 package gorm
 
 import (
+	"code.byted.org/gopkg/etcd_util"
 	"code.byted.org/gopkg/logs"
-	"code.byted.org/microservice/configstorer"
 	"context"
 	"errors"
 	"fmt"
@@ -24,13 +24,11 @@ func (p *DBProxy) initConfig() (err error) {
 			err = fmt.Errorf("panic: %v", r)
 		}
 	}()
-	configstorer.InitStorer()
-	configstorer.SetGetterTimeout(10 * time.Millisecond)
 
-	configstorer.Get("/kite/stressbot/request/switch/global")
+	etcdutil.GetWithDefault("/kite/stressbot/request/switch/global", "off")
 	if len(p.dbName) > 0 && p.dbName != "unknown" {
 		p.dbSwitchKey = fmt.Sprintf("/kite/stressbot/db/%s/switch", p.dbName)
-		configstorer.Get(p.dbSwitchKey)
+		etcdutil.GetWithDefault(p.dbSwitchKey, "off")
 	}
 
 	err = nil
@@ -133,6 +131,11 @@ func (p *DBProxy) SetMaxOpenConns(n int) *DBProxy {
 	return p
 }
 
+func (p *DBProxy) SingularTable(enable bool) *DBProxy {
+	p.db.SingularTable(enable)
+	return p
+}
+
 func (p *DBProxy) LogMode(enable bool) *DBProxy {
 	p.db.LogMode(enable)
 	return p
@@ -160,11 +163,8 @@ func (p *DBProxy) stressSwitchContext(ctx context.Context) context.Context {
 		return ctx
 	}
 
-	globalSwitch, err := configstorer.GetOrDefault("/kite/stressbot/request/switch/global", "off")
-	if err != nil {
-		ctx = context.WithValue(ctx, ContextStressSwitch, SwitchOff)
-		return ctx
-	} else if globalSwitch == "off" {
+	globalSwitch := etcdutil.GetWithDefault("/kite/stressbot/request/switch/global", "off")
+	if globalSwitch == "off" {
 		ctx = context.WithValue(ctx, ContextStressSwitch, SwitchOff)
 		return ctx
 	} else if globalSwitch != "on" {
@@ -172,11 +172,8 @@ func (p *DBProxy) stressSwitchContext(ctx context.Context) context.Context {
 		return ctx
 	}
 
-	dbSwitch, err := configstorer.GetOrDefault(p.dbSwitchKey, "off")
-	if err != nil {
-		ctx = context.WithValue(ctx, ContextStressSwitch, SwitchOff)
-		return ctx
-	} else if dbSwitch == "off" {
+	dbSwitch := etcdutil.GetWithDefault(p.dbSwitchKey, "off")
+	if dbSwitch == "off" {
 		ctx = context.WithValue(ctx, ContextStressSwitch, SwitchOff)
 		return ctx
 	} else if dbSwitch != "on" {

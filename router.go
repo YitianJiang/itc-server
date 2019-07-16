@@ -14,17 +14,10 @@ func InitRouter(r *ginex.Engine) {
 	api := r.GroupEX("/api")
 	//二进制包检测回调接口
 	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
+	r.POST("/updateOtherDetectInfos", detect.UpdateOtherDetectInfos)
 
 	//获取鉴权接口
 	r.GET("/t/generateToken", detect.GetToken)
-	//查询被拒案例
-	api.GET("/casemanage/queryRejCases", casemanage.GetRejCasesByConditions)
-	//新增被拒案例
-	api.POST("/casemanage/addRejCase", casemanage.AddRejCase)
-	//删除被拒案例
-	api.POST("/casemanage/deleteRejCase", casemanage.DeleteRejCase)
-	//更新被拒案例
-	api.POST("/casemanage/updateRejCase", casemanage.EditRejCaseofSolution)
 
 	//检测服务检测异常报警接口
 	api.POST("/check_server/alarm", detect.Alram)
@@ -33,8 +26,8 @@ func InitRouter(r *ginex.Engine) {
 	{
 		//上传ipa和apk
 		api.POST("/uploadFile", detect.UploadFile)
-		//上传ipa和apk------fj
-		//api.POST("/uploadFileNew", detect.UploadFileNew)
+		//上传aar------fj
+		api.POST("/uploadFileOther", detect.NewOtherDetect)
 		//增加检查项
 		api.POST("/addDetectItem", detect.AddDetectItem)
 		//二进制任务查询
@@ -52,7 +45,6 @@ func InitRouter(r *ginex.Engine) {
 		//获取当前任务的二进制工具检测内容
 		api.GET("/task/queryBinaryContent", detect.QueryTaskBinaryCheckContent)
 		//获取当前任务的apk二进制工具检测内容
-		//api.GET("/task/queryApkBinaryContent", detect.QueryTaskApkBinaryCheckContentWithIgnorance_2)
 		api.GET("/task/queryApkBinaryContent", detect.QueryTaskApkBinaryCheckContentWithIgnorance_3)
 		//新增二进制检测工具
 		api.POST("/tool/insert", detect.InsertBinaryTool)
@@ -65,10 +57,7 @@ func InitRouter(r *ginex.Engine) {
 		//确认二进制包检测信息
 		api.POST("/detect/confirmResult", detect.ConfirmBinaryResult)
 		//确认apk二进制包检测信息
-		//api.POST("/detect/confirmApkResult", detect.ConfirmApkBinaryResultv_4)
 		api.POST("/detect/confirmApkResult", detect.ConfirmApkBinaryResultv_5)
-		////确认apk二进制包权限检测信息------fj
-		//api.POST("/detect/confirmApk_2", detect.ConfirmApkBinaryResultv_4)
 		//根据platform获取配置的问题类型
 		api.GET("/config/queryProblemConfigs", detect.QueryProblemConfigs)
 		//增加配置项
@@ -93,6 +82,8 @@ func InitRouter(r *ginex.Engine) {
 		api.GET("/certificates", controllers.GetCertificates)
 		//过期证书提醒
 		api.GET("/certificates/controller", controllers.CertificateController)
+		//证书删除
+		api.POST("/certificate/delete", controllers.DeteleCertificate)
 		//获取iOS当前任务的二进制工具检测内容
 		api.GET("/task/queryIOSBinaryContent", detect.QueryIOSTaskBinaryCheckContent)
 		//确认iOS二进制检测信息
@@ -114,21 +105,34 @@ func InitRouter(r *ginex.Engine) {
 		//查询权限详情
 		api.GET("/perm/getpermDetails", detect.GetPermDetails)
 		//获取app的版本号---权限关联查询使用
-		api.GET("/perm/getAppVesions",detect.GetAppVersions)
+		api.GET("/perm/getAppVesions", detect.GetAppVersions)
+		//aar检测结果查询
+		api.GET("/detect/getAarDetectResults", detect.QueryAarBinaryDetectResult)
+		//aar检测结果确认
+		api.POST("/detect/confirmAarResult", detect.ConfirmAarDetectResult)
+		//aar任务列表查询
+		api.POST("/detect/getAarTaskList", detect.GetOtherDetectTaskList)
+		//查询被拒案例
+		api.GET("/casemanage/queryRejCases", casemanage.GetRejCasesByConditions)
+		//新增被拒案例
+		api.POST("/casemanage/addRejCase", casemanage.AddRejCase)
+		//删除被拒案例
+		api.POST("/casemanage/deleteRejCase", casemanage.DeleteRejCase)
+		//更新被拒案例
+		api.POST("/casemanage/updateRejCase", casemanage.EditRejCaseofSolution)
 
 	}
 	//todo 巩锐开始开发证书体系监管后台API
 	connapi := r.Group("/v1/devConnManage")
 	{
 		//connapi.GET("/bundleIdSearch",developerconnmanager.TestAskBundleId)
-		connapi.GET("/getBundleIdsList",developerconnmanager.GetBunldIdsObj)
-		connapi.GET("/testPrivatePrint",developerconnmanager.ParsePrivateKey)
-		connapi.GET("/createProvProfile",developerconnmanager.Test64DecodeToString)
-		connapi.POST("/createP8DBInfo",developerconnmanager.CreateP8DBInfoToTable)
-
+		connapi.GET("/getBundleIdsList", developerconnmanager.GetBunldIdsObj)
+		connapi.GET("/testPrivatePrint", developerconnmanager.ParsePrivateKey)
+		connapi.GET("/createProvProfile", developerconnmanager.Test64DecodeToString)
+		connapi.POST("/createP8DBInfo", developerconnmanager.CreateP8DBInfoToTable)
 
 	}
-	accountapi:=r.Group("/v1/accountManage")
+	accountapi := r.Group("/v1/accountManage")
 	{
 		accountapi.PATCH ("/accountInfoUpdate",developerconnmanager.UpdateAccount)
 		accountapi.GET("/accountInfoGet",developerconnmanager.QueryAccount)
@@ -142,5 +146,10 @@ func InitRouter(r *ginex.Engine) {
 		certificateapi.DELETE("/certificateDelete",developerconnmanager.DeleteCertificate)
 		certificateapi.GET("/certExpireDateCheck",developerconnmanager.CheckCertExpireDate)
 		certificateapi.PATCH("/privUploadForCert",developerconnmanager.UploadPrivKey)
+	}
+	usermanagerapi := r.Group("/v1/userManage")
+	{
+		usermanagerapi.GET("/getCapabilitiesInfo",developerconnmanager.GetBundleIdCapabilitiesInfo)
+		usermanagerapi.POST("/assertBunldCapabilities",developerconnmanager.AssertBunldIDInfo)
 	}
 }

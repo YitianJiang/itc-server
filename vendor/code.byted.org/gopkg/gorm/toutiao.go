@@ -12,7 +12,7 @@ const (
 	ContextSkipStressForRead = "K_SKIP_STRESS"
 	ContextStressSwitch      = "K_STRESS_SWITCH"
 
-	SwitchOn  = "on"
+	SwitchOn = "on"
 	SwitchOff = "off"
 )
 

@@ -134,7 +134,10 @@ func (stmt *mysqlStmt) QueryContext(ctx context.Context, args []driver.NamedValu
 		stmt.mc.finish()
 		return nil, err
 	}
-	rows.finish = stmt.mc.finish
+	rows.finish = func() {
+		stmt.mc.clearPkgSize()
+		stmt.mc.finish()
+	}
 	return rows, err
 }
 
@@ -147,7 +150,10 @@ func (stmt *mysqlStmt) ExecContext(ctx context.Context, args []driver.NamedValue
 	if err := stmt.mc.watchCancel(ctx); err != nil {
 		return nil, err
 	}
-	defer stmt.mc.finish()
+	defer func() {
+		stmt.mc.clearPkgSize()
+		stmt.mc.finish()
+	}()
 
 	return stmt.Exec(dargs)
 }

@@ -3,6 +3,7 @@ package detect
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -44,12 +45,12 @@ var iosBlackListDescription = map[string]interface{}{
 /**
  *iOS 检测结果jsonContent处理
  */
-func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, bool) {
+func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, bool, int) {
 	warnFlag := false
 	var dat map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonContent), &dat); err != nil {
 		logs.Error("json转map出错！", err.Error())
-		return false, warnFlag
+		return false, warnFlag, 0
 	}
 	appName := dat["name"].(string)
 	version := dat["version"].(string)
@@ -62,7 +63,7 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 	var blacklist []interface{}
 	var method []interface{}
 	var lastDetectContent *[]dal.IOSNewDetectContent
-	if lastTaskId >= 0{
+	if lastTaskId >= 0 {
 		lastDetectContent = dal.QueryNewIOSDetectModel(map[string]interface{}{
 			"taskId": lastTaskId,
 		})
@@ -121,7 +122,7 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 		})
 		if err != nil {
 			logs.Error("map转json出错！")
-			return false, warnFlag
+			return false, warnFlag, 0
 		}
 		blackDetect.DetectContent = string(BlackContentValue)
 		blackDetect.DetectType = "blacklist"
@@ -171,7 +172,7 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 		})
 		if err != nil {
 			logs.Error("map转json出错！")
-			return false, warnFlag
+			return false, warnFlag, 0
 		}
 		methodDetect.DetectContent = string(methodContentValue)
 		methodDetect.DetectType = "method"
@@ -224,7 +225,7 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 		})
 		if err != nil {
 			logs.Error("map转json出错！")
-			return false, warnFlag
+			return false, warnFlag, 0
 		}
 		privacyDetect.DetectContent = string(privacyContentValue)
 		privacyDetect.DetectType = "privacy"
@@ -240,10 +241,11 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 	}
 	insertFlag := dal.InsertNewIOSDetect(blackDetect, methodDetect, privacyDetect)
 	//更新tb_binary_detect中status值
-	if err := changeTotalStatus(taskId, toolId); err != nil {
+	err, unRes := changeTotalStatus(taskId, toolId)
+	if err != nil {
 		logs.Error("判断总的total status出错！", err.Error())
 	}
-	return insertFlag, warnFlag
+	return insertFlag, warnFlag, unRes
 }
 
 //检测结果与上一次检测结果比较
@@ -678,7 +680,7 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 		delete(LARK_MSG_CALL_MAP, key)
 	}
 	//更新tb_binary_detect中status值
-	if err := changeTotalStatus(ios.TaskId, ios.ToolId); err != nil {
+	if err, _ := changeTotalStatus(ios.TaskId, ios.ToolId); err != nil {
 		logs.Error("总状态更改出错！", err)
 		return false
 	}
@@ -686,19 +688,19 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 }
 
 //判断是否需要更新total status状态值
-func changeTotalStatus(taskId, toolId int) error {
+func changeTotalStatus(taskId, toolId int) (error, int) {
 	var newChangeFlag = true
+	var unConfirmNum = 0
 	iosDetectAll := dal.QueryNewIOSDetectModel(map[string]interface{}{
 		"taskId": taskId,
 		"toolId": toolId,
 	})
-P:
 	for _, oneDetect := range *iosDetectAll {
 		var im map[string]interface{}
 		err := json.Unmarshal([]byte(oneDetect.DetectContent), &im)
 		if err != nil {
 			logs.Error("确认任务状态时，map信息数据库内容转map出错!", err.Error())
-			return err
+			return err, unConfirmNum
 		}
 		newQueryKey := oneDetect.DetectType
 		if newQueryKey == "blacklist" {
@@ -709,7 +711,7 @@ P:
 			needConfirm := oneBlack.(map[string]interface{})
 			if needConfirm["status"].(float64) == 0 {
 				newChangeFlag = false
-				break P
+				unConfirmNum++
 			}
 		}
 	}
@@ -721,13 +723,13 @@ P:
 		err := dal.UpdateDetectModelNew((*detect)[0])
 		if err != nil {
 			logs.Error("更新任务状态失败，任务ID："+strconv.Itoa(taskId)+",错误原因:%v", err)
-			return err
+			return err, unConfirmNum
 		}
 		if (*detect)[0].SelfCheckStatus == 1 && (*detect)[0].Status == 1 {
 			CICallBack(&(*detect)[0])
 		}
 	}
-	return nil
+	return nil, unConfirmNum
 }
 
 //返回两个bool值，第一个代表是否是middl数据，第二个代表处理是否成功
@@ -741,7 +743,7 @@ func middleDataDeal(taskId, toolId, aId int) (bool, bool) {
 		return false, false
 	}
 	fmt.Println((*middleData)[0].JsonContent)
-	insertFlag, _ := iOSResultClassify(taskId, toolId, aId, (*middleData)[0].JsonContent) //插入数据
+	insertFlag, _, _ := iOSResultClassify(taskId, toolId, aId, (*middleData)[0].JsonContent) //插入数据
 	//已经确认记得在map中更新数据
 	if insertFlag {
 		for _, m := range *middleData {
@@ -772,4 +774,30 @@ func middleDataDeal(taskId, toolId, aId int) (bool, bool) {
 		return true, false
 	}
 	return true, true
+}
+
+func GetIOSSelfNum(appid, taskId int) (bool, int) {
+	url := "https://itc.bytedance.net/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
+	//url := "http://10.224.14.220:6789/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
+	resp, err := http.Get(url)
+	if err != nil {
+		logs.Error("获取iOS自查项失败！", err.Error())
+		return false, 0
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logs.Error("获取iOS自查项失败！", err.Error())
+		return false, 0
+	}
+	m := make(map[string]interface{})
+	json.Unmarshal(body, &m)
+	data := m["data"].([]interface{})
+	var selfNum0 = 0
+	for _, d := range data {
+		if int(d.(map[string]interface{})["status"].(float64)) == 0 {
+			selfNum0++
+		}
+	}
+	return true, selfNum0
 }

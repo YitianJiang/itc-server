@@ -11,10 +11,12 @@ package mysql
 import (
 	"context"
 	"database/sql/driver"
+	"github.com/opentracing/opentracing-go"
 	"io"
 	"net"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -50,6 +52,7 @@ type mysqlConn struct {
 	finished chan<- struct{}
 	canceled atomicError // set non-nil if conn is canceled
 	closed   atomicBool  // set when conn is closed, before closech is closed
+	span     *opentracing.Span
 }
 
 // Handles parameters set in DSN after the connection is established
@@ -88,10 +91,11 @@ func (mc *mysqlConn) Begin() (rtx driver.Tx, txerr error) {
 
 func (mc *mysqlConn) beginToutiao(ctx context.Context) (rtx driver.Tx, txerr error) {
 	defer func(begin time.Time) {
-		toutiaoSQLAfter(ctx, "begin", mc.cfg, time.Now().Sub(begin), txerr)
+		toutiaoSQLAfter(ctx, "begin", mc.cfg, time.Now().Sub(begin), txerr, mc)
+		mc.clearPkgSize()
 	}(time.Now())
 
-	if txerr = toutiaoSQLBefore(ctx, "begin", mc.cfg); txerr != nil {
+	if txerr = toutiaoSQLBefore(ctx, "begin", mc.cfg, mc); txerr != nil {
 		return
 	}
 
@@ -153,10 +157,10 @@ func (mc *mysqlConn) Prepare(query string) (rstmt driver.Stmt, perr error) {
 
 func (mc *mysqlConn) prepareToutiao(ctx context.Context, query string) (rstmt driver.Stmt, perr error) {
 	defer func(begin time.Time) {
-		toutiaoSQLAfter(ctx, query, mc.cfg, time.Now().Sub(begin), perr)
+		toutiaoSQLAfter(ctx, query, mc.cfg, time.Now().Sub(begin), perr, mc)
 	}(time.Now())
 
-	if perr = toutiaoSQLBefore(ctx, query, mc.cfg); perr != nil {
+	if perr = toutiaoSQLBefore(ctx, query, mc.cfg, mc); perr != nil {
 		return
 	}
 
@@ -322,14 +326,6 @@ func (mc *mysqlConn) Exec(query string, args []driver.Value) (result driver.Resu
 }
 
 func (mc *mysqlConn) execToutiao(ctx context.Context, query string, args []driver.Value) (result driver.Result, exerr error) {
-	defer func(begin time.Time) {
-		toutiaoSQLAfter(ctx, query, mc.cfg, time.Now().Sub(begin), exerr)
-	}(time.Now())
-
-	if exerr = toutiaoSQLBefore(ctx, query, mc.cfg); exerr != nil {
-		return
-	}
-
 	if mc.closed.IsSet() {
 		errLog.Print(ErrInvalidConn)
 		return nil, driver.ErrBadConn
@@ -349,6 +345,16 @@ func (mc *mysqlConn) execToutiao(ctx context.Context, query string, args []drive
 		}
 		query = prepared
 	}
+
+	defer func(begin time.Time) {
+		toutiaoSQLAfter(ctx, query, mc.cfg, time.Now().Sub(begin), exerr, mc)
+		mc.clearPkgSize()
+	}(time.Now())
+
+	if exerr = toutiaoSQLBefore(ctx, query, mc.cfg, mc); exerr != nil {
+		return
+	}
+
 	mc.affectedRows = 0
 	mc.insertId = 0
 
@@ -395,14 +401,6 @@ func (mc *mysqlConn) Query(query string, args []driver.Value) (driver.Rows, erro
 }
 
 func (mc *mysqlConn) queryToutiao(ctx context.Context, query string, args []driver.Value) (rows *textRows, qerr error) {
-	defer func(begin time.Time) {
-		toutiaoSQLAfter(ctx, query, mc.cfg, time.Now().Sub(begin), qerr)
-	}(time.Now())
-
-	if qerr = toutiaoSQLBefore(ctx, query, mc.cfg); qerr != nil {
-		return
-	}
-
 	if mc.closed.IsSet() {
 		errLog.Print(ErrInvalidConn)
 		return nil, driver.ErrBadConn
@@ -422,6 +420,16 @@ func (mc *mysqlConn) queryToutiao(ctx context.Context, query string, args []driv
 		}
 		query = prepared
 	}
+
+	defer func(begin time.Time) {
+		toutiaoSQLAfter(ctx, query, mc.cfg, time.Now().Sub(begin), qerr, mc)
+		mc.clearPkgSize()
+	}(time.Now())
+
+	if qerr = toutiaoSQLBefore(ctx, query, mc.cfg, mc); qerr != nil {
+		return
+	}
+
 	// Send command
 	err := mc.writeCommandPacketStr(comQuery, query)
 	if err == nil {
@@ -496,4 +504,35 @@ func (mc *mysqlConn) finish() {
 		mc.watching = false
 	case <-mc.closech:
 	}
+}
+
+func (mc *mysqlConn) clearPkgSize() {
+	if conn, ok := mc.netConn.(*ConnWithPkgSize); ok {
+		opentracingMW.ProcessFinish(mc, conn)
+		conn.clear()
+	}
+}
+
+type ConnWithPkgSize struct {
+	net.Conn
+	Written int32
+	Readn   int32
+}
+
+func (c *ConnWithPkgSize) Read(b []byte) (n int, err error) {
+	n, err = c.Conn.Read(b)
+	atomic.AddInt32(&(c.Readn), int32(n))
+	return n, err
+}
+
+func (c *ConnWithPkgSize) Write(b []byte) (n int, err error) {
+	n, err = c.Conn.Write(b)
+	atomic.AddInt32(&(c.Written), int32(n))
+	return n, err
+}
+
+// clear pkg size
+func (c *ConnWithPkgSize) clear() {
+	atomic.StoreInt32(&(c.Written), 0)
+	atomic.StoreInt32(&(c.Readn), 0)
 }

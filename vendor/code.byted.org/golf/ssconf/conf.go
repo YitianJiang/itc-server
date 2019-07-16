@@ -33,6 +33,14 @@ func GetTotalConfigure(confFile string) (map[string]string, error) {
 	return rets, nil
 }
 
+func GetConfigureOnDemand(confFile, consulKey string) (map[string]string, error) {
+	rets, err := LoadSsConfFileOnDemand(confFile, consulKey)
+	if err != nil {
+		return nil, err
+	}
+	return rets, nil
+}
+
 func GetServersFromCache(rets map[string]string, key string) ([]string, error) {
 	line, status := rets[key]
 	if status == false {
@@ -70,6 +78,14 @@ func GetServerList(confFile, key string) ([]string, error) {
 		return nil, err
 	}
 	return GetServersFromCache(rets, key)
+}
+
+func GetServerListOnDemand(confFile, consulKey string) ([]string, error) {
+	rets, err := GetConfigureOnDemand(confFile, consulKey)
+	if err != nil {
+		return nil, err
+	}
+	return GetServersFromCache(rets, consulKey)
 }
 
 func ParseClusterAndServerList(confFile, category string) (map[string][]string, error) {

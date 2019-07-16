@@ -2,16 +2,9 @@ package detect
 
 import (
 	"bytes"
-	_const "code.byted.org/clientQA/itc-server/const"
-	"code.byted.org/clientQA/itc-server/database/dal"
-	"code.byted.org/clientQA/itc-server/utils"
-	"code.byted.org/gopkg/logs"
-	"code.byted.org/gopkg/tos"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/gin-gonic/gin"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -22,12 +15,20 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	_const "code.byted.org/clientQA/itc-server/const"
+	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/logs"
+	"code.byted.org/gopkg/tos"
+	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-gonic/gin"
 )
 
 const (
 	DETECT_URL_DEV = "10.2.209.202:9527"
 	//DETECT_URL_PRO = "10.2.9.226:9527"
-	DETECT_URL_PRO = "10.1.221.15:9527"
+	DETECT_URL_PRO = "10.1.221.188:9527"
 	//test----fj
 	Local_URL_PRO = "10.1.220.99:9527"
 
@@ -61,6 +62,15 @@ func UploadFile(c *gin.Context) {
 			"errorCode": -2,
 		})
 		logs.Error("未选择上传的文件！")
+		return
+	}
+	//问题文件提前排查（大小<1m）
+	if header.Size < (1 << 20) {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "上传的文件有问题（文件大小异常），请排查！",
+			"errorCode": -2,
+		})
+		logs.Error("上传的文件有问题（文件大小异常）")
 		return
 	}
 	defer file.Close()
@@ -98,10 +108,9 @@ func UploadFile(c *gin.Context) {
 	logs.Info("checkItem: ", checkItem)
 
 	//增加回调地址
-	callBackAddr := c.DefaultPostForm("callBackAddr","")
+	callBackAddr := c.DefaultPostForm("callBackAddr", "")
 	var extraInfo dal.ExtraStruct
 	extraInfo.CallBackAddr = callBackAddr
-
 
 	//检验文件格式是否是apk或者ipa
 	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".ipa") ||
@@ -183,8 +192,10 @@ func UploadFile(c *gin.Context) {
 	dbDetectModel.AppId = appId
 	//增加状态字段，0---未完全确认；1---已完全确认
 	dbDetectModel.Status = 0
-	byteExtraInfo,_ := json.Marshal(extraInfo)
-	dbDetectModel.ExtraInfo = string(byteExtraInfo)
+	if callBackAddr != "" {
+		byteExtraInfo, _ := json.Marshal(extraInfo)
+		dbDetectModel.ExtraInfo = string(byteExtraInfo)
+	}
 	dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
 	if checkItem == "" {
@@ -206,7 +217,7 @@ func UploadFile(c *gin.Context) {
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
 		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
-		//callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
+		//callBackUrl := "http://10.224.14.220:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -229,18 +240,22 @@ func UploadFile(c *gin.Context) {
 		contentType := bodyWriter.FormDataContentType()
 		err = bodyWriter.Close()
 		logs.Info("url: ", url)
-		tr := http.Transport{DisableKeepAlives: true}
+		tr := http.Transport{
+			DisableKeepAlives:   true,
+			MaxIdleConnsPerHost: 0,
+		}
 		toolHttp := &http.Client{
-			Timeout: 300 * time.Second,
+			Timeout:   300 * time.Second,
 			Transport: &tr,
 		}
 		response, err := toolHttp.Post(url, contentType, bodyBuffer)
 		if err != nil {
 			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",上传二进制包出错", err)
 			//及时报警
-			utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
-			utils.LarkDingOneInner("yinzhihong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
-			utils.LarkDingOneInner("fanjuan.xqp", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
+			for _, lark_people := range _const.LowLarkPeople {
+				utils.UserInGroup(lark_people) //将用户拉入预审平台群
+				utils.LarkDingOneInner(lark_people, "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
+			}
 		}
 		resBody := &bytes.Buffer{}
 		if response != nil {
@@ -298,13 +313,17 @@ func UpdateDetectInfos(c *gin.Context) {
 	}
 	toolIdInt, _ := strconv.Atoi(toolId)
 
+	//消息通知条数--检测项+自查项
+	var unConfirms int
+	var unSelfCheck = 0
 	if (*detect)[0].Platform == 0 {
 		if toolIdInt == 6 { //安卓兼容新版本
 			//安卓检测信息分析，并将检测信息写库-----fj
 			mapInfo := make(map[string]int)
 			mapInfo["taskId"], _ = strconv.Atoi(taskId)
 			mapInfo["toolId"], _ = strconv.Atoi(toolId)
-			errApk := ApkJsonAnalysis_2(jsonContent, mapInfo)
+			var errApk error
+			errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, mapInfo)
 			if errApk != nil {
 				return
 			}
@@ -356,7 +375,8 @@ func UpdateDetectInfos(c *gin.Context) {
 		taskId, _ := strconv.Atoi(taskId)
 		toolId, _ := strconv.Atoi(toolId)
 		appId, _ := strconv.Atoi((*detect)[0].AppId)
-		res, warnFlag := iOSResultClassify(taskId, toolId, appId, jsonContent) //检测结果处理
+		res, warnFlag, detectNo := iOSResultClassify(taskId, toolId, appId, jsonContent) //检测结果处理
+		unConfirms = detectNo
 		if res == false {
 			logs.Error("iOS 新增new detect content失败！！！") //防止影响现有用户，出错后暂不return
 		}
@@ -364,27 +384,40 @@ func UpdateDetectInfos(c *gin.Context) {
 		if res && warnFlag {
 			tips := "Notice: " + (*detect)[0].AppName + " " + (*detect)[0].AppVersion + " iOS包完成二进制检测，检测黑名单中itms-services不为空，请及时关注！！！！\n"
 			larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + strconv.Itoa(toolId) + "&showItcDetail=1&itcTaskId=" + strconv.Itoa(taskId)
-			tips += "地址链接：" + larkUrl
-			utils.LarkDingOneInner("zhangshuai.02", tips)
-			utils.LarkDingOneInner("gongrui", tips)
-			utils.LarkDingOneInner("kanghuaisong", tips)
-			utils.LarkDingOneInner((*detect)[0].ToLarker, tips)
+			//tips += "地址链接：" + larkUrl
+			for _, lark_people := range _const.MiddleLarkPeople {
+				//utils.LarkDingOneInner(lark_people, tips)
+				utils.LarkDingOneInnerWithUrl(lark_people, tips, "点击跳转检测详情", larkUrl)
+			}
+		}
+		//获取未确认自查项数目
+		isRight, selfNum := GetIOSSelfNum(appId, taskId)
+		if isRight {
+			unSelfCheck = selfNum
 		}
 	}
-
 	//进行lark消息提醒
+	detect = dal.QueryDetectModelsByMap(map[string]interface{}{
+		"id": taskId,
+	})
 	var message string
 	creators := (*detect)[0].ToLarker
 	larkList := strings.Split(creators, ",")
 	//for _,creator := range larkList {
 	message = "你好，" + (*detect)[0].AppName + " " + (*detect)[0].AppVersion
 	platform := (*detect)[0].Platform
+	var os_code string
 	if platform == 0 {
-		message += "安卓包"
+		message += " Android包"
+		os_code = "1"
 	} else {
-		message += "iOS包"
+		message += " iOS包"
+		os_code = "2"
 	}
-	message += "完成二进制检测，请及时对每条未确认信息进行确认！\n"
+
+	message += "  检测已经完成"
+
+	//message += " 完成二进制检测，请及时对每条未确认信息进行确认！\n"
 	//message += "如果安卓选择了GooglePlay检测和隐私检测，两个检测结果都需要进行确认，请不要遗漏！！！\n"
 	appId := (*detect)[0].AppId
 	appIdInt, _ := strconv.Atoi(appId)
@@ -425,20 +458,47 @@ func UpdateDetectInfos(c *gin.Context) {
 	var key string
 	key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
 	LARK_MSG_CALL_MAP[key] = ticker
+	//获取BM负责人
+	project_id := ""
+	qa_bm := ""
+	rd_bm := ""
+	if p, ok := _const.AppVersionProject[appId]; ok {
+		project_id = p
+		rd, qa := utils.GetVersionBMInfo(appId, project_id, (*detect)[0].AppVersion, os_code)
+		rd_id := utils.GetUserOpenId(rd + "@bytedance.com")
+		if rd_id != "" {
+			rd_info := utils.GetUserAllInfo(rd_id)
+			rd_map := make(map[string]interface{})
+			json.Unmarshal([]byte(rd_info), &rd_map)
+			rd_bm = rd_map["name"].(string)
+		}
+		qa_id := utils.GetUserOpenId(qa + "@bytedance.com")
+		if qa_id != "" {
+			qa_info := utils.GetUserAllInfo(qa_id)
+			qa_map := make(map[string]interface{})
+			json.Unmarshal([]byte(qa_info), &qa_map)
+			qa_bm = qa_map["name"].(string)
+		}
+	}
 	//此处测试时注释掉
 	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
-	message += "地址链接：" + larkUrl
 	for _, creator := range larkList {
-		utils.LarkDingOneInner(creator, message)
+		//new lark卡片通知形式
+		utils.LarkDetectResult(creator, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, false)
 	}
-	//给群ID对应群发送消息
+	//发给群消息沿用旧的机器人，给群ID对应群发送消息
 	toGroupID := (*detect)[0].ToGroup
 	if toGroupID != "" {
 		group := strings.Replace(toGroupID, "，", ",", -1) //中文逗号切换成英文逗号
 		groupArr := strings.Split(group, ",")
 		for _, group_id := range groupArr {
 			to_lark_group := strings.Trim(group_id, " ")
-			utils.LarkGroup(message, to_lark_group)
+			//新样式
+			if utils.LarkDetectResult(to_lark_group, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, true) == false {
+				message += message + larkUrl
+				utils.LarkGroup(message, to_lark_group)
+			}
+
 		}
 	}
 
@@ -764,6 +824,11 @@ func QueryDetectTasks(c *gin.Context) {
 	data.Total = total
 	data.NowPage = uint(page)
 	data.Tasks = *items
+	if appId == "1319" {
+		for i := 0; i < len(*items); i++ {
+			(*items)[i].AppName = "皮皮虾"
+		}
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
 		"errorCode": 0,
@@ -832,6 +897,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 		var res [0]dal.DetectContent
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "success",
+			"platform":  platform,
 			"errorCode": 0,
 			"appId":     (*task)[0].AppId,
 			"data":      res,
@@ -856,6 +922,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 	selected := dal.QueryBinaryToolsByCondition(toolCondition)
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
+		"platform":  platform,
 		"errorCode": 0,
 		"appId":     (*task)[0].AppId,
 		"data":      *selected,
@@ -947,8 +1014,8 @@ func GetToken(c *gin.Context) {
  */
 func Alram(c *gin.Context) {
 	message := c.Request.FormValue("errorMsg")
-	larkList := strings.Split("kanghuaisong,yinzhihong,fanjuan.xqp", ",")
-	for _, creator := range larkList {
+	//larkList := strings.Split("kanghuaisong,yinzhihong,fanjuan.xqp", ",")
+	for _, creator := range _const.LowLarkPeople {
 		utils.LarkDingOneInner(creator, "检测服务异常，请立即关注！"+message)
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -957,107 +1024,117 @@ func Alram(c *gin.Context) {
 	})
 }
 
-
-func CICallBack(task *dal.DetectStruct) error{
-	if task.Platform == 1 && (task.SelfCheckStatus != 1 || task.Status != 1){
+func CICallBack(task *dal.DetectStruct) error {
+	if task.Platform == 1 && (task.SelfCheckStatus != 1 || task.Status != 1) {
 		logs.Info("不满足callback条件")
 		return nil
 	}
 	var t dal.ExtraStruct
 	//兼容旧信息---无extra_info字段
-	if task.ExtraInfo == ""{
+	if task.ExtraInfo == "" {
 		return nil
 	}
-	err := json.Unmarshal([]byte(task.ExtraInfo),&t)
+	err := json.Unmarshal([]byte(task.ExtraInfo), &t)
 	if err != nil {
-		logs.Error("任务附加信息存储格式错误，任务ID："+fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("fanjuan.xqp","任务附加信息存储格式错误，任务ID："+fmt.Sprint(task.ID))
+		logs.Error("任务附加信息存储格式错误，任务ID：" + fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("fanjuan.xqp", "任务附加信息存储格式错误，任务ID："+fmt.Sprint(task.ID))
 		return err
 	}
 	//无回调地址（页面上传），不需要进行回调
 	if t.CallBackAddr == "" {
 		return nil
 	}
-	urlInfos := strings.Split(t.CallBackAddr,"?")
+	urlInfos := strings.Split(t.CallBackAddr, "?")
 	workflow_id := ""
 	job_id := ""
-	if len(urlInfos)>1 {
+	if len(urlInfos) > 1 {
 		queryInfos := getUrlInfo(urlInfos[1])
-		if v,ok := queryInfos["workflow_id"];ok {
+		if v, ok := queryInfos["workflow_id"]; ok {
 			workflow_id = v
 		}
-		if v,ok := queryInfos["job_id"];ok {
+		if v, ok := queryInfos["job_id"]; ok {
 			job_id = v
 		}
 	}
 
 	//回调CI接口，发送post请求
 	data := make(map[string]string)
-	data["workflow_id"]= workflow_id
+	data["workflow_id"] = workflow_id
 	data["job_id"] = job_id
 	data["statsu"] = "2"
 	data["task_id"] = fmt.Sprint(task.ID)
+	url := urlInfos[0]
+	return PostInfos(url, data)
+}
+
+/**
+预审发送post信息
+*/
+func PostInfos(url string, data map[string]string) error {
+	taskId := data["task_id"]
 	bytesData, err1 := json.Marshal(data)
-	if err != nil {
-		logs.Error("任务ID："+fmt.Sprint(task.ID)+",CI回调信息转换失败"+fmt.Sprint(err1))
-		utils.LarkDingOneInner("fanjuan.xqp", "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("kanghuaisong", "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("yinzhihong", "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+	if err1 != nil {
+		logs.Error("任务ID：" + fmt.Sprint(taskId) + ",CI回调信息转换失败" + fmt.Sprint(err1))
+		for _, lark_people := range _const.LowLarkPeople {
+			utils.LarkDingOneInner(lark_people, "CI回调信息转换失败，请及时进行检查！任务ID："+fmt.Sprint(taskId))
+		}
 		return err1
 	}
 	reader := bytes.NewReader(bytesData)
-	url := urlInfos[0]
+
 	request, err2 := http.NewRequest("POST", url, reader)
 	if err2 != nil {
-		logs.Error("任务ID："+fmt.Sprint(task.ID)+",CI回调请求Create失败"+fmt.Sprint(err2))
-		utils.LarkDingOneInner("fanjuan.xqp", "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("kanghuaisong", "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("yinzhihong", "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		logs.Error("任务ID：" + fmt.Sprint(taskId) + ",CI回调请求Create失败" + fmt.Sprint(err2))
+		for _, lark_people := range _const.LowLarkPeople {
+			utils.LarkDingOneInner(lark_people, "CI回调请求Create失败，请及时进行检查！任务ID："+fmt.Sprint(taskId))
+		}
 		return err2
 	}
 	request.Header.Set("Content-Type", "application/json;charset=UTF-8")
 	client := http.Client{}
 	resp, err3 := client.Do(request)
 	if err3 != nil {
-		logs.Error("任务ID："+fmt.Sprint(task.ID)+",回调CI接口失败,%v", err3)
+		logs.Error("任务ID："+taskId+",回调CI接口失败,%v", err3)
 		//及时报警
 		//utils.LarkDingOneInner("kanghuaisong", "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("fanjuan.xqp", "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("kanghuaisong", "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("yinzhihong", "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(task.ID))
+		for _, lark_people := range _const.LowLarkPeople {
+			utils.LarkDingOneInner(lark_people, "CI回调请求发送失败，请及时进行检查！任务ID："+fmt.Sprint(taskId))
+		}
 		return err3
 	}
-	logs.Info("任务ID："+fmt.Sprint(task.ID)+"回调成功,回调信息："+fmt.Sprint(data)+",回调地址："+url)
+	logs.Info("任务ID：" + fmt.Sprint(taskId) + "回调成功,回调信息：" + fmt.Sprint(data) + ",回调地址：" + url)
 	if resp != nil {
 		defer resp.Body.Close()
 		respBytes, _ := ioutil.ReadAll(resp.Body)
 		var data map[string]interface{}
 		data = make(map[string]interface{})
 		json.Unmarshal(respBytes, &data)
-		logs.Info("taskId :"+fmt.Sprint(task.ID)+",CI detect url's response: %+v", data)
+		logs.Info("taskId :"+taskId+",CI detect url's response: %+v", data)
 	}
 	return nil
 }
+
 /**
-	获取URL信息
- */
+获取URL信息
+*/
 func getUrlInfo(url string) map[string]string {
-	infos := strings.Split(url,"&")
+	infos := strings.Split(url, "&")
 	result := make(map[string]string)
-	for _,info := range infos {
-		keyValues := strings.Split(info,"=")
-		if len(keyValues)>1{
+	for _, info := range infos {
+		keyValues := strings.Split(info, "=")
+		if len(keyValues) > 1 {
 			result[keyValues[0]] = keyValues[1]
 		}
 	}
 	return result
 }
+
 /**
-	自测Ci回调接口
- */
-func CICallBackTest(c *gin.Context)  {
-	param,_ := ioutil.ReadAll(c.Request.Body)
+自测Ci回调接口
+*/
+func CICallBackTest(c *gin.Context) {
+	param, _ := ioutil.ReadAll(c.Request.Body)
 	var t map[string]interface{}
-	json.Unmarshal(param,&t)
-	logs.Notice("CI回调返回信息，%v",t)
+	json.Unmarshal(param, &t)
+	logs.Notice("CI回调返回信息，%v", t)
 }

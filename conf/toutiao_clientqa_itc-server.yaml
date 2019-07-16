@@ -6,6 +6,7 @@ Develop:
   LogInterval: "hour"
   EnableMetrics: false
   ConsoleLog: true
+  AgentLog: true
   DatabusLog: false
   FileLog: true
   Mode: "debug"

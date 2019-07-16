@@ -21,42 +21,6 @@
 			"revisionTime": "2017-09-30T09:00:34Z"
 		},
 		{
-			"checksumSHA1": "yXvC7PnsXJBo5tH8vuSxCatFFDo=",
-			"path": "code.byted.org/clientQA/pkg/conf",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
-			"checksumSHA1": "YIVzF6sbFBcJXfnf+7Kq+g+b5O4=",
-			"path": "code.byted.org/clientQA/pkg/const",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
-			"checksumSHA1": "avkfUqP0VhLDnqOee/JPFAdf1nU=",
-			"path": "code.byted.org/clientQA/pkg/database",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
-			"checksumSHA1": "KmppMQlNHaUzKA2Hbq15zuQQeIs=",
-			"path": "code.byted.org/clientQA/pkg/http-util",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
-			"checksumSHA1": "zsRsSUphCbG8+c6hzaaXGmmoO6M=",
-			"path": "code.byted.org/clientQA/pkg/job-processor/dal",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
-			"checksumSHA1": "IVcwsZtQYvPt9p0zmYrsBBRlMAA=",
-			"path": "code.byted.org/clientQA/pkg/request-processor/request-dal",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
 			"checksumSHA1": "jgqsb30I2aaftT4OXh+dRzMview=",
 			"path": "code.byted.org/dp/gotqs",
 			"revision": "e6e28d36e0aa0c072c1a705d3058b4b61ea184f2",
@@ -153,11 +117,10 @@
 			"revisionTime": "2018-12-21T06:28:23Z"
 		},
 		{
-			"checksumSHA1": "xXJmFGg+egY8UaHlHaMwTfclwss=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/code.byted.org/golf/ssconf",
+			"checksumSHA1": "ZQkmFfMfZw6ewpnwOWHam0vuD/o=",
 			"path": "code.byted.org/golf/ssconf",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
+			"revision": "26ac8c57bda9470aab4d8753cf02a02ef7d10eed",
+			"revisionTime": "2018-10-12T07:45:23Z"
 		},
 		{
 			"checksumSHA1": "huStgGvq3eahbFCAbHbNB1ylrI0=",
@@ -178,18 +141,16 @@
 			"revisionTime": "2018-03-05T10:31:52Z"
 		},
 		{
-			"checksumSHA1": "j9L4qBOrNLxDQtRTyBiMMfPfK/U=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/code.byted.org/gopkg/dbutil/conf",
+			"checksumSHA1": "7jfWQ4xz0bSZZmTlZGeNPfgiK5A=",
 			"path": "code.byted.org/gopkg/dbutil/conf",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
+			"revision": "ce91bcfce03858cd472de98e6d43e472ad1e0c55",
+			"revisionTime": "2019-06-03T09:33:21Z"
 		},
 		{
 			"checksumSHA1": "U1REsTQtq+tbvX6Tqz3ixW/B/M4=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/code.byted.org/gopkg/dbutil/gormdb",
 			"path": "code.byted.org/gopkg/dbutil/gormdb",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
+			"revision": "ce91bcfce03858cd472de98e6d43e472ad1e0c55",
+			"revisionTime": "2019-06-03T09:33:21Z"
 		},
 		{
 			"checksumSHA1": "m2wwlYxJkST52aDibIoYJ5lWyAQ=",
@@ -216,11 +177,10 @@
 			"revisionTime": "2018-12-10T03:50:30Z"
 		},
 		{
-			"checksumSHA1": "2ND2HKmCHDuU1gxCjohSlVxc3qk=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/code.byted.org/gopkg/gorm",
+			"checksumSHA1": "b72mPvFxFRjfbrBjCugz52e1I04=",
 			"path": "code.byted.org/gopkg/gorm",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
+			"revision": "ca638a3bf763ab722be50e37d9543705690038ac",
+			"revisionTime": "2019-05-19T14:12:57Z"
 		},
 		{
 			"checksumSHA1": "d78GuAz8cOy4X9v2CFX2jYyza5A=",
@@ -241,11 +201,22 @@
 			"revisionTime": "2019-02-28T10:31:31Z"
 		},
 		{
-			"checksumSHA1": "5yiAswuV8RKamNy5AZauRaLv1cI=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/code.byted.org/gopkg/mysql-driver",
+			"checksumSHA1": "XFTxmy5hNdN615JEf3SeMfoSF3g=",
 			"path": "code.byted.org/gopkg/mysql-driver",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
+			"revision": "bd8ab9d61f3c17b4a254d29baccda9d49ed545a6",
+			"revisionTime": "2019-06-05T08:10:41Z"
+		},
+		{
+			"checksumSHA1": "pQvlzqRW/i8LEk72kupKjtYRpjo=",
+			"path": "code.byted.org/gopkg/mysql-driver/trace/ext",
+			"revision": "bd8ab9d61f3c17b4a254d29baccda9d49ed545a6",
+			"revisionTime": "2019-06-05T08:10:41Z"
+		},
+		{
+			"checksumSHA1": "2RIjUOZAVwaxGLJzVpPzTtGs6tk=",
+			"path": "code.byted.org/gopkg/mysql-driver/trace/post-trace",
+			"revision": "bd8ab9d61f3c17b4a254d29baccda9d49ed545a6",
+			"revisionTime": "2019-06-05T08:10:41Z"
 		},
 		{
 			"checksumSHA1": "B8Vxf87O6VIiqu5/mdiFHfAhrdw=",
@@ -307,6 +278,12 @@
 			"path": "code.byted.org/hystrix/hystrix-go/hystrix/rolling",
 			"revision": "a2a890c81cd5e00c57f0ccd947e0019d62a355b2",
 			"revisionTime": "2019-02-14T09:50:17Z"
+		},
+		{
+			"checksumSHA1": "j28YV8QEy6S5iWXFhUDKWSl6Tvc=",
+			"path": "code.byted.org/inf/infsecc",
+			"revision": "f2f030be6361c063ccd309f023c91c28bb6d9aa2",
+			"revisionTime": "2019-06-18T06:03:46Z"
 		},
 		{
 			"checksumSHA1": "3sCHq780tBsxCI80x3+ckWKkA/g=",
@@ -405,55 +382,6 @@
 			"revisionTime": "2019-01-14T11:40:21Z"
 		},
 		{
-			"checksumSHA1": "mQFKfQjpylMNpYDdHTUKEUDZ5ZY=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/code.byted.org/kv/goredis",
-			"path": "code.byted.org/kv/goredis",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
-			"checksumSHA1": "r6Ui+iaV1mf4DbmbRr0OuCjsuQY=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/code.byted.org/kv/redis-v6",
-			"path": "code.byted.org/kv/redis-v6",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
-			"checksumSHA1": "l/ic9tUOmIP1JqwYoCQtEk1wOm4=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/code.byted.org/kv/redis-v6/pkg",
-			"path": "code.byted.org/kv/redis-v6/pkg",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
-			"checksumSHA1": "+xbLPek3TvklrjBCZNN3UkuLIxE=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/code.byted.org/kv/redis-v6/pkg/consistenthash",
-			"path": "code.byted.org/kv/redis-v6/pkg/consistenthash",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
-			"checksumSHA1": "MuwXXLTE+yRMI8t8GArZniWuyMA=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/code.byted.org/kv/redis-v6/pkg/hashtag",
-			"path": "code.byted.org/kv/redis-v6/pkg/hashtag",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
-			"checksumSHA1": "/IvTE7vD9/MSN0Q5Ioq/OsVInEU=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/code.byted.org/kv/redis-v6/pkg/pool",
-			"path": "code.byted.org/kv/redis-v6/pkg/pool",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
-			"checksumSHA1": "ebIR5DEIAK+iOv2sEz2XgjsQus0=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/code.byted.org/kv/redis-v6/pkg/proto",
-			"path": "code.byted.org/kv/redis-v6/pkg/proto",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
 			"checksumSHA1": "a1M3FUcHsk15XvXtVZgbI0MUj84=",
 			"path": "code.byted.org/log_market/gosdk",
 			"revision": "bc310150c322a8a4587295324a22f6f2ce85044c",
@@ -538,18 +466,16 @@
 			"revisionTime": "2019-02-20T07:51:40Z"
 		},
 		{
-			"checksumSHA1": "1qAq9A25apESKVBobU7Ta+MJDPY=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/code.byted.org/zhangwanlong/go-lark",
-			"path": "code.byted.org/zhangwanlong/go-lark",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
+			"checksumSHA1": "3SVcuqMM6E4AkRmzrcGSVsXOleM=",
+			"path": "code.byted.org/yinzhihong/uploaduserdata",
+			"revision": "2ca0af0fc76931b2073a5a019b64c7f17d6978cb",
+			"revisionTime": "2019-07-09T08:03:38Z"
 		},
 		{
-			"checksumSHA1": "BftuY1poE77Mld2VA/6DuYcC5wI=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/github.com/cenk/backoff",
-			"path": "github.com/cenk/backoff",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
+			"checksumSHA1": "vhI3tzO5WLWc6ZHmjxR00g5nkPU=",
+			"path": "github.com/astaxie/beego/logs",
+			"revision": "32ee728078c84c28f2642c70745afc8f6830044d",
+			"revisionTime": "2019-07-05T04:26:39Z"
 		},
 		{
 			"checksumSHA1": "UwR/g7IGkJnBDuJu0cKAY5yvxUs=",
@@ -568,13 +494,6 @@
 			"path": "github.com/dgrijalva/jwt-go",
 			"revision": "3af4c746e1c248ee8491a3e0c6f7a9cd831e95f8",
 			"revisionTime": "2018-09-21T17:23:15Z"
-		},
-		{
-			"checksumSHA1": "imR2wF388/0fBU6RRWx8RvTi8Q8=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/github.com/facebookgo/clock",
-			"path": "github.com/facebookgo/clock",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
 		},
 		{
 			"checksumSHA1": "7NP1qUMF8Kx1y0zANxx0e+oq9Oo=",
@@ -607,13 +526,6 @@
 			"revisionTime": "2019-06-27T04:47:45Z"
 		},
 		{
-			"checksumSHA1": "woO1qIxIeQ1bcbPSiMfAKk3r4xg=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/github.com/gin-gonic/gin/json",
-			"path": "github.com/gin-gonic/gin/json",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
 			"checksumSHA1": "4XLWNQHHCyHJCCROC4UXSn7U1OM=",
 			"path": "github.com/gin-gonic/gin/render",
 			"revision": "f98b339b773105aad77f321d0baaa30475bf875d",
@@ -624,12 +536,6 @@
 			"path": "github.com/gogo/protobuf/proto",
 			"revision": "ba06b47c162d49f2af050fb4c75bcbc86a159d5c",
 			"revisionTime": "2019-02-18T06:30:03Z"
-		},
-		{
-			"checksumSHA1": "HmbftipkadrLlCfzzVQ+iFHbl6g=",
-			"path": "github.com/golang/glog",
-			"revision": "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
-			"revisionTime": "2016-01-25T20:49:56Z"
 		},
 		{
 			"checksumSHA1": "Y2MOwzNZfl4NRNDbLCZa6sgx7O0=",
@@ -698,11 +604,10 @@
 			"revisionTime": "2018-09-06T18:38:39Z"
 		},
 		{
-			"checksumSHA1": "4eelJOSLZoDzLuaJvgilOBVNovU=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/github.com/jinzhu/inflection",
+			"checksumSHA1": "iqeSAF7imnVsW+iqLqf6kkYn1VU=",
 			"path": "github.com/jinzhu/inflection",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
+			"revision": "f5c5f50e6090ae76a29240b61ae2a90dd810112e",
+			"revisionTime": "2019-06-03T04:28:36Z"
 		},
 		{
 			"checksumSHA1": "2JH1DF82SAPY1JzD1iG4U7GZUcQ=",
@@ -777,38 +682,10 @@
 			"revisionTime": "2019-02-27T00:00:51Z"
 		},
 		{
-			"checksumSHA1": "xGlhb4NZjBVCNSbb7GIMvhn6mQg=",
-			"path": "github.com/robfig/cron",
-			"revision": "b41be1df696709bb6395fe435af20370037c0b4c",
-			"revisionTime": "2018-05-05T20:34:41Z"
-		},
-		{
-			"checksumSHA1": "q6JII/ziSLMqwajFGHj6w8V+RbA=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/github.com/rubyist/circuitbreaker",
-			"path": "github.com/rubyist/circuitbreaker",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
-			"checksumSHA1": "4xiFcTuGN52sL6Cu9CLSIq48RT8=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/github.com/skip2/go-qrcode",
-			"path": "github.com/skip2/go-qrcode",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
-			"checksumSHA1": "xkuxp8PnGrQUsIXMiIOCk4U5IGw=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/github.com/skip2/go-qrcode/bitset",
-			"path": "github.com/skip2/go-qrcode/bitset",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
-		},
-		{
-			"checksumSHA1": "UtPg/z5chOpfiJvr29Or0oUx1Bs=",
-			"origin": "code.byted.org/clientQA/pkg/vendor/github.com/skip2/go-qrcode/reedsolomon",
-			"path": "github.com/skip2/go-qrcode/reedsolomon",
-			"revision": "412a047ca0e8548d1fe1c7f24980ec843d4ca7d5",
-			"revisionTime": "2019-03-05T12:29:18Z"
+			"checksumSHA1": "v5CCEZdC63TIkIL8TUeURBcZzNc=",
+			"path": "github.com/shiena/ansicolor",
+			"revision": "a422bbe96644373c5753384a59d678f7d261ff10",
+			"revisionTime": "2015-11-19T15:19:21Z"
 		},
 		{
 			"checksumSHA1": "h+9Sb/jocXQ94U6GHjP4QuWuow4=",
@@ -875,12 +752,6 @@
 			"path": "golang.org/x/text/unicode/norm",
 			"revision": "d14c52b222ee852cdba8b07206ca0c614b389876",
 			"revisionTime": "2019-02-21T13:47:49Z"
-		},
-		{
-			"checksumSHA1": "p+R5MqPdKK/1xlqaECuh+vbEmC4=",
-			"path": "gopkg.in/cas.v2",
-			"revision": "1b87d011d1fc0430cdbdfe3115c9843ec33d9da6",
-			"revisionTime": "2017-07-27T10:16:41Z"
 		},
 		{
 			"checksumSHA1": "P/k5ZGf0lEBgpKgkwy++F7K1PSg=",

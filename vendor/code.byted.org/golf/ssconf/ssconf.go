@@ -21,6 +21,7 @@ func isSsConfSep(r rune) bool {
 func parseSsConfKeyValue(line string) (key, value string) {
 	// remove comments
 	line = strings.Split(strings.Split(line, "#")[0], ";")[0]
+	line = strings.TrimSpace(line) // /etc/ss_conf/db_profile.conf  #commentxx, 会多出空格, 导致解析失败
 	k_end := -1
 	v_begin := -1
 	for idx, c := range line {
@@ -131,6 +132,54 @@ func LoadSsConfFile(filename string) (ret map[string]string, err error) {
 			}
 		} else if len(key) > 0 {
 			ret[key] = value
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	resolve_conf(ret)
+	consul_ret, err := consul.TranslateConf(ret, filename)
+	if err == nil {
+		ret = consul_ret
+	}
+	return
+}
+
+func LoadSsConfFileOnDemand(filename, consulKey string) (ret map[string]string, err error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	ret = make(map[string]string)
+	err = nil
+
+	basename := path.Dir(filename)
+	scanner := bufio.NewScanner(file)
+	for {
+		line, ok := getWholeLine(scanner)
+		if ok != true {
+			break
+		}
+
+		key, value := parseSsConfKeyValue(line)
+		if key == "include" {
+			include_file := value
+			if strings.HasPrefix(include_file, "/") == false {
+				include_file = basename + "/" + include_file
+			}
+			include_conf, err := LoadSsConfFile(include_file)
+			if err != nil {
+				continue
+			}
+			// merge sub conf
+			for k, v := range include_conf {
+				ret[k] = v
+			}
+		} else if len(key) > 0 {
+			if key == consulKey {
+				ret[key] = value
+			}
 		}
 	}
 	if err := scanner.Err(); err != nil {

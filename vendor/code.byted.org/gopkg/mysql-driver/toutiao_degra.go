@@ -67,6 +67,17 @@ func doDegradation(sql string, cfg *Config) bool {
 	return defaultSafeRander.Intn(100) < num
 }
 
+func doDegradationNew(r MysqlReqMeta) bool {
+	config := getRemoteConfig(r)
+	if config.DegraPercent == 0 {
+		return false
+	} else if config.DegraPercent == 100 {
+		return true
+	}
+
+	return defaultSafeRander.Intn(100) < config.DegraPercent
+}
+
 // /kite/config/from/fromCluster/to/toCluster/method
 func buildKey(to, method string) string {
 	buf := make([]byte, 0, 96)

@@ -13,6 +13,7 @@ import (
 	"reflect"
 )
 
+
 // Scope contain current operation's information when you perform any operation on the database
 type Scope struct {
 	Search          *search
@@ -26,7 +27,7 @@ type Scope struct {
 	fields          *[]*Field
 	selectAttrs     *[]string
 
-	kind string
+	kind      string
 }
 
 func (scope *Scope) ShouldRejectTestRequest() bool {
