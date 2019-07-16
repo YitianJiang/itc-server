@@ -149,7 +149,7 @@ func CreateUsersInfoResData(obj *devconnmanager.FromAppleUserInfo) *devconnmanag
 }
 
 func UserDetailInfoGet(c *gin.Context){
-	logs.Info("返回角色列表以供前端筛选")
+	logs.Info("返回全部人员信息")
 	var requestData devconnmanager.UserDetailInfoReq
 	bindQueryError := c.ShouldBindQuery(&requestData)
 	utils.RecordError("请求参数绑定错误: ", bindQueryError)
