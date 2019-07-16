@@ -405,10 +405,13 @@ func UpdateDetectInfos(c *gin.Context) {
 	//for _,creator := range larkList {
 	message = "你好，" + (*detect)[0].AppName + " " + (*detect)[0].AppVersion
 	platform := (*detect)[0].Platform
+	var os_code string
 	if platform == 0 {
 		message += " Android包"
+		os_code = "1"
 	} else {
 		message += " iOS包"
+		os_code = "2"
 	}
 
 	message += "  检测已经完成"
@@ -454,11 +457,33 @@ func UpdateDetectInfos(c *gin.Context) {
 	var key string
 	key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
 	LARK_MSG_CALL_MAP[key] = ticker
+	//获取BM负责人
+	project_id := ""
+	qa_bm := ""
+	rd_bm := ""
+	if p, ok := _const.AppVersionProject[appId]; ok {
+		project_id = p
+		rd, qa := utils.GetVersionBMInfo(appId, project_id, (*detect)[0].AppVersion, os_code)
+		rd_id := utils.GetUserOpenId(rd + "@bytedance.com")
+		if rd_id != "" {
+			rd_info := utils.GetUserAllInfo(rd_id)
+			rd_map := make(map[string]interface{})
+			json.Unmarshal([]byte(rd_info), &rd_map)
+			rd_bm = rd_map["name"].(string)
+		}
+		qa_id := utils.GetUserOpenId(qa + "@bytedance.com")
+		if qa_id != "" {
+			qa_info := utils.GetUserAllInfo(qa_id)
+			qa_map := make(map[string]interface{})
+			json.Unmarshal([]byte(qa_info), &qa_map)
+			qa_bm = qa_map["name"].(string)
+		}
+	}
 	//此处测试时注释掉
 	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
 	for _, creator := range larkList {
 		//new lark卡片通知形式
-		utils.LarkDetectResult(creator, message, larkUrl, unConfirms, unSelfCheck, false)
+		utils.LarkDetectResult(creator, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, false)
 	}
 	//发给群消息沿用旧的机器人，给群ID对应群发送消息
 	toGroupID := (*detect)[0].ToGroup
@@ -468,7 +493,7 @@ func UpdateDetectInfos(c *gin.Context) {
 		for _, group_id := range groupArr {
 			to_lark_group := strings.Trim(group_id, " ")
 			//新样式
-			if utils.LarkDetectResult(to_lark_group, message, larkUrl, unConfirms, unSelfCheck, true) == false {
+			if utils.LarkDetectResult(to_lark_group, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, true) == false {
 				message += message + larkUrl
 				utils.LarkGroup(message, to_lark_group)
 			}

@@ -15,10 +15,12 @@ const ROCKETTOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJOYW1lIjoiZmFuanVhbi
 const ROCKET_URL = "https://rocket-api.bytedance.net/api/v1/products/query"
 const LARK_URL = "https://rocket-api.bytedance.net/api/v1/robot/person/send"
 const OFFICE_LARK_URL = "https://open.feishu.cn/open-apis/message/v3/send/"
+const LARK_Email2Id_URL = "https://open.feishu.cn/open-apis/user/v3/email2id"
 
 var LowLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong"}
 var MiddleLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong", "gongrui", "zhangshuai.02"}
 var HighLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong", "gongrui", "zhangshuai.02", "chenyujun"}
+var AppVersionProject = map[string]string{"13": "1", "27": "35", "32": "23", "1128": "375", "1112": "397"}
 
 
 //苹果apple connect后台管理常参
