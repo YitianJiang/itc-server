@@ -134,11 +134,18 @@ func InitRouter(r *ginex.Engine) {
 	}
 	accountapi := r.Group("/v1/accountManage")
 	{
-		accountapi.PATCH("/accountInfoUpdate", developerconnmanager.UpdateAccount)
-		accountapi.GET("/accountInfoGet", developerconnmanager.QueryAccount)
-		accountapi.POST("/accountInfoWriter", developerconnmanager.InsertAccount)
-		accountapi.DELETE("/accountInfoDelete", developerconnmanager.DeleteByTeamId)
-
+		accountapi.PATCH ("/accountInfoUpdate",developerconnmanager.UpdateAccount)
+		accountapi.GET("/accountInfoGet",developerconnmanager.QueryAccount)
+		accountapi.POST("/accountInfoWriter",developerconnmanager.InsertAccount)
+		accountapi.DELETE("/accountInfoDelete",developerconnmanager.DeleteByTeamId)
+	}
+	certificateapi:=r.Group("/v1/appleCertManage/")
+	{
+		certificateapi.GET("/certificateInfoGet",developerconnmanager.QueryCertificatesInfo)
+		certificateapi.POST("/certificateCreate",developerconnmanager.InsertCertificate)
+		certificateapi.DELETE("/certificateDelete",developerconnmanager.DeleteCertificate)
+		certificateapi.GET("/certExpireDateCheck",developerconnmanager.CheckCertExpireDate)
+		certificateapi.PATCH("/privUploadForCert",developerconnmanager.UploadPrivKey)
 	}
 	usermanagerapi := r.Group("/v1/userManage")
 	{
