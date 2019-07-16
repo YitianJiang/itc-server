@@ -45,7 +45,7 @@ func QueryPerms(url string,resPerms *dal.GetPermsResponse) bool{
 		return true
 	}
 }
-//查询个人拥有的某一资源的所有权限
+
 func QueryResPerms(userName string,resourceKey string) int{
 	var resPerms dal.GetPermsResponse
 	url:=_const.Certain_Resource_All_PERMS_URL+"employeeKey="+userName+"&"+"resourceKeys="+resourceKey
@@ -104,7 +104,7 @@ func QueryCertificatesInfo(c *gin.Context){
 	}
 	condition:=make(map[string]interface{})
 	condition["team_id"]=queryCertRequest.TeamId
-	teamIdLower:=strings.ToLower(queryCertRequest.TeamId)        //权限平台上的权限名称都是小写
+	teamIdLower:=strings.ToLower(queryCertRequest.TeamId)
 	resourceKey:=teamIdLower+"_space_account"
 	permsResult:=QueryResPerms(queryCertRequest.UserName,resourceKey)
 	if permsResult==-1{
@@ -157,17 +157,6 @@ func CutCsrContent(csrContent string) string{
 		}
 	}
 	return csrContent[start:end+1]
-}
-
-func GetSufix(certType string) string{
-	var pos int
-	for i:=len(certType)-1;i>=0;i--{
-		if certType[i]=='_'{
-			pos=i+1
-			break
-		}
-	}
-	return certType[pos:]
 }
 
 func CreateCertInApple(tokenString string,certType string,certTypeSufix string) *dal.CreCertResponse{
@@ -487,7 +476,6 @@ func DeleteCertificate(c *gin.Context){
 			"errorInfo": "",
 		})
 	}else {
-		//todo lark拉群拉对应app的负责人，通知换绑证书
 		userNames:=dal.QueryUserNameByAppName(appList)
 		var appListStr string
 		for _,appName:=range appList{
@@ -506,7 +494,6 @@ func CheckCertExpireDate(c *gin.Context){
 		"errorCode": "0",
 		"errorInfo": "",
 	})
-	//todo 需要新建lark群（不同证书建立不同群），拉app负责人进群，同步群里，证书即将过期。
 	for _,expiredCertInfo:=range *expiredCertInfos{
 		userNames:=dal.QueryUserNameByAppName(expiredCertInfo.EffectAppList)
 		LarkNotifyUsers("证书将要过期提醒",userNames,"证书"+expiredCertInfo.CertId+"即将过期")

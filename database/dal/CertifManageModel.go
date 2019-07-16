@@ -24,7 +24,6 @@ type CertInfo struct {
 	EffectAppList       []string    `gorm:"-"                              json:"effect_app_list,omitempty"`
 }
 
-//创建证书响应
 type CreCertResponse struct {
 	Data                OutLayer        `json:"data"`
 	Links               Links           `json:"links"`
@@ -52,7 +51,6 @@ type Attributes struct{
 	CertificateType     string      `json:"certificateType"`
 }
 
-//新增证书请求
 type InsertCertRequest struct {
 	AccountName        string      `json:"account_name" binding:"required"`
 	TeamId             string      `json:"team_id"      binding:"required"`
@@ -60,7 +58,6 @@ type InsertCertRequest struct {
 	CertType           string      `json:"cert_type"    binding:"required"`
 }
 
-//创建苹果证书请求
 type CreAppleCertReq struct {
 	Data Data       `json:"data"`
 }
@@ -74,26 +71,25 @@ type AttributesSend struct {
 	CsrContent          string      `json:"csrContent"`
 	CertificateType     string      `json:"certificateType"`
 }
-//获取权限请求
+
 type GetPermsResponse struct {
 	Data map[string][]string    `json:"data"`
 	Errno   int                 `json:"errno"`
 	Message string              `json:"message"`
 }
-//删除证书请求
+
 type DelCertRequest struct {
 	CertId   string  `form:"cert_id"        binding:"required"`
 	TeamId   string  `form:"team_id"        binding:"required"`
 	CertType string  `form:"cert_type"      binding:"required"`
 }
-//查询证书请求
+
 type QueryCertRequest struct {
 	TeamId         string      `form:"team_id"      json:"team_id"`
 	ExpireSoon     string      `form:"expire_soon"  json:"expire_soon"`
 	UserName       string      `form:"user_name"    json:"user_name"`
 }
 
-//根据app名称来查找用户名
 type UserName struct {
 	UserName string `gorm:"user_name"`
 }
@@ -131,7 +127,6 @@ func InsertCertInfo(CertInfo CertInfo) bool {
 	return true
 }
 
-//先根据条件到表tt_apple_conn_account中筛选证书，再根据筛选出来的证书id到表tt_apple_certificate中查询受影响的app
 func QueryCertInfo(condition map[string]interface{},expireSoon string,permsResult int) *[]CertInfo {
 	conn, err := database.GetConneection()
 	if err != nil {
@@ -194,7 +189,6 @@ func GetAppNamesByCertId(conn *gorm.DB ,certType string,certId string)[]RecAppNa
 	return recAppNames
 }
 
-//先根据条件到表tt_apple_conn_account中筛选要过期的证书，再根据筛选出来的证书id到表tt_apple_certificate中查询受影响的app
 func QueryExpiredCertInfos() *[]CertInfo {
 	conn, err := database.GetConneection()
 	if err != nil {
@@ -328,5 +322,4 @@ func UpdateCertInfo(condition map[string]interface{},priv_key_url string) bool {
 	db:= conn.LogMode(_const.DB_LOG_MODE).Table(CertInfo{}.TableName()).Where(condition).Update(&certInfo)
 	utils.RecordError("Update DB Failed: ", db.Error)
 	return true
-
 }

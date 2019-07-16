@@ -152,10 +152,10 @@ func CreateResource(creResRequest dal.CreateResourceRequest) bool{
 		logs.Info("读取respose的body内容失败")
 	}
 	json.Unmarshal(body, &creResResponse)
-	if creResResponse.Errno==0{      //资源创建成功
+	if creResResponse.Errno==0{
 		return  true
 	}
-	if creResResponse.Errno==500{    //资源重复创建会创建不成功，返回错误码500
+	if creResResponse.Errno==500{
 		return false
 	}
 	return  false

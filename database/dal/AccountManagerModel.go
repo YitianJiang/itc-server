@@ -21,7 +21,7 @@ type AccountInfo struct {
 	UserName 			string      `gorm:"user_name"            form:"user_name"               json:"user_name"`
 	PermissionAction   []string     `gorm:"-"                                                   json:"permission_action"`
 }
-//用于返回带权限的账号信息
+
 type AccInfoWithAuth struct {
 	TeamId 			    string      `gorm:"team_id"`
 	AccountName 		string      `gorm:"account_name"`
@@ -31,7 +31,7 @@ type AccInfoWithAuth struct {
 	UserName 			string      `gorm:"user_name"`
 	PermissionAction   []string
 }
-//用于返回不带权限的账号信息
+
 type AccInfoWithoutAuth struct {
 	TeamId 			    string      `gorm:"team_id"`
 	AccountName 		string      `gorm:"account_name"`
@@ -44,7 +44,6 @@ type DelAccRequest struct {
 	TeamId string `json:"team_id"`
 }
 
-//创建资源请求
 type CreateResourceRequest struct {
 	ResourceName    string      `json:"resourceName"`
 	ResourceKey     string      `json:"resourceKey"`
@@ -121,7 +120,6 @@ func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]interface{}{
 			accInfoWithoutAuth:=AccInfoWithoutAuth{}
 			db:=conn.LogMode(_const.DB_LOG_MODE).
 				Table(AccountInfo{}.TableName()).
-				Select("team_id,account_name,account_type,user_name").
 				Where("team_id = ?",teamId.TeamId).
 				Find(&accInfoWithoutAuth)
 			utils.RecordError("Query from DB Failed: ", db.Error)
@@ -131,7 +129,6 @@ func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]interface{}{
 			accInfoWithAuth:=AccInfoWithAuth{}
 			db:=conn.LogMode(_const.DB_LOG_MODE).
 				Table(AccountInfo{}.TableName()).
-				Select("team_id,account_name,account_type,user_name,account_p8file_name,account_p8file").
 				Where("team_id =?",teamId.TeamId).
 				Find(&accInfoWithAuth)
 			utils.RecordError("Query from DB Failed: ", db.Error)
