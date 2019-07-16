@@ -3,7 +3,6 @@ package utils
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -30,7 +29,6 @@ func PostJsonHttp(url string, rbody []byte) (int, []byte) {
 	if err != nil {
 		return -2, nil
 	}
-	fmt.Println(string(body))
 	return 0, body
 }
 func PostLocalFileWithParams(params map[string]string, postfilename string, fileName string, api_url string) (string, error) {
@@ -194,7 +192,8 @@ func PostJsonHttp3(rbody []byte, token, url string) (bool, string) {
 		logs.Error("读取返回body出错！", err.Error())
 		return false, ""
 	}
-	if m["msg"].(string) == "ok" {
+	//返回bool只适合发检测的lark消息
+	if msg, ok := m["msg"]; ok && msg.(string) == "ok" {
 		return true, string(body)
 	} else {
 		return false, string(body)
@@ -203,6 +202,10 @@ func PostJsonHttp3(rbody []byte, token, url string) (bool, string) {
 
 func GetVersionBMInfo(biz, project, version, os_type string) (rd string, qa string) {
 	version_arr := strings.Split(version, ".")
+	//TikTok这类型版本号：122005 无法获取BM信息
+	if len(version_arr) < 3 {
+		return "", ""
+	}
 	new_version := version_arr[0] + "." + version_arr[1] + "." + version_arr[2]
 	client := &http.Client{}
 	requestUrl := "https://rocket.bytedance.net/api/v1/project/versions"
@@ -258,4 +261,25 @@ func GetVersionBMInfo(biz, project, version, os_type string) (rd string, qa stri
 		}
 	}
 	return rd_bm, qa_bm
+}
+
+//lark api get
+func GetLarkInfo(url string, rbody map[string]string) string {
+	client := &http.Client{}
+	reqest, err := http.NewRequest("GET", url, nil)
+	token := "Bearer " + GetLarkToken()
+	reqest.Header.Add("Authorization", token)
+	q := reqest.URL.Query()
+	for k, v := range rbody {
+		q.Add(k, v)
+	}
+	reqest.URL.RawQuery = q.Encode()
+	resp, _ := client.Do(reqest)
+	if err != nil {
+		logs.Error("获取version info出错！", err.Error())
+		return ""
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	return string(body)
 }

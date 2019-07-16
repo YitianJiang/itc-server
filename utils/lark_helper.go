@@ -3,8 +3,6 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -14,9 +12,9 @@ import (
 )
 
 const (
-	robotToken = "b-e57916f0-f644-472e-a9d4-087b39ce70fc"
+	robotToken = "b-c0baf8bf-b138-4077-8ef9-800476529ca2"
 	//user token
-	myToken = "u-725a4ebd-483d-4175-9ca1-16920f94dc17"
+	myToken = "u-77a951b4-8a4a-4cb5-8fce-4358c14f5b55"
 	larkAPI = "https://oapi.zjurl.cn/open-apis/api/v2/message"
 )
 
@@ -127,7 +125,7 @@ func GetUserChannelID(token string, userid string) string {
 	if num == 0 && retBodyJson.Ok == true {
 		retstr = retBodyJson.Channel.Id
 	} else {
-		fmt.Println("打开私聊会话失败，如果是0，问题在于Lark平台" + fmt.Sprint(num))
+		logs.Error("打开私聊会话失败，如果是0，问题在于Lark平台" + fmt.Sprint(num))
 	}
 	return retstr
 }
@@ -401,21 +399,42 @@ func GetUserOpenId(email string) string {
 	return ""
 }
 
+//获取用户的全部信息，包括中文名
 func GetUserAllInfo(open_id string) string {
-	client := &http.Client{}
 	requestUrl := "https://open.feishu.cn/open-apis/user/v3/info"
-	reqest, err := http.NewRequest("GET", requestUrl, nil)
-	token := "Bearer " + GetLarkToken()
-	reqest.Header.Add("Authorization", token)
-	q := reqest.URL.Query()
-	q.Add("open_id", open_id)
-	reqest.URL.RawQuery = q.Encode()
-	resp, _ := client.Do(reqest)
-	if err != nil {
-		logs.Error("获取version info出错！", err.Error())
-		return ""
+	params := map[string]string{
+		"open_id": open_id,
 	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	return string(body)
+	return GetLarkInfo(requestUrl, params)
+}
+
+//强制拉用户到预审平台的用户群
+func UserInGroup(username string) {
+	inGroupUrl := "https://open.feishu.cn/open-apis/chat/v3/chatter/add/"
+	user_id := GetUserOpenId(username + "@bytedance.com")
+	allInfo := GetUserAllInfo(user_id)
+	m := make(map[string]interface{})
+	json.Unmarshal([]byte(allInfo), &m)
+	user_ids := []string{user_id}
+	if user_id != "" {
+		m := map[string]interface{}{
+			"open_chat_id": "oc_5226ab6b46ad51fc1a8926d15003b490",
+			"open_ids":     user_ids,
+		}
+		request_body, _ := json.Marshal(m)
+		PostJsonHttp3(request_body, GetLarkToken(), inGroupUrl)
+	}
+}
+
+//群里拉预审机器人入群，必须robot的创建者在群内，暂时不用
+func Bot2Group(groupId string) {
+	bot2GroupUrl := "https://oapi.zjurl.cn/open-apis/api/v2/bot/chat/join"
+	m := map[string]interface{}{
+		"token":   myToken,
+		"bot":     robotToken,
+		"chat_id": groupId,
+	}
+	request_body, _ := json.Marshal(m)
+	fmt.Println(request_body)
+	PostJsonHttp3(request_body, "", bot2GroupUrl)
 }
