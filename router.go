@@ -151,5 +151,8 @@ func InitRouter(r *ginex.Engine) {
 	{
 		usermanagerapi.GET("/getCapabilitiesInfo",developerconnmanager.GetBundleIdCapabilitiesInfo)
 		usermanagerapi.POST("/assertBunldCapabilities",developerconnmanager.AssertBunldIDInfo)
+		//账号人员管理相关开发
+		usermanagerapi.GET("/userRolesGet",developerconnmanager.UserRolesGetInfo)
+		usermanagerapi.GET("/userInfoGet",developerconnmanager.UserDetailInfoGet)
 	}
 }

@@ -6,8 +6,8 @@ import (
 	dbconf "code.byted.org/gopkg/dbutil/conf"
 	"code.byted.org/gopkg/dbutil/gormdb"
 	"code.byted.org/gopkg/gorm"
-	"code.byted.org/gopkg/logs"
 	"fmt"
+	"github.com/astaxie/beego/logs"
 )
 
 var (
