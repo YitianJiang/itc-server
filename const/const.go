@@ -31,7 +31,11 @@ const(
 	CERT_TYPE_MAC_DEV="MAC_APP_DEVELOPMENT"
 	CERT_TYPE_MAC_DIST="MAC_APP_DISTRIBUTION"
 )
-
+const (
+	APPLE_USER_INFO_URL = "https://api.appstoreconnect.apple.com/v1/users?limit=200"
+	APPLE_USER_INVITED_INFO_URL = "https://api.appstoreconnect.apple.com/v1/userInvitations?limit=200"
+	APPLE_USER_VISIBLE_APPS_URL = "https://api.appstoreconnect.apple.com/v1/users/a586c1c7-dcd6-44d7-8d69-6a3f40f4292c/visibleApps?limit=200&fields[apps]=bundleId,name"
+)
 const (
 	TOS_BUCKET_URL="http://tosv.byted.org/obj/staticanalysisresult/"
 	TOS_BUCKET_NAME_JYT = "staticanalysisresult"
@@ -58,9 +62,16 @@ const (
 	ICLOUD  = "ICLOUD"
 	DATA_PROTECTION = "DATA_PROTECTION"
 )
+const(
+	Organization = "Organization"
+	Enterprise = "Enterprise"
+)
 var IOSSelectCapabilities = []string{ "ACCESS_WIFI_INFORMATION", "APP_GROUPS", "ASSOCIATED_DOMAINS", "AUTOFILL_CREDENTIAL_PROVIDER", "CLASSKIT", "GAME_CENTER",
 	"HEALTHKIT", "HOMEKIT", "HOT_SPOT", "IN_APP_PURCHASE", "INTER_APP_AUDIO", "MULTIPATH", "NETWORK_EXTENSIONS", "NFC_TAG_READING", "PERSONAL_VPN",
 	"PUSH_NOTIFICATIONS", "SIRIKIT", "WALLET", "WIRELESS_ACCESSORY_CONFIGURATION" }
 var MacSelectCapabilities = []string{ "ASSOCIATED_DOMAINS", "NETWORK_EXTENSIONS", "PERSONAL_VPN", "PUSH_NOTIFICATIONS" }
 var CloudSettings = []string{"XCODE_6","XCODE_5"}
 var ProtectionSettings = []string{"COMPLETE_PROTECTION","PROTECTED_UNLESS_OPEN","PROTECTED_UNTIL_FIRST_USER_AUTH"}
+
+var RolesInfoMap = map[string]string{"账号持有者":"ACCOUNT_HOLDER","管理":"ADMIN","财务":"FINANCE","App管理":"APP_MANAGER","开发人员":"DEVELOPER","营销":"MARKETING","销售":"SALES","用户支持":"CUSTOMER_SUPPORT"}
+var RolesIndexList = []string{"ACCOUNT_HOLDER","ADMIN","FINANCE","APP_MANAGER","DEVELOPER","MARKETING","SALES","CUSTOMER_SUPPORT"}
