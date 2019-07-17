@@ -7,7 +7,7 @@ import (
 	"code.byted.org/gopkg/dbutil/gormdb"
 	"code.byted.org/gopkg/gorm"
 	"fmt"
-	"github.com/astaxie/beego/logs"
+	"code.byted.org/gopkg/logs"
 )
 
 var (
