@@ -132,7 +132,7 @@ func UpdateAccount(c *gin.Context)  {
 }
 
 
-func CreateResource(creResRequest dal.CreateResourceRequest) bool{
+func CreateResource(creResRequest dal.CreateResourceRequest) int{
 	bodyByte, _ := json.Marshal(creResRequest)
 	rbodyByte := bytes.NewReader(bodyByte)
 	client := &http.Client{}
@@ -151,14 +151,14 @@ func CreateResource(creResRequest dal.CreateResourceRequest) bool{
 	if err != nil {
 		logs.Info("读取respose的body内容失败")
 	}
-	json.Unmarshal(body, &creResResponse)
+	json.Unmarshal(body,&creResResponse)
 	if creResResponse.Errno==0{
-		return  true
+		return  0
 	}
 	if creResResponse.Errno==500{
-		return false
+		return -1
 	}
-	return  false
+	return  -2
 }
 
 func InsertAccount(c *gin.Context)  {
@@ -178,11 +178,19 @@ func InsertAccount(c *gin.Context)  {
 		return
 	}
 	dbResult := dal.InsertAccountInfo(accountInfo)
-	if !dbResult {
-		logs.Error("往数据库中插入数据失败")
+	if dbResult==-1 {
+		logs.Error("往数据库中插入账号信息失败")
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": -2,
-			"errorInfo": "往数据库中插入数据失败！",
+			"errorInfo": "往数据库中插入账号信息失败",
+		})
+		return
+	}
+	if dbResult==-2 {
+		logs.Error("往数据库中插入账号信息失败,数据库中已经存在该记录")
+		c.JSON(http.StatusOK, gin.H{
+			"errorCode": -3,
+			"errorInfo": "往数据库中插入账号信息失败,数据库中已经存在该记录！",
 		})
 		return
 	}
@@ -193,16 +201,23 @@ func InsertAccount(c *gin.Context)  {
 	creResRequest.ResourceName=teamIdLower+"_space_account"
 	creResRequest.ResourceType=0
 	creResult:=CreateResource(creResRequest)
-	if !creResult{
+	if creResult==-1{
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -3,
-			"errorInfo": "创建资源失败！",
+			"errorCode": -4,
+			"errorInfo": "往数据库中插入账号信息成功，但由于资源已经存在，创建资源失败！",
+		})
+		return
+	}
+	if creResult==-2{
+		c.JSON(http.StatusOK, gin.H{
+			"errorCode": -5,
+			"errorInfo": "往数据库中插入账号信息成功，但创建资源失败,错误原因在kani平台！",
 		})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"errorCode": "0",
-		"message":   "insert success",
+		"message":   "往数据库中插入账号信息成功，同时资源创建成功",
 	})
 }
 
