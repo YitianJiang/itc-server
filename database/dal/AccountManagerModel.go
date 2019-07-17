@@ -78,16 +78,26 @@ func DeleteAccountInfo(teamId string) bool {
 	return true
 }
 
-func InsertAccountInfo(accountInfo AccountInfo) bool {
+func InsertAccountInfo(accountInfo AccountInfo) int {
 	conn, err := database.GetConneection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
-		return false
+		return -1
 	}
 	defer conn.Close()
-	db:= conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).Create(&accountInfo)
+	var teamIds []TeamID
+	db:= conn.LogMode(_const.DB_LOG_MODE).
+		Table(AccountInfo{}.TableName()).
+		Select("team_id").
+		Where("team_id=?",accountInfo.TeamId).
+		Find(&teamIds)
+	utils.RecordError("query DB Failed: ", db.Error)
+	if len(teamIds)!=0{
+		return -2
+	}
+	db= conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).Create(&accountInfo)
 	utils.RecordError("Insert into DB Failed: ", db.Error)
-	return true
+	return 0
 }
 
 func QueryAccountInfo(condition map[string]interface{} ) *[]AccountInfo {
