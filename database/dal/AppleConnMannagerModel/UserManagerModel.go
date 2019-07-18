@@ -69,17 +69,17 @@ type RetAllVisibleAppsFromApple struct {
 }
 //组合账号里所有的app数据，返回前端
 type RetAllVisibleAppItem struct {
-	AppAppleId string `json:"app_apple_id" gorm:"column:app_apple_id`
-	AppName string `json:"name" gorm:"column:app_name`
-	BundleID string `json:"bundleId"gorm:"column:bundle_id`
+	AppAppleId string `json:"app_apple_id" gorm:"column:app_apple_id"`
+	AppName string `json:"name" gorm:"column:app_name"`
+	BundleID string `json:"bundleId"gorm:"column:bundle_id"`
 }
 
 type AllVisibleAppDB struct {
 	gorm.Model
-	AppAppleId string `json:"id" gorm:"column:app_apple_id`
-	AppName string `json:"name" gorm:"column:app_name`
-	BundleID string `json:"bundleId" gorm:"column:bundle_id`
-	TeamId string `json:"team_id" gorm:"column:team_id`
+	AppAppleId string `json:"id" gorm:"column:app_apple_id"`
+	AppName string `json:"name" gorm:"column:app_name"`
+	BundleID string `json:"bundleId" gorm:"column:bundle_id"`
+	TeamId string `json:"team_id" gorm:"column:team_id"`
 }
 func (c AllVisibleAppDB) TableName() string {
 	return "tt_apple_app_info"

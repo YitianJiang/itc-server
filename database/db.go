@@ -6,8 +6,8 @@ import (
 	dbconf "code.byted.org/gopkg/dbutil/conf"
 	"code.byted.org/gopkg/dbutil/gormdb"
 	"code.byted.org/gopkg/gorm"
-	"fmt"
 	"code.byted.org/gopkg/logs"
+	"fmt"
 )
 
 var (
@@ -16,7 +16,7 @@ var (
 
 func InitDB(){
 
-	// online
+	//online
 	//线上采用mysql gdpr
 	var err error
 	dboptional,err = dbconf.GetDBOptionalByConsulName("toutiao.mysql.itcserver_write")

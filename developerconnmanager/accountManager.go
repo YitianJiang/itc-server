@@ -3,7 +3,7 @@ package developerconnmanager
 import (
 	"bytes"
 	_const "code.byted.org/clientQA/itc-server/const"
-	"code.byted.org/clientQA/itc-server/database/dal"
+	devconnmanager "code.byted.org/clientQA/itc-server/database/dal/AppleConnMannagerModel"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 	"encoding/json"
@@ -17,27 +17,36 @@ import (
 
 func DeleteByTeamId(c *gin.Context)  {
 	logs.Info("根据team_id参数将数据从数据库中删除")
-	var delAccRequest dal.DelAccRequest
+	var delAccRequest devconnmanager.DelAccRequest
 	bindQueryError:=c.ShouldBindQuery(&delAccRequest)
 	if bindQueryError!=nil{
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "delete fail",
-			"errorCode":  -1,
+			"errorCode":  1,
 			"errorInfo": "请求参数绑定失败",
 		})
 		return
 	}
 	teamId:=delAccRequest.TeamId
-	dbResult:=dal.DeleteAccountInfo(teamId)
-	if !dbResult{
-		logs.Error("从数据库中删除数据失败")
+	dbResult:=devconnmanager.DeleteAccountInfo(teamId)
+	if dbResult==-2{
+		logs.Error("从数据库中删除数据失败!,失败原因为数据库中不存在该条数据")
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode" : -2,
-			"errorInfo" : "从数据库中删除数据失败！",
+			"errorCode" : 2,
+			"errorInfo" : "从数据库中删除数据失败！,失败原因为数据库中不存在该条数据",
 		})
+		return
+	}
+	if dbResult==-1||dbResult==-3{
+		logs.Error("从数据库中删除数据失败!")
+		c.JSON(http.StatusOK, gin.H{
+			"errorCode" : 3,
+			"errorInfo" : "从数据库中删除数据失败!",
+		})
+		return
 	}
 	c.JSON(http.StatusOK,gin.H{
-		"errorCode": "0",
+		"errorCode": 0,
 		"message":   "delete success",
 	})
 }
@@ -47,42 +56,42 @@ func QueryAccount(c *gin.Context)  {
 	userName:=c.DefaultQuery("user_name","")
 	if userName==""{
 		c.JSON(http.StatusOK,gin.H{
-			"errcode" : "-1",
+			"errcode" : 1,
 			"errinfo" : "未上传user_name",
 		})
 		return
 	}
-	var resPerms dal.GetPermsResponse
+	var resPerms devconnmanager.GetPermsResponse
 	url:=_const.USER_ALL_RESOURCES_PERMS_URL+"userName="+userName
 	result:=QueryPerms(url,&resPerms)
 	if !result{
 		c.JSON(http.StatusOK,gin.H{
-			"errcode" : "-2",
+			"errcode" : 2,
 			"errinfo" : "查询权限失败",
 		})
 		return
 	}
 	var accountsInfo *[]interface{}
-	accountsInfo=dal.QueryAccInfoWithAuth(&resPerms)
+	accountsInfo=devconnmanager.QueryAccInfoWithAuth(&resPerms)
 	if accountsInfo==nil{
 		c.JSON(http.StatusOK,gin.H{
-			"errcode" : "-3",
+			"errcode" : 3,
 			"errinfo" : "从数据库中查询数据失败",
 		})
 		return
 	}
 	c.JSON(http.StatusOK,gin.H{
 		"data":accountsInfo,
-		"errcode" : "0",
+		"errcode" : 0,
 		"errinfo" : "",
 	})
 }
 
-func ReceiveP8file(c *gin.Context,accountInfo *dal.AccountInfo) bool{
+func ReceiveP8file(c *gin.Context,accountInfo *devconnmanager.AccountInfo) bool{
 	file, header, _ :=c.Request.FormFile("account_p8file")
 	if header==nil {
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -1,
+			"errorCode": 1,
 			"errorInfo":   "没有文件上传",
 		})
 		return false
@@ -91,7 +100,7 @@ func ReceiveP8file(c *gin.Context,accountInfo *dal.AccountInfo) bool{
 	p8ByteInfo,err := ioutil.ReadAll(file)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -2,
+			"errorCode": 2,
 			"errorInfo":   "error read p8 file",
 		})
 		return false
@@ -102,7 +111,7 @@ func ReceiveP8file(c *gin.Context,accountInfo *dal.AccountInfo) bool{
 
 func UpdateAccount(c *gin.Context)  {
 	logs.Info("更新数据库中的账户信息")
-	var accountInfo dal.AccountInfo
+	var accountInfo devconnmanager.AccountInfo
 	recResult:=ReceiveP8file(c,&accountInfo)
 	if !recResult{
 		return
@@ -111,28 +120,36 @@ func UpdateAccount(c *gin.Context)  {
 	utils.RecordError("请求参数绑定错误: ", bindError)
 	if bindError!=nil {
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -1,
+			"errorCode": 1,
 			"errorInfo": "请求参数绑定失败",
 		})
 		return
 	}
-	dbResult := dal.UpdateAccountInfo(accountInfo)
-	if !dbResult {
+	dbResult := devconnmanager.UpdateAccountInfo(accountInfo)
+	if dbResult==-1 {
 		logs.Error("更新数据库中的账户信息失败！")
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -2,
+			"errorCode": 2,
 			"errorInfo": "更新数据库中的账户信息失败！",
 		})
 		return
 	}
+	if dbResult==-2 {
+		logs.Error("更新数据库中的账户信息失败！,数据库中不存在team_id对应的记录")
+		c.JSON(http.StatusOK, gin.H{
+			"errorCode": 3,
+			"errorInfo": "更新数据库中的账户信息失败！，数据库中不存在team_id对应的记录",
+		})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
-		"errorCode": "0",
+		"errorCode": 0,
 		"message":   "update success",
 	})
 }
 
 
-func CreateResource(creResRequest dal.CreateResourceRequest) int{
+func CreateResource(creResRequest devconnmanager.CreateResourceRequest) int{
 	bodyByte, _ := json.Marshal(creResRequest)
 	rbodyByte := bytes.NewReader(bodyByte)
 	client := &http.Client{}
@@ -146,7 +163,7 @@ func CreateResource(creResRequest dal.CreateResourceRequest) int{
 		logs.Info("发送post请求失败")
 	}
 	defer response.Body.Close()
-	var creResResponse dal.CreResResponse
+	var creResResponse devconnmanager.CreResResponse
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		logs.Info("读取respose的body内容失败")
@@ -163,7 +180,7 @@ func CreateResource(creResRequest dal.CreateResourceRequest) int{
 
 func InsertAccount(c *gin.Context)  {
 	logs.Info("往数据库中添加账户信息")
-	var accountInfo =dal.AccountInfo{}
+	var accountInfo =devconnmanager.AccountInfo{}
 	recResult:=ReceiveP8file(c,&accountInfo)
 	if !recResult{
 		return
@@ -172,16 +189,16 @@ func InsertAccount(c *gin.Context)  {
 	utils.RecordError("请求参数绑定错误: ", bindError)
 	if bindError!=nil{
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -1,
+			"errorCode": 1,
 			"errorInfo": "请求参数绑定失败",
 		})
 		return
 	}
-	dbResult := dal.InsertAccountInfo(accountInfo)
+	dbResult := devconnmanager.InsertAccountInfo(accountInfo)
 	if dbResult==-1 {
 		logs.Error("往数据库中插入账号信息失败")
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -2,
+			"errorCode": 2,
 			"errorInfo": "往数据库中插入账号信息失败",
 		})
 		return
@@ -189,12 +206,12 @@ func InsertAccount(c *gin.Context)  {
 	if dbResult==-2 {
 		logs.Error("往数据库中插入账号信息失败,数据库中已经存在该记录")
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -3,
+			"errorCode": 3,
 			"errorInfo": "往数据库中插入账号信息失败,数据库中已经存在该记录！",
 		})
 		return
 	}
-	var creResRequest dal.CreateResourceRequest
+	var creResRequest devconnmanager.CreateResourceRequest
 	creResRequest.CreatorKey=accountInfo.UserName
 	teamIdLower:=strings.ToLower(accountInfo.TeamId)
 	creResRequest.ResourceKey=teamIdLower+"_space_account"
@@ -203,25 +220,25 @@ func InsertAccount(c *gin.Context)  {
 	creResult:=CreateResource(creResRequest)
 	if creResult==-1{
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -4,
+			"errorCode": 4,
 			"errorInfo": "往数据库中插入账号信息成功，但由于资源已经存在，创建资源失败！",
 		})
 		return
 	}
 	if creResult==-2{
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -5,
+			"errorCode": 5,
 			"errorInfo": "往数据库中插入账号信息成功，但创建资源失败,错误原因在kani平台！",
 		})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"errorCode": "0",
+		"errorCode": 0,
 		"message":   "往数据库中插入账号信息成功，同时资源创建成功",
 	})
 }
 
-func GetTokenStringByAccInfo(accountInfo dal.AccountInfo) string{
+func GetTokenStringByAccInfo(accountInfo devconnmanager.AccountInfo) string{
 	authKey, error := AuthKeyFromBytes([]byte(accountInfo.AccountP8file))
 	if error != nil{
 		logs.Info("读取authKey失败")
@@ -245,9 +262,9 @@ func GetTokenStringByAccInfo(accountInfo dal.AccountInfo) string{
 func GetTokenStringByTeamId(teamId string) string{
 	condition := make(map[string]interface{})
 	condition["team_id"] = teamId
-	accountsInfo := dal.QueryAccountInfo(condition)
+	accountsInfo := devconnmanager.QueryAccountInfo(condition)
 	if len(*accountsInfo)==0{
-		logs.Error("team_id对应的记录不存在")
+		logs.Error("team_id对应的记录不存在,无法签出token")
 		return ""
 	}else {
 		tokenString := GetTokenStringByAccInfo((*accountsInfo)[0])
