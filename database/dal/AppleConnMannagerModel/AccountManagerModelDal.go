@@ -16,7 +16,7 @@ func DeleteAccountInfo(teamId string) int {
 	}
 	defer connection.Close()
 	var teamIds []TeamID
-	db:=connection.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).Select("team_id").Where("team_id=?",teamId).Find(&teamIds)
+	db:=connection.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).Where("team_id=?",teamId).Find(&teamIds)
 	utils.RecordError("query DB Failed: ", db.Error)
 	if len(teamIds)==0{
 		return -2
@@ -38,7 +38,6 @@ func InsertAccountInfo(accountInfo AccountInfo) int {
 	var teamIds []TeamID
 	db:= conn.LogMode(_const.DB_LOG_MODE).
 		Table(AccountInfo{}.TableName()).
-		Select("team_id").
 		Where("team_id=?",accountInfo.TeamId).
 		Find(&teamIds)
 	utils.RecordError("query DB Failed: ", db.Error)
@@ -72,7 +71,7 @@ func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]interface{}{
 	defer conn.Close()
 	var accountsInfo []interface{}
 	var teamIds []TeamID
-	db:=conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).Select("team_id").Find(&teamIds)
+	db:=conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).Find(&teamIds)
 	utils.RecordError("Query from DB Failed: ", db.Error)
 	for _,teamId:=range teamIds{
 		perms:=resPerms.Data[strings.ToLower(teamId.TeamId)+"_space_account"]
@@ -109,7 +108,6 @@ func UpdateAccountInfo(accountInfo AccountInfo) int {
 	var teamIds []TeamID
 	db:= conn.LogMode(_const.DB_LOG_MODE).
 		Table(CertInfo{}.TableName()).
-		Select("team_id").
 		Where("team_id=?",accountInfo.TeamId).
 		Find(&teamIds)
 	utils.RecordError("query DB Failed: ", db.Error)

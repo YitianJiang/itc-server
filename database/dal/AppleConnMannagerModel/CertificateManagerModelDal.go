@@ -85,14 +85,14 @@ func GetAppNamesByCertId(conn *gorm.DB ,certType string,certId string)[]RecAppNa
 		db := conn.LogMode(_const.DB_LOG_MODE).
 			Table(AppAccountCert{}.TableName()).
 			Where("dev_cert_id=?", certId).
-			Select("app_name").Find(&recAppNames)
+			Find(&recAppNames)
 		utils.RecordError("Query from DB Failed: ", db.Error)
 	}
 	if certType==_const.CERT_TYPE_IOS_DIST||certType==_const.CERT_TYPE_MAC_DIST {
 		db := conn.LogMode(_const.DB_LOG_MODE).
 			Table(AppAccountCert{}.TableName()).
 			Where("dist_cert_id=?", certId).
-			Select("app_name").Find(&recAppNames)
+			Find(&recAppNames)
 		utils.RecordError("Query from DB Failed: ", db.Error)
 	}
 	return recAppNames
@@ -198,7 +198,7 @@ func QueryUserNameByAppName(appList []string) []string{
 	var userNames []string
 	for _,appName:=range appList {
 		var userName UserName
-		db := conn.LogMode(_const.DB_LOG_MODE).Table(AppAccountCert{}.TableName()).Where("app_name=?",appName).Select("user_name").Find(&userName)
+		db := conn.LogMode(_const.DB_LOG_MODE).Table(AppAccountCert{}.TableName()).Where("app_name=?",appName).Find(&userName)
 		userNames= append(userNames, userName.UserName)
 		utils.RecordError("Query from DB Failed: ", db.Error)
 	}
@@ -243,7 +243,6 @@ func CheckCertExit(teamId string) int{
 	var teamIds []TeamID
 	db:= conn.LogMode(_const.DB_LOG_MODE).
 		Table(CertInfo{}.TableName()).
-		Select("team_id").
 		Where("team_id=?",teamId).
 		Find(&teamIds)
 	utils.RecordError("query DB Failed: ", db.Error)

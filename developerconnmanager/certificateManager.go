@@ -373,26 +373,33 @@ func FilterCert(certInfo *devconnmanager.CertInfo){
 	certInfo.CsrFileUrl=""
 }
 
-func DeleteCertInApple(tokenString string,certId string)bool{
+func DeleteCertInApple(tokenString string,certId string)int{
 	client := &http.Client{}
 	request, err := http.NewRequest("DELETE", _const.APPLE_CERT_DELETE_ADDR+certId,nil)
 	if err != nil {
 		logs.Info("新建request对象失败")
+		return -1
 	}
 	request.Header.Set("Authorization", tokenString)
 	response, err := client.Do(request)
 	if err != nil {
 		logs.Info("发送DELETE请求失败")
+		return -1
 	}
 	defer response.Body.Close()
+	if response.StatusCode==409{
+		logs.Info("苹果不存在该certId对应的证书")
+		return -2
+	}
 	responseByte, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		logs.Info("读取respose的body内容失败")
+		return -1
 	}
 	if len(responseByte)==0{
-		return true
+		return 0
 	}
-	return false
+	return -1
 }
 
 func CheckDelCertRequest(c *gin.Context,delCertRequest *devconnmanager.DelCertRequest) bool{
@@ -442,30 +449,38 @@ func DeleteCertificate(c *gin.Context){
 	if len(appList)==0{
 		tokenString:=GetTokenStringByTeamId(delCertRequest.TeamId)
 		delResult:=DeleteCertInApple(tokenString,delCertRequest.CertId)
-		if !delResult{
+		if delResult==-2{
 			c.JSON(http.StatusOK,gin.H{
 				"message": "delete fail",
 				"errorCode": 5,
+				"errorInfo": "在苹果开发者网站删除对应证书失败,失败原因为不存在该certId对应的证书",
+			})
+			return
+		}
+		if delResult==-1{
+			c.JSON(http.StatusOK,gin.H{
+				"message": "delete fail",
+				"errorCode": 6,
 				"errorInfo": "在苹果开发者网站删除对应证书失败",
 			})
 			return
 		}
 		certInfo:=devconnmanager.QueryCertInfoByCertId(delCertRequest.CertId)
 		tosFilePath:="appleConnectFile/"+string(delCertRequest.TeamId)+"/"+delCertRequest.CertType+"/"+delCertRequest.CertId+"/"+DealCertName(certInfo.CertName)+".cer"
-		delResult=DeleteTosCert(tosFilePath)
-		if !delResult{
+		delResultBool:=DeleteTosCert(tosFilePath)
+		if !delResultBool{
 			c.JSON(http.StatusOK,gin.H{
 				"message": "delete fail",
-				"errorCode": 6,
+				"errorCode": 7,
 				"errorInfo": "删除tos上的证书失败",
 			})
 			return
 		}
-		delResult=devconnmanager.DeleteCertInfo(condition)
-		if !delResult {
+		delResultBool=devconnmanager.DeleteCertInfo(condition)
+		if !delResultBool {
 			c.JSON(http.StatusOK, gin.H{
 				"message":   "delete fail",
-				"errorCode": 7,
+				"errorCode": 8,
 				"errorInfo": "从数据库中删除cert_id对应的证书失败",
 			})
 			return
