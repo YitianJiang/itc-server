@@ -45,7 +45,6 @@ type RetUsersDataDetailObj struct {
 	ExpirationDate string `json:"expirationDate,omitempty"`
 }
 
-//从苹果取账号里所有的app数据
 type RetUsersDataObj struct {
 	EmployData map[string][]RetUsersDataDetailObj `json:"employ_data,omitempty"`
 }
@@ -54,6 +53,7 @@ type RetUsersInvitedDataObj struct {
 	InvitedData map[string][]RetUsersDataDetailObj `json:"invited_data,omitempty"`
 }
 
+//从苹果取账号里所有的app数据
 type RetALlVisibleAppsItemAttribute struct {
 	AppName string `json:"name"`
 	BundleID string `json:"bundleId"`
@@ -84,6 +84,10 @@ type AllVisibleAppDB struct {
 func (c AllVisibleAppDB) TableName() string {
 	return "tt_apple_app_info"
 }
-//type RetAllVisibleAppsToFe struct {
-//	DataList []RetAllVisibleAppItem `json:"data"`
-//}
+
+//从苹果取某一位user可见app信息
+type UserVisibleAppsReq struct {
+	TeamId string `form:"team_id" binding:"required"`
+	UserId string `form:"user_id" binding:"required"`
+	OrInvited string `form:"or_invited" binding:"required"`
+}

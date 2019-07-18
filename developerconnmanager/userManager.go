@@ -54,6 +54,38 @@ func GetBundleIdCapabilitiesInfo(c *gin.Context){
 			})
 }
 
+func ReqToAppleGetInfo(url,tokenString string,obj interface{}) bool{
+	//var obj devconnmanager.FromAppleUserInfo
+	client := &http.Client{}
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		logs.Info("新建request对象失败")
+		return false
+	}
+	request.Header.Set("Authorization", tokenString)
+	response, err := client.Do(request)
+	if err != nil {
+		logs.Info("发送get请求失败")
+		return false
+	}
+	defer response.Body.Close()
+	if response.StatusCode != 200 {
+		logs.Info(string(response.StatusCode))
+		responseByte, _ := ioutil.ReadAll(response.Body)
+		logs.Info(string(responseByte))
+		return false
+	} else {
+		responseByte, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			logs.Info("读取respose的body内容失败")
+			return false
+		}
+		//logs.Info(string(responseByte))
+		json.Unmarshal(responseByte, &obj)
+		return true
+	}
+}
+
 //type BundleIDCapabilitiesInfo struct {
 //	ICloudInfo string `json:"icloud_action" binding:"required"`
 //	PushCapInfo []string `json:"push_list"`
@@ -86,35 +118,6 @@ func UserRolesGetInfo(c *gin.Context){
 }
 
 //账号人员管理相关开发
-func ReqToAppleGetInfo(url,tokenString string,obj interface{}) bool{
-	//var obj devconnmanager.FromAppleUserInfo
-	client := &http.Client{}
-	request, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		logs.Info("新建request对象失败")
-		return false
-	}
-	request.Header.Set("Authorization", tokenString)
-	response, err := client.Do(request)
-	if err != nil {
-		logs.Info("发送get请求失败")
-		return false
-	}
-	defer response.Body.Close()
-	if response.StatusCode != 200 {
-		logs.Info(string(response.StatusCode))
-		return false
-	} else {
-		responseByte, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			logs.Info("读取respose的body内容失败")
-			return false
-		}
-		//logs.Info(string(responseByte))
-		json.Unmarshal(responseByte, &obj)
-		return true
-	}
-}
 func UserDetailInfoStructTransfer (itemUserData *devconnmanager.FromAppleUserItemInfo) *devconnmanager.RetUsersDataDetailObj{
 	var resItemUserInfo devconnmanager.RetUsersDataDetailObj
 	resItemUserInfo.UserIdApple = itemUserData.UserIdApple
@@ -294,4 +297,53 @@ func VisibleAppsInfoGet(c *gin.Context) {
 		})
 	}
 	return
+}
+
+//返回个人可见的全部app信息
+func CreateVisibleAppsInfoResDataNoDB(obj *devconnmanager.RetAllVisibleAppsFromApple) *[]devconnmanager.RetAllVisibleAppItem{
+	resDataListobj := make([]devconnmanager.RetAllVisibleAppItem,0)
+	for _,itemUserData := range obj.DataList {
+		var resDataobj devconnmanager.RetAllVisibleAppItem
+		resDataobj.AppAppleId = itemUserData.AppAppleId
+		resDataobj.AppName = itemUserData.AppsAttribute.AppName
+		resDataobj.BundleID = itemUserData.AppsAttribute.BundleID
+		resDataListobj = append(resDataListobj,resDataobj)
+	}
+	return &resDataListobj
+}
+
+func VisibleAppsOfUserGet(c *gin.Context)  {
+	logs.Info("返回个人可见的全部app信息")
+	var requestData devconnmanager.UserVisibleAppsReq
+	bindQueryError := c.ShouldBindQuery(&requestData)
+	utils.RecordError("请求参数绑定错误: ", bindQueryError)
+	if bindQueryError != nil {
+		AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", map[string]interface{}{})
+		return
+	}
+	logs.Info(requestData.TeamId)
+	tokenString := GetTokenStringByTeamId(requestData.TeamId)
+	var obj devconnmanager.RetAllVisibleAppsFromApple
+	var visibleUrlChoice string
+	if requestData.OrInvited == "1"{
+		visibleUrlChoice = _const.APPLE_USER_INVITED_INFO_URL_NO_PARAM
+	}else {
+		visibleUrlChoice = _const.APPLE_USER_INFO_URL_NO_PARAM
+	}
+	userIdVisibleAppUrl := visibleUrlChoice + "/" + requestData.UserId + "/visibleApps?limit=200&fields[apps]=bundleId,name"
+	resultFromApple := ReqToAppleGetInfo(userIdVisibleAppUrl,tokenString,&obj)
+	if !resultFromApple{
+		c.JSON(http.StatusOK, gin.H{
+			"error_info":   "苹果后台返回数据错误",
+			"error_code": 1,
+			"data": "",
+		})
+		return
+	}
+	resDataobj := CreateVisibleAppsInfoResDataNoDB(&obj)
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "success",
+		"error_code": 0,
+		"data": resDataobj,
+	})
 }

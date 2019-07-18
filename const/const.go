@@ -35,6 +35,8 @@ const (
 	APPLE_USER_INFO_URL = "https://api.appstoreconnect.apple.com/v1/users?limit=200"
 	APPLE_USER_INVITED_INFO_URL = "https://api.appstoreconnect.apple.com/v1/userInvitations?limit=200"
 	APPLE_USER_VISIBLE_APPS_URL = "https://api.appstoreconnect.apple.com/v1/users/a586c1c7-dcd6-44d7-8d69-6a3f40f4292c/visibleApps?limit=200&fields[apps]=bundleId,name"
+	APPLE_USER_INFO_URL_NO_PARAM= "https://api.appstoreconnect.apple.com/v1/users"
+	APPLE_USER_INVITED_INFO_URL_NO_PARAM = "https://api.appstoreconnect.apple.com/v1/userInvitations"
 )
 const (
 	TOS_BUCKET_URL="http://tosv.byted.org/obj/staticanalysisresult/"
