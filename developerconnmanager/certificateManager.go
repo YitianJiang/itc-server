@@ -3,7 +3,7 @@ package developerconnmanager
 import (
 	"bytes"
 	"code.byted.org/clientQA/itc-server/const"
-	"code.byted.org/clientQA/itc-server/database/dal"
+	devconnmanager "code.byted.org/clientQA/itc-server/database/dal/AppleConnMannagerModel"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/context"
 	"code.byted.org/gopkg/logs"
@@ -14,12 +14,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
-	"time"
 	"strings"
+	"time"
 )
 
-
-func QueryPerms(url string,resPerms *dal.GetPermsResponse) bool{
+func QueryPerms(url string,resPerms *devconnmanager.GetPermsResponse) bool{
 	client := &http.Client{}
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -36,20 +35,21 @@ func QueryPerms(url string,resPerms *dal.GetPermsResponse) bool{
 		logs.Info(string(response.StatusCode))
 		return false
 	} else {
-		response, err := ioutil.ReadAll(response.Body)
+		responseByte, err := ioutil.ReadAll(response.Body)
 		if err != nil {
 			logs.Info("读取respose的body内容失败")
 			return false
 		}
-		json.Unmarshal(response, resPerms)
+		json.Unmarshal(responseByte, resPerms)
 		return true
 	}
 }
 
 func QueryResPerms(userName string,resourceKey string) int{
-	var resPerms dal.GetPermsResponse
+	var resPerms devconnmanager.GetPermsResponse
 	url:=_const.Certain_Resource_All_PERMS_URL+"employeeKey="+userName+"&"+"resourceKeys="+resourceKey
 	result:=QueryPerms(url,&resPerms)
+	println(resourceKey)
 	if !result{
 		return -1
 	}
@@ -78,26 +78,26 @@ func QueryResPerms(userName string,resourceKey string) int{
 
 func QueryCertificatesInfo(c *gin.Context){
 	logs.Info("从数据库中查询证书信息")
-	var queryCertRequest dal.QueryCertRequest
+	var queryCertRequest devconnmanager.QueryCertRequest
 	bindQueryError:=c.ShouldBindQuery(&queryCertRequest)
 	if bindQueryError!=nil{
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "delete fail",
-			"errorCode":  -1,
+			"errorCode":  1,
 			"errorInfo": "请求参数绑定失败",
 		})
 		return
 	}
 	if queryCertRequest.TeamId=="" {
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode" : -2,
+			"errorCode" : 2,
 			"errorInfo" : "team_id为空！",
 		})
 		return
 	}
 	if queryCertRequest.UserName=="" {
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode" : -3,
+			"errorCode" : 3,
 			"errorInfo" : "user_name为空！",
 		})
 		return
@@ -109,7 +109,7 @@ func QueryCertificatesInfo(c *gin.Context){
 	permsResult:=QueryResPerms(queryCertRequest.UserName,resourceKey)
 	if permsResult==-1{
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": "-4",
+			"errorCode": 4,
 			"errorInfo": "查询权限失败",
 		})
 		return
@@ -121,19 +121,19 @@ func QueryCertificatesInfo(c *gin.Context){
 		})
 		return
 	}
-	var certsInfo *[]dal.CertInfo
-	certsInfo=dal.QueryCertInfo(condition,queryCertRequest.ExpireSoon,permsResult)
+	var certsInfo *[]devconnmanager.CertInfo
+	certsInfo=devconnmanager.QueryCertInfo(condition,queryCertRequest.ExpireSoon,permsResult)
 	if certsInfo==nil{
 		logs.Error("从数据库中查询证书相关信息失败")
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode" : -5,
+			"errorCode" : 5,
 			"errorInfo" : "从数据库中查询证书相关信息失败！",
 		})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"data":      certsInfo,
-		"errorCode": "0",
+		"errorCode": 0,
 		"errorInfo": "",
 	})
 }
@@ -159,8 +159,8 @@ func CutCsrContent(csrContent string) string{
 	return csrContent[start:end+1]
 }
 
-func CreateCertInApple(tokenString string,certType string,certTypeSufix string) *dal.CreCertResponse{
-	var creAppleCertReq dal.CreAppleCertReq
+func CreateCertInApple(tokenString string,certType string,certTypeSufix string) *devconnmanager.CreCertResponse{
+	var creAppleCertReq devconnmanager.CreAppleCertReq
 	creAppleCertReq.Data.Type=_const.APPLE_RECEIVED_DATA_TYPE
 	creAppleCertReq.Data.Attributes.CertificateType= certType
 	var csrContent string
@@ -185,7 +185,7 @@ func CreateCertInApple(tokenString string,certType string,certTypeSufix string) 
 		logs.Info("发送post请求失败")
 	}
 	defer response.Body.Close()
-	var certInfo dal.CreCertResponse
+	var certInfo devconnmanager.CreCertResponse
 	if response.StatusCode != 201 {
 		logs.Info(string(response.StatusCode))
 		if response.StatusCode==409{
@@ -241,39 +241,39 @@ func DeleteTosCert(tosFilePath string) bool{
 	return true
 }
 
-func CheckParams(c *gin.Context,bodyAddr *dal.InsertCertRequest)bool{
+func CheckParams(c *gin.Context,bodyAddr *devconnmanager.InsertCertRequest)bool{
 	err:=c.ShouldBindJSON(bodyAddr)
 	if err!=nil{
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode" : -1,
+			"errorCode" : 1,
 			"errorInfo" : "请求参数绑定失败！",
 		})
 		return false
 	}
 	if bodyAddr.CertName=="" {
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode" : -2,
+			"errorCode" : 2,
 			"errorInfo" : "cert_name为空！",
 		})
 		return false
 	}
 	if bodyAddr.CertType=="" {
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode" : -3,
+			"errorCode" : 3,
 			"errorInfo" : "cert_type为空！",
 		})
 		return false
 	}
 	if bodyAddr.AccountName=="" {
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode" : -4,
+			"errorCode" : 4,
 			"errorInfo" : "account_name为空！",
 		})
 		return false
 	}
 	if bodyAddr.TeamId=="" {
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode" : -5,
+			"errorCode" : 5,
 			"errorInfo" : "team_id为空！",
 		})
 		return false
@@ -297,7 +297,7 @@ func DealCertName(certName string) string{
 
 func InsertCertificate(c *gin.Context){
 	logs.Info("从数据库中查询证书信息")
-	var body dal.InsertCertRequest
+	var body devconnmanager.InsertCertRequest
 	checkResult:=CheckParams(c,&body)
 	if !checkResult{
 		return
@@ -310,7 +310,7 @@ func InsertCertificate(c *gin.Context){
 	if certContent==""{
 		logs.Error("从苹果获取证书失败")
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode" : -6,
+			"errorCode" : 6,
 			"errorInfo" : "从苹果获取证书失败！",
 		})
 		return
@@ -319,12 +319,12 @@ func InsertCertificate(c *gin.Context){
 	if err!=nil {
 		logs.Error("%s", "base64 decode error"+err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode" : -7,
+			"errorCode" : 7,
 			"errorInfo" : "证书格式有误！",
 		})
 		return
 	}
-	var certInfo dal.CertInfo
+	var certInfo devconnmanager.CertInfo
 	certInfo.TeamId=body.TeamId
 	certInfo.AccountName=body.AccountName
 	certInfo.CertId=creCertResponse.Data.Id
@@ -344,17 +344,17 @@ func InsertCertificate(c *gin.Context){
 	if !uploadResult{
 		c.JSON(http.StatusOK,gin.H{
 			"data":certInfo,
-			"errorCode": "-8",
+			"errorCode": 8,
 			"errorInfo": "往tos上传证书信息失败",
 		})
 		return
 	}
 	certInfo.CertDownloadUrl=_const.TOS_BUCKET_URL+tosFilePath
-	dbResult:=dal.InsertCertInfo(certInfo)
+	dbResult:=devconnmanager.InsertCertInfo(certInfo)
 	if !dbResult{
 		c.JSON(http.StatusOK,gin.H{
 			"data":certInfo,
-			"errorCode": "-9",
+			"errorCode": 9,
 			"errorInfo": "往数据库中插入证书信息失败",
 		})
 		return
@@ -362,12 +362,12 @@ func InsertCertificate(c *gin.Context){
 	FilterCert(&certInfo)
 	c.JSON(http.StatusOK,gin.H{
 		"data":certInfo,
-		"errorCode": "0",
+		"errorCode": 0,
 		"errorInfo": "",
 	})
 }
 
-func FilterCert(certInfo *dal.CertInfo){
+func FilterCert(certInfo *devconnmanager.CertInfo){
 	certInfo.TeamId=""
 	certInfo.AccountName=""
 	certInfo.CsrFileUrl=""
@@ -385,34 +385,34 @@ func DeleteCertInApple(tokenString string,certId string)bool{
 		logs.Info("发送DELETE请求失败")
 	}
 	defer response.Body.Close()
-	r, err := ioutil.ReadAll(response.Body)
+	responseByte, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		logs.Info("读取respose的body内容失败")
 	}
-	if len(r)==0{
+	if len(responseByte)==0{
 		return true
 	}
 	return false
 }
 
-func CheckDelCertRequest(c *gin.Context,delCertRequest *dal.DelCertRequest) bool{
+func CheckDelCertRequest(c *gin.Context,delCertRequest *devconnmanager.DelCertRequest) bool{
 	if delCertRequest.TeamId=="" {
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode" : -2,
+			"errorCode" : 2,
 			"errorInfo" : "team_id为空！",
 		})
 		return false
 	}
 	if delCertRequest.CertId=="" {
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -3,
+			"errorCode": 3,
 			"errorInfo": "cert_id为空！",
 		})
 		return false
 	}
 	if delCertRequest.CertType=="" {
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -4,
+			"errorCode": 4,
 			"errorInfo": "cert_type为空！",
 		})
 		return false
@@ -422,12 +422,12 @@ func CheckDelCertRequest(c *gin.Context,delCertRequest *dal.DelCertRequest) bool
 
 func DeleteCertificate(c *gin.Context){
 	logs.Info("根据cert_id删除证书")
-	var delCertRequest dal.DelCertRequest
+	var delCertRequest devconnmanager.DelCertRequest
 	bindQueryError:=c.ShouldBindQuery(&delCertRequest)
 	if bindQueryError!=nil{
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "delete fail",
-			"errorCode": "-1",
+			"errorCode": 1,
 			"errorInfo": "请求参数绑定失败",
 		})
 		return
@@ -438,45 +438,45 @@ func DeleteCertificate(c *gin.Context){
 	}
 	condition:=make(map[string]interface{})
 	condition["cert_id"]=delCertRequest.CertId
-	appList:=dal.QueryEffectAppList(delCertRequest.CertId,delCertRequest.CertType)
+	appList:=devconnmanager.QueryEffectAppList(delCertRequest.CertId,delCertRequest.CertType)
 	if len(appList)==0{
 		tokenString:=GetTokenStringByTeamId(delCertRequest.TeamId)
 		delResult:=DeleteCertInApple(tokenString,delCertRequest.CertId)
 		if !delResult{
 			c.JSON(http.StatusOK,gin.H{
 				"message": "delete fail",
-				"errorCode": "-5",
+				"errorCode": 5,
 				"errorInfo": "在苹果开发者网站删除对应证书失败",
 			})
 			return
 		}
-		certInfo:=dal.QueryCertInfoByCertId(delCertRequest.CertId)
+		certInfo:=devconnmanager.QueryCertInfoByCertId(delCertRequest.CertId)
 		tosFilePath:="appleConnectFile/"+string(delCertRequest.TeamId)+"/"+delCertRequest.CertType+"/"+delCertRequest.CertId+"/"+DealCertName(certInfo.CertName)+".cer"
 		delResult=DeleteTosCert(tosFilePath)
 		if !delResult{
 			c.JSON(http.StatusOK,gin.H{
 				"message": "delete fail",
-				"errorCode": "-6",
+				"errorCode": 6,
 				"errorInfo": "删除tos上的证书失败",
 			})
 			return
 		}
-		delResult=dal.DeleteCertInfo(condition)
+		delResult=devconnmanager.DeleteCertInfo(condition)
 		if !delResult {
 			c.JSON(http.StatusOK, gin.H{
 				"message":   "delete fail",
-				"errorCode": "-7",
+				"errorCode": 7,
 				"errorInfo": "从数据库中删除cert_id对应的证书失败",
 			})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "delete success",
-			"errorCode": "0",
+			"errorCode": 0,
 			"errorInfo": "",
 		})
 	}else {
-		userNames:=dal.QueryUserNameByAppName(appList)
+		userNames:=devconnmanager.QueryUserNameByAppName(appList)
 		var appListStr string
 		for _,appName:=range appList{
 			appListStr+=appName
@@ -488,14 +488,14 @@ func DeleteCertificate(c *gin.Context){
 
 func CheckCertExpireDate(c *gin.Context){
 	logs.Info("检查过期证书")
-	expiredCertInfos:=dal.QueryExpiredCertInfos()
+	expiredCertInfos:=devconnmanager.QueryExpiredCertInfos()
 	c.JSON(http.StatusOK,gin.H{
 		"data":expiredCertInfos,
-		"errorCode": "0",
+		"errorCode": 0,
 		"errorInfo": "",
 	})
 	for _,expiredCertInfo:=range *expiredCertInfos{
-		userNames:=dal.QueryUserNameByAppName(expiredCertInfo.EffectAppList)
+		userNames:=devconnmanager.QueryUserNameByAppName(expiredCertInfo.EffectAppList)
 		LarkNotifyUsers("证书将要过期提醒",userNames,"证书"+expiredCertInfo.CertId+"即将过期")
 	}
 
@@ -505,7 +505,7 @@ func ReceiveP12file(c *gin.Context) ([]byte,string){
 	file, header, _ :=c.Request.FormFile("priv_p12_file")
 	if header==nil {
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -1,
+			"errorCode": 1,
 			"errorInfo":   "没有文件上传",
 		})
 		return nil,""
@@ -514,7 +514,7 @@ func ReceiveP12file(c *gin.Context) ([]byte,string){
 	p12ByteInfo,err := ioutil.ReadAll(file)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -2,
+			"errorCode": 2,
 			"errorInfo":   "error read p12 file",
 		})
 		return nil,""
@@ -522,12 +522,12 @@ func ReceiveP12file(c *gin.Context) ([]byte,string){
 	return p12ByteInfo,header.Filename
 }
 
-func CheckUploadRequest(c *gin.Context,certInfo *dal.CertInfo) bool{
+func CheckUploadRequest(c *gin.Context,certInfo *devconnmanager.CertInfo) bool{
 	if certInfo.TeamId == "" {
 		logs.Error("缺少team_id参数")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少team_id参数",
-			"errorCode" : -3,
+			"errorCode" : 3,
 			"data" : "缺少team_id参数",
 		})
 		return false
@@ -536,7 +536,7 @@ func CheckUploadRequest(c *gin.Context,certInfo *dal.CertInfo) bool{
 		logs.Error("缺少cert_type参数")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少cert_type参数",
-			"errorCode" : -4,
+			"errorCode" : 4,
 			"data" : "缺少cert_type参数",
 		})
 		return false
@@ -545,7 +545,7 @@ func CheckUploadRequest(c *gin.Context,certInfo *dal.CertInfo) bool{
 		logs.Error("缺少cert_id参数")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少cert_id参数",
-			"errorCode" : -5,
+			"errorCode" : 5,
 			"data" : "缺少cert_id参数",
 		})
 		return false
@@ -559,17 +559,17 @@ func UploadPrivKey(c *gin.Context){
 		logs.Error("缺少priv_p12_file参数")
 		c.JSON(http.StatusOK, gin.H{
 			"message" : "缺少priv_p12_file参数",
-			"errorCode" : -1,
+			"errorCode" : 1,
 			"data" : "缺少priv_p12_file参数",
 		})
 		return
 	}
-	var certInfo dal.CertInfo
+	var certInfo devconnmanager.CertInfo
 	bindError:=c.ShouldBind(&certInfo)
 	if bindError!=nil{
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "请求参数绑定失败",
-			"errorCode": "-2",
+			"errorCode": 2,
 			"errorInfo": "请求参数绑定失败",
 		})
 		return
@@ -578,12 +578,27 @@ func UploadPrivKey(c *gin.Context){
 	if !CheckResult{
 		return
 	}
+	chkCertResult:=devconnmanager.CheckCertExit(certInfo.TeamId)
+	if chkCertResult==-1{
+		c.JSON(http.StatusOK, gin.H{
+			"errorCode": 6,
+			"errorInfo": "数据库连接失败",
+		})
+		return
+	}
+	if chkCertResult==-2{
+		c.JSON(http.StatusOK, gin.H{
+			"errorCode": 7,
+			"errorInfo": "team_id对应的证书记录不存在",
+		})
+		return
+	}
 	tosFilePath:="appleConnectFile/"+string(certInfo.TeamId)+"/"+certInfo.CertType+"/"+certInfo.CertId+"/"+p12filename
 	uploadResult:=UploadTos(p12FileCont,tosFilePath)
 	if !uploadResult {
 		logs.Error("上传p12文件到tos失败！")
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -6,
+			"errorCode": 8,
 			"errorInfo": "上传p12文件到tos失败！",
 		})
 		return
@@ -591,20 +606,20 @@ func UploadPrivKey(c *gin.Context){
 	condition := make(map[string]interface{})
 	condition["cert_id"] = certInfo.CertId
 	privKeyUrl:=_const.TOS_BUCKET_URL+tosFilePath
-	dbResult := dal.UpdateCertInfo(condition,privKeyUrl)
+	dbResult := devconnmanager.UpdateCertInfo(condition,privKeyUrl)
 	if !dbResult {
 		logs.Error("更新数据库中的证书信息失败！")
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -7,
+			"errorCode": 9,
 			"errorInfo": "更新数据库中的证书信息失败！",
 		})
 		return
 	}
-	certInfoNew:=dal.QueryCertInfoByCertId(certInfo.CertId)
+	certInfoNew:=devconnmanager.QueryCertInfoByCertId(certInfo.CertId)
 	if certInfoNew==nil{
 		logs.Error("从数据库中查询证书相关信息失败")
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode" : -8,
+			"errorCode" : 10,
 			"errorInfo" : "从数据库中查询证书相关信息失败！",
 		})
 		return
@@ -612,7 +627,7 @@ func UploadPrivKey(c *gin.Context){
 	FilterCert(certInfoNew)
 	c.JSON(http.StatusOK,gin.H{
 		"data":*certInfoNew,
-		"errorCode": "0",
+		"errorCode": 0,
 		"errorInfo": "",
 	})
 }
