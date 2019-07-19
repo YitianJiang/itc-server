@@ -62,6 +62,20 @@ func QueryAccountInfo(condition map[string]interface{} ) *[]AccountInfo {
 	return &accountInfos
 }
 
+func CheckAdmin(perms []string)bool{
+	if len(perms)==0{
+		return false
+	}
+	checkResult:=false
+	for _,perm:=range perms{
+		if perm=="admin"{
+			checkResult=true
+			break
+		}
+	}
+	return checkResult
+}
+
 func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]interface{}{
 	conn, err := database.GetConneection()
 	if err != nil {
@@ -75,7 +89,8 @@ func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]interface{}{
 	utils.RecordError("Query from DB Failed: ", db.Error)
 	for _,teamId:=range teamIds{
 		perms:=resPerms.Data[strings.ToLower(teamId.TeamId)+"_space_account"]
-		if len(perms)==0{
+		checkResult:=CheckAdmin(perms)
+		if !checkResult{
 			accInfoWithoutAuth:=AccInfoWithoutAuth{}
 			db:=conn.LogMode(_const.DB_LOG_MODE).
 				Table(AccountInfo{}.TableName()).
