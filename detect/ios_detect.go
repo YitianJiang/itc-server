@@ -661,7 +661,7 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 			}
 		}
 	}
-	//更新后的内容重新专程json存储到数据库
+	//更新后的内容重新转成json存储到数据库
 	confirmedContent, _ := json.Marshal(m)
 	flag := dal.UpdateNewIOSDetectModel((*iosDetect)[0], map[string]interface{}{
 		"detect_content": string(confirmedContent),
@@ -691,6 +691,7 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 func changeTotalStatus(taskId, toolId int) (error, int) {
 	var newChangeFlag = true
 	var unConfirmNum = 0
+	var notPassNum = 0
 	iosDetectAll := dal.QueryNewIOSDetectModel(map[string]interface{}{
 		"taskId": taskId,
 		"toolId": toolId,
@@ -713,13 +714,21 @@ func changeTotalStatus(taskId, toolId int) (error, int) {
 				newChangeFlag = false
 				unConfirmNum++
 			}
+			if needConfirm["status"].(float64) == 2 {
+				notPassNum++
+			}
 		}
 	}
 	if newChangeFlag {
 		detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 			"id": taskId,
 		})
-		(*detect)[0].Status = 1
+		if notPassNum == 0 {
+			(*detect)[0].Status = 1 //1代表全部确认且确认通过
+		} else {
+			(*detect)[0].Status = 2 //2代表全部确认且有确认不通过
+		}
+		(*detect)[0].DetectNoPass = notPassNum //不通过总数
 		err := dal.UpdateDetectModelNew((*detect)[0])
 		if err != nil {
 			logs.Error("更新任务状态失败，任务ID："+strconv.Itoa(taskId)+",错误原因:%v", err)
@@ -800,4 +809,9 @@ func GetIOSSelfNum(appid, taskId int) (bool, int) {
 		}
 	}
 	return true, selfNum0
+}
+func ciDeal(detect dal.DetectStruct) {
+	if detect.SelfCheckStatus == 1 && detect.Status == 1 {
+		CICallBack(&(*detect)[0])
+	}
 }
