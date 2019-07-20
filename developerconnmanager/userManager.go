@@ -1,7 +1,6 @@
 package developerconnmanager
 
 import (
-	"bytes"
 	_const "code.byted.org/clientQA/itc-server/const"
 	devconnmanager "code.byted.org/clientQA/itc-server/database/dal/AppleConnMannagerModel"
 	"code.byted.org/clientQA/itc-server/utils"
@@ -174,7 +173,7 @@ func UserDetailInfoGet(c *gin.Context){
 		})
 	}else {
 		c.JSON(http.StatusOK, gin.H{
-			"error_info":   "苹果后台返回数据错误",
+			"message":   "苹果后台返回数据错误",
 			"error_code": 1,
 			"data": "",
 		})
@@ -223,7 +222,7 @@ func UserInvitedDetailInfoGet(c *gin.Context){
 		})
 	}else {
 		c.JSON(http.StatusOK, gin.H{
-			"error_info":   "苹果后台返回数据错误",
+			"message":   "苹果后台返回数据错误",
 			"error_code": 1,
 			"data": "",
 		})
@@ -347,104 +346,4 @@ func VisibleAppsOfUserGet(c *gin.Context)  {
 		"error_code": 0,
 		"data": resDataobj,
 	})
-}
-
-//编辑指定user的权限
-func PostToAppleGetInfo(method,url,tokenString string,obj interface{}) bool{
-	bodyByte, _ := json.Marshal(&obj)
-	rbodyByte := bytes.NewReader(bodyByte)
-	client := &http.Client{}
-	request, err := http.NewRequest(method, url, rbodyByte)
-	if err != nil {
-		logs.Info("新建request对象失败")
-		return false
-	}
-	request.Header.Set("Authorization", tokenString)
-	request.Header.Set("Content-Type", "application/json")
-	response, err := client.Do(request)
-	if err != nil {
-		logs.Info("发送Post请求失败")
-		return false
-	}
-	defer response.Body.Close()
-	if response.StatusCode != 200 {
-		logs.Info(string(response.StatusCode))
-		responseByte, _ := ioutil.ReadAll(response.Body)
-		logs.Info(string(responseByte))
-		return false
-	} else {
-		responseByte, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			logs.Info("读取respose的body内容失败")
-			return false
-		}
-		logs.Info(string(responseByte))
-		//json.Unmarshal(responseByte, &obj)
-		return true
-	}
-}
-
-func EditPermOfUserFunc(c *gin.Context){
-	logs.Info("变更指定user的权限")
-	var requestData devconnmanager.UserPermEditReq
-	bindQueryError := c.ShouldBindQuery(&requestData)
-	utils.RecordError("请求参数绑定错误: ", bindQueryError)
-	if bindQueryError != nil {
-		AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", map[string]interface{}{})
-		return
-	}
-	//todo UserPermEditReq类型 ==>> UserPermEditReqOfApple类型转化，然后请求苹果后台edit权限，然后插入DB
-	logs.Info(requestData.TeamId,requestData.AppleId,requestData.UserId)
-	var reqAppleEditUserPerm devconnmanager.UserPermEditReqOfApple
-	reqAppleEditUserPerm.Type = "users"
-	reqAppleEditUserPerm.Id = requestData.UserId
-	reqAppleEditUserPerm.Attributes.Roles = requestData.RolesResult
-	reqAppleEditUserPerm.Attributes.AllAppsVisible = requestData.AllAppsVisibleResult
-	reqAppleEditUserPerm.Attributes.ProvisioningAllowed = requestData.ProvisioningAllowedResult
-	if requestData.AllAppsVisibleResult == false && requestData.AllappsVisibleChangeSign == "1" {
-		reqAppleEditUserPerm.Relationships.VisibleApps.DataList = make([]devconnmanager.VisibleAppItemReqOfApple,0)
-		if len(requestData.VisibleAppsResult) > 0{
-			for _,itemApp := range requestData.VisibleAppsResult{
-				var visibleAppItem devconnmanager.VisibleAppItemReqOfApple
-				visibleAppItem.AppType = "apps"
-				visibleAppItem.AppAppleId = itemApp
-				reqAppleEditUserPerm.Relationships.VisibleApps.DataList = append(reqAppleEditUserPerm.Relationships.VisibleApps.DataList,visibleAppItem)
-			}
-		}else {
-			c.JSON(http.StatusOK, gin.H{
-				"error_info":   "参数传递错误，all_apps_visible_result是false情况下，visible_apps_result不能为空",
-				"error_code": 1,
-				"data": "",
-			})
-			return
-		}
-	}
-	tokenString := GetTokenStringByTeamId(requestData.TeamId)
-	method := "PATCH"
-	userPermEditUrl := _const.APPLE_USER_PERM_EDIT_URL + "/" + requestData.UserId
-	resultFromApple := PostToAppleGetInfo(method,userPermEditUrl,tokenString,&reqAppleEditUserPerm)
-	if !resultFromApple{
-		c.JSON(http.StatusOK, gin.H{
-			"error_info":   "苹果后台返回数据错误",
-			"error_code": 1,
-			"data": "",
-		})
-		return
-	}else {
-		dbInsertResult := devconnmanager.InsertUserPermEditHistoryDB(&requestData)
-		if dbInsertResult {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "success",
-				"error_code": 0,
-				"data": "变更权限成功",
-			})
-		}else {
-			c.JSON(http.StatusOK, gin.H{
-				"error_info":   "数据库插入失败",
-				"error_code": 2,
-				"data": "db insert error",
-			})
-		}
-		return
-	}
 }
