@@ -122,7 +122,7 @@ func UpdateAccountInfo(accountInfo AccountInfo) int {
 	defer conn.Close()
 	var teamIds []TeamID
 	db:= conn.LogMode(_const.DB_LOG_MODE).
-		Table(CertInfo{}.TableName()).
+		Table(AccountInfo{}.TableName()).
 		Where("team_id=?",accountInfo.TeamId).
 		Find(&teamIds)
 	utils.RecordError("query DB Failed: ", db.Error)
