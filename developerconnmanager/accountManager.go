@@ -154,6 +154,7 @@ func SendPost2Kani(postRequest interface{},url string) int{
 		logs.Info("新建request对象失败")
 	}
 	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization","Basic "+_const.KANI_APP_ID_AND_SECRET_BASE64)
 	response, err := client.Do(request)
 	if err != nil {
 		logs.Info("发送post请求失败")
@@ -173,8 +174,6 @@ func SendPost2Kani(postRequest interface{},url string) int{
 	}
 	return  -2
 }
-
-
 
 func InsertAccount(c *gin.Context)  {
 	logs.Info("往数据库中添加账户信息")
@@ -256,7 +255,6 @@ func GetTokenStringByAccInfo(accountInfo devconnmanager.AccountInfo) string{
 	}
 	return tokenString
 }
-
 
 func GetTokenStringByTeamId(teamId string) string{
 	condition := make(map[string]interface{})
