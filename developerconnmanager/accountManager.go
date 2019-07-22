@@ -215,11 +215,7 @@ func InsertAccount(c *gin.Context)  {
 	creResRequest.ResourceKey=teamIdLower+"_space_account"
 	creResRequest.ResourceName=teamIdLower+"_space_account"
 	creResRequest.ResourceType=0
-	creResRequest.Permissions=map[string]string{
-		"user_manager": "user_manager",
-		"all_cert_manager": "all_cert_manager",
-		"dev_cert_manager": "dev_cert_manager",
-	}
+	creResRequest.Permissions=_const.PermsMap
 	creResult:=SendPost2Kani(creResRequest,_const.Create_RESOURCE_URL)
 	if creResult==-1{
 		c.JSON(http.StatusOK, gin.H{

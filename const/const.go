@@ -76,3 +76,4 @@ var ProtectionSettings = []string{"COMPLETE_PROTECTION","PROTECTED_UNLESS_OPEN",
 
 var RolesInfoMap = map[string]string{"账号持有者":"ACCOUNT_HOLDER","管理":"ADMIN","财务":"FINANCE","App管理":"APP_MANAGER","开发人员":"DEVELOPER","营销":"MARKETING","销售":"SALES","用户支持":"CUSTOMER_SUPPORT"}
 var RolesIndexList = []string{"ACCOUNT_HOLDER","ADMIN","FINANCE","APP_MANAGER","DEVELOPER","MARKETING","SALES","CUSTOMER_SUPPORT"}
+var PermsMap=map[string]string{"user_manager": "user_manager", "all_cert_manager": "all_cert_manager", "dev_cert_manager": "dev_cert_manager",}
