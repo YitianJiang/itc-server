@@ -21,6 +21,8 @@ type AccInfoWithAuth struct {
 	AccountType 		string      `gorm:"account_type"`
 	AccountP8fileName   string      `gorm:"account_p8file_name"`
 	AccountP8file 		string      `gorm:"account_p8file"`
+	IssueId 			string      `gorm:"issue_id"`
+	KeyId 				string      `gorm:"key_id"               `
 	UserName 			string      `gorm:"user_name"`
 	PermissionAction   []string
 }
@@ -38,10 +40,11 @@ type DelAccRequest struct {
 }
 
 type CreateResourceRequest struct {
-	ResourceName    string      `json:"resourceName"`
-	ResourceKey     string      `json:"resourceKey"`
-	CreatorKey      string      `json:"creatorKey"`
-	ResourceType    int         `json:"resourceType"`
+	ResourceName    string              `json:"resourceName"`
+	ResourceKey     string              `json:"resourceKey"`
+	CreatorKey      string              `json:"creatorKey"`
+	ResourceType    int                 `json:"resourceType"`
+	Permissions     map[string]string   `json:"permissions"`
 }
 
 type CreResResponse struct {

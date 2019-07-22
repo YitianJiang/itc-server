@@ -134,7 +134,7 @@ func InitRouter(r *ginex.Engine) {
 	}
 	accountapi := r.Group("/v1/accountManage")
 	{
-		accountapi.PATCH ("/accountInfoUpdate",developerconnmanager.UpdateAccount)
+		accountapi.POST ("/accountInfoUpdate",developerconnmanager.UpdateAccount)
 		accountapi.GET("/accountInfoGet",developerconnmanager.QueryAccount)
 		accountapi.POST("/accountInfoWriter",developerconnmanager.InsertAccount)
 		accountapi.DELETE("/accountInfoDelete",developerconnmanager.DeleteByTeamId)

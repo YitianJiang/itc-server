@@ -90,11 +90,7 @@ func QueryAccount(c *gin.Context)  {
 func ReceiveP8file(c *gin.Context,accountInfo *devconnmanager.AccountInfo) bool{
 	file, header, _ :=c.Request.FormFile("account_p8file")
 	if header==nil {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 1,
-			"errorInfo":   "没有文件上传",
-		})
-		return false
+		return true
 	}
 	logs.Info("打印File Name：" + header.Filename)
 	p8ByteInfo,err := ioutil.ReadAll(file)
@@ -149,11 +145,11 @@ func UpdateAccount(c *gin.Context)  {
 }
 
 
-func CreateResource(creResRequest devconnmanager.CreateResourceRequest) int{
-	bodyByte, _ := json.Marshal(creResRequest)
+func SendPost2Kani(postRequest interface{},url string) int{
+	bodyByte, _ := json.Marshal(postRequest)
 	rbodyByte := bytes.NewReader(bodyByte)
 	client := &http.Client{}
-	request, err := http.NewRequest("POST", _const.Create_RESOURCE_URL,rbodyByte)
+	request, err := http.NewRequest("POST", url,rbodyByte)
 	if err != nil {
 		logs.Info("新建request对象失败")
 	}
@@ -177,6 +173,8 @@ func CreateResource(creResRequest devconnmanager.CreateResourceRequest) int{
 	}
 	return  -2
 }
+
+
 
 func InsertAccount(c *gin.Context)  {
 	logs.Info("往数据库中添加账户信息")
@@ -217,7 +215,8 @@ func InsertAccount(c *gin.Context)  {
 	creResRequest.ResourceKey=teamIdLower+"_space_account"
 	creResRequest.ResourceName=teamIdLower+"_space_account"
 	creResRequest.ResourceType=0
-	creResult:=CreateResource(creResRequest)
+	creResRequest.Permissions=_const.PermsMap
+	creResult:=SendPost2Kani(creResRequest,_const.Create_RESOURCE_URL)
 	if creResult==-1{
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": 4,
