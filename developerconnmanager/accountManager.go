@@ -145,11 +145,11 @@ func UpdateAccount(c *gin.Context)  {
 }
 
 
-func CreateResource(creResRequest devconnmanager.CreateResourceRequest) int{
-	bodyByte, _ := json.Marshal(creResRequest)
+func SendPost2Kani(postRequest interface{},url string) int{
+	bodyByte, _ := json.Marshal(postRequest)
 	rbodyByte := bytes.NewReader(bodyByte)
 	client := &http.Client{}
-	request, err := http.NewRequest("POST", _const.Create_RESOURCE_URL,rbodyByte)
+	request, err := http.NewRequest("POST", url,rbodyByte)
 	if err != nil {
 		logs.Info("新建request对象失败")
 	}
@@ -173,6 +173,8 @@ func CreateResource(creResRequest devconnmanager.CreateResourceRequest) int{
 	}
 	return  -2
 }
+
+
 
 func InsertAccount(c *gin.Context)  {
 	logs.Info("往数据库中添加账户信息")
@@ -213,7 +215,7 @@ func InsertAccount(c *gin.Context)  {
 	creResRequest.ResourceKey=teamIdLower+"_space_account"
 	creResRequest.ResourceName=teamIdLower+"_space_account"
 	creResRequest.ResourceType=0
-	creResult:=CreateResource(creResRequest)
+	creResult:=SendPost2Kani(creResRequest,_const.Create_RESOURCE_URL)
 	if creResult==-1{
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": 4,
@@ -228,9 +230,21 @@ func InsertAccount(c *gin.Context)  {
 		})
 		return
 	}
+	var crePermRequest devconnmanager.CrePermRequest
+	crePermRequest.CreatorKey=accountInfo.UserName
+	crePermRequest.ResourceKey=creResRequest.ResourceKey
+	crePermRequest.PermissionAction="user_manager"
+	crePermRequest.PermissionName="user_manager"
+	SendPost2Kani(crePermRequest,_const.CREATE_PERM_FOR_CERTAIN_RES_URL)
+	crePermRequest.PermissionAction="all_cert_manager"
+	crePermRequest.PermissionName="all_cert_manager"
+	SendPost2Kani(crePermRequest,_const.CREATE_PERM_FOR_CERTAIN_RES_URL)
+	crePermRequest.PermissionAction="dev_cert_manager"
+	crePermRequest.PermissionName="dev_cert_manager"
+	SendPost2Kani(crePermRequest,_const.CREATE_PERM_FOR_CERTAIN_RES_URL)
 	c.JSON(http.StatusOK, gin.H{
 		"errorCode": 0,
-		"message":   "往数据库中插入账号信息成功，同时资源创建成功",
+		"message":   "往数据库中插入账号信息成功，同时资源创建成功,权限添加成功",
 	})
 }
 

@@ -55,6 +55,13 @@ type TeamID struct {
 	TeamId string `gorm:"team_id"`
 }
 
+type CrePermRequest struct {
+	PermissionName          string      `json:"permissionName"`
+	PermissionAction        string      `json:"permissionAction"`
+	CreatorKey              string      `json:"creatorKey"`
+	ResourceKey             string      `json:"resourceKey"`
+}
+
 func (AccountInfo) TableName() string{
 	return  "tt_apple_conn_account"
 }
