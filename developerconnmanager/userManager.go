@@ -352,6 +352,7 @@ func VisibleAppsOfUserGet(c *gin.Context)  {
 //编辑指定user的权限
 func PostToAppleGetInfo(method,url,tokenString string,obj interface{}) bool{
 	bodyByte, _ := json.Marshal(&obj)
+	logs.Info(string(bodyByte))
 	rbodyByte := bytes.NewReader(bodyByte)
 	client := &http.Client{}
 	request, err := http.NewRequest(method, url, rbodyByte)
@@ -387,28 +388,29 @@ func PostToAppleGetInfo(method,url,tokenString string,obj interface{}) bool{
 func EditPermOfUserFunc(c *gin.Context){
 	logs.Info("变更指定user的权限")
 	var requestData devconnmanager.UserPermEditReq
-	bindQueryError := c.ShouldBindQuery(&requestData)
+	bindQueryError := c.ShouldBindJSON(&requestData)
 	utils.RecordError("请求参数绑定错误: ", bindQueryError)
 	if bindQueryError != nil {
 		AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", map[string]interface{}{})
 		return
 	}
-	//todo UserPermEditReq类型 ==>> UserPermEditReqOfApple类型转化，然后请求苹果后台edit权限，然后插入DB
 	logs.Info(requestData.TeamId,requestData.AppleId,requestData.UserId)
-	var reqAppleEditUserPerm devconnmanager.UserPermEditReqOfApple
-	reqAppleEditUserPerm.Type = "users"
-	reqAppleEditUserPerm.Id = requestData.UserId
-	reqAppleEditUserPerm.Attributes.Roles = requestData.RolesResult
-	reqAppleEditUserPerm.Attributes.AllAppsVisible = requestData.AllAppsVisibleResult
-	reqAppleEditUserPerm.Attributes.ProvisioningAllowed = requestData.ProvisioningAllowedResult
-	if requestData.AllAppsVisibleResult == false && requestData.AllappsVisibleChangeSign == "1" {
-		reqAppleEditUserPerm.Relationships.VisibleApps.DataList = make([]devconnmanager.VisibleAppItemReqOfApple,0)
+	var reqAppleEditUserPerm devconnmanager.UserPermEditReqOfAppleObj
+	reqAppleEditUserPerm.DataObj.Type = "users"
+	reqAppleEditUserPerm.DataObj.Id = requestData.UserId
+	reqAppleEditUserPerm.DataObj.Attributes.Roles = requestData.RolesResult
+	reqAppleEditUserPerm.DataObj.Attributes.AllAppsVisible = requestData.AllAppsVisibleResult
+	reqAppleEditUserPerm.DataObj.Attributes.ProvisioningAllowed = requestData.ProvisioningAllowedResult
+	if requestData.AllAppsVisibleResult == false {
+		reqAppleEditUserPerm.DataObj.Relationships = &devconnmanager.VisibleAppObjReqOfApple{}
+		reqAppleEditUserPerm.DataObj.Relationships.VisibleApps = &devconnmanager.VisibleAppsReqOfApple{}
+		reqAppleEditUserPerm.DataObj.Relationships.VisibleApps.DataList = make([]devconnmanager.VisibleAppItemReqOfApple,0)
 		if len(requestData.VisibleAppsResult) > 0{
 			for _,itemApp := range requestData.VisibleAppsResult{
 				var visibleAppItem devconnmanager.VisibleAppItemReqOfApple
 				visibleAppItem.AppType = "apps"
 				visibleAppItem.AppAppleId = itemApp
-				reqAppleEditUserPerm.Relationships.VisibleApps.DataList = append(reqAppleEditUserPerm.Relationships.VisibleApps.DataList,visibleAppItem)
+				reqAppleEditUserPerm.DataObj.Relationships.VisibleApps.DataList = append(reqAppleEditUserPerm.DataObj.Relationships.VisibleApps.DataList,visibleAppItem)
 			}
 		}else {
 			c.JSON(http.StatusOK, gin.H{

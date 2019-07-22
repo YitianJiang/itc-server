@@ -56,15 +56,13 @@ func SearchVisibleAppInfos (condition map[string]interface{}) (*[]RetAllVisibleA
 
 func addStringFromSlice(x []string) string{
 	var sliceString string
-	lenInt := len(x)
-	if lenInt == 1 {
-		sliceString = x[0]
-	}else {
-		for _,item := range x {
-			sliceString = item + ","
-			sliceString = sliceString[:lenInt-1]
-		}
+	sliceString = x[0]
+	x = x[1:]
+	for _,item := range x {
+		sliceString = sliceString + "," + item
 	}
+	stringIntLen := len(sliceString)
+	sliceString = sliceString[:stringIntLen]
 	return sliceString
 }
 

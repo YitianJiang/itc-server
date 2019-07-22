@@ -94,20 +94,20 @@ type UserVisibleAppsReq struct {
 
 //编辑人员权限的上传参数Struct
 type UserPermEditReq struct {
-	OperateUserName string `form:"operate_user_name" binding:"required"`
-	TeamId string `form:"team_id" binding:"required"`
-	UserId string `form:"user_id" binding:"required"`
-	AppleId string `form:"apple_id" binding:"required"`
-	ProvisioningAllowedResult bool `form:"provisioning_allowed_result" binding:"required"`
-	ProvisioningChangeSign string `form:"provisioning_change_sign" binding:"required"`
-	RolesResult []string `form:"roles_result" binding:"required"`
-	RolesAdd []string `form:"roles_add"`
-	RolesMin []string `form:"roles_min"`
-	AllAppsVisibleResult bool `form:"all_apps_visible_result" binding:"required"`
-	AllappsVisibleChangeSign string `form:"allapps_visible_change_sign" binding:"required"`
-	VisibleAppsResult []string `form:"visible_apps_result"`
-	VisibleAppsAdd []string `form:"visible_apps_add"`
-	VisibleAppsMin []string `form:"visible_apps_min"`
+	OperateUserName string `binding:"required" json:"operate_user_name"`
+	TeamId string `json:"team_id" binding:"required"`
+	UserId string `json:"user_id" binding:"required"`
+	AppleId string `json:"apple_id" binding:"required"`
+	ProvisioningAllowedResult bool `json:"provisioning_allowed_result" binding:"exists"`
+	ProvisioningChangeSign string `json:"provisioning_change_sign" binding:"required"`
+	RolesResult []string `json:"roles_result" binding:"required"`
+	RolesAdd []string `json:"roles_add"`
+	RolesMin []string `json:"roles_min"`
+	AllAppsVisibleResult bool `json:"all_apps_visible_result" binding:"exists"`
+	AllappsVisibleChangeSign string `json:"allapps_visible_change_sign" binding:"required"`
+	VisibleAppsResult []string `json:"visible_apps_result"`
+	VisibleAppsAdd []string `json:"visible_apps_add"`
+	VisibleAppsMin []string `json:"visible_apps_min"`
 }
 
 type VisibleAppItemReqOfApple struct {
@@ -116,11 +116,11 @@ type VisibleAppItemReqOfApple struct {
 }
 
 type VisibleAppsReqOfApple struct {
-	DataList []VisibleAppItemReqOfApple `json:"data" binding:"required"`
+	DataList []VisibleAppItemReqOfApple `json:"data,omitempty"`
 }
 
 type VisibleAppObjReqOfApple struct {
-	VisibleApps VisibleAppsReqOfApple `json:"visibleApps" binding:"required"`
+	VisibleApps *VisibleAppsReqOfApple `json:"visibleApps,omitempty"`
 }
 
 type UserAttributesEditReqOfApple struct {
@@ -132,8 +132,11 @@ type UserAttributesEditReqOfApple struct {
 type UserPermEditReqOfApple struct {
 	Attributes UserAttributesEditReqOfApple `json:"attributes" binding:"required"`
 	Id string `json:"id" binding:"required"`
-	Relationships VisibleAppObjReqOfApple `json:"relationships,omitempty"`
+	Relationships *VisibleAppObjReqOfApple `json:"relationships,omitempty"`
 	Type string `json:"type" binding:"required"`
+}
+type UserPermEditReqOfAppleObj struct {
+	DataObj UserPermEditReqOfApple `json:"data" binding:"required"`
 }
 
 type InsertUserPermEditHistoryDBModel struct {
