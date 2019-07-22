@@ -663,6 +663,12 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 		"task_id": t.TaskId,
 	})
 
+	//是否更新任务表中detect_no_pass字段的标志
+	var notPassFlag = false
+	if t.Status == 2 {
+		notPassFlag = true
+	}
+
 	if t.Type == 0 { //敏感方法和字符串确认
 		condition1 := "id=" + strconv.Itoa(t.Id)
 		detailInfo, err := dal.QueryDetectContentDetail(condition1)
@@ -701,11 +707,14 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 				}
 			} else { //敏感字符串
 				keys := strings.Split((*detailInfo)[0].KeyInfo, ";")
+				var strIgnoreList []dal.IgnoreInfoStruct
 				for _, key := range keys[0 : len(keys)-1] {
 					//结果写入
-					if err := createIgnoreInfo(c, &t, &(*detect)[0], usernameStr, key, 2); err != nil {
-						return
-					}
+					strIgnoreList = append(strIgnoreList, *createIgnoreInfoBatch(&t, &(*detect)[0], usernameStr, key, 2))
+				}
+				if err := dal.InsertIgnoredInfoBatch(&strIgnoreList); err != nil {
+					errorReturn(c, "增量信息更新失败！")
+					return
 				}
 			}
 		}
@@ -761,7 +770,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 	}
 
 	//任务状态更新
-	updateInfo, _ := taskStatusUpdate(t.TaskId, t.ToolId, &(*detect)[0])
+	updateInfo, _ := taskStatusUpdate(t.TaskId, t.ToolId, &(*detect)[0], notPassFlag)
 	if updateInfo != "" {
 		errorReturn(c, updateInfo)
 	}
@@ -777,14 +786,15 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 /**
 任务确认状态更新
 */
-func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct) (string, int) {
-	condition := "deleted_at IS NULL and task_id='" + strconv.Itoa(taskId) + "' and tool_id='" + strconv.Itoa(toolId) + "' and status= 0"
-	counts := dal.QueryUnConfirmDetectContent(condition)
+func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassFlag bool) (string, int) {
+	condition := "deleted_at IS NULL and task_id='" + strconv.Itoa(taskId) + "' and tool_id='" + strconv.Itoa(toolId) + "'"
+	counts, countsUn := dal.QueryUnConfirmDetectContent(condition)
 
 	perms, _ := dal.QueryPermAppRelation(map[string]interface{}{
 		"task_id": taskId,
 	})
 	var permFlag = true
+	var updateFlag = false
 	var permCounts = 0
 	if perms == nil || len(*perms) == 0 {
 		logs.Error("taskId:" + fmt.Sprint(taskId) + ",该任务无权限检测信息！")
@@ -807,16 +817,30 @@ func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct) (string,
 
 	logs.Notice("当前确认情况，字符串和方法剩余：" + fmt.Sprint(counts) + " ,权限是否全部确认：" + fmt.Sprint(permFlag) + "权限剩余数：" + fmt.Sprint(permCounts))
 	if counts == 0 && permFlag {
-		detect.Status = 1
+		updateFlag = true
+		if countsUn == 0 {
+			detect.Status = 1
+		} else {
+			detect.Status = 2
+		}
+	}
+	if notPassFlag {
+		detect.DetectNoPass = countsUn - counts
+		updateFlag = true
+	}
+	if updateFlag {
 		err := dal.UpdateDetectModelNew(*detect)
 		if err != nil {
 			logs.Error("taskId:"+fmt.Sprint(taskId)+",任务确认状态更新失败！%v", err)
 			utils.LarkDingOneInner("fanjuan.xqp", "任务ID："+fmt.Sprint(taskId)+"确认状态更新失败，失败原因："+err.Error())
 			return "任务确认状态更新失败！", 0
 		}
+	}
+	if countsUn == 0 && permFlag {
 		if err := CICallBack(detect); err != nil {
 			return err.Error(), 0
 		}
+		//logs.Notice("回调了CI接口")
 	}
 	return "", counts + permCounts
 
@@ -842,6 +866,20 @@ func createIgnoreInfo(c *gin.Context, t *dal.PostConfirm, detect *dal.DetectStru
 		return err
 	}
 	return nil
+}
+
+func createIgnoreInfoBatch(t *dal.PostConfirm, detect *dal.DetectStruct, usernameStr string, key string, senType int) *dal.IgnoreInfoStruct {
+	var igInfo dal.IgnoreInfoStruct
+	igInfo.Platform = detect.Platform
+	igInfo.AppId, _ = strconv.Atoi(detect.AppId)
+	igInfo.SensiType = senType
+	igInfo.KeysInfo = key
+	igInfo.Confirmer = usernameStr
+	igInfo.Remarks = t.Remark
+	igInfo.Version = detect.AppVersion
+	igInfo.Status = t.Status
+	igInfo.TaskId = t.TaskId
+	return &igInfo
 }
 
 /**

@@ -24,14 +24,19 @@ type DetectStruct struct {
 	CheckContent    string `gorm:"column:check_content"          json:"checkContent"`
 	SelfCheckStatus int    `gorm:"column:self_check_status"      json:"selfCheckStatus"` //0-自查未完成；1-自查完成
 	TosUrl          string `gorm:"column:tos_url"                json:"tosUrl"`
-	Status          int    `gorm:"column:status"                 json:"status"` //0---未完全确认；1---已完全确认
-	ExtraInfo       string `gorm:"column:extra_info" 		     json:"extraInfo"`   //其他附加信息
+	Status          int    `gorm:"column:status"                 json:"status"`         //0---未完全确认；1---已完全确认
+	SelfNoPass      int    `gorm:"column:self_no_pass"           json:"self_no_pass"`   //自查项未通过数目
+	DetectNoPass    int    `gorm:"column:detect_no_pass"         json:"detect_no_pass"` //检测项未通过数目
+	ExtraInfo       string `gorm:"column:extra_info"             json:"extraInfo"`      //其他附加信息
 }
 type ExtraStruct struct {
 	CallBackAddr string `json:"callBackAddr"`
+	//SelfNotPass  	string 		`json:"selfNotPass"`
+	//DetectNotPass 	string  	`json:"detectNotPass"`
 }
 type RecordTotal struct {
-	Total uint
+	Total   uint
+	TotalUn uint
 }
 
 type RetDetectTasks struct {
@@ -581,21 +586,25 @@ func InsertDetectDetailBatch(details *[]DetectContentDetail) error {
 /**
 未确认敏感信息数据量查询-----fj
 */
-func QueryUnConfirmDetectContent(condition string) int {
+func QueryUnConfirmDetectContent(condition string) (int, int) {
 	connection, err := database.GetConneection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
-		return -1
+		return -1, -1
 	}
 	defer connection.Close()
 
 	db := connection.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var total RecordTotal
-	if err = db.Select("count(id) as total").Where(condition).Find(&total).Error; err != nil {
+	if err = db.Select("sum(case when status = '0' then 1 else 0 end) as total, sum(case when status <> '1' then 1 else 0 end) as total_un").Where(condition).Find(&total).Error; err != nil {
 		logs.Error("query sensitive infos total record failed! %v", err)
-		return -1
+		return -1, -1
 	}
-	return int(total.Total)
+	//if err = db.Select("count(id) as total").Where(condition).Find(&total).Error; err != nil {
+	//	logs.Error("query sensitive infos total record failed! %v", err)
+	//	return -1,-1
+	//}
+	return int(total.Total), int(total.TotalUn)
 
 }
 
@@ -686,6 +695,34 @@ func InsertIgnoredInfo(detail IgnoreInfoStruct) error {
 		logs.Error("数据库新增可忽略信息失败,%v，可忽略信息具体key参数：%s", err1, detail.KeysInfo)
 		return err1
 	}
+	return nil
+}
+
+/**
+可忽略信息批量insert------fj
+*/
+func InsertIgnoredInfoBatch(details *[]IgnoreInfoStruct) error {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return nil
+	}
+	defer connection.Close()
+
+	db := connection.Table(IgnoreInfoStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
+
+	db.Begin()
+	for _, detail := range *details {
+		detail.CreatedAt = time.Now()
+		detail.UpdatedAt = time.Now()
+
+		if err1 := db.Create(&detail).Error; err1 != nil {
+			logs.Error("数据库新增可忽略信息失败,%v，可忽略信息具体key参数：%s", err1, detail.KeysInfo)
+			db.Rollback()
+			return err1
+		}
+	}
+	db.Commit()
 	return nil
 }
 

@@ -241,7 +241,7 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 	}
 	insertFlag := dal.InsertNewIOSDetect(blackDetect, methodDetect, privacyDetect)
 	//更新tb_binary_detect中status值
-	err, unRes := changeTotalStatus(taskId, toolId)
+	err, unRes := changeTotalStatus(taskId, toolId, false)
 	if err != nil {
 		logs.Error("判断总的total status出错！", err.Error())
 	}
@@ -567,6 +567,10 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 		return true
 	}
 	//新接口内容
+	var notPassFlag = false
+	if ios.Status == 2 {
+		notPassFlag = true
+	}
 	var queryKey string
 	switch ios.ConfirmType {
 	case 1:
@@ -680,17 +684,19 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 		delete(LARK_MSG_CALL_MAP, key)
 	}
 	//更新tb_binary_detect中status值
-	if err, _ := changeTotalStatus(ios.TaskId, ios.ToolId); err != nil {
-		logs.Error("总状态更改出错！", err)
+	if err, _ := changeTotalStatus(ios.TaskId, ios.ToolId, notPassFlag); err != nil {
+		logs.Error("总任务状态更改出错！", err)
 		return false
 	}
 	return true
 }
 
 //判断是否需要更新total status状态值
-func changeTotalStatus(taskId, toolId int) (error, int) {
+func changeTotalStatus(taskId, toolId int, notPassFlag bool) (error, int) {
 	var newChangeFlag = true
+	var updateFlag = false //是否更新任务状态的标识
 	var unConfirmNum = 0
+	var notPass = 0 //确认不通过数目
 	iosDetectAll := dal.QueryNewIOSDetectModel(map[string]interface{}{
 		"taskId": taskId,
 		"toolId": toolId,
@@ -712,22 +718,36 @@ func changeTotalStatus(taskId, toolId int) (error, int) {
 			if needConfirm["status"].(float64) == 0 {
 				newChangeFlag = false
 				unConfirmNum++
+			} else if needConfirm["status"].(float64) == 2 {
+				notPass++
 			}
 		}
 	}
+	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
+		"id": taskId,
+	})
+	//检测项全部确认，更改任务状态
 	if newChangeFlag {
-		detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-			"id": taskId,
-		})
-		(*detect)[0].Status = 1
+		updateFlag = true
+		if notPass == 0 { //全部确认通过
+			(*detect)[0].Status = 1
+		} else { //存在确认不通过
+			(*detect)[0].Status = 2
+		}
+	}
+	if notPassFlag { //如果有确认不通过的项，也需要更新不通过数目
+		(*detect)[0].DetectNoPass = notPass
+		updateFlag = true
+	}
+	if updateFlag {
 		err := dal.UpdateDetectModelNew((*detect)[0])
 		if err != nil {
 			logs.Error("更新任务状态失败，任务ID："+strconv.Itoa(taskId)+",错误原因:%v", err)
 			return err, unConfirmNum
 		}
-		if (*detect)[0].SelfCheckStatus == 1 && (*detect)[0].Status == 1 {
-			CICallBack(&(*detect)[0])
-		}
+	}
+	if (*detect)[0].SelfCheckStatus == 1 && (*detect)[0].Status == 1 { //只有自查项全部确认通过，检测项全部确认通过，才不阻塞
+		CICallBack(&(*detect)[0])
 	}
 	return nil, unConfirmNum
 }
@@ -800,4 +820,5 @@ func GetIOSSelfNum(appid, taskId int) (bool, int) {
 		}
 	}
 	return true, selfNum0
+	//return true,0
 }
