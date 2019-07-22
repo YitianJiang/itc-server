@@ -90,11 +90,7 @@ func QueryAccount(c *gin.Context)  {
 func ReceiveP8file(c *gin.Context,accountInfo *devconnmanager.AccountInfo) bool{
 	file, header, _ :=c.Request.FormFile("account_p8file")
 	if header==nil {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 1,
-			"errorInfo":   "没有文件上传",
-		})
-		return false
+		return true
 	}
 	logs.Info("打印File Name：" + header.Filename)
 	p8ByteInfo,err := ioutil.ReadAll(file)
