@@ -215,6 +215,11 @@ func InsertAccount(c *gin.Context)  {
 	creResRequest.ResourceKey=teamIdLower+"_space_account"
 	creResRequest.ResourceName=teamIdLower+"_space_account"
 	creResRequest.ResourceType=0
+	creResRequest.Permissions=map[string]string{
+		"user_manager": "user_manager",
+		"all_cert_manager": "all_cert_manager",
+		"dev_cert_manager": "dev_cert_manager",
+	}
 	creResult:=SendPost2Kani(creResRequest,_const.Create_RESOURCE_URL)
 	if creResult==-1{
 		c.JSON(http.StatusOK, gin.H{
@@ -230,21 +235,9 @@ func InsertAccount(c *gin.Context)  {
 		})
 		return
 	}
-	var crePermRequest devconnmanager.CrePermRequest
-	crePermRequest.CreatorKey=accountInfo.UserName
-	crePermRequest.ResourceKey=creResRequest.ResourceKey
-	crePermRequest.PermissionAction="user_manager"
-	crePermRequest.PermissionName="user_manager"
-	SendPost2Kani(crePermRequest,_const.CREATE_PERM_FOR_CERTAIN_RES_URL)
-	crePermRequest.PermissionAction="all_cert_manager"
-	crePermRequest.PermissionName="all_cert_manager"
-	SendPost2Kani(crePermRequest,_const.CREATE_PERM_FOR_CERTAIN_RES_URL)
-	crePermRequest.PermissionAction="dev_cert_manager"
-	crePermRequest.PermissionName="dev_cert_manager"
-	SendPost2Kani(crePermRequest,_const.CREATE_PERM_FOR_CERTAIN_RES_URL)
 	c.JSON(http.StatusOK, gin.H{
 		"errorCode": 0,
-		"message":   "往数据库中插入账号信息成功，同时资源创建成功,权限添加成功",
+		"message":   "往数据库中插入账号信息成功，同时资源创建成功",
 	})
 }
 
