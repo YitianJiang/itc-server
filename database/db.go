@@ -16,7 +16,7 @@ var (
 
 func InitDB(){
 
-	// online
+	//online
 	//线上采用mysql gdpr
 	var err error
 	dboptional,err = dbconf.GetDBOptionalByConsulName("toutiao.mysql.itcserver_write")

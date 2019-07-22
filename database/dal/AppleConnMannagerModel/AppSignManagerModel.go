@@ -1,4 +1,4 @@
-package dal
+package devconnmanager
 
 import "code.byted.org/gopkg/gorm"
 
