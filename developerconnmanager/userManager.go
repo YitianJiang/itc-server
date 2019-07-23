@@ -71,7 +71,7 @@ func ReqToAppleGetInfo(url,tokenString string,obj interface{}) bool{
 	}
 	defer response.Body.Close()
 	if response.StatusCode != 200 {
-		logs.Info(string(response.StatusCode))
+		logs.Info("查看返回状态码",response.StatusCode)
 		responseByte, _ := ioutil.ReadAll(response.Body)
 		logs.Info(string(responseByte))
 		return false
@@ -507,6 +507,78 @@ func UserInvitedFunc(c *gin.Context) {
 				"message":   "success",
 				"error_code": 0,
 				"data": "邀请人员成功",
+			})
+		}else {
+			c.JSON(http.StatusOK, gin.H{
+				"error_info":   "数据库插入失败",
+				"error_code": 2,
+				"data": "db insert error",
+			})
+		}
+		return
+	}
+}
+//删除邀请中的成员
+func ReqToAppleDeleteUserInvited(method,url,tokenString string) bool{
+	client := &http.Client{}
+	request, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		logs.Info("新建request对象失败")
+		return false
+	}
+	request.Header.Set("Authorization", tokenString)
+	response, err := client.Do(request)
+	if err != nil {
+		logs.Info("发送get请求失败")
+		return false
+	}
+	defer response.Body.Close()
+	if response.StatusCode == http.StatusOK || response.StatusCode == http.StatusNoContent {
+		responseByte, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			logs.Info("读取respose的body内容失败")
+			return false
+		}
+		logs.Info(string(responseByte))
+		//json.Unmarshal(responseByte, &obj)
+		return true
+	} else {
+		logs.Info("查看返回状态码",response.StatusCode)
+		responseByte, _ := ioutil.ReadAll(response.Body)
+		logs.Info(string(responseByte))
+		return false
+	}
+}
+
+func UserInvitedDeleteFunc(c *gin.Context)  {
+	logs.Info("邀请用户进入企业账号")
+	var requestData devconnmanager.UserInvitedDeleteReq
+	bindQueryError := c.ShouldBindJSON(&requestData)
+	utils.RecordError("请求参数绑定错误: ", bindQueryError)
+	if bindQueryError != nil {
+		AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", map[string]interface{}{})
+		return
+	}
+	logs.Info(requestData.TeamId,requestData.AppleId)
+	tokenString := GetTokenStringByTeamId(requestData.TeamId)
+	deleteInvitedUrl := _const.APPLE_USER_INVITED_URL + "/" + requestData.UserId
+	method := "DELETE"
+	resultFromApple := ReqToAppleDeleteUserInvited(method,deleteInvitedUrl,tokenString)
+	if !resultFromApple{
+		c.JSON(http.StatusOK, gin.H{
+			"error_info":   "苹果后台返回数据错误",
+			"error_code": 1,
+			"data": "",
+		})
+		return
+	}else {
+		invitedOrCancel := "0"
+		dbInsertResult := devconnmanager.DeleteUserInvitedHistoryDB(&requestData,invitedOrCancel)
+		if dbInsertResult {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "success",
+				"error_code": 0,
+				"data": "删除邀请人员成功",
 			})
 		}else {
 			c.JSON(http.StatusOK, gin.H{

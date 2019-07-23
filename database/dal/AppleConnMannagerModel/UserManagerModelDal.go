@@ -131,3 +131,23 @@ func InsertUserInvitedHistoryDB(userInvitedInfoReq *UserInvitedReq,invitedOrCanc
 	}
 	return true
 }
+
+func DeleteUserInvitedHistoryDB(UserInvitedDeleteobj *UserInvitedDeleteReq,invitedOrCancel string) bool{
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return false
+	}
+	defer connection.Close()
+	var userInvitedDB InsertUserInvitedHistoryDBModel
+	userInvitedDB.OperateUserName = UserInvitedDeleteobj.OperateUserName
+	userInvitedDB.TeamId = UserInvitedDeleteobj.TeamId
+	userInvitedDB.AppleId = UserInvitedDeleteobj.AppleId
+	userInvitedDB.InvitedOrCancel = invitedOrCancel
+	err = connection.Table(InsertUserInvitedHistoryDBModel{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&userInvitedDB).Error
+	if err != nil {
+		logs.Error("记录user的删除邀请历史失败", err)
+		return false
+	}
+	return true
+}

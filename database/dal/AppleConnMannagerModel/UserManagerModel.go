@@ -199,3 +199,10 @@ type InsertUserInvitedHistoryDBModel struct {
 func (c InsertUserInvitedHistoryDBModel) TableName() string {
 	return "tt_apple_user_invited_history"
 }
+//删除邀请中的成员
+type UserInvitedDeleteReq struct {
+	OperateUserName string `binding:"required" json:"operate_user_name"`
+	TeamId string `json:"team_id" binding:"required"`
+	AppleId string `json:"apple_id" binding:"required"`
+	UserId string `json:"user_id" binding:"required"`
+}
