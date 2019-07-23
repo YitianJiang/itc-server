@@ -21,6 +21,7 @@ import (
 func QueryPerms(url string,resPerms *devconnmanager.GetPermsResponse) bool{
 	client := &http.Client{}
 	request, err := http.NewRequest("GET", url, nil)
+	request.Header.Set("Authorization","Basic "+_const.KANI_APP_ID_AND_SECRET_BASE64)
 	if err != nil {
 		logs.Info("新建request对象失败")
 		return false
@@ -49,7 +50,6 @@ func QueryResPerms(userName string,resourceKey string) int{
 	var resPerms devconnmanager.GetPermsResponse
 	url:=_const.Certain_Resource_All_PERMS_URL+"employeeKey="+userName+"&"+"resourceKeys="+resourceKey
 	result:=QueryPerms(url,&resPerms)
-	println(resourceKey)
 	if !result{
 		return -1
 	}
