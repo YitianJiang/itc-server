@@ -120,6 +120,8 @@ func InitRouter(r *ginex.Engine) {
 		api.POST("/casemanage/deleteRejCase", casemanage.DeleteRejCase)
 		//更新被拒案例
 		api.POST("/casemanage/updateRejCase", casemanage.EditRejCaseofSolution)
+		//组件平台结果接口
+		api.GET("/aar/getAarTaskDetail", detect.GetAARInfoNotITC)
 
 	}
 	//todo 巩锐开始开发证书体系监管后台API
@@ -134,28 +136,28 @@ func InitRouter(r *ginex.Engine) {
 	}
 	accountapi := r.Group("/v1/accountManage")
 	{
-		accountapi.PATCH ("/accountInfoUpdate",developerconnmanager.UpdateAccount)
-		accountapi.GET("/accountInfoGet",developerconnmanager.QueryAccount)
-		accountapi.POST("/accountInfoWriter",developerconnmanager.InsertAccount)
-		accountapi.DELETE("/accountInfoDelete",developerconnmanager.DeleteByTeamId)
+		accountapi.PATCH("/accountInfoUpdate", developerconnmanager.UpdateAccount)
+		accountapi.GET("/accountInfoGet", developerconnmanager.QueryAccount)
+		accountapi.POST("/accountInfoWriter", developerconnmanager.InsertAccount)
+		accountapi.DELETE("/accountInfoDelete", developerconnmanager.DeleteByTeamId)
 	}
-	certificateapi:=r.Group("/v1/appleCertManage/")
+	certificateapi := r.Group("/v1/appleCertManage/")
 	{
-		certificateapi.GET("/certificateInfoGet",developerconnmanager.QueryCertificatesInfo)
-		certificateapi.POST("/certificateCreate",developerconnmanager.InsertCertificate)
-		certificateapi.DELETE("/certificateDelete",developerconnmanager.DeleteCertificate)
-		certificateapi.GET("/certExpireDateCheck",developerconnmanager.CheckCertExpireDate)
-		certificateapi.PATCH("/privUploadForCert",developerconnmanager.UploadPrivKey)
+		certificateapi.GET("/certificateInfoGet", developerconnmanager.QueryCertificatesInfo)
+		certificateapi.POST("/certificateCreate", developerconnmanager.InsertCertificate)
+		certificateapi.DELETE("/certificateDelete", developerconnmanager.DeleteCertificate)
+		certificateapi.GET("/certExpireDateCheck", developerconnmanager.CheckCertExpireDate)
+		certificateapi.PATCH("/privUploadForCert", developerconnmanager.UploadPrivKey)
 	}
 	usermanagerapi := r.Group("/v1/userManage")
 	{
-		usermanagerapi.GET("/getCapabilitiesInfo",developerconnmanager.GetBundleIdCapabilitiesInfo)
+		usermanagerapi.GET("/getCapabilitiesInfo", developerconnmanager.GetBundleIdCapabilitiesInfo)
 		//usermanagerapi.POST("/assertBunldCapabilities",developerconnmanager.AssertBunldIDInfo)
 		//账号人员管理相关开发
-		usermanagerapi.GET("/userRolesGet",developerconnmanager.UserRolesGetInfo)
-		usermanagerapi.GET("/userInfoGet",developerconnmanager.UserDetailInfoGet)
-		usermanagerapi.GET("/userInvitedInfoGet",developerconnmanager.UserInvitedDetailInfoGet)
-		usermanagerapi.GET("/visibleAppsFromAccount",developerconnmanager.VisibleAppsInfoGet)
-		usermanagerapi.GET("/visibleAppsOfUser",developerconnmanager.VisibleAppsOfUserGet)
+		usermanagerapi.GET("/userRolesGet", developerconnmanager.UserRolesGetInfo)
+		usermanagerapi.GET("/userInfoGet", developerconnmanager.UserDetailInfoGet)
+		usermanagerapi.GET("/userInvitedInfoGet", developerconnmanager.UserInvitedDetailInfoGet)
+		usermanagerapi.GET("/visibleAppsFromAccount", developerconnmanager.VisibleAppsInfoGet)
+		usermanagerapi.GET("/visibleAppsOfUser", developerconnmanager.VisibleAppsOfUserGet)
 	}
 }
