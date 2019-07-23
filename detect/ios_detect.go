@@ -241,7 +241,7 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 	}
 	insertFlag := dal.InsertNewIOSDetect(blackDetect, methodDetect, privacyDetect)
 	//更新tb_binary_detect中status值
-	err, unRes := changeTotalStatus(taskId, toolId)
+	err, unRes := changeTotalStatus(taskId, toolId, false)
 	if err != nil {
 		logs.Error("判断总的total status出错！", err.Error())
 	}
@@ -567,6 +567,10 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 		return true
 	}
 	//新接口内容
+	var notPassFlag = false
+	if ios.Status == 2 {
+		notPassFlag = true
+	}
 	var queryKey string
 	switch ios.ConfirmType {
 	case 1:
@@ -680,18 +684,18 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 		delete(LARK_MSG_CALL_MAP, key)
 	}
 	//更新tb_binary_detect中status值
-	if err, _ := changeTotalStatus(ios.TaskId, ios.ToolId); err != nil {
-		logs.Error("总状态更改出错！", err)
+	if err, _ := changeTotalStatus(ios.TaskId, ios.ToolId, notPassFlag); err != nil {
+		logs.Error("总任务状态更改出错！", err)
 		return false
 	}
 	return true
 }
 
 //判断是否需要更新total status状态值
-func changeTotalStatus(taskId, toolId int) (error, int) {
+func changeTotalStatus(taskId, toolId int, notPassFlag bool) (error, int) {
 	var newChangeFlag = true
 	var unConfirmNum = 0
-	var notPassNum = 0
+	var notPassNum = 0 //确认不通过数目
 	iosDetectAll := dal.QueryNewIOSDetectModel(map[string]interface{}{
 		"taskId": taskId,
 		"toolId": toolId,
@@ -713,12 +717,15 @@ func changeTotalStatus(taskId, toolId int) (error, int) {
 			if needConfirm["status"].(float64) == 0 {
 				newChangeFlag = false
 				unConfirmNum++
-			}
-			if needConfirm["status"].(float64) == 2 {
+			} else if needConfirm["status"].(float64) == 2 {
 				notPassNum++
 			}
 		}
 	}
+	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
+		"id": taskId,
+	})
+	//检测项全部确认，更改任务状态
 	if newChangeFlag {
 		detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 			"id": taskId,
@@ -734,9 +741,9 @@ func changeTotalStatus(taskId, toolId int) (error, int) {
 			logs.Error("更新任务状态失败，任务ID："+strconv.Itoa(taskId)+",错误原因:%v", err)
 			return err, unConfirmNum
 		}
-		if (*detect)[0].SelfCheckStatus == 1 && (*detect)[0].Status == 1 {
-			CICallBack(&(*detect)[0])
-		}
+	}
+	if (*detect)[0].SelfCheckStatus == 1 && (*detect)[0].Status == 1 { //只有自查项全部确认通过，检测项全部确认通过，才不阻塞
+		CICallBack(&(*detect)[0])
 	}
 	return nil, unConfirmNum
 }
@@ -809,9 +816,10 @@ func GetIOSSelfNum(appid, taskId int) (bool, int) {
 		}
 	}
 	return true, selfNum0
+	//return true,0
 }
 func ciDeal(detect dal.DetectStruct) {
 	if detect.SelfCheckStatus == 1 && detect.Status == 1 {
-		CICallBack(&(*detect)[0])
+		CICallBack(&detect)
 	}
 }

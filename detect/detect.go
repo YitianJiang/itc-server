@@ -142,6 +142,7 @@ func UploadFile(c *gin.Context) {
 			errorFormatFile(c)
 			return
 		}
+		//url = "http://"+Local_URL_PRO+"/ipa_post/v2"
 		url = "http://" + DETECT_URL_PRO + "/ipa_post/v2"
 	} else {
 		c.JSON(http.StatusOK, gin.H{
@@ -217,7 +218,7 @@ func UploadFile(c *gin.Context) {
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
 		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
-		//callBackUrl := "http://10.224.14.220:6789/updateDetectInfos"
+		//callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -249,13 +250,19 @@ func UploadFile(c *gin.Context) {
 			Transport: &tr,
 		}
 		response, err := toolHttp.Post(url, contentType, bodyBuffer)
+		logs.Notice("taskId:"+fmt.Sprint(dbDetectModelId)+",传输后的bodyBuffer：%v", bodyBuffer)
 		if err != nil {
-			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",上传二进制包出错", err)
+			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",上传二进制包出错,%v", err)
+			//response,err = toolHttp.Post(url,contentType,bodyBuffer)
+			//if err != nil {
+			//	logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",重新上传二进制包出错,%v", err)
 			//及时报警
 			for _, lark_people := range _const.LowLarkPeople {
-				utils.LarkDingOneInner(lark_people, "二进制包检测服务无响应，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
+				utils.LarkDingOneInner(lark_people, "上传二进制包出错，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
 			}
+			//}
 		}
+
 		resBody := &bytes.Buffer{}
 		if response != nil {
 			defer response.Body.Close()

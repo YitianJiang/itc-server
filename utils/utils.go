@@ -2,6 +2,8 @@ package utils
 
 import (
 	"bytes"
+	_const "code.byted.org/clientQA/itc-server/const"
+	"code.byted.org/gopkg/logs"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -11,8 +13,6 @@ import (
 	"os"
 	"strings"
 	"time"
-	_const "code.byted.org/clientQA/itc-server/const"
-	"code.byted.org/gopkg/logs"
 )
 
 //发送http post请求，其中rbody是一个json串
@@ -231,7 +231,7 @@ func GetVersionBMInfo(biz, project, version, os_type string) (rd string, qa stri
 	m := map[string]interface{}{}
 	json.Unmarshal(body, &m)
 	if m["data"] == nil {
-		logs.Error("读取BM信息出错！", err.Error())
+		logs.Error("读取BM信息出错！")
 		return "", ""
 	}
 	versionInfo := m["data"].(map[string]interface{})["VersionCards"].([]interface{})
