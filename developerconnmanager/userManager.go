@@ -550,9 +550,50 @@ func ReqToAppleDeleteUserInvited(method,url,tokenString string) bool{
 	}
 }
 
+func UserDeleteFunc(c *gin.Context)  {
+	logs.Info("删除企业账号中已有的人员")
+	var requestData devconnmanager.UserDeleteReq
+	bindQueryError := c.ShouldBindJSON(&requestData)
+	utils.RecordError("请求参数绑定错误: ", bindQueryError)
+	if bindQueryError != nil {
+		AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", map[string]interface{}{})
+		return
+	}
+	logs.Info(requestData.TeamId,requestData.AppleId)
+	tokenString := GetTokenStringByTeamId(requestData.TeamId)
+	deletedUrl := _const.APPLE_USER_PERM_EDIT_URL + "/" + requestData.UserId
+	method := "DELETE"
+	resultFromApple := ReqToAppleDeleteUserInvited(method,deletedUrl,tokenString)
+	if !resultFromApple{
+		c.JSON(http.StatusOK, gin.H{
+			"error_info":   "苹果后台返回数据错误",
+			"error_code": 1,
+			"data": "",
+		})
+		return
+	}else {
+		invitedOrCancel := "2"
+		dbInsertResult := devconnmanager.DeleteUserHistoryDB(&requestData,invitedOrCancel)
+		if dbInsertResult {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "success",
+				"error_code": 0,
+				"data": "删除已有人员成功",
+			})
+		}else {
+			c.JSON(http.StatusOK, gin.H{
+				"error_info":   "数据库插入失败",
+				"error_code": 2,
+				"data": "db insert error",
+			})
+		}
+		return
+	}
+}
+
 func UserInvitedDeleteFunc(c *gin.Context)  {
-	logs.Info("邀请用户进入企业账号")
-	var requestData devconnmanager.UserInvitedDeleteReq
+	logs.Info("删除邀请用户")
+	var requestData devconnmanager.UserDeleteReq
 	bindQueryError := c.ShouldBindJSON(&requestData)
 	utils.RecordError("请求参数绑定错误: ", bindQueryError)
 	if bindQueryError != nil {
@@ -573,7 +614,7 @@ func UserInvitedDeleteFunc(c *gin.Context)  {
 		return
 	}else {
 		invitedOrCancel := "0"
-		dbInsertResult := devconnmanager.DeleteUserInvitedHistoryDB(&requestData,invitedOrCancel)
+		dbInsertResult := devconnmanager.DeleteUserHistoryDB(&requestData,invitedOrCancel)
 		if dbInsertResult {
 			c.JSON(http.StatusOK, gin.H{
 				"message":   "success",
