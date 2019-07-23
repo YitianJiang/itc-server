@@ -38,6 +38,7 @@ const (
 	APPLE_USER_INFO_URL_NO_PARAM= "https://api.appstoreconnect.apple.com/v1/users"
 	APPLE_USER_INVITED_INFO_URL_NO_PARAM = "https://api.appstoreconnect.apple.com/v1/userInvitations"
 	APPLE_USER_PERM_EDIT_URL = "https://api.appstoreconnect.apple.com/v1/users"
+	APPLE_USER_INVITED_URL = "https://api.appstoreconnect.apple.com/v1/userInvitations"
 )
 const (
 	TOS_BUCKET_URL="http://tosv.byted.org/obj/staticanalysisresult/"

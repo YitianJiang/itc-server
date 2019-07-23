@@ -368,12 +368,7 @@ func PostToAppleGetInfo(method,url,tokenString string,obj interface{}) bool{
 		return false
 	}
 	defer response.Body.Close()
-	if response.StatusCode != 200 {
-		logs.Info(string(response.StatusCode))
-		responseByte, _ := ioutil.ReadAll(response.Body)
-		logs.Info(string(responseByte))
-		return false
-	} else {
+	if response.StatusCode == http.StatusOK || response.StatusCode == http.StatusCreated {
 		responseByte, err := ioutil.ReadAll(response.Body)
 		if err != nil {
 			logs.Info("读取respose的body内容失败")
@@ -382,6 +377,11 @@ func PostToAppleGetInfo(method,url,tokenString string,obj interface{}) bool{
 		logs.Info(string(responseByte))
 		//json.Unmarshal(responseByte, &obj)
 		return true
+	} else {
+		logs.Info("查看返回状态码",response.StatusCode)
+		responseByte, _ := ioutil.ReadAll(response.Body)
+		logs.Info(string(responseByte))
+		return false
 	}
 }
 
@@ -439,6 +439,74 @@ func EditPermOfUserFunc(c *gin.Context){
 				"message":   "success",
 				"error_code": 0,
 				"data": "变更权限成功",
+			})
+		}else {
+			c.JSON(http.StatusOK, gin.H{
+				"error_info":   "数据库插入失败",
+				"error_code": 2,
+				"data": "db insert error",
+			})
+		}
+		return
+	}
+}
+//用户邀请接口
+func UserInvitedFunc(c *gin.Context) {
+	logs.Info("邀请用户进入企业账号")
+	var requestData devconnmanager.UserInvitedReq
+	bindQueryError := c.ShouldBindJSON(&requestData)
+	utils.RecordError("请求参数绑定错误: ", bindQueryError)
+	if bindQueryError != nil {
+		AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", map[string]interface{}{})
+		return
+	}
+	logs.Info(requestData.TeamId,requestData.AppleId)
+	var reqAppleUserInvited devconnmanager.UserInvitedReqOfAppleObj
+	reqAppleUserInvited.DataObj.Type = "userInvitations"
+	reqAppleUserInvited.DataObj.Attributes.Email = requestData.AppleId
+	reqAppleUserInvited.DataObj.Attributes.FirstName = requestData.FirstName
+	reqAppleUserInvited.DataObj.Attributes.LastName = requestData.LastName
+	reqAppleUserInvited.DataObj.Attributes.ProvisioningAllowed = requestData.ProvisioningAllowedResult
+	reqAppleUserInvited.DataObj.Attributes.Roles = requestData.RolesResult
+	reqAppleUserInvited.DataObj.Attributes.AllAppsVisible = requestData.AllAppsVisibleResult
+	if requestData.AllAppsVisibleResult == false {
+		reqAppleUserInvited.DataObj.Relationships = &devconnmanager.VisibleAppObjReqOfApple{}
+		reqAppleUserInvited.DataObj.Relationships.VisibleApps = &devconnmanager.VisibleAppsReqOfApple{}
+		reqAppleUserInvited.DataObj.Relationships.VisibleApps.DataList = make([]devconnmanager.VisibleAppItemReqOfApple,0)
+		if len(requestData.VisibleAppsResult) > 0 {
+			for _, itemApp := range requestData.VisibleAppsResult {
+				var visibleAppItem devconnmanager.VisibleAppItemReqOfApple
+				visibleAppItem.AppType = "apps"
+				visibleAppItem.AppAppleId = itemApp
+				reqAppleUserInvited.DataObj.Relationships.VisibleApps.DataList = append(reqAppleUserInvited.DataObj.Relationships.VisibleApps.DataList, visibleAppItem)
+			}
+		}else{
+			c.JSON(http.StatusOK, gin.H{
+				"error_info":   "参数传递错误，all_apps_visible_result是false情况下，visible_apps_result不能为空",
+				"error_code": 1,
+				"data": "",
+			})
+			return
+		}
+	}
+	tokenString := GetTokenStringByTeamId(requestData.TeamId)
+	method := "POST"
+	resultFromApple := PostToAppleGetInfo(method,_const.APPLE_USER_INVITED_URL,tokenString,&reqAppleUserInvited)
+	if !resultFromApple{
+		c.JSON(http.StatusOK, gin.H{
+			"error_info":   "苹果后台返回数据错误",
+			"error_code": 1,
+			"data": "",
+		})
+		return
+	}else {
+		invitedOrCancel := "1"
+		dbInsertResult := devconnmanager.InsertUserInvitedHistoryDB(&requestData,invitedOrCancel)
+		if dbInsertResult {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "success",
+				"error_code": 0,
+				"data": "邀请人员成功",
 			})
 		}else {
 			c.JSON(http.StatusOK, gin.H{

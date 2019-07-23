@@ -111,3 +111,23 @@ func InsertUserPermEditHistoryDB(userPermInfoReq *UserPermEditReq) bool{
 	}
 	return true
 }
+
+func InsertUserInvitedHistoryDB(userInvitedInfoReq *UserInvitedReq,invitedOrCancel string) bool{
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return false
+	}
+	defer connection.Close()
+	var userInvitedDB InsertUserInvitedHistoryDBModel
+	userInvitedDB.OperateUserName = userInvitedInfoReq.OperateUserName
+	userInvitedDB.TeamId = userInvitedInfoReq.TeamId
+	userInvitedDB.AppleId = userInvitedInfoReq.AppleId
+	userInvitedDB.InvitedOrCancel = invitedOrCancel
+	err = connection.Table(InsertUserInvitedHistoryDBModel{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&userInvitedDB).Error
+	if err != nil {
+		logs.Error("记录user的邀请历史失败", err)
+		return false
+	}
+	return true
+}

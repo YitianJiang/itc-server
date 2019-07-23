@@ -158,5 +158,6 @@ func InitRouter(r *ginex.Engine) {
 		usermanagerapi.GET("/visibleAppsFromAccount",developerconnmanager.VisibleAppsInfoGet)
 		usermanagerapi.GET("/visibleAppsOfUser",developerconnmanager.VisibleAppsOfUserGet)
 		usermanagerapi.POST("/editPermOfUser",developerconnmanager.EditPermOfUserFunc)
+		usermanagerapi.POST("/userInvitations",developerconnmanager.UserInvitedFunc)
 	}
 }
