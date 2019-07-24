@@ -120,6 +120,8 @@ func InitRouter(r *ginex.Engine) {
 		api.POST("/casemanage/deleteRejCase", casemanage.DeleteRejCase)
 		//更新被拒案例
 		api.POST("/casemanage/updateRejCase", casemanage.EditRejCaseofSolution)
+		//组件平台结果接口
+		api.GET("/aar/getAarTaskDetail", detect.GetAARInfoNotITC)
 
 	}
 	//todo 巩锐开始开发证书体系监管后台API
@@ -134,7 +136,7 @@ func InitRouter(r *ginex.Engine) {
 	}
 	accountapi := r.Group("/v1/accountManage")
 	{
-		accountapi.PATCH("/accountInfoUpdate", developerconnmanager.UpdateAccount)
+		accountapi.POST("/accountInfoUpdate", developerconnmanager.UpdateAccount)
 		accountapi.GET("/accountInfoGet", developerconnmanager.QueryAccount)
 		accountapi.POST("/accountInfoWriter", developerconnmanager.InsertAccount)
 		accountapi.DELETE("/accountInfoDelete", developerconnmanager.DeleteByTeamId)
@@ -157,5 +159,9 @@ func InitRouter(r *ginex.Engine) {
 		usermanagerapi.GET("/userInvitedInfoGet", developerconnmanager.UserInvitedDetailInfoGet)
 		usermanagerapi.GET("/visibleAppsFromAccount", developerconnmanager.VisibleAppsInfoGet)
 		usermanagerapi.GET("/visibleAppsOfUser", developerconnmanager.VisibleAppsOfUserGet)
+		usermanagerapi.POST("/editPermOfUser", developerconnmanager.EditPermOfUserFunc)
+		usermanagerapi.POST("/userInvitations", developerconnmanager.UserInvitedFunc)
+		usermanagerapi.POST("/userDelete", developerconnmanager.UserDeleteFunc)
+		usermanagerapi.POST("/userInvitationsDelete", developerconnmanager.UserInvitedDeleteFunc)
 	}
 }

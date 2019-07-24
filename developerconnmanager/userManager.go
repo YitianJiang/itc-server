@@ -1,6 +1,7 @@
 package developerconnmanager
 
 import (
+	"bytes"
 	_const "code.byted.org/clientQA/itc-server/const"
 	devconnmanager "code.byted.org/clientQA/itc-server/database/dal/AppleConnMannagerModel"
 	"code.byted.org/clientQA/itc-server/utils"
@@ -70,7 +71,7 @@ func ReqToAppleGetInfo(url,tokenString string,obj interface{}) bool{
 	}
 	defer response.Body.Close()
 	if response.StatusCode != 200 {
-		logs.Info(string(response.StatusCode))
+		logs.Info("查看返回状态码",response.StatusCode)
 		responseByte, _ := ioutil.ReadAll(response.Body)
 		logs.Info(string(responseByte))
 		return false
@@ -346,4 +347,287 @@ func VisibleAppsOfUserGet(c *gin.Context)  {
 		"error_code": 0,
 		"data": resDataobj,
 	})
+}
+
+//编辑指定user的权限
+func PostToAppleGetInfo(method,url,tokenString string,obj interface{}) bool{
+	bodyByte, _ := json.Marshal(&obj)
+	logs.Info(string(bodyByte))
+	rbodyByte := bytes.NewReader(bodyByte)
+	client := &http.Client{}
+	request, err := http.NewRequest(method, url, rbodyByte)
+	if err != nil {
+		logs.Info("新建request对象失败")
+		return false
+	}
+	request.Header.Set("Authorization", tokenString)
+	request.Header.Set("Content-Type", "application/json")
+	response, err := client.Do(request)
+	if err != nil {
+		logs.Info("发送Post请求失败")
+		return false
+	}
+	defer response.Body.Close()
+	if response.StatusCode == http.StatusOK || response.StatusCode == http.StatusCreated {
+		responseByte, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			logs.Info("读取respose的body内容失败")
+			return false
+		}
+		logs.Info(string(responseByte))
+		//json.Unmarshal(responseByte, &obj)
+		return true
+	} else {
+		logs.Info("查看返回状态码",response.StatusCode)
+		responseByte, _ := ioutil.ReadAll(response.Body)
+		logs.Info(string(responseByte))
+		return false
+	}
+}
+
+func EditPermOfUserFunc(c *gin.Context){
+	logs.Info("变更指定user的权限")
+	var requestData devconnmanager.UserPermEditReq
+	bindQueryError := c.ShouldBindJSON(&requestData)
+	utils.RecordError("请求参数绑定错误: ", bindQueryError)
+	if bindQueryError != nil {
+		AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", map[string]interface{}{})
+		return
+	}
+	logs.Info(requestData.TeamId,requestData.AppleId,requestData.UserId)
+	var reqAppleEditUserPerm devconnmanager.UserPermEditReqOfAppleObj
+	reqAppleEditUserPerm.DataObj.Type = "users"
+	reqAppleEditUserPerm.DataObj.Id = requestData.UserId
+	reqAppleEditUserPerm.DataObj.Attributes.Roles = requestData.RolesResult
+	reqAppleEditUserPerm.DataObj.Attributes.AllAppsVisible = requestData.AllAppsVisibleResult
+	reqAppleEditUserPerm.DataObj.Attributes.ProvisioningAllowed = requestData.ProvisioningAllowedResult
+	if requestData.AllAppsVisibleResult == false {
+		reqAppleEditUserPerm.DataObj.Relationships = &devconnmanager.VisibleAppObjReqOfApple{}
+		reqAppleEditUserPerm.DataObj.Relationships.VisibleApps = &devconnmanager.VisibleAppsReqOfApple{}
+		reqAppleEditUserPerm.DataObj.Relationships.VisibleApps.DataList = make([]devconnmanager.VisibleAppItemReqOfApple,0)
+		if len(requestData.VisibleAppsResult) > 0{
+			for _,itemApp := range requestData.VisibleAppsResult{
+				var visibleAppItem devconnmanager.VisibleAppItemReqOfApple
+				visibleAppItem.AppType = "apps"
+				visibleAppItem.AppAppleId = itemApp
+				reqAppleEditUserPerm.DataObj.Relationships.VisibleApps.DataList = append(reqAppleEditUserPerm.DataObj.Relationships.VisibleApps.DataList,visibleAppItem)
+			}
+		}else {
+			c.JSON(http.StatusOK, gin.H{
+				"error_info":   "参数传递错误，all_apps_visible_result是false情况下，visible_apps_result不能为空",
+				"error_code": 1,
+				"data": "",
+			})
+			return
+		}
+	}
+	tokenString := GetTokenStringByTeamId(requestData.TeamId)
+	method := "PATCH"
+	userPermEditUrl := _const.APPLE_USER_PERM_EDIT_URL + "/" + requestData.UserId
+	resultFromApple := PostToAppleGetInfo(method,userPermEditUrl,tokenString,&reqAppleEditUserPerm)
+	if !resultFromApple{
+		c.JSON(http.StatusOK, gin.H{
+			"error_info":   "苹果后台返回数据错误",
+			"error_code": 1,
+			"data": "",
+		})
+		return
+	}else {
+		dbInsertResult := devconnmanager.InsertUserPermEditHistoryDB(&requestData)
+		if dbInsertResult {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "success",
+				"error_code": 0,
+				"data": "变更权限成功",
+			})
+		}else {
+			c.JSON(http.StatusOK, gin.H{
+				"error_info":   "数据库插入失败",
+				"error_code": 2,
+				"data": "db insert error",
+			})
+		}
+		return
+	}
+}
+//用户邀请接口
+func UserInvitedFunc(c *gin.Context) {
+	logs.Info("邀请用户进入企业账号")
+	var requestData devconnmanager.UserInvitedReq
+	bindQueryError := c.ShouldBindJSON(&requestData)
+	utils.RecordError("请求参数绑定错误: ", bindQueryError)
+	if bindQueryError != nil {
+		AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", map[string]interface{}{})
+		return
+	}
+	logs.Info(requestData.TeamId,requestData.AppleId)
+	var reqAppleUserInvited devconnmanager.UserInvitedReqOfAppleObj
+	reqAppleUserInvited.DataObj.Type = "userInvitations"
+	reqAppleUserInvited.DataObj.Attributes.Email = requestData.AppleId
+	reqAppleUserInvited.DataObj.Attributes.FirstName = requestData.FirstName
+	reqAppleUserInvited.DataObj.Attributes.LastName = requestData.LastName
+	reqAppleUserInvited.DataObj.Attributes.ProvisioningAllowed = requestData.ProvisioningAllowedResult
+	reqAppleUserInvited.DataObj.Attributes.Roles = requestData.RolesResult
+	reqAppleUserInvited.DataObj.Attributes.AllAppsVisible = requestData.AllAppsVisibleResult
+	if requestData.AllAppsVisibleResult == false {
+		reqAppleUserInvited.DataObj.Relationships = &devconnmanager.VisibleAppObjReqOfApple{}
+		reqAppleUserInvited.DataObj.Relationships.VisibleApps = &devconnmanager.VisibleAppsReqOfApple{}
+		reqAppleUserInvited.DataObj.Relationships.VisibleApps.DataList = make([]devconnmanager.VisibleAppItemReqOfApple,0)
+		if len(requestData.VisibleAppsResult) > 0 {
+			for _, itemApp := range requestData.VisibleAppsResult {
+				var visibleAppItem devconnmanager.VisibleAppItemReqOfApple
+				visibleAppItem.AppType = "apps"
+				visibleAppItem.AppAppleId = itemApp
+				reqAppleUserInvited.DataObj.Relationships.VisibleApps.DataList = append(reqAppleUserInvited.DataObj.Relationships.VisibleApps.DataList, visibleAppItem)
+			}
+		}else{
+			c.JSON(http.StatusOK, gin.H{
+				"error_info":   "参数传递错误，all_apps_visible_result是false情况下，visible_apps_result不能为空",
+				"error_code": 1,
+				"data": "",
+			})
+			return
+		}
+	}
+	tokenString := GetTokenStringByTeamId(requestData.TeamId)
+	method := "POST"
+	resultFromApple := PostToAppleGetInfo(method,_const.APPLE_USER_INVITED_URL,tokenString,&reqAppleUserInvited)
+	if !resultFromApple{
+		c.JSON(http.StatusOK, gin.H{
+			"error_info":   "苹果后台返回数据错误",
+			"error_code": 1,
+			"data": "",
+		})
+		return
+	}else {
+		invitedOrCancel := "1"
+		dbInsertResult := devconnmanager.InsertUserInvitedHistoryDB(&requestData,invitedOrCancel)
+		if dbInsertResult {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "success",
+				"error_code": 0,
+				"data": "邀请人员成功",
+			})
+		}else {
+			c.JSON(http.StatusOK, gin.H{
+				"error_info":   "数据库插入失败",
+				"error_code": 2,
+				"data": "db insert error",
+			})
+		}
+		return
+	}
+}
+//删除邀请中的成员
+func ReqToAppleDeleteUserInvited(method,url,tokenString string) bool{
+	client := &http.Client{}
+	request, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		logs.Info("新建request对象失败")
+		return false
+	}
+	request.Header.Set("Authorization", tokenString)
+	response, err := client.Do(request)
+	if err != nil {
+		logs.Info("发送get请求失败")
+		return false
+	}
+	defer response.Body.Close()
+	if response.StatusCode == http.StatusOK || response.StatusCode == http.StatusNoContent {
+		responseByte, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			logs.Info("读取respose的body内容失败")
+			return false
+		}
+		logs.Info(string(responseByte))
+		//json.Unmarshal(responseByte, &obj)
+		return true
+	} else {
+		logs.Info("查看返回状态码",response.StatusCode)
+		responseByte, _ := ioutil.ReadAll(response.Body)
+		logs.Info(string(responseByte))
+		return false
+	}
+}
+
+func UserDeleteFunc(c *gin.Context)  {
+	logs.Info("删除企业账号中已有的人员")
+	var requestData devconnmanager.UserDeleteReq
+	bindQueryError := c.ShouldBindJSON(&requestData)
+	utils.RecordError("请求参数绑定错误: ", bindQueryError)
+	if bindQueryError != nil {
+		AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", map[string]interface{}{})
+		return
+	}
+	logs.Info(requestData.TeamId,requestData.AppleId)
+	tokenString := GetTokenStringByTeamId(requestData.TeamId)
+	deletedUrl := _const.APPLE_USER_PERM_EDIT_URL + "/" + requestData.UserId
+	method := "DELETE"
+	resultFromApple := ReqToAppleDeleteUserInvited(method,deletedUrl,tokenString)
+	if !resultFromApple{
+		c.JSON(http.StatusOK, gin.H{
+			"error_info":   "苹果后台返回数据错误",
+			"error_code": 1,
+			"data": "",
+		})
+		return
+	}else {
+		invitedOrCancel := "2"
+		dbInsertResult := devconnmanager.DeleteUserHistoryDB(&requestData,invitedOrCancel)
+		if dbInsertResult {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "success",
+				"error_code": 0,
+				"data": "删除已有人员成功",
+			})
+		}else {
+			c.JSON(http.StatusOK, gin.H{
+				"error_info":   "数据库插入失败",
+				"error_code": 2,
+				"data": "db insert error",
+			})
+		}
+		return
+	}
+}
+
+func UserInvitedDeleteFunc(c *gin.Context)  {
+	logs.Info("删除邀请用户")
+	var requestData devconnmanager.UserDeleteReq
+	bindQueryError := c.ShouldBindJSON(&requestData)
+	utils.RecordError("请求参数绑定错误: ", bindQueryError)
+	if bindQueryError != nil {
+		AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", map[string]interface{}{})
+		return
+	}
+	logs.Info(requestData.TeamId,requestData.AppleId)
+	tokenString := GetTokenStringByTeamId(requestData.TeamId)
+	deleteInvitedUrl := _const.APPLE_USER_INVITED_URL + "/" + requestData.UserId
+	method := "DELETE"
+	resultFromApple := ReqToAppleDeleteUserInvited(method,deleteInvitedUrl,tokenString)
+	if !resultFromApple{
+		c.JSON(http.StatusOK, gin.H{
+			"error_info":   "苹果后台返回数据错误",
+			"error_code": 1,
+			"data": "",
+		})
+		return
+	}else {
+		invitedOrCancel := "0"
+		dbInsertResult := devconnmanager.DeleteUserHistoryDB(&requestData,invitedOrCancel)
+		if dbInsertResult {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "success",
+				"error_code": 0,
+				"data": "删除邀请人员成功",
+			})
+		}else {
+			c.JSON(http.StatusOK, gin.H{
+				"error_info":   "数据库插入失败",
+				"error_code": 2,
+				"data": "db insert error",
+			})
+		}
+		return
+	}
 }

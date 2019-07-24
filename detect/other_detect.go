@@ -90,7 +90,7 @@ func NewOtherDetect(c *gin.Context) {
 			"message":   "安装包文件处理失败，请联系相关人员！",
 			"errorCode": -6,
 		})
-		logs.Fatal("临时文件保存失败")
+		logs.Fatal("临时文件保存失败，%v", err)
 		return
 	}
 	defer out.Close()
@@ -100,7 +100,7 @@ func NewOtherDetect(c *gin.Context) {
 			"message":   "安装包文件处理失败，请联系相关人员！",
 			"errorCode": -6,
 		})
-		logs.Fatal("临时文件保存失败")
+		logs.Fatal("临时文件保存失败,%v", err)
 		return
 	}
 	//调试，暂时注释
@@ -242,9 +242,6 @@ func UpdateOtherDetectInfos(c *gin.Context) {
 		}
 	}
 	//预留IOS检测
-	if (*detect)[0].Platform == 1 {
-
-	}
 
 	//进行lark消息提醒
 	var message string
@@ -920,4 +917,154 @@ func otherPermAna(perms *[]string, mapInfo map[string]int, index int) (dal.Other
 	}
 	return detailInfo, nil
 
+}
+
+/**
+组件平台调用结果接口
+*/
+func GetAARInfoNotITC(c *gin.Context) {
+	taskId := c.DefaultQuery("taskId", "")
+	if taskId == "" {
+		logs.Error("缺少taskId参数")
+		errorReturn(c, "缺少taskId参数")
+		return
+	}
+	toolId := c.DefaultQuery("toolId", "")
+	if toolId == "" {
+		logs.Error("缺少toolId参数")
+		errorReturn(c, "缺少toolId参数")
+		return
+	}
+	//获取任务信息
+	detect := dal.QueryOtherDetectModelsByMap(map[string]interface{}{
+		"id": taskId,
+	})
+	if detect == nil || len(*detect) == 0 {
+		logs.Error("未查询到该taskid对应的检测任务，%v", taskId)
+		errorReturn(c, "未查询到该taskid对应的检测任务")
+		return
+	}
+
+	infos := dal.QueryOtherDetectDetail(map[string]interface{}{
+		"task_id": taskId,
+	})
+	if infos == nil || len(*infos) == 0 {
+		logs.Error("未查询到aar检测结果，任务ID：" + taskId)
+		errorReturn(c, "未查询到aar检测结果")
+		return
+	}
+	//获取检测结果
+	finalResult := getOtherDetectDetailAARP(c, infos, &(*detect)[0])
+
+	logs.Info("组件平台查询aar检测结果成果！")
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "success",
+		"errorCode": 0,
+		"data":      *finalResult,
+	})
+	return
+}
+func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct, task *dal.OtherDetectModel) *[]dal.DetectQueryStructAarPlatform {
+	detailMap := make(map[int][]dal.OtherDetailInfoStruct)
+	finalResult := make([]dal.DetectQueryStructAarPlatform, 0)
+	var midResult []dal.DetectQueryStructAarPlatform
+	var firstResult dal.DetectQueryStructAarPlatform //主要包检测结果
+	for _, info := range *infos {
+		if info.DetailType == 4 {
+			var t dal.OtherBasicInfo
+			if err := json.Unmarshal([]byte(info.DetectInfos), &t); err != nil {
+				logs.Error("arr基础信息存储格式错误，taskID：" + fmt.Sprint(task.ID))
+				errorReturn(c, "arr基础信息存储格式错误，taskID："+fmt.Sprint(task.ID))
+				return nil
+			}
+			if t.Name == task.OtherName {
+				firstResult.ApkName = t.Name
+				firstResult.Version = t.Version
+				firstResult.Channel = t.Channel
+				firstResult.Index = info.SubIndex + 1
+			} else {
+				var mid dal.DetectQueryStructAarPlatform
+				mid.ApkName = t.Name
+				mid.Version = t.Version
+				mid.Channel = t.Channel
+				mid.Index = info.SubIndex + 1
+				midResult = append(midResult, mid)
+			}
+		} else {
+			if detailMap[info.SubIndex+1] == nil {
+				infoList := make([]dal.OtherDetailInfoStruct, 0)
+				infoList = append(infoList, info)
+				detailMap[info.SubIndex+1] = infoList
+			} else {
+				detailMap[info.SubIndex+1] = append(detailMap[info.SubIndex+1], info)
+			}
+		}
+	}
+	finalResult = append(finalResult, firstResult)
+	finalResult = append(finalResult, midResult...)
+
+	for i := 0; i < len(finalResult); i++ {
+		detailArray := detailMap[finalResult[i].Index]
+		for _, detailOne := range detailArray {
+			if detailOne.DetailType == 0 {
+				var t []dal.SMethod
+				if err := json.Unmarshal([]byte(detailOne.DetectInfos), &t); err != nil {
+					logs.Error("arr敏感方法信息存储格式错误，taskID：" + fmt.Sprint(task.ID))
+					errorReturn(c, "arr敏感方法存储格式错误，taskID："+fmt.Sprint(task.ID))
+					return nil
+				}
+				var result = make([]dal.SMethodAarPlatform, 0)
+				for _, method := range t {
+					var m dal.SMethodAarPlatform
+					m.Id = method.Id
+					m.Desc = method.Desc
+					m.ClassName = method.ClassName
+					m.CallLoc = method.CallLoc
+					m.MethodName = method.MethodName
+					m.GPFlag = method.GPFlag
+					result = append(result, m)
+				}
+				finalResult[i].SMethods = result
+			} else if detailOne.DetailType == 1 {
+				var t []dal.SStr
+				if err := json.Unmarshal([]byte(detailOne.DetectInfos), &t); err != nil {
+					logs.Error("arr敏感字符串信息存储格式错误，taskID：" + fmt.Sprint(task.ID))
+					errorReturn(c, "arr敏感字符串存储格式错误，taskID："+fmt.Sprint(task.ID))
+					return nil
+				}
+				var result = make([]dal.SStrAarPlatform, 0)
+				for _, str := range t {
+					var m dal.SStrAarPlatform
+					m.Id = str.Id
+					m.Desc = str.Desc
+					m.Keys = str.Keys
+					m.GPFlag = str.GPFlag
+					m.CallLoc = str.CallLoc
+					result = append(result, m)
+				}
+				finalResult[i].SStrs_new = result
+			} else if detailOne.DetailType == 2 {
+				var t []dal.Permissions
+				if err := json.Unmarshal([]byte(detailOne.DetectInfos), &t); err != nil {
+					logs.Error("arr权限信息存储格式错误，taskID：" + fmt.Sprint(task.ID))
+					errorReturn(c, "arr权限信息存储格式错误，taskID："+fmt.Sprint(task.ID))
+					return nil
+				}
+				//权限排序
+				var result PermSlice = t
+				sort.Sort(PermSlice(result))
+				var pResult = make([]dal.PermissionsAarPlatform, 0)
+				for _, perm := range result {
+					var p dal.PermissionsAarPlatform
+					p.Desc = perm.Desc
+					p.Id = perm.Id
+					p.Priority = perm.Priority
+					p.Key = perm.Key
+					pResult = append(pResult, p)
+				}
+				finalResult[i].Permissions_2 = pResult
+			}
+		}
+	}
+	return &finalResult
 }
