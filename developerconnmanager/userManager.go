@@ -174,7 +174,7 @@ func UserDetailInfoGet(c *gin.Context){
 		})
 	}else {
 		c.JSON(http.StatusOK, gin.H{
-			"error_info":   "苹果后台返回数据错误",
+			"message":   "苹果后台返回数据错误",
 			"error_code": 1,
 			"data": "",
 		})
@@ -223,7 +223,7 @@ func UserInvitedDetailInfoGet(c *gin.Context){
 		})
 	}else {
 		c.JSON(http.StatusOK, gin.H{
-			"error_info":   "苹果后台返回数据错误",
+			"message":   "苹果后台返回数据错误",
 			"error_code": 1,
 			"data": "",
 		})
