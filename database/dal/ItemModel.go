@@ -528,7 +528,7 @@ func ConfirmSelfCheck(param map[string]interface{}) (bool, *DetectStruct) {
 		if self.(map[string]interface{})["status"] == 0 {
 			allCheckFlag = false
 		}
-		if self.(map[string]interface{})["status"] == 2 {
+		if self.(map[string]interface{})["status"] == 2 && int(self.(map[string]interface{})["keyWord"].(float64)) == 8 {
 			isNotPass++
 		}
 	}

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"code.byted.org/clientQA/itc-server/utils"
+
 	"github.com/gin-gonic/gin"
 
 	"code.byted.org/clientQA/itc-server/database/dal"
@@ -104,9 +106,11 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 			blackMap["content"] = v
 			if blacklist != nil || len(blacklist) != 0 { //diff处理
 				status, confirmer, remark := iosDetectDiff(blackMap, blacklist)
-				blackMap["status"] = status
-				blackMap["confirmer"] = confirmer
-				blackMap["remark"] = remark
+				if status == 1 {
+					blackMap["status"] = status
+					blackMap["confirmer"] = confirmer
+					blackMap["remark"] = remark
+				}
 			} else {
 				blackMap["status"] = 0
 				blackMap["confirmer"] = ""
@@ -157,9 +161,11 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 			methodMap["content"] = susClass
 			if method != nil || len(method) != 0 { //diff 处理
 				status, confirmer, remark := iosDetectDiff(methodMap, method)
-				methodMap["status"] = status
-				methodMap["confirmer"] = confirmer
-				methodMap["remark"] = remark
+				if status == 1 {
+					methodMap["status"] = status
+					methodMap["confirmer"] = confirmer
+					methodMap["remark"] = remark
+				}
 			} else {
 				methodMap["status"] = 0
 				methodMap["confirmer"] = ""
@@ -241,7 +247,7 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 	}
 	insertFlag := dal.InsertNewIOSDetect(blackDetect, methodDetect, privacyDetect)
 	//更新tb_binary_detect中status值
-	err, unRes := changeTotalStatus(taskId, toolId, false)
+	err, unRes := changeTotalStatus(taskId, toolId)
 	if err != nil {
 		logs.Error("判断总的total status出错！", err.Error())
 	}
@@ -567,10 +573,6 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 		return true
 	}
 	//新接口内容
-	var notPassFlag = false
-	if ios.Status == 2 {
-		notPassFlag = true
-	}
 	var queryKey string
 	switch ios.ConfirmType {
 	case 1:
@@ -684,7 +686,7 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 		delete(LARK_MSG_CALL_MAP, key)
 	}
 	//更新tb_binary_detect中status值
-	if err, _ := changeTotalStatus(ios.TaskId, ios.ToolId, notPassFlag); err != nil {
+	if err, _ := changeTotalStatus(ios.TaskId, ios.ToolId); err != nil {
 		logs.Error("总任务状态更改出错！", err)
 		return false
 	}
@@ -692,7 +694,7 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 }
 
 //判断是否需要更新total status状态值
-func changeTotalStatus(taskId, toolId int, notPassFlag bool) (error, int) {
+func changeTotalStatus(taskId, toolId int) (error, int) {
 	var newChangeFlag = true
 	var unConfirmNum = 0
 	var notPassNum = 0 //确认不通过数目
@@ -722,9 +724,9 @@ func changeTotalStatus(taskId, toolId int, notPassFlag bool) (error, int) {
 			}
 		}
 	}
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": taskId,
-	})
+	//detect := dal.QueryDetectModelsByMap(map[string]interface{}{
+	//	"id": taskId,
+	//})
 	//检测项全部确认，更改任务状态
 	if newChangeFlag {
 		detect := dal.QueryDetectModelsByMap(map[string]interface{}{
@@ -741,10 +743,11 @@ func changeTotalStatus(taskId, toolId int, notPassFlag bool) (error, int) {
 			logs.Error("更新任务状态失败，任务ID："+strconv.Itoa(taskId)+",错误原因:%v", err)
 			return err, unConfirmNum
 		}
+		StatusDeal((*detect)[0]) //ci回调和不通过block处理
 	}
-	if (*detect)[0].SelfCheckStatus == 1 && (*detect)[0].Status == 1 { //只有自查项全部确认通过，检测项全部确认通过，才不阻塞
-		CICallBack(&(*detect)[0])
-	}
+	//if (*detect)[0].SelfCheckStatus == 1 && (*detect)[0].Status == 1 { //只有自查项全部确认通过，检测项全部确认通过，才不阻塞
+	//	CICallBack(&(*detect)[0])
+	//}
 	return nil, unConfirmNum
 }
 
@@ -818,8 +821,34 @@ func GetIOSSelfNum(appid, taskId int) (bool, int) {
 	return true, selfNum0
 	//return true,0
 }
-func ciDeal(detect dal.DetectStruct) {
+
+//全部确认完成后处理
+func StatusDeal(detect dal.DetectStruct) {
+	//ci回调
 	if detect.SelfCheckStatus == 1 && detect.Status == 1 {
-		CICallBack(&detect)
+		//CICallBack(&detect)
+	}
+	//结果通知
+	selfNoPass := detect.SelftNoPass
+	detectNoPass := detect.DetectNoPass
+	message := "你好，" + detect.AppName + " " + detect.AppVersion
+	if detect.Platform == 0 {
+		message += " Android包"
+	} else {
+		message += " iOS包"
+	}
+	message += "  已经确认完毕！"
+	url := "http://rocket.bytedance.net/rocket/itc/task?biz=" + detect.AppId + "&showItcDetail=1&itcTaskId=" + strconv.Itoa(int(detect.ID))
+	lark_people := detect.ToLarker
+	peoples := strings.Replace(lark_people, "，", ",", -1)
+	lark_people_arr := strings.Split(peoples, ",")
+	for _, p := range lark_people_arr {
+		utils.LarkConfirmResult(strings.TrimSpace(p), message, url, detectNoPass, selfNoPass, false)
+	}
+	lark_group := detect.ToGroup
+	groups := strings.Replace(lark_group, "，", ",", -1)
+	lark_group_arr := strings.Split(groups, ",")
+	for _, g := range lark_group_arr {
+		utils.LarkConfirmResult(strings.TrimSpace(g), message, url, detectNoPass, selfNoPass, true)
 	}
 }

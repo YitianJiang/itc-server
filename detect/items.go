@@ -395,14 +395,15 @@ func ConfirmCheck(c *gin.Context) {
 		return
 	}
 	if detect != nil && detect.Status != 0 && detect.SelfCheckStatus != 0 {
-		if detect.Status == 1 && detect.SelfCheckStatus == 1 {
-			CICallBack(detect)
-		} else {
-			//全部确认完成但是有确认不通过项目
-			detectNoPass := detect.DetectNoPass
-			selfNoPass := detect.SelftNoPass
-
-		}
+		StatusDeal(*detect)
+		//if detect.Status == 1 && detect.SelfCheckStatus == 1 {
+		//	CICallBack(detect)
+		//} else {
+		//	//全部确认完成但是有确认不通过项目
+		//	detectNoPass := detect.DetectNoPass
+		//	selfNoPass := detect.SelftNoPass
+		//
+		//}
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
