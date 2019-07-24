@@ -1,17 +1,18 @@
 package detect
 
 import (
-	"code.byted.org/clientQA/itc-server/database/dal"
-	"code.byted.org/clientQA/itc-server/utils"
-	"code.byted.org/gopkg/logs"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
+
+	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/logs"
+	"github.com/gin-gonic/gin"
 )
 
 type PermSlice []dal.Permissions
@@ -837,7 +838,7 @@ func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassF
 		}
 	}
 	if countsUn == 0 && permFlag {
-		if err := CICallBack(detect); err != nil {
+		if err := StatusDeal(*detect); err != nil {
 			return err.Error(), 0
 		}
 		//logs.Notice("回调了CI接口")

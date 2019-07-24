@@ -724,9 +724,6 @@ func changeTotalStatus(taskId, toolId int) (error, int) {
 			}
 		}
 	}
-	//detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-	//	"id": taskId,
-	//})
 	//检测项全部确认，更改任务状态
 	if newChangeFlag {
 		detect := dal.QueryDetectModelsByMap(map[string]interface{}{
@@ -745,9 +742,6 @@ func changeTotalStatus(taskId, toolId int) (error, int) {
 		}
 		StatusDeal((*detect)[0]) //ci回调和不通过block处理
 	}
-	//if (*detect)[0].SelfCheckStatus == 1 && (*detect)[0].Status == 1 { //只有自查项全部确认通过，检测项全部确认通过，才不阻塞
-	//	CICallBack(&(*detect)[0])
-	//}
 	return nil, unConfirmNum
 }
 
@@ -761,7 +755,6 @@ func middleDataDeal(taskId, toolId, aId int) (bool, bool) {
 		logs.Error("没有查询到中间数据！")
 		return false, false
 	}
-	fmt.Println((*middleData)[0].JsonContent)
 	insertFlag, _, _ := iOSResultClassify(taskId, toolId, aId, (*middleData)[0].JsonContent) //插入数据
 	//已经确认记得在map中更新数据
 	if insertFlag {
@@ -823,10 +816,13 @@ func GetIOSSelfNum(appid, taskId int) (bool, int) {
 }
 
 //全部确认完成后处理
-func StatusDeal(detect dal.DetectStruct) {
+func StatusDeal(detect dal.DetectStruct) error {
 	//ci回调
 	if detect.SelfCheckStatus == 1 && detect.Status == 1 {
-		//CICallBack(&detect)
+		if err := CICallBack(&detect); err != nil {
+			logs.Error("回到ci出错！", err.Error())
+			return err
+		}
 	}
 	//结果通知
 	selfNoPass := detect.SelftNoPass
@@ -851,4 +847,5 @@ func StatusDeal(detect dal.DetectStruct) {
 	for _, g := range lark_group_arr {
 		utils.LarkConfirmResult(strings.TrimSpace(g), message, url, detectNoPass, selfNoPass, true)
 	}
+	return nil
 }

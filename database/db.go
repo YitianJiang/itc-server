@@ -1,34 +1,36 @@
 package database
 
 import (
-	"code.byted.org/clientQA/itc-server/conf"
-	"code.byted.org/golf/ssconf"
+	"fmt"
+
+	_const "code.byted.org/clientQA/itc-server/const"
+	"code.byted.org/clientQA/itc-server/utils"
 	dbconf "code.byted.org/gopkg/dbutil/conf"
 	"code.byted.org/gopkg/dbutil/gormdb"
 	"code.byted.org/gopkg/gorm"
-	"fmt"
+	"code.byted.org/gopkg/logs"
 )
 
 var (
 	dboptional dbconf.DBOptional
 )
 
-func InitDB(){
+func InitDB() {
 
 	//online
 	//线上采用mysql gdpr
-	//var err error
-	//dboptional,err = dbconf.GetDBOptionalByConsulName("toutiao.mysql.itcserver_write")
-	//if err != nil {
-	//	logs.Error("mysql gdpr failed,%v",err)
-	//	for _, lark_people := range _const.LowLarkPeople {
-	//		utils.LarkDingOneInner(lark_people, "mysql gdpr failed！")
-	//	}
-	//}
+	var err error
+	dboptional, err = dbconf.GetDBOptionalByConsulName("toutiao.mysql.itcserver_write")
+	if err != nil {
+		logs.Error("mysql gdpr failed,%v", err)
+		for _, lark_people := range _const.LowLarkPeople {
+			utils.LarkDingOneInner(lark_people, "mysql gdpr failed！")
+		}
+	}
 
 	//test
-	ssConf, _ := ssconf.LoadSsConfFile(conf.Configuration.MysqlConfigPath)
-	dboptional = dbconf.GetDbConf(ssConf, "qa_ee", dbconf.Write)
+	//ssConf, _ := ssconf.LoadSsConfFile(conf.Configuration.MysqlConfigPath)
+	//dboptional = dbconf.GetDbConf(ssConf, "qa_ee", dbconf.Write)
 }
 
 func GetConneection() (*gorm.DB, error) {
