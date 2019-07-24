@@ -498,6 +498,11 @@ func DeleteCertificate(c *gin.Context) {
 		}
 		message := "证书" + delCertRequest.CertId + "将要被删除," + "与该证书关联的app:" + appListStr + " 需要换绑新的证书"
 		LarkNotifyUsers("证书"+delCertRequest.CertId+"将要被删除", userNames, message)
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "delete fail",
+			"errorCode": 9,
+			"errorInfo": "该证书对应的appList不为空,删除失败",
+		})
 	}
 }
 
