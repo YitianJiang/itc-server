@@ -91,6 +91,30 @@ func CheckAdmin(perms []string) bool {
 	return checkResult
 }
 
+func TransferValues2AccInfoWithoutAuth(accountInfo *AccountInfo)*AccInfoWithoutAuth{
+	accInfoWithoutAuth:=AccInfoWithoutAuth{}
+	accInfoWithoutAuth.AccountType=accountInfo.AccountType
+	accInfoWithoutAuth.AccountName=accountInfo.AccountName
+	accInfoWithoutAuth.UserName=accountInfo.UserName
+	accInfoWithoutAuth.TeamId=accountInfo.TeamId
+	accInfoWithoutAuth.PermissionAction = []string{}
+	return &accInfoWithoutAuth
+}
+
+func TransferValues2AccInfoWithAuth(accountInfo *AccountInfo,perms []string)*AccInfoWithAuth{
+	accInfoWithAuth:=AccInfoWithAuth{}
+	accInfoWithAuth.TeamId=accountInfo.TeamId
+	accInfoWithAuth.UserName=accountInfo.UserName
+	accInfoWithAuth.AccountName=accountInfo.AccountName
+	accInfoWithAuth.AccountType=accountInfo.AccountType
+	accInfoWithAuth.AccountP8file=accountInfo.AccountP8file
+	accInfoWithAuth.AccountP8fileName=accountInfo.AccountP8fileName
+	accInfoWithAuth.IssueId=accountInfo.IssueId
+	accInfoWithAuth.KeyId=accountInfo.KeyId
+	accInfoWithAuth.PermissionAction = perms
+	return &accInfoWithAuth
+}
+
 func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]interface{} {
 	conn, err := database.GetConneection()
 	if err != nil {
@@ -99,40 +123,22 @@ func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]interface{} {
 	}
 	defer conn.Close()
 	var accountsInfo []interface{}
-	var teamIds []TeamID
-	if err= conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).Find(&teamIds).Error;err!=nil{
+	var allAccountInfo []AccountInfo
+	if err= conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).Find(&allAccountInfo).Error;err!=nil{
 		logs.Error("Query DB Failed:", err)
 		return nil
 	}
-	conn.Begin()
-	for _, teamId := range teamIds {
-		perms := resPerms.Data[strings.ToLower(teamId.TeamId)+"_space_account"]
+	for _, accountInfo := range allAccountInfo {
+		perms := resPerms.Data[strings.ToLower(accountInfo.TeamId)+"_space_account"]
 		checkResult := CheckAdmin(perms)
 		if !checkResult {
-			accInfoWithoutAuth := AccInfoWithoutAuth{}
-			if err= conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).
-				Where("team_id = ?", teamId.TeamId).Find(&accInfoWithoutAuth).
-				Error;err!=nil{
-				logs.Error("Query DB Failed:", err)
-				conn.Rollback()
-				return nil
-			}
-			accInfoWithoutAuth.PermissionAction = []string{}
+			accInfoWithoutAuth:=TransferValues2AccInfoWithoutAuth(&accountInfo)
 			accountsInfo = append(accountsInfo, accInfoWithoutAuth)
 		} else {
-			accInfoWithAuth := AccInfoWithAuth{}
-			if err= conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).
-				Where("team_id =?", teamId.TeamId).Find(&accInfoWithAuth).
-				Error;err!=nil{
-				logs.Error("Query DB Failed:", err)
-				conn.Rollback()
-				return nil
-			}
-			accInfoWithAuth.PermissionAction = perms
+			accInfoWithAuth:=TransferValues2AccInfoWithAuth(&accountInfo,perms)
 			accountsInfo = append(accountsInfo, accInfoWithAuth)
 		}
 	}
-	conn.Commit()
 	return &accountsInfo
 }
 
