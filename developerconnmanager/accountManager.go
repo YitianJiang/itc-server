@@ -37,7 +37,7 @@ func DeleteByTeamId(c *gin.Context) {
 		})
 		return
 	}
-	if dbResult == -1 || dbResult == -3 {
+	if dbResult == -1 {
 		logs.Error("从数据库中删除数据失败!")
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": 3,

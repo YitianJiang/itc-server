@@ -602,7 +602,7 @@ func UploadPrivKey(c *gin.Context) {
 	if chkCertResult == -1 {
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": 6,
-			"errorInfo": "数据库连接失败",
+			"errorInfo": "数据库查询失败",
 		})
 		return
 	}
