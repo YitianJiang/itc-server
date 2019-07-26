@@ -830,27 +830,29 @@ func StatusDeal(detect dal.DetectStruct) error {
 		}
 	}
 	//结果通知
-	selfNoPass := detect.SelftNoPass
-	detectNoPass := detect.DetectNoPass
-	message := "你好，" + detect.AppName + " " + detect.AppVersion
-	if detect.Platform == 0 {
-		message += " Android包"
-	} else {
-		message += " iOS包"
-	}
-	message += "  已经确认完毕！"
-	url := "http://rocket.bytedance.net/rocket/itc/task?biz=" + detect.AppId + "&showItcDetail=1&itcTaskId=" + strconv.Itoa(int(detect.ID))
-	lark_people := detect.ToLarker
-	peoples := strings.Replace(lark_people, "，", ",", -1)
-	lark_people_arr := strings.Split(peoples, ",")
-	for _, p := range lark_people_arr {
-		utils.LarkConfirmResult(strings.TrimSpace(p), message, url, detectNoPass, selfNoPass, false)
-	}
-	lark_group := detect.ToGroup
-	groups := strings.Replace(lark_group, "，", ",", -1)
-	lark_group_arr := strings.Split(groups, ",")
-	for _, g := range lark_group_arr {
-		utils.LarkConfirmResult(strings.TrimSpace(g), message, url, detectNoPass, selfNoPass, true)
-	}
+	go func() {
+		selfNoPass := detect.SelftNoPass
+		detectNoPass := detect.DetectNoPass
+		message := "你好，" + detect.AppName + " " + detect.AppVersion
+		if detect.Platform == 0 {
+			message += " Android包"
+		} else {
+			message += " iOS包"
+		}
+		message += "  已经确认完毕！"
+		url := "http://rocket.bytedance.net/rocket/itc/task?biz=" + detect.AppId + "&showItcDetail=1&itcTaskId=" + strconv.Itoa(int(detect.ID))
+		lark_people := detect.ToLarker
+		peoples := strings.Replace(lark_people, "，", ",", -1)
+		lark_people_arr := strings.Split(peoples, ",")
+		for _, p := range lark_people_arr {
+			utils.LarkConfirmResult(strings.TrimSpace(p), message, url, detectNoPass, selfNoPass, false)
+		}
+		lark_group := detect.ToGroup
+		groups := strings.Replace(lark_group, "，", ",", -1)
+		lark_group_arr := strings.Split(groups, ",")
+		for _, g := range lark_group_arr {
+			utils.LarkConfirmResult(strings.TrimSpace(g), message, url, detectNoPass, selfNoPass, true)
+		}
+	}()
 	return nil
 }

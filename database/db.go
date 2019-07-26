@@ -1,13 +1,15 @@
 package database
 
 import (
+	"fmt"
+
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/utils"
+
 	dbconf "code.byted.org/gopkg/dbutil/conf"
 	"code.byted.org/gopkg/dbutil/gormdb"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
-	"fmt"
 )
 
 var (
