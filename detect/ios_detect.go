@@ -818,9 +818,14 @@ func GetIOSSelfNum(appid, taskId int) (bool, int) {
 //全部确认完成后处理
 func StatusDeal(detect dal.DetectStruct) error {
 	//ci回调
-	if detect.SelfCheckStatus == 1 && detect.Status == 1 {
+	if detect.Platform == 0 && detect.Status == 1 {
 		if err := CICallBack(&detect); err != nil {
-			logs.Error("回到ci出错！", err.Error())
+			logs.Error("回调ci出错！", err.Error())
+			return err
+		}
+	} else if detect.SelfCheckStatus == 1 && detect.Status == 1 {
+		if err := CICallBack(&detect); err != nil {
+			logs.Error("回调ci出错！", err.Error())
 			return err
 		}
 	}

@@ -926,13 +926,13 @@ func GetAARInfoNotITC(c *gin.Context) {
 	taskId := c.DefaultQuery("taskId", "")
 	if taskId == "" {
 		logs.Error("缺少taskId参数")
-		errorReturn(c, "缺少taskId参数")
+		errorReturn(c, "缺少taskId参数", -2)
 		return
 	}
 	toolId := c.DefaultQuery("toolId", "")
 	if toolId == "" {
 		logs.Error("缺少toolId参数")
-		errorReturn(c, "缺少toolId参数")
+		errorReturn(c, "缺少toolId参数", -2)
 		return
 	}
 	//获取任务信息
@@ -941,7 +941,7 @@ func GetAARInfoNotITC(c *gin.Context) {
 	})
 	if detect == nil || len(*detect) == 0 {
 		logs.Error("未查询到该taskid对应的检测任务，%v", taskId)
-		errorReturn(c, "未查询到该taskid对应的检测任务")
+		errorReturn(c, "未查询到该taskid对应的检测任务", -3)
 		return
 	}
 
@@ -974,7 +974,7 @@ func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct
 			var t dal.OtherBasicInfo
 			if err := json.Unmarshal([]byte(info.DetectInfos), &t); err != nil {
 				logs.Error("arr基础信息存储格式错误，taskID：" + fmt.Sprint(task.ID))
-				errorReturn(c, "arr基础信息存储格式错误，taskID："+fmt.Sprint(task.ID))
+				errorReturn(c, "arr基础信息存储格式错误，taskID："+fmt.Sprint(task.ID), -4)
 				return nil
 			}
 			if t.Name == task.OtherName {
@@ -1010,7 +1010,7 @@ func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct
 				var t []dal.SMethod
 				if err := json.Unmarshal([]byte(detailOne.DetectInfos), &t); err != nil {
 					logs.Error("arr敏感方法信息存储格式错误，taskID：" + fmt.Sprint(task.ID))
-					errorReturn(c, "arr敏感方法存储格式错误，taskID："+fmt.Sprint(task.ID))
+					errorReturn(c, "arr敏感方法存储格式错误，taskID："+fmt.Sprint(task.ID), -4)
 					return nil
 				}
 				var result = make([]dal.SMethodAarPlatform, 0)
@@ -1029,7 +1029,7 @@ func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct
 				var t []dal.SStr
 				if err := json.Unmarshal([]byte(detailOne.DetectInfos), &t); err != nil {
 					logs.Error("arr敏感字符串信息存储格式错误，taskID：" + fmt.Sprint(task.ID))
-					errorReturn(c, "arr敏感字符串存储格式错误，taskID："+fmt.Sprint(task.ID))
+					errorReturn(c, "arr敏感字符串存储格式错误，taskID："+fmt.Sprint(task.ID), -4)
 					return nil
 				}
 				var result = make([]dal.SStrAarPlatform, 0)
@@ -1047,7 +1047,7 @@ func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct
 				var t []dal.Permissions
 				if err := json.Unmarshal([]byte(detailOne.DetectInfos), &t); err != nil {
 					logs.Error("arr权限信息存储格式错误，taskID：" + fmt.Sprint(task.ID))
-					errorReturn(c, "arr权限信息存储格式错误，taskID："+fmt.Sprint(task.ID))
+					errorReturn(c, "arr权限信息存储格式错误，taskID："+fmt.Sprint(task.ID), -4)
 					return nil
 				}
 				//权限排序

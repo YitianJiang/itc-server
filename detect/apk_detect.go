@@ -1,18 +1,17 @@
 package detect
 
 import (
+	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/logs"
 	"encoding/json"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
-
-	"code.byted.org/clientQA/itc-server/database/dal"
-	"code.byted.org/clientQA/itc-server/utils"
-	"code.byted.org/gopkg/logs"
-	"github.com/gin-gonic/gin"
 )
 
 type PermSlice []dal.Permissions
@@ -836,13 +835,16 @@ func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassF
 			utils.LarkDingOneInner("fanjuan.xqp", "任务ID："+fmt.Sprint(taskId)+"确认状态更新失败，失败原因："+err.Error())
 			return "任务确认状态更新失败！", 0
 		}
-	}
-	if countsUn == 0 && permFlag {
 		if err := StatusDeal(*detect); err != nil {
 			return err.Error(), 0
 		}
-		//logs.Notice("回调了CI接口")
 	}
+	//if countsUn == 0 && permFlag {
+	//	if err := StatusDeal(*detect); err != nil {
+	//		return err.Error(), 0
+	//	}
+	//	//logs.Notice("回调了CI接口")
+	//}
 	return "", counts + permCounts
 
 }
@@ -886,10 +888,14 @@ func createIgnoreInfoBatch(t *dal.PostConfirm, detect *dal.DetectStruct, usernam
 /**
 请求错误信息返回统一格式
 */
-func errorReturn(c *gin.Context, message string, errs ...error) {
+func errorReturn(c *gin.Context, message string, errCodes ...int) {
+	var errCode = -1
+	if len(errCodes) > 0 {
+		errCode = errCodes[0]
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"message":   message,
-		"errorCode": -1,
+		"errorCode": errCode,
 		"data":      message,
 	})
 	return
