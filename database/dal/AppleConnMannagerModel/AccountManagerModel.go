@@ -16,22 +16,22 @@ type AccountInfo struct {
 }
 
 type AccInfoWithAuth struct {
-	TeamId            string `gorm:"team_id"`
-	AccountName       string `gorm:"account_name"`
-	AccountType       string `gorm:"account_type"`
-	AccountP8fileName string `gorm:"account_p8file_name"`
-	AccountP8file     string `gorm:"account_p8file"`
-	IssueId           string `gorm:"issue_id"`
-	KeyId             string `gorm:"key_id"               `
-	UserName          string `gorm:"user_name"`
+	TeamId            string `gorm:"team_id"                json:"team_id"`
+	AccountName       string `gorm:"account_name"           json:"account_name"`
+	AccountType       string `gorm:"account_type"           json:"account_type"`
+	AccountP8fileName string `gorm:"account_p8file_name"    json:"account_p8file_name"`
+	AccountP8file     string `gorm:"account_p8file"         json:"account_p8file"`
+	IssueId           string `gorm:"issue_id"               json:"issue_id"`
+	KeyId             string `gorm:"key_id"                 json:"key_id"`
+	UserName          string `gorm:"user_name"              json:"user_name"`
 	PermissionAction  []string
 }
 
 type AccInfoWithoutAuth struct {
-	TeamId           string `gorm:"team_id"`
-	AccountName      string `gorm:"account_name"`
-	AccountType      string `gorm:"account_type"`
-	UserName         string `gorm:"user_name"`
+	TeamId           string `gorm:"team_id"                 json:"team_id"`
+	AccountName      string `gorm:"account_name"            json:"account_name"`
+	AccountType      string `gorm:"account_type"            json:"account_type"`
+	UserName         string `gorm:"user_name"               json:"user_name"`
 	PermissionAction []string
 }
 
