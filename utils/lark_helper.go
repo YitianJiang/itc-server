@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/gopkg/logs"
 )
@@ -132,75 +133,76 @@ func GetUserChannelID(token string, userid string) string {
 }
 
 //建群发收参数结构体
-type CreateGroupRequest struct{
-	Name            string             `json:"name"`
-	Description     string             `json:"description"`
-	OpenIds         []string           `json:"open_ids"`
-	EmployeeIds     []string           `json:"employee_ids"`
+type CreateGroupRequest struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	OpenIds     []string `json:"open_ids"`
+	EmployeeIds []string `json:"employee_ids"`
 }
 
 type CreateGroupResponse struct {
-	Code                int         `json:"code"`
-	Msg                 string      `json:"msg"`
-	OpenChatId          string      `json:"open_chat_id"`
-	InvalidOpenIds      []string    `json:"invalid_open_ids"`
-	InvalidEmployeeIds  []string    `json:"invalid_employee_ids"`
+	Code               int      `json:"code"`
+	Msg                string   `json:"msg"`
+	OpenChatId         string   `json:"open_chat_id"`
+	InvalidOpenIds     []string `json:"invalid_open_ids"`
+	InvalidEmployeeIds []string `json:"invalid_employee_ids"`
 }
 
 //获取用户ID发收参数结构体
 type GetUserIdsRequest struct {
-	Email       string      `json:"email"`
+	Email string `json:"email"`
 }
 
 type GetUserIdsResponse struct {
-	Code            int     `json:"code"`
-	OpenId          string  `json:"open_id"`
-	EmployeeId      string  `json:"employee_id"`
+	Code       int    `json:"code"`
+	OpenId     string `json:"open_id"`
+	EmployeeId string `json:"employee_id"`
 }
 
 //发消息结构体
 type SendMsgRequest struct {
-	OpenChatId      string      `json:"open_chat_id"`
-	MsgType         string      `json:"msg_type"`
-	Content         Content     `json:"content"`
+	OpenChatId string  `json:"open_chat_id"`
+	MsgType    string  `json:"msg_type"`
+	Content    Content `json:"content"`
 }
 
 type Content struct {
-	Text    string      `json:"text"`
+	Text string `json:"text"`
 }
 
 type SendMsgResponse struct {
-	Code                int         `json:"code"`
-	Msg                 string      `json:"msg"`
-	OpenMessageId       string      `json:"open_message_id"`
+	Code          int    `json:"code"`
+	Msg           string `json:"msg"`
+	OpenMessageId string `json:"open_message_id"`
 }
+
 //获取token结构体
 type GetTokenRequest struct {
-	AppId                string      `json:"app_id"`
-	AppSecret            string      `json:"app_secret"`
+	AppId     string `json:"app_id"`
+	AppSecret string `json:"app_secret"`
 }
 
 type GetTokenResponse struct {
-	Code                int         `json:"code"`
-	Msg                 string      `json:"msg"`
-	TenantAccessToken   string      `json:"tenant_access_token"`
-	Expire              int         `json:"expire"`
+	Code              int    `json:"code"`
+	Msg               string `json:"msg"`
+	TenantAccessToken string `json:"tenant_access_token"`
+	Expire            int    `json:"expire"`
 }
 
 const (
-	CREATE_GROUP_URL="https://open.feishu.cn/open-apis/chat/v3/create/"
-	GET_USER_IDS_URL="https://open.feishu.cn/open-apis/user/v3/email2id"
-	SEND_MESSAGE_URL="https://open.feishu.cn/open-apis/message/v3/send/"
-	GET_Tenant_Access_Token_URL="https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal/"
-	APP_ID="cli_9a2d72678bb8d102"
-	APP_SECRET="7aprfnGu8mU3KOTqV4RiSjhIde2gsvAM"
+	CREATE_GROUP_URL            = "https://open.feishu.cn/open-apis/chat/v3/create/"
+	GET_USER_IDS_URL            = "https://open.feishu.cn/open-apis/user/v3/email2id"
+	SEND_MESSAGE_URL            = "https://open.feishu.cn/open-apis/message/v3/send/"
+	GET_Tenant_Access_Token_URL = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal/"
+	APP_ID                      = "cli_9a2d72678bb8d102"
+	APP_SECRET                  = "7aprfnGu8mU3KOTqV4RiSjhIde2gsvAM"
 )
 
-func CallLarkAPI(url string,token string,paramsIn interface{} ,paramsOut interface{} ) {
+func CallLarkAPI(url string, token string, paramsIn interface{}, paramsOut interface{}) {
 	bodyByte, _ := json.Marshal(paramsIn)
 	rbodyByte := bytes.NewReader(bodyByte)
 	client := &http.Client{}
-	request, err := http.NewRequest("POST", url,rbodyByte)
+	request, err := http.NewRequest("POST", url, rbodyByte)
 	if err != nil {
 		logs.Info("新建request对象失败")
 	}
@@ -217,7 +219,6 @@ func CallLarkAPI(url string,token string,paramsIn interface{} ,paramsOut interfa
 	}
 	json.Unmarshal(body, paramsOut)
 }
-
 
 /*
  *lark机器人发消息给个人，内部调用
@@ -526,4 +527,115 @@ func Bot2Group(groupId string) {
 	request_body, _ := json.Marshal(m)
 	fmt.Println(request_body)
 	PostJsonHttp3(request_body, "", bot2GroupUrl)
+}
+
+//初始化消息中的不变量
+func resultLarkStruct(lark_people, lark_message, detect_no_pass, self_no_pass, url string, groupFlag bool) LarkCardMessage {
+	//分割线
+	var divid LarkText
+	divid.Tag = "text"
+	divid.Text = "------------------------------------------\n"
+	divid.Style = "width: 100%; fontSize: 13;color: #C2C2C2"
+	//内容
+	//content第一部分
+	var arr1 []interface{}
+	var text1 LarkText
+	text1.Tag = "text"
+	text1.Text = lark_message + "\n"
+	arr1 = append(arr1, text1)
+	arr1 = append(arr1, divid)
+	var fields1 Field
+	fields1.Title.Tag = "text"
+	fields1.Title.Text = "项目"
+	fields1.Title.Lines = 1
+	fields1.Value.Tag = "text"
+	fields1.Value.Text = "静态检查项"
+	fields1.Value.Lines = 1
+	fields1.Short = true
+	var fields2 Field
+	fields2.Title.Tag = "text"
+	fields2.Title.Text = "未通过数量"
+	fields2.Title.Lines = 1
+	fields2.Value.Tag = "text"
+	fields2.Value.Text = detect_no_pass
+	fields2.Value.Lines = 1
+	fields2.Short = true
+	var fields3 Field
+	fields3.Title.Tag = "text"
+	fields3.Title.Text = "项目"
+	fields3.Title.Lines = 1
+	fields3.Value.Tag = "text"
+	fields3.Value.Text = "自查项"
+	fields3.Value.Lines = 1
+	fields3.Short = true
+	var fields4 Field
+	fields4.Title.Tag = "text"
+	fields4.Title.Text = "未通过数量"
+	fields4.Title.Lines = 1
+	fields4.Value.Tag = "text"
+	fields4.Value.Text = self_no_pass
+	fields4.Value.Lines = 1
+	fields4.Short = true
+	fieldArr := []Field{fields1, fields2, fields3, fields4}
+	var lark_field LarkField
+	lark_field.Tag = "field"
+	lark_field.Fields = fieldArr
+	arr1 = append(arr1, lark_field)
+	//content第二部分
+	var arr2 []interface{}
+	var noConfirm LarkText
+	noConfirm.Tag = "text"
+	if detect_no_pass == "0" && self_no_pass == "0" {
+		noConfirm.Text = "Notice:检测结果已全部确认通过!\n业务方可正常执行下一步操作！"
+		noConfirm.Style = "width: 100%; fontSize: 15; color:#DAA520"
+	} else {
+		noConfirm.Text = "Notice:存在不通过项，无法进行下一步\n点击卡片查看详情，更改后重新上传检测"
+		noConfirm.Style = "width: 100%; fontSize: 15; color:#DC143C"
+	}
+	arr2 = append(arr2, divid)
+	arr2 = append(arr2, noConfirm)
+	//卡片
+	var card LarkCard
+	card.Link.Herf = url
+	card.Header.Title = "预审确认结果通知"
+	card.Header.Color = "yellow"
+	card.Header.Lines = 1
+	var temp_arr []interface{}
+	temp_arr = append(temp_arr, arr1)
+	temp_arr = append(temp_arr, arr2)
+	card.Content = temp_arr
+	//内容
+	var larkCC LarkContent
+	larkCC.Card = card
+	//消息
+	var message LarkCardMessage
+	message.MsgType = "interactive"
+	if groupFlag {
+		message.ChatID = lark_people
+	} else {
+		message.Email = lark_people + "@bytedance.com"
+	}
+	message.Content = larkCC
+
+	return message
+}
+func LarkConfirmResult(lark_people, lark_message, url string, detect_no_pass, self_no_pass int, groupFlag bool) bool {
+	larkStruct := resultLarkStruct(lark_people, lark_message, strconv.Itoa(detect_no_pass), strconv.Itoa(self_no_pass), url, groupFlag)
+	larkBody, err := json.Marshal(larkStruct)
+	if err != nil {
+		logs.Error(err.Error())
+		return false
+	}
+	if groupFlag {
+		m := make(map[string]interface{})
+		json.Unmarshal(larkBody, &m)
+		delete(m, "email")
+		larkBody, err = json.Marshal(m)
+		if err != nil {
+			logs.Error(err.Error())
+		}
+	}
+	token := GetLarkToken()
+	res, _ := PostJsonHttp3(larkBody, token, _const.OFFICE_LARK_URL)
+	return res
 }

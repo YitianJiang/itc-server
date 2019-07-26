@@ -66,9 +66,9 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 			var keystr = newMethod.ClassName + "." + newMethod.MethodName
 			if v, ok := methodInfo[keystr]; ok {
 				info := v.(map[string]interface{})
-				detailContent.Status = info["status"].(int)
-			} else {
-				detailContent.Status = 0
+				if info["status"].(int) == 1 {
+					detailContent.Status = info["status"].(int)
+				}
 			}
 			detailContent.TaskId = mapInfo["taskId"]
 			detailContent.ToolId = mapInfo["toolId"]
@@ -103,7 +103,7 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 	}
 
 	//任务状态更新----该app无需要特别确认的敏感方法、字符串或权限
-	errTaskUpdate, unConfirms := taskStatusUpdate(mapInfo["taskId"], mapInfo["toolId"], &(*detect)[0])
+	errTaskUpdate, unConfirms := taskStatusUpdate(mapInfo["taskId"], mapInfo["toolId"], &(*detect)[0], false)
 	if errTaskUpdate != "" {
 		return fmt.Errorf(errTaskUpdate), 0
 	}
@@ -387,8 +387,6 @@ func StrAnalysis(str dal.StrInfo, detail *dal.DetectContentDetail, strInfos map[
 	if key2 == "" {
 		if passFlag {
 			detail.Status = 1
-		} else {
-			detail.Status = 2
 		}
 	} else {
 		detail.Status = 0

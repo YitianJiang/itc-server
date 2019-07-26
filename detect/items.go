@@ -394,8 +394,8 @@ func ConfirmCheck(c *gin.Context) {
 		})
 		return
 	}
-	if detect != nil && detect.Status == 1 && detect.SelfCheckStatus == 1 {
-		CICallBack(detect)
+	if detect != nil && detect.Status != 0 && detect.SelfCheckStatus != 0 {
+		StatusDeal(*detect)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",

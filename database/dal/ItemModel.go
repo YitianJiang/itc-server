@@ -430,13 +430,13 @@ func DeleteItemsByCondition(condition map[string]interface{}) bool {
 			}
 		}
 		m["item"] = new_items
-		if len(new_items) == 0{
+		if len(new_items) == 0 {
 			if err := db.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Delete(&appSelf).Error; err != nil {
 				logs.Error("删除tb_app_selfItem出错！", err.Error())
 				db.Rollback()
 				return false
 			}
-		}else{
+		} else {
 			item_self, err := json.Marshal(m)
 			if err != nil {
 				logs.Error("map -> json error!", err.Error())
@@ -501,6 +501,7 @@ func ConfirmSelfCheck(param map[string]interface{}) (bool, *DetectStruct) {
 	db := connection.Begin()
 	//获取自查记录
 	allCheckFlag := true //自查项是否全部确认标志
+	isNotPass := 0       //自查项是否有确认不通过数量
 	var taskSelf TaskSelfItem
 	if err := db.Table(TaskSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("taskId = ?", taskId).Find(&taskSelf).Error; err != nil {
 		logs.Error("查询taskId自查项失败！", err.Error())
@@ -526,6 +527,9 @@ func ConfirmSelfCheck(param map[string]interface{}) (bool, *DetectStruct) {
 		}
 		if self.(map[string]interface{})["status"] == 0 {
 			allCheckFlag = false
+		}
+		if self.(map[string]interface{})["status"] == 2 && int(self.(map[string]interface{})["keyWord"].(float64)) == 8 {
+			isNotPass++
 		}
 	}
 	taskSelfMap["item"] = taskSelfList
@@ -555,7 +559,12 @@ func ConfirmSelfCheck(param map[string]interface{}) (bool, *DetectStruct) {
 			db.Rollback()
 			return false, nil
 		}
-		detect.SelfCheckStatus = 1
+		if isNotPass == 0 {
+			detect.SelfCheckStatus = 1 //全部确认且通过
+		} else {
+			detect.SelfCheckStatus = 2 //全部确认且有不通过
+		}
+		detect.SelftNoPass = isNotPass //自查项不通过数量
 		if err = db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
 			Save(&detect).Error; err != nil {
 			logs.Error("%v", err)
@@ -672,9 +681,9 @@ func QueryTaskSelfItemList(taskId int) (bool, []interface{}) {
 	defer connection.Close()
 	var taskItem TaskSelfItem
 	if err := connection.Table(TaskSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("taskId = ?", taskId).Limit(1).Find(&taskItem).Error; err != nil {
-		if err == gorm.ErrRecordNotFound{
+		if err == gorm.ErrRecordNotFound {
 			return true, nil
-		}else{
+		} else {
 			logs.Error(err.Error())
 			return false, nil
 		}

@@ -154,14 +154,14 @@ func InitRouter(r *ginex.Engine) {
 		usermanagerapi.GET("/getCapabilitiesInfo", developerconnmanager.GetBundleIdCapabilitiesInfo)
 		//usermanagerapi.POST("/assertBunldCapabilities",developerconnmanager.AssertBunldIDInfo)
 		//账号人员管理相关开发
-		usermanagerapi.GET("/userRolesGet",developerconnmanager.UserRolesGetInfo)
-		usermanagerapi.GET("/userInfoGet",developerconnmanager.UserDetailInfoGet)
-		usermanagerapi.GET("/userInvitedInfoGet",developerconnmanager.UserInvitedDetailInfoGet)
-		usermanagerapi.GET("/visibleAppsFromAccount",developerconnmanager.VisibleAppsInfoGet)
-		usermanagerapi.GET("/visibleAppsOfUser",developerconnmanager.VisibleAppsOfUserGet)
-		usermanagerapi.POST("/editPermOfUser",developerconnmanager.EditPermOfUserFunc)
-		usermanagerapi.POST("/userInvitations",developerconnmanager.UserInvitedFunc)
-		usermanagerapi.POST("/userDelete",developerconnmanager.UserDeleteFunc)
-		usermanagerapi.POST("/userInvitationsDelete",developerconnmanager.UserInvitedDeleteFunc)
+		usermanagerapi.GET("/userRolesGet", developerconnmanager.UserRolesGetInfo)
+		usermanagerapi.GET("/userInfoGet", developerconnmanager.UserDetailInfoGet)
+		usermanagerapi.GET("/userInvitedInfoGet", developerconnmanager.UserInvitedDetailInfoGet)
+		usermanagerapi.GET("/visibleAppsFromAccount", developerconnmanager.VisibleAppsInfoGet)
+		usermanagerapi.GET("/visibleAppsOfUser", developerconnmanager.VisibleAppsOfUserGet)
+		usermanagerapi.POST("/editPermOfUser", developerconnmanager.EditPermOfUserFunc)
+		usermanagerapi.POST("/userInvitations", developerconnmanager.UserInvitedFunc)
+		usermanagerapi.POST("/userDelete", developerconnmanager.UserDeleteFunc)
+		usermanagerapi.POST("/userInvitationsDelete", developerconnmanager.UserInvitedDeleteFunc)
 	}
 }
