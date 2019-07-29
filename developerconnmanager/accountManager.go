@@ -151,12 +151,14 @@ func SendPost2Kani(postRequest interface{}, url string) int {
 	request, err := http.NewRequest("POST", url, rbodyByte)
 	if err != nil {
 		logs.Info("新建request对象失败")
+		return -3
 	}
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", "Basic "+_const.KANI_APP_ID_AND_SECRET_BASE64)
 	response, err := client.Do(request)
 	if err != nil {
 		logs.Info("发送post请求失败")
+		return -3
 	}
 	defer response.Body.Close()
 	var creResResponse devconnmanager.CreResResponse
@@ -229,6 +231,13 @@ func InsertAccount(c *gin.Context) {
 		})
 		return
 	}
+	if creResult == -3 {
+		c.JSON(http.StatusOK, gin.H{
+			"errorCode": 6,
+			"errorInfo": "往kani平台发送资源创建请求失败！",
+		})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"errorCode": 0,
 		"message":   "往数据库中插入账号信息成功，同时资源创建成功",
@@ -236,8 +245,8 @@ func InsertAccount(c *gin.Context) {
 }
 
 func GetTokenStringByAccInfo(accountInfo devconnmanager.AccountInfo) string {
-	authKey, error := AuthKeyFromBytes([]byte(accountInfo.AccountP8file))
-	if error != nil {
+	authKey, err := AuthKeyFromBytes([]byte(accountInfo.AccountP8file))
+	if err != nil {
 		logs.Info("读取authKey失败")
 		return ""
 	}
@@ -259,6 +268,10 @@ func GetTokenStringByTeamId(teamId string) string {
 	condition := make(map[string]interface{})
 	condition["team_id"] = teamId
 	accountsInfo := devconnmanager.QueryAccountInfo(condition)
+	if accountsInfo==nil{
+		logs.Error("从数据库查询账号信息失败，无法签出token")
+		return ""
+	}
 	if len(*accountsInfo) == 0 {
 		logs.Error("team_id对应的记录不存在,无法签出token")
 		return ""

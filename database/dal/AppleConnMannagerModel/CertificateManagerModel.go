@@ -90,6 +90,10 @@ type RecAppName struct {
 	AppName string  `gorm:"app_name"`
 }
 
+type CertName struct {
+	CertName string `gorm:"certName"`
+}
+
 func (CertInfo) TableName() string{
 	return  "tt_apple_certificate"
 }

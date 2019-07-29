@@ -465,13 +465,22 @@ func DeleteCertificate(c *gin.Context) {
 			})
 			return
 		}
-		certInfo := devconnmanager.QueryCertInfoByCertId(delCertRequest.CertId)
-		tosFilePath := "appleConnectFile/" + string(delCertRequest.TeamId) + "/" + delCertRequest.CertType + "/" + delCertRequest.CertId + "/" + DealCertName(certInfo.CertName) + ".cer"
+
+		certName := devconnmanager.QueryCertNameByCertId(delCertRequest.CertId)
+		if certName==""{
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "delete fail",
+				"errorCode": 7,
+				"errorInfo": "找不到certId对应的证书记录",
+			})
+			return
+		}
+		tosFilePath := "appleConnectFile/" + string(delCertRequest.TeamId) + "/" + delCertRequest.CertType + "/" + delCertRequest.CertId + "/" + DealCertName(certName) + ".cer"
 		delResultBool := DeleteTosCert(tosFilePath)
 		if !delResultBool {
 			c.JSON(http.StatusOK, gin.H{
 				"message":   "delete fail",
-				"errorCode": 7,
+				"errorCode": 8,
 				"errorInfo": "删除tos上的证书失败",
 			})
 			return
@@ -480,7 +489,7 @@ func DeleteCertificate(c *gin.Context) {
 		if !delResultBool {
 			c.JSON(http.StatusOK, gin.H{
 				"message":   "delete fail",
-				"errorCode": 8,
+				"errorCode": 9,
 				"errorInfo": "从数据库中删除cert_id对应的证书失败",
 			})
 			return
@@ -500,7 +509,7 @@ func DeleteCertificate(c *gin.Context) {
 		LarkNotifyUsers("证书"+delCertRequest.CertId+"将要被删除", userNames, message)
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "delete fail",
-			"errorCode": 9,
+			"errorCode": 10,
 			"errorInfo": "该证书对应的appList不为空,删除失败",
 		})
 	}
@@ -509,6 +518,13 @@ func DeleteCertificate(c *gin.Context) {
 func CheckCertExpireDate(c *gin.Context) {
 	logs.Info("检查过期证书")
 	expiredCertInfos := devconnmanager.QueryExpiredCertInfos()
+	if expiredCertInfos==nil{
+		c.JSON(http.StatusOK, gin.H{
+			"errorCode": 1,
+			"errorInfo": "查询将要过期的证书信息失败",
+		})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"data":      expiredCertInfos,
 		"errorCode": 0,
@@ -518,7 +534,6 @@ func CheckCertExpireDate(c *gin.Context) {
 		userNames := devconnmanager.QueryUserNameByAppName(expiredCertInfo.EffectAppList)
 		LarkNotifyUsers("证书将要过期提醒", userNames, "证书"+expiredCertInfo.CertId+"即将过期")
 	}
-
 }
 
 func ReceiveP12file(c *gin.Context) ([]byte, string) {

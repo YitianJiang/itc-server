@@ -147,7 +147,7 @@ func InitRouter(r *ginex.Engine) {
 		certificateapi.POST("/certificateCreate", developerconnmanager.InsertCertificate)
 		certificateapi.DELETE("/certificateDelete", developerconnmanager.DeleteCertificate)
 		certificateapi.GET("/certExpireDateCheck", developerconnmanager.CheckCertExpireDate)
-		certificateapi.PATCH("/privUploadForCert", developerconnmanager.UploadPrivKey)
+		certificateapi.POST("/privUploadForCert", developerconnmanager.UploadPrivKey)
 	}
 	usermanagerapi := r.Group("/v1/userManage")
 	{
