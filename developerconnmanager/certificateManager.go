@@ -177,12 +177,14 @@ func CreateCertInApple(tokenString string, certType string, certTypeSufix string
 	request, err := http.NewRequest("POST", _const.APPLE_CREATE_CERT_URL, rbodyByte)
 	if err != nil {
 		logs.Info("新建request对象失败")
+		return nil
 	}
 	request.Header.Set("Authorization", tokenString)
 	request.Header.Set("Content-Type", "application/json")
 	response, err := client.Do(request)
 	if err != nil {
 		logs.Info("发送post请求失败")
+		return nil
 	}
 	defer response.Body.Close()
 	var certInfo devconnmanager.CreCertResponse
@@ -306,8 +308,7 @@ func InsertCertificate(c *gin.Context) {
 	strs := strings.Split(body.CertType, "_")
 	certTypeSufix := strs[len(strs)-1]
 	creCertResponse := CreateCertInApple(tokenString, body.CertType, certTypeSufix)
-	certContent := creCertResponse.Data.Attributes.CertificateContent
-	if certContent == "" {
+	if creCertResponse == nil ||creCertResponse.Data.Attributes.CertificateContent==""{
 		logs.Error("从苹果获取证书失败")
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": 6,
@@ -315,6 +316,7 @@ func InsertCertificate(c *gin.Context) {
 		})
 		return
 	}
+	certContent := creCertResponse.Data.Attributes.CertificateContent
 	encryptedCert, err := base64.StdEncoding.DecodeString(certContent)
 	if err != nil {
 		logs.Error("%s", "base64 decode error"+err.Error())
