@@ -60,7 +60,8 @@ func GetIgnoredPermission(appId int) map[int]interface{} {
 func GetPermList() map[int]interface{} {
 	result := make(map[int]interface{})
 	queryResult := dal.QueryDetectConfig(map[string]interface{}{
-		"platform": 0,
+		"platform":   0,
+		"check_type": 0,
 	})
 	if queryResult == nil || len(*queryResult) == 0 {
 		logs.Error("权限信息表为空")
@@ -465,10 +466,26 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, m
 	methods_con := make([]dal.SMethod, 0)
 	strs_un := make([]dal.SStr, 0)
 	strs_con := make([]dal.SStr, 0)
-
+	//旧版本不带危险等级更新标识，及更新内容
+	var updateFlag = false
+	var updateIds = make([]string, 0)
+	var updateLevels = make([]string, 0)
+	var updateConfigIds = make([]dal.DetailExtraInfo, 0)
+	//配置表中信息获取
+	var apiMap *map[string]interface{}
+	if len(details) > 0 {
+		if details[0].RiskLevel == "" {
+			updateFlag = true
+			//logs.Notice("需要更新旧的敏感方法")
+			apiMap = GetAllAPIConfigs()
+		}
+	}
 	//敏感方法和字符串增量形式检测结果重组
 	for _, detail := range details {
 		if detail.SensiType == 1 { //敏感方法
+			var t dal.DetailExtraInfo
+			json.Unmarshal([]byte(detail.ExtraInfo), &t)
+
 			var method dal.SMethod
 			method.Status = detail.Status
 			method.Confirmer = detail.Confirmer
@@ -478,10 +495,23 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, m
 			method.Status = detail.Status
 			method.Id = detail.ID
 			method.MethodName = detail.KeyInfo
-			if detail.ExtraInfo != "" {
-				var t dal.DetailExtraInfo
-				json.Unmarshal([]byte(detail.ExtraInfo), &t)
-				method.GPFlag = int(t.GPFlag)
+			method.GPFlag = t.GPFlag
+			method.RiskLevel = detail.RiskLevel
+			method.ConfigId = t.ConfigId
+			//若为旧版本，更新内容收集
+			if updateFlag {
+				updateIds = append(updateIds, fmt.Sprint(method.Id))
+				if v, ok := (*apiMap)[method.ClassName+"."+method.MethodName]; ok {
+					info := v.(map[string]int)
+					method.RiskLevel = fmt.Sprint(info["priority"])
+					method.ConfigId = info["id"]
+					updateLevels = append(updateLevels, method.RiskLevel)
+					t.ConfigId = info["id"]
+				} else {
+					updateLevels = append(updateLevels, "3")
+					t.ConfigId = 0
+				}
+				updateConfigIds = append(updateConfigIds, t)
 			}
 			if methodIgs != nil {
 				if v, ok := methodIgs[detail.ClassName+"."+detail.KeyInfo]; ok {
@@ -581,7 +611,23 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, m
 	for _, str := range strs_con {
 		strs_un = append(strs_un, str)
 	}
+	//异步更新
+	if updateFlag {
+		//logs.Notice("go 协程")
+		go methodRiskLevelUpdate(&updateIds, &updateLevels, &updateConfigIds)
+	}
+	//logs.Notice("原线程返回")
 	return methods_un, strs_un
+}
+
+//旧版本信息更新
+func methodRiskLevelUpdate(ids *[]string, levels *[]string, configIds *[]dal.DetailExtraInfo) {
+	err := dal.UpdateOldApkDetectDetailLevel(ids, levels, configIds)
+	if err != nil {
+		logs.Error("更新旧任务敏感方法危险等级失败，id信息：" + fmt.Sprint((*ids)[0]))
+		utils.LarkDingOneInner("fanjuan.xqp", "更新旧任务敏感方法危险等级失败")
+	}
+	//logs.Notice("协程done")
 }
 
 /**

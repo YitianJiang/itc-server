@@ -51,7 +51,7 @@ func AddDetectConfig(c *gin.Context) {
 		})
 		return
 	}
-	if t.KeyInfo == "" || t.Priority == nil || t.Platform == nil || t.DescInfo == "" || t.Type == nil {
+	if t.KeyInfo == "" || t.Priority == nil || t.Platform == nil || t.DescInfo == "" || t.Type == nil || t.GpFlag == nil || t.SensiFlag == nil {
 		logs.Error("缺少关键参数！")
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "缺少关键参数！",
@@ -70,7 +70,8 @@ func AddDetectConfig(c *gin.Context) {
 	data.CheckType = int(t.Type.(float64))
 	data.Suggestion = t.Suggestion
 	data.Platform = int(t.Platform.(float64))
-
+	data.GpFlag = int(t.GpFlag.(float64))
+	data.SensiFlag = int(t.SensiFlag.(float64))
 	data.Creator = username.(string)
 
 	queryResult := dal.QueryDetectConfig(map[string]interface{}{
@@ -192,6 +193,8 @@ func QueryDectecConfig(c *gin.Context) {
 		perm.DescInfo = re.DescInfo
 		perm.Platform = re.Platform
 		perm.Type = re.CheckType
+		perm.SensiFlag = re.SensiFlag
+		perm.GpFlag = re.GpFlag
 		permList = append(permList, perm)
 	}
 	realResult["permList"] = permList
@@ -279,6 +282,14 @@ func EditDectecConfig(c *gin.Context) {
 	if refer != "" {
 		flag = true
 		data["reference"] = refer
+	}
+	if t.GpFlag != nil {
+		flag = true
+		data["gp_flag"] = int(t.GpFlag.(float64))
+	}
+	if t.SensiFlag != nil {
+		flag = true
+		data["sensi_flag"] = int(t.SensiFlag.(float64))
 	}
 	if !flag {
 		logs.Error("无修改参数！")
