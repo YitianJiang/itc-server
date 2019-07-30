@@ -22,6 +22,7 @@ var permToModify = map[string]int{
 	"lirensheng":    1,
 	//测试加入
 	//"fanjuan.xqp":1,
+	//"liyixian.lym":1,
 }
 
 /**

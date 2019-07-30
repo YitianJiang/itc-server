@@ -14,6 +14,7 @@ import (
 	"strings"
 )
 
+//权限排序
 type PermSlice []dal.Permissions
 
 func (a PermSlice) Len() int { // 重写 Len() 方法
@@ -24,6 +25,19 @@ func (a PermSlice) Swap(i, j int) { // 重写 Swap() 方法
 }
 func (a PermSlice) Less(i, j int) bool { // 重写 Less() 方法， 从大到小排序
 	return a[j].Priority < a[i].Priority
+}
+
+//方法排序
+type MethodSlice []dal.SMethod
+
+func (a MethodSlice) Len() int { // 重写 Len() 方法
+	return len(a)
+}
+func (a MethodSlice) Swap(i, j int) { // 重写 Swap() 方法
+	a[i], a[j] = a[j], a[i]
+}
+func (a MethodSlice) Less(i, j int) bool { // 重写 Less() 方法， 从大到小排序
+	return a[j].RiskLevel < a[i].RiskLevel
 }
 
 /**
@@ -462,8 +476,8 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 敏感方法和字符串的结果输出解析---新版
 */
 func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, methodIgs map[string]interface{}, strIgs map[string]interface{}) ([]dal.SMethod, []dal.SStr) {
-	methods_un := make([]dal.SMethod, 0)
-	methods_con := make([]dal.SMethod, 0)
+	methods_un := make(MethodSlice, 0)
+	methods_con := make(MethodSlice, 0)
 	strs_un := make([]dal.SStr, 0)
 	strs_con := make([]dal.SStr, 0)
 	//旧版本不带危险等级更新标识，及更新内容
@@ -605,6 +619,8 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, m
 		}
 	}
 	//保证结果未确认结果在前
+	sort.Sort(MethodSlice(methods_un))
+	sort.Sort(MethodSlice(methods_con))
 	for _, m := range methods_con {
 		methods_un = append(methods_un, m)
 	}
