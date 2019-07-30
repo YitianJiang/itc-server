@@ -522,6 +522,8 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, m
 					updateLevels = append(updateLevels, method.RiskLevel)
 					t.ConfigId = info["id"]
 				} else {
+					method.RiskLevel = "3"
+					method.ConfigId = 0
 					updateLevels = append(updateLevels, "3")
 					t.ConfigId = 0
 				}
