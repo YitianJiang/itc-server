@@ -426,6 +426,13 @@ func CheckDelCertRequest(c *gin.Context, delCertRequest *devconnmanager.DelCertR
 		})
 		return false
 	}
+	if delCertRequest.CertName == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"errorCode": 5,
+			"errorInfo": "cert_name为空！",
+		})
+		return false
+	}
 	return true
 }
 
@@ -454,7 +461,7 @@ func DeleteCertificate(c *gin.Context) {
 		if delResult == -2 {
 			c.JSON(http.StatusOK, gin.H{
 				"message":   "delete fail",
-				"errorCode": 5,
+				"errorCode": 6,
 				"errorInfo": "在苹果开发者网站删除对应证书失败,失败原因为不存在该certId对应的证书",
 			})
 			return
@@ -462,22 +469,12 @@ func DeleteCertificate(c *gin.Context) {
 		if delResult == -1 {
 			c.JSON(http.StatusOK, gin.H{
 				"message":   "delete fail",
-				"errorCode": 6,
+				"errorCode": 7,
 				"errorInfo": "在苹果开发者网站删除对应证书失败",
 			})
 			return
 		}
-
-		certName := devconnmanager.QueryCertNameByCertId(delCertRequest.CertId)
-		if certName==""{
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "delete fail",
-				"errorCode": 7,
-				"errorInfo": "找不到certId对应的证书记录",
-			})
-			return
-		}
-		tosFilePath := "appleConnectFile/" + string(delCertRequest.TeamId) + "/" + delCertRequest.CertType + "/" + delCertRequest.CertId + "/" + DealCertName(certName) + ".cer"
+		tosFilePath := "appleConnectFile/" + string(delCertRequest.TeamId) + "/" + delCertRequest.CertType + "/" + delCertRequest.CertId + "/" + DealCertName(delCertRequest.CertName) + ".cer"
 		delResultBool := DeleteTosCert(tosFilePath)
 		if !delResultBool {
 			c.JSON(http.StatusOK, gin.H{

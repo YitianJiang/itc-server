@@ -268,7 +268,7 @@ func GetTokenStringByTeamId(teamId string) string {
 	condition := make(map[string]interface{})
 	condition["team_id"] = teamId
 	accountsInfo := devconnmanager.QueryAccountInfo(condition)
-	if accountsInfo==nil{
+	if accountsInfo == nil{
 		logs.Error("从数据库查询账号信息失败，无法签出token")
 		return ""
 	}

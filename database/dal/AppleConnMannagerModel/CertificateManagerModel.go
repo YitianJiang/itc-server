@@ -72,6 +72,7 @@ type GetPermsResponse struct {
 
 type DelCertRequest struct {
 	CertId   string  `form:"cert_id"        binding:"required"`
+	CertName string  `form:"cert_name"      binding:"required"`
 	TeamId   string  `form:"team_id"        binding:"required"`
 	CertType string  `form:"cert_type"      binding:"required"`
 }
@@ -88,10 +89,6 @@ type UserName struct {
 
 type RecAppName struct {
 	AppName string  `gorm:"app_name"`
-}
-
-type CertName struct {
-	CertName string `gorm:"certName"`
 }
 
 func (CertInfo) TableName() string{

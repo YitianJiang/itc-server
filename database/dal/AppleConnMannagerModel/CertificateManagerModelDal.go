@@ -239,21 +239,6 @@ func QueryCertInfoByCertId(certId string)*CertInfo{
 	return &certInfo
 }
 
-func QueryCertNameByCertId(certId string) string{
-	conn, err := database.GetConneection()
-	if err != nil {
-		logs.Error("Get DB Connection Failed: ", err)
-		return ""
-	}
-	defer conn.Close()
-	var certName CertName
-	if err=conn.LogMode(_const.DB_LOG_MODE).Table(CertInfo{}.TableName()).Where("cert_id=?",certId).Find(&certName).Error;err!=nil{
-		logs.Error("Query DB Failed:", err)
-		return ""
-	}
-	return certName.CertName
-}
-
 func UpdateCertInfo(condition map[string]interface{},priv_key_url string) bool {
 	conn, err := database.GetConneection()
 	if err != nil {
