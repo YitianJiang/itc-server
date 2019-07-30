@@ -282,7 +282,7 @@ func VisibleAppsInfoGet(c *gin.Context) {
 			"data": resDataobj,
 		})
 	}else {
-		resDataobj,searchRes := devconnmanager.SearchVisibleAppInfos(map[string]interface{}{"team_id": requestData.TeamId})
+		resDataobj,searchRes := devconnmanager.SearchVisibleAppInfos(map[string]interface{}{"team_id": requestData.TeamId,"deleted_at": nil})
 		if !searchRes{
 			c.JSON(http.StatusOK, gin.H{
 				"error_info":   "数据库查询数据失败",
