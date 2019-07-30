@@ -177,12 +177,14 @@ func CreateCertInApple(tokenString string, certType string, certTypeSufix string
 	request, err := http.NewRequest("POST", _const.APPLE_CREATE_CERT_URL, rbodyByte)
 	if err != nil {
 		logs.Info("新建request对象失败")
+		return nil
 	}
 	request.Header.Set("Authorization", tokenString)
 	request.Header.Set("Content-Type", "application/json")
 	response, err := client.Do(request)
 	if err != nil {
 		logs.Info("发送post请求失败")
+		return nil
 	}
 	defer response.Body.Close()
 	var certInfo devconnmanager.CreCertResponse
@@ -306,8 +308,7 @@ func InsertCertificate(c *gin.Context) {
 	strs := strings.Split(body.CertType, "_")
 	certTypeSufix := strs[len(strs)-1]
 	creCertResponse := CreateCertInApple(tokenString, body.CertType, certTypeSufix)
-	certContent := creCertResponse.Data.Attributes.CertificateContent
-	if certContent == "" {
+	if creCertResponse == nil ||creCertResponse.Data.Attributes.CertificateContent==""{
 		logs.Error("从苹果获取证书失败")
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": 6,
@@ -315,6 +316,7 @@ func InsertCertificate(c *gin.Context) {
 		})
 		return
 	}
+	certContent := creCertResponse.Data.Attributes.CertificateContent
 	encryptedCert, err := base64.StdEncoding.DecodeString(certContent)
 	if err != nil {
 		logs.Error("%s", "base64 decode error"+err.Error())
@@ -424,6 +426,13 @@ func CheckDelCertRequest(c *gin.Context, delCertRequest *devconnmanager.DelCertR
 		})
 		return false
 	}
+	if delCertRequest.CertName == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"errorCode": 5,
+			"errorInfo": "cert_name为空！",
+		})
+		return false
+	}
 	return true
 }
 
@@ -452,7 +461,7 @@ func DeleteCertificate(c *gin.Context) {
 		if delResult == -2 {
 			c.JSON(http.StatusOK, gin.H{
 				"message":   "delete fail",
-				"errorCode": 5,
+				"errorCode": 6,
 				"errorInfo": "在苹果开发者网站删除对应证书失败,失败原因为不存在该certId对应的证书",
 			})
 			return
@@ -460,18 +469,17 @@ func DeleteCertificate(c *gin.Context) {
 		if delResult == -1 {
 			c.JSON(http.StatusOK, gin.H{
 				"message":   "delete fail",
-				"errorCode": 6,
+				"errorCode": 7,
 				"errorInfo": "在苹果开发者网站删除对应证书失败",
 			})
 			return
 		}
-		certInfo := devconnmanager.QueryCertInfoByCertId(delCertRequest.CertId)
-		tosFilePath := "appleConnectFile/" + string(delCertRequest.TeamId) + "/" + delCertRequest.CertType + "/" + delCertRequest.CertId + "/" + DealCertName(certInfo.CertName) + ".cer"
+		tosFilePath := "appleConnectFile/" + string(delCertRequest.TeamId) + "/" + delCertRequest.CertType + "/" + delCertRequest.CertId + "/" + DealCertName(delCertRequest.CertName) + ".cer"
 		delResultBool := DeleteTosCert(tosFilePath)
 		if !delResultBool {
 			c.JSON(http.StatusOK, gin.H{
 				"message":   "delete fail",
-				"errorCode": 7,
+				"errorCode": 8,
 				"errorInfo": "删除tos上的证书失败",
 			})
 			return
@@ -480,7 +488,7 @@ func DeleteCertificate(c *gin.Context) {
 		if !delResultBool {
 			c.JSON(http.StatusOK, gin.H{
 				"message":   "delete fail",
-				"errorCode": 8,
+				"errorCode": 9,
 				"errorInfo": "从数据库中删除cert_id对应的证书失败",
 			})
 			return
@@ -500,7 +508,7 @@ func DeleteCertificate(c *gin.Context) {
 		LarkNotifyUsers("证书"+delCertRequest.CertId+"将要被删除", userNames, message)
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "delete fail",
-			"errorCode": 9,
+			"errorCode": 10,
 			"errorInfo": "该证书对应的appList不为空,删除失败",
 		})
 	}
@@ -509,6 +517,13 @@ func DeleteCertificate(c *gin.Context) {
 func CheckCertExpireDate(c *gin.Context) {
 	logs.Info("检查过期证书")
 	expiredCertInfos := devconnmanager.QueryExpiredCertInfos()
+	if expiredCertInfos==nil{
+		c.JSON(http.StatusOK, gin.H{
+			"errorCode": 1,
+			"errorInfo": "查询将要过期的证书信息失败",
+		})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"data":      expiredCertInfos,
 		"errorCode": 0,
@@ -518,7 +533,6 @@ func CheckCertExpireDate(c *gin.Context) {
 		userNames := devconnmanager.QueryUserNameByAppName(expiredCertInfo.EffectAppList)
 		LarkNotifyUsers("证书将要过期提醒", userNames, "证书"+expiredCertInfo.CertId+"即将过期")
 	}
-
 }
 
 func ReceiveP12file(c *gin.Context) ([]byte, string) {

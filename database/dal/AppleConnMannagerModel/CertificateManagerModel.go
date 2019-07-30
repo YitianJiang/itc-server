@@ -72,6 +72,7 @@ type GetPermsResponse struct {
 
 type DelCertRequest struct {
 	CertId   string  `form:"cert_id"        binding:"required"`
+	CertName string  `form:"cert_name"      binding:"required"`
 	TeamId   string  `form:"team_id"        binding:"required"`
 	CertType string  `form:"cert_type"      binding:"required"`
 }
