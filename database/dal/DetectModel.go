@@ -1,6 +1,7 @@
 package dal
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -90,11 +91,13 @@ type DetectContentDetail struct {
 	CallLoc   string `json:"callLoc"`
 	ToolId    int    `json:"toolId"`
 	SubIndex  int    `json:"index"`
+	RiskLevel string `json:"riskLevel"`
 	ExtraInfo string `json:"extraInfo"` //其他附加信息
 }
 
 type DetailExtraInfo struct {
-	GPFlag int `json:"gpFlag"`
+	ConfigId int `json:"configId"`
+	GPFlag   int `json:"gpFlag"`
 }
 
 type IgnoreInfoStruct struct {
@@ -136,6 +139,8 @@ type SMethod struct {
 	CallLoc      []MethodCallJson `json:"callLoc"`
 	OtherVersion string           `json:"otherVersion"`
 	GPFlag       int              `json:"gpFlag"`
+	RiskLevel    string           `json:"riskLevel"`
+	ConfigId     int              `json:"configId"`
 }
 type MethodCallJson struct {
 	MethodName string      `json:"method_name"`
@@ -510,6 +515,31 @@ func ConfirmApkBinaryResultNew(data map[string]string) bool {
 	}
 	//db.Commit()
 	return true
+}
+
+func UpdateOldApkDetectDetailLevel(ids *[]string, levels *[]string, configIds *[]DetailExtraInfo) error {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return err
+	}
+	defer connection.Close()
+	db := connection.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	db.Begin()
+	for i := 0; i < len(*ids); i++ {
+		condition := "id=" + (*ids)[i]
+		byteExtra, _ := json.Marshal((*configIds)[i])
+		extraInfo := string(byteExtra)
+		if err := db.Where(condition).Update(map[string]interface{}{
+			"risk_level": (*levels)[i],
+			"extra_info": extraInfo,
+		}).Error; err != nil {
+			db.Rollback()
+			return err
+		}
+	}
+	db.Commit()
+	return nil
 }
 
 /**

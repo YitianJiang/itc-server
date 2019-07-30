@@ -60,6 +60,7 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 				mRepeat[keystr] = 1
 			}
 		}
+		apiMap := GetAllAPIConfigs()
 		allMethods := make([]dal.DetectContentDetail, 0) //批量写入数据库的敏感方法struct集合
 		for _, newMethod := range newMethods {
 			var detailContent dal.DetectContentDetail
@@ -70,11 +71,19 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 					detailContent.Status = info["status"].(int)
 				}
 			}
+			var extraInfo dal.DetailExtraInfo
+			if v, ok := (*apiMap)[keystr]; ok {
+				info := v.(map[string]int)
+				detailContent.RiskLevel = fmt.Sprint(info["priority"])
+				extraInfo.ConfigId = info["id"]
+			} else {
+				detailContent.RiskLevel = "3"
+			}
 			detailContent.TaskId = mapInfo["taskId"]
 			detailContent.ToolId = mapInfo["toolId"]
 			//新增兼容下标
 			detailContent.SubIndex = index
-			allMethods = append(allMethods, *MethodAnalysis(newMethod, &detailContent)) //内层去重，并放入写库信息数组
+			allMethods = append(allMethods, *MethodAnalysis(newMethod, &detailContent, extraInfo)) //内层去重，并放入写库信息数组
 		}
 		err1 := dal.InsertDetectDetailBatch(&allMethods)
 		if err1 != nil {
@@ -320,7 +329,7 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 /**
 批量method解析-----fj
 */
-func MethodAnalysis(method dal.MethodInfo, detail *dal.DetectContentDetail) *dal.DetectContentDetail {
+func MethodAnalysis(method dal.MethodInfo, detail *dal.DetectContentDetail, extraInfo dal.DetailExtraInfo) *dal.DetectContentDetail {
 	detail.SensiType = 1
 	//detail.Status = 0
 
@@ -329,11 +338,10 @@ func MethodAnalysis(method dal.MethodInfo, detail *dal.DetectContentDetail) *dal
 	detail.ClassName = method.ClassName
 	//增加flag标识
 	if method.Flag != 0 {
-		var extraInfo dal.DetailExtraInfo
 		extraInfo.GPFlag = method.Flag
-		byteExtra, _ := json.Marshal(extraInfo)
-		detail.ExtraInfo = string(byteExtra)
 	}
+	byteExtra, _ := json.Marshal(extraInfo)
+	detail.ExtraInfo = string(byteExtra)
 	var call = method.CallLocation
 
 	callLocation := MethodRmRepeat_2(call)
@@ -423,4 +431,26 @@ func StrRmRepeat_2(callInfo []dal.CallLocInfo) string {
 		}
 	}
 	return result
+}
+
+func GetAllAPIConfigs() *map[string]interface{} {
+	queryData := map[string]interface{}{
+		"check_type": 1,
+	}
+	apiMap := make(map[string]interface{})
+	result := dal.QueryDetectConfig(queryData)
+	if result == nil {
+		return &apiMap
+	}
+	for _, api := range *result {
+		if _, ok := apiMap[api.KeyInfo]; !ok {
+			info := map[string]int{
+				"priority": api.Priority,
+				"id":       int(api.ID),
+			}
+			apiMap[api.KeyInfo] = info
+		}
+	}
+	return &apiMap
+
 }
