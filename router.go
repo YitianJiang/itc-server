@@ -164,4 +164,9 @@ func InitRouter(r *ginex.Engine) {
 		usermanagerapi.POST("/userDelete", developerconnmanager.UserDeleteFunc)
 		usermanagerapi.POST("/userInvitationsDelete", developerconnmanager.UserInvitedDeleteFunc)
 	}
+
+	appSignManager := r.Group("/v1/appleConnManage")
+	{
+		appSignManager.GET("/appDetailInfoGet", developerconnmanager.GetAppDetailInfo)
+	}
 }
