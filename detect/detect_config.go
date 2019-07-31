@@ -766,6 +766,81 @@ func GetAppVersions(c *gin.Context) {
 	return
 }
 
+/**
+IOS组件平台获取隐私API调用信息接口
+*/
+type IOSSensiAPIQueryStruct struct {
+	KeyInfo   string `json:"key"`
+	Desc      string `json:"desc"`
+	Type      string `json:"type"`
+	Priority  int    `json:"priority"`
+	RiskLevel string `json:"risk_level"`
+}
+
+var TypeMap = map[int]string{
+	0: "权限",
+	1: "隐私API调用",
+	2: "action",
+	3: "其他",
+}
+var RiskLevelMap = map[int]string{
+	0: "一般",
+	1: "低危",
+	2: "中危",
+	3: "高危",
+}
+
+func GetPermsInfo(c *gin.Context) {
+	platform, ok := c.GetQuery("platform")
+	if !ok {
+		logs.Error("没有platform信息")
+		errorReturn(c, "没有platform信息")
+		return
+	}
+	check_type, ok := c.GetQuery("type")
+	if !ok {
+		logs.Error("没有type信息")
+		errorReturn(c, "没有type信息")
+		return
+	}
+	check_typeInt, errInt := strconv.Atoi(check_type)
+	if errInt != nil {
+		logs.Error("type参数形式出错")
+		errorReturn(c, "type参数形式出错")
+		return
+	}
+	queryData := map[string]interface{}{
+		"platform":   platform,
+		"check_type": check_typeInt,
+	}
+	result := make([]IOSSensiAPIQueryStruct, 0)
+	infos := dal.QueryDetectConfig(queryData)
+	if infos == nil || len(*infos) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "没有相关信息",
+			"errorCode": -1,
+			"data":      result,
+		})
+		return
+	}
+	for _, info := range *infos {
+		var oneR IOSSensiAPIQueryStruct
+		oneR.KeyInfo = info.KeyInfo
+		oneR.Desc = info.DescInfo
+		oneR.Priority = info.Priority
+		oneR.Type = TypeMap[info.CheckType]
+		oneR.RiskLevel = RiskLevelMap[info.Priority]
+		result = append(result, oneR)
+	}
+	logs.Info("open api 获取权限信息成功！")
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "success",
+		"errorCode": 0,
+		"data":      result,
+	})
+	return
+}
+
 //安卓app版本排序相关
 type StringSlice []string
 
