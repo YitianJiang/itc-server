@@ -22,6 +22,7 @@ var permToModify = map[string]int{
 	"lirensheng":    1,
 	//测试加入
 	//"fanjuan.xqp":1,
+	//"liyixian.lym":1,
 }
 
 /**
@@ -51,7 +52,7 @@ func AddDetectConfig(c *gin.Context) {
 		})
 		return
 	}
-	if t.KeyInfo == "" || t.Priority == nil || t.Platform == nil || t.DescInfo == "" || t.Type == nil {
+	if t.KeyInfo == "" || t.Priority == nil || t.Platform == nil || t.DescInfo == "" || t.Type == nil || t.GpFlag == nil || t.SensiFlag == nil {
 		logs.Error("缺少关键参数！")
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "缺少关键参数！",
@@ -70,7 +71,8 @@ func AddDetectConfig(c *gin.Context) {
 	data.CheckType = int(t.Type.(float64))
 	data.Suggestion = t.Suggestion
 	data.Platform = int(t.Platform.(float64))
-
+	data.GpFlag = int(t.GpFlag.(float64))
+	data.SensiFlag = int(t.SensiFlag.(float64))
 	data.Creator = username.(string)
 
 	queryResult := dal.QueryDetectConfig(map[string]interface{}{
@@ -192,6 +194,8 @@ func QueryDectecConfig(c *gin.Context) {
 		perm.DescInfo = re.DescInfo
 		perm.Platform = re.Platform
 		perm.Type = re.CheckType
+		perm.SensiFlag = re.SensiFlag
+		perm.GpFlag = re.GpFlag
 		permList = append(permList, perm)
 	}
 	realResult["permList"] = permList
@@ -279,6 +283,14 @@ func EditDectecConfig(c *gin.Context) {
 	if refer != "" {
 		flag = true
 		data["reference"] = refer
+	}
+	if t.GpFlag != nil {
+		flag = true
+		data["gp_flag"] = int(t.GpFlag.(float64))
+	}
+	if t.SensiFlag != nil {
+		flag = true
+		data["sensi_flag"] = int(t.SensiFlag.(float64))
 	}
 	if !flag {
 		logs.Error("无修改参数！")
@@ -746,6 +758,81 @@ func GetAppVersions(c *gin.Context) {
 	}
 	sort.Sort(StringSlice(result))
 	logs.Info("查询app的权限版本成功！")
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "success",
+		"errorCode": 0,
+		"data":      result,
+	})
+	return
+}
+
+/**
+IOS组件平台获取隐私API调用信息接口
+*/
+type IOSSensiAPIQueryStruct struct {
+	KeyInfo   string `json:"key"`
+	Desc      string `json:"desc"`
+	Type      string `json:"type"`
+	Priority  int    `json:"priority"`
+	RiskLevel string `json:"risk_level"`
+}
+
+var TypeMap = map[int]string{
+	0: "权限",
+	1: "隐私API调用",
+	2: "action",
+	3: "其他",
+}
+var RiskLevelMap = map[int]string{
+	0: "一般",
+	1: "低危",
+	2: "中危",
+	3: "高危",
+}
+
+func GetPermsInfo(c *gin.Context) {
+	platform, ok := c.GetQuery("platform")
+	if !ok {
+		logs.Error("没有platform信息")
+		errorReturn(c, "没有platform信息")
+		return
+	}
+	check_type, ok := c.GetQuery("type")
+	if !ok {
+		logs.Error("没有type信息")
+		errorReturn(c, "没有type信息")
+		return
+	}
+	check_typeInt, errInt := strconv.Atoi(check_type)
+	if errInt != nil {
+		logs.Error("type参数形式出错")
+		errorReturn(c, "type参数形式出错")
+		return
+	}
+	queryData := map[string]interface{}{
+		"platform":   platform,
+		"check_type": check_typeInt,
+	}
+	result := make([]IOSSensiAPIQueryStruct, 0)
+	infos := dal.QueryDetectConfig(queryData)
+	if infos == nil || len(*infos) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "没有相关信息",
+			"errorCode": -1,
+			"data":      result,
+		})
+		return
+	}
+	for _, info := range *infos {
+		var oneR IOSSensiAPIQueryStruct
+		oneR.KeyInfo = info.KeyInfo
+		oneR.Desc = info.DescInfo
+		oneR.Priority = info.Priority
+		oneR.Type = TypeMap[info.CheckType]
+		oneR.RiskLevel = RiskLevelMap[info.Priority]
+		result = append(result, oneR)
+	}
+	logs.Info("open api 获取权限信息成功！")
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
 		"errorCode": 0,

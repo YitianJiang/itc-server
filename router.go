@@ -21,6 +21,8 @@ func InitRouter(r *ginex.Engine) {
 
 	//检测服务检测异常报警接口
 	api.POST("/check_server/alarm", detect.Alram)
+	//获取IOS隐私调用API信息
+	api.GET("/perm/getPerms", detect.GetPermsInfo)
 
 	api.Use(middleware.JWTCheck())
 	{
@@ -147,7 +149,7 @@ func InitRouter(r *ginex.Engine) {
 		certificateapi.POST("/certificateCreate", developerconnmanager.InsertCertificate)
 		certificateapi.DELETE("/certificateDelete", developerconnmanager.DeleteCertificate)
 		certificateapi.GET("/certExpireDateCheck", developerconnmanager.CheckCertExpireDate)
-		certificateapi.PATCH("/privUploadForCert", developerconnmanager.UploadPrivKey)
+		certificateapi.POST("/privUploadForCert", developerconnmanager.UploadPrivKey)
 	}
 	usermanagerapi := r.Group("/v1/userManage")
 	{
