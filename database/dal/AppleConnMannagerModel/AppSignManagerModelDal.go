@@ -5,7 +5,6 @@ import (
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/utils"
 	"fmt"
-	"github.com/astaxie/beego/logs"
 )
 
 /**
@@ -61,7 +60,6 @@ func DeleteAppAccountCert(queryData map[string]interface{}) error {
 	db := conn.Table(AppAccountCert{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var t AppAccountCert
 	if err1 := db.Where(queryData).Delete(&t).Error; err1 != nil {
-		logs.Error("删除 tt_app_account_cert失败，删除条件："+fmt.Sprint(queryData)+",errInfo：%v", err1)
 		utils.RecordError("删除 tt_app_account_cert失败，删除条件："+fmt.Sprint(queryData)+",errInfo：", err1)
 		return err1
 	}
@@ -101,7 +99,6 @@ func DeleteAppBoundleProfiles(queryData map[string]interface{}) error {
 	db := conn.Table(AppBoundleProfiles{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var t AppBoundleProfiles
 	if err1 := db.Where(queryData).Delete(&t).Error; err1 != nil {
-		logs.Error("删除 tt_app_account_cert失败，删除条件："+fmt.Sprint(queryData)+",errInfo：%v", err1)
 		utils.RecordError("删除 tt_app_account_cert失败，删除条件："+fmt.Sprint(queryData)+",errInfo：", err1)
 		return err1
 	}
@@ -141,7 +138,6 @@ func DeleteAppleBoundleId(queryData map[string]interface{}) error {
 	db := conn.Table(AppleBundleId{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var t AppleBundleId
 	if err1 := db.Where(queryData).Delete(&t).Error; err1 != nil {
-		logs.Error("删除 tt_app_account_cert失败，删除条件："+fmt.Sprint(queryData)+",errInfo：%v", err1)
 		utils.RecordError("删除 tt_app_account_cert失败，删除条件："+fmt.Sprint(queryData)+",errInfo：", err1)
 		return err1
 	}
@@ -181,9 +177,25 @@ func DeleteAppleProfile(queryData map[string]interface{}) error {
 	db := conn.Table(AppleProfile{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var t AppleProfile
 	if err1 := db.Where(queryData).Delete(&t).Error; err1 != nil {
-		logs.Error("删除 tt_app_account_cert失败，删除条件："+fmt.Sprint(queryData)+",errInfo：%v", err1)
 		utils.RecordError("删除 tt_app_account_cert失败，删除条件："+fmt.Sprint(queryData)+",errInfo：", err1)
 		return err1
+	}
+	return nil
+}
+
+/**
+根据app_id联查，获取cert_section
+*/
+func QueryWithSql(sql string, result interface{}) error {
+	conn, err := database.GetConneection()
+	if err != nil {
+		utils.RecordError("Get DB Connection Failed: ", err)
+		return err
+	}
+	defer conn.Close()
+	if err := conn.LogMode(_const.DB_LOG_MODE).Raw(sql).Scan(result).Error; err != nil {
+		utils.RecordError("query detectConfig failed,", err)
+		return err
 	}
 	return nil
 }
