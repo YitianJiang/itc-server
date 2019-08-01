@@ -267,8 +267,11 @@ func iosDetectDiff(newDetect map[string]interface{}, lastDetect []interface{}) (
 	name := newDetect["name"]
 	content := newDetect["content"]
 	for _, last := range lastDetect {
-		if n, ok := last.(map[string]interface{})["name"]; ok && n.(string) == name.(string) {
+		if last.(map[string]interface{})["name"].(string) == name.(string) {
 			var status int
+			if _, ok := last.(map[string]interface{})["status"]; !ok {
+				return 0, "", ""
+			}
 			switch last.(map[string]interface{})["status"].(type) {
 			case float64:
 				status = int(last.(map[string]interface{})["status"].(float64))
@@ -291,9 +294,8 @@ func iosDetectDiff(newDetect map[string]interface{}, lastDetect []interface{}) (
 					return status, confirmer, remark
 				}
 			}
-		} else {
-			return 0, "", ""
 		}
+
 	}
 	return 0, "", ""
 }
