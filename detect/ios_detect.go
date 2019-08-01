@@ -110,6 +110,10 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 					blackMap["status"] = status
 					blackMap["confirmer"] = confirmer
 					blackMap["remark"] = remark
+				} else {
+					blackMap["status"] = 0
+					blackMap["confirmer"] = ""
+					blackMap["remark"] = ""
 				}
 			} else {
 				blackMap["status"] = 0
@@ -165,6 +169,10 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 					methodMap["status"] = status
 					methodMap["confirmer"] = confirmer
 					methodMap["remark"] = remark
+				} else {
+					methodMap["status"] = 0
+					methodMap["confirmer"] = ""
+					methodMap["remark"] = ""
 				}
 			} else {
 				methodMap["status"] = 0
