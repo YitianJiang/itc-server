@@ -26,6 +26,7 @@ type AppAccountCert struct {
 	AccountVerifyUser   string `gorm:"column:account_verify_user"       json:"account_verify_user"`
 	DevCertId           string `gorm:"column:dev_cert_id"               json:"dev_cert_id"`
 	DistCertId          string `gorm:"column:dist_cert_id"              json:"dist_cert_id"`
+	PushCertId          string `gorm:"column:push_cert_id"              json:"push_cert_id"`
 }
 
 type AppBoundleProfiles struct {
@@ -42,33 +43,33 @@ type AppBoundleProfiles struct {
 
 type AppleBundleId struct {
 	gorm.Model
-	BundleidId                       string `gorm:"bundleid_id"                         json:"bundleid_id"`
-	BundleidName                     string `gorm:"bundleid_name"                       json:"bundleid_name"`
-	BundleId                         string `gorm:"bundle_id"                           json:"bundle_id"`
-	BundleidType                     string `gorm:"bundleid_type"                       json:"bundleid_type"`
-	ICLOUD                           string `gorm:"ICLOUD"                              json:"ICLOUD"`
-	IN_APP_PURCHASE                  string `gorm:"IN_APP_PURCHASE"                     json:"IN_APP_PURCHASE"`
-	GAME_CENTER                      string `gorm:"GAME_CENTER"                         json:"GAME_CENTER"`
-	PUSH_NOTIFICATIONS               string `gorm:"PUSH_NOTIFICATIONS"                  json:"PUSH_NOTIFICATIONS"`
-	WALLET                           string `gorm:"WALLET"                              json:"WALLET"`
-	INTER_APP_AUDIO                  string `gorm:"INTER_APP_AUDIO"                     json:"INTER_APP_AUDIO"`
-	MAPS                             string `gorm:"MAPS"                                json:"MAPS"`
-	ASSOCIATED_DOMAINS               string `gorm:"ASSOCIATED_DOMAINS"                  json:"ASSOCIATED_DOMAINS"`
-	PERSONAL_VPN                     string `gorm:"PERSONAL_VPN"                        json:"PERSONAL_VPN"`
-	APP_GROUPS                       string `gorm:"APP_GROUPS"                          json:"APP_GROUPS"`
-	HEALTHKIT                        string `gorm:"HEALTHKIT"                           json:"HEALTHKIT"`
-	HOMEKIT                          string `gorm:"HOMEKIT"                             json:"HOMEKIT"`
-	WIRELESS_ACCESSORY_CONFIGURATION string `gorm:"WIRELESS_ACCESSORY_CONFIGURATION"    json:"WIRELESS_ACCESSORY_CONFIGURATION"`
-	APPLE_PAY                        string `gorm:"APPLE_PAY"                           json:"APPLE_PAY"`
-	DATA_PROTECTION                  string `gorm:"DATA_PROTECTION"                     json:"DATA_PROTECTION"`
-	SIRIKIT                          string `gorm:"SIRIKIT"                             json:"SIRIKIT"`
-	NETWORK_EXTENSIONS               string `gorm:"NETWORK_EXTENSIONS"                  json:"NETWORK_EXTENSIONS"`
-	MULTIPATH                        string `gorm:"MULTIPATH"                           json:"MULTIPATH"`
-	HOT_SPOT                         string `gorm:"HOT_SPOT"                            json:"HOT_SPOT"`
-	NFC_TAG_READING                  string `gorm:"NFC_TAG_READING"                     json:"NFC_TAG_READING"`
-	CLASSKIT                         string `gorm:"CLASSKIT"                            json:"CLASSKIT"`
-	AUTOFILL_CREDENTIAL_PROVIDER     string `gorm:"AUTOFILL_CREDENTIAL_PROVIDER"        json:"AUTOFILL_CREDENTIAL_PROVIDER"`
-	ACCESS_WIFI_INFORMATION          string `gorm:"ACCESS_WIFI_INFORMATION"             json:"ACCESS_WIFI_INFORMATION"`
+	BundleidId                       string `gorm:"column:bundleid_id"                         json:"bundleid_id"`
+	BundleidName                     string `gorm:"column:bundleid_name"                       json:"bundleid_name"`
+	BundleId                         string `gorm:"column:bundle_id"                           json:"bundle_id"`
+	BundleidType                     string `gorm:"column:bundleid_type"                       json:"bundleid_type"`
+	ICLOUD                           string `gorm:"column:ICLOUD"                              json:"ICLOUD"`
+	IN_APP_PURCHASE                  string `gorm:"column:IN_APP_PURCHASE"                     json:"IN_APP_PURCHASE"`
+	GAME_CENTER                      string `gorm:"column:GAME_CENTER"                         json:"GAME_CENTER"`
+	PUSH_NOTIFICATIONS               string `gorm:"column:PUSH_NOTIFICATIONS"                  json:"PUSH_NOTIFICATIONS"`
+	WALLET                           string `gorm:"column:WALLET"                              json:"WALLET"`
+	INTER_APP_AUDIO                  string `gorm:"column:INTER_APP_AUDIO"                     json:"INTER_APP_AUDIO"`
+	MAPS                             string `gorm:"column:MAPS"                                json:"MAPS"`
+	ASSOCIATED_DOMAINS               string `gorm:"column:ASSOCIATED_DOMAINS"                  json:"ASSOCIATED_DOMAINS"`
+	PERSONAL_VPN                     string `gorm:"column:PERSONAL_VPN"                        json:"PERSONAL_VPN"`
+	APP_GROUPS                       string `gorm:"column:APP_GROUPS"                          json:"APP_GROUPS"`
+	HEALTHKIT                        string `gorm:"column:HEALTHKIT"                           json:"HEALTHKIT"`
+	HOMEKIT                          string `gorm:"column:HOMEKIT"                             json:"HOMEKIT"`
+	WIRELESS_ACCESSORY_CONFIGURATION string `gorm:"column:WIRELESS_ACCESSORY_CONFIGURATION"    json:"WIRELESS_ACCESSORY_CONFIGURATION"`
+	APPLE_PAY                        string `gorm:"column:APPLE_PAY"                           json:"APPLE_PAY"`
+	DATA_PROTECTION                  string `gorm:"column:DATA_PROTECTION"                     json:"DATA_PROTECTION"`
+	SIRIKIT                          string `gorm:"column:SIRIKIT"                             json:"SIRIKIT"`
+	NETWORK_EXTENSIONS               string `gorm:"column:NETWORK_EXTENSIONS"                  json:"NETWORK_EXTENSIONS"`
+	MULTIPATH                        string `gorm:"column:MULTIPATH"                           json:"MULTIPATH"`
+	HOT_SPOT                         string `gorm:"column:HOT_SPOT"                            json:"HOT_SPOT"`
+	NFC_TAG_READING                  string `gorm:"column:NFC_TAG_READING"                     json:"NFC_TAG_READING"`
+	CLASSKIT                         string `gorm:"column:CLASSKIT"                            json:"CLASSKIT"`
+	AUTOFILL_CREDENTIAL_PROVIDER     string `gorm:"column:AUTOFILL_CREDENTIAL_PROVIDER"        json:"AUTOFILL_CREDENTIAL_PROVIDER"`
+	ACCESS_WIFI_INFORMATION          string `gorm:"column:ACCESS_WIFI_INFORMATION"             json:"ACCESS_WIFI_INFORMATION"`
 }
 
 type AppleProfile struct {
@@ -93,4 +94,87 @@ func (AppleBundleId) TableName() string {
 }
 func (AppleProfile) TableName() string {
 	return "tt_apple_profile"
+}
+
+/**
+单个app_name的App签名管理信息
+*/
+type APPSignManagerInfo struct {
+	AppName                  string              `json:"app_name"`
+	AppType                  string              `json:"app_type"`
+	AppAcountId              string              `json:"app_account_id"`
+	TeamId                   string              `json:"team_id"`
+	AccountType              string              `json:"account_type"`
+	AccountVerifyStatus      string              `json:"account_verify_status"`
+	AccountVerifyUser        string              `json:"account_verify_user"`
+	BundleProfileCertSection []BundleProfileCert `json:"bundle_profile_cert_section"`
+	CertSection              AppCertGroupInfo    `json:"cert_section"`
+}
+type BundleProfileCert struct {
+	BoundleId          string             `json:"bundle_id"`
+	BundleIdIsDel      string             `json:"bundleid_isdel"`
+	BundleIdId         string             `json:"bundleid_id"`
+	BundleIdType       string             `json:"bundleid_type"`
+	EnableCapList      []string           `json:"enable_capabilities_list"`
+	ConfigCapObj       BundleConfigCap    `json:"config_capabilities_obj"`
+	ProfileCertSection BundleProfileGroup `json:"profile_cert_section"`
+}
+type BundleConfigCap struct {
+	ICLOUD         BundleConfigCapInfo `json:"ICLOUD"`
+	DataProtection BundleConfigCapInfo `json:"DATA_PROTECTION"`
+}
+type BundleConfigCapInfo struct {
+	KeyInfo string         `json:"key"`
+	Options []OptionStruct `json:"options"`
+}
+
+type OptionStruct struct {
+	Key string `json:"key"`
+}
+
+type BundleProfileGroup struct {
+	DistProfile BundleProfileInfo `json:"dist_profile"`
+	DevProfile  BundleProfileInfo `json:"dev_profile"`
+}
+
+type BundleProfileInfo struct {
+	UserCertId         string    `json:"user_cert_id"`
+	ProfileId          string    `json:"profile_id"`
+	ProfileName        string    `json:"profile_name"`
+	ProfileType        string    `json:"profile_type"`
+	ProfileExpireDate  time.Time `json:"profile_expire_date"`
+	ProfileDownloadUrl string    `json:"profile_download_url"`
+}
+
+type AppCertGroupInfo struct {
+	DistCert AppCertInfo `json:"dist_cert"`
+	DevCert  AppCertInfo `json:"dev_cert"`
+	PushCert AppCertInfo `json:"push_cert"`
+}
+
+type AppCertInfo struct {
+	CertId          string    `json:"cert_id"`
+	CertType        string    `json:"cert_type"`
+	CertExpireDate  time.Time `json:"cert_expire_date"`
+	CertDownloadUrl string    `json:"cert_download_url"`
+	PrivKeyUrl      string    `json:"priv_key_url"`
+}
+
+/**
+数据库联查struct
+*/
+
+type APPandCert struct {
+	AppName             string    `json:"app_name"`
+	AppType             string    `json:"app_type"`
+	AppAcountId         string    `json:"app_account_id"`
+	TeamId              string    `json:"team_id"`
+	AccountType         string    `json:"account_type"`
+	AccountVerifyStatus string    `json:"account_verify_status"`
+	AccountVerifyUser   string    `json:"account_verify_user"`
+	CertId              string    `json:"cert_id"`
+	CertType            string    `json:"cert_type"`
+	CertExpireDate      time.Time `json:"cert_expire_date"`
+	CertDownloadUrl     string    `json:"cert_download_url"`
+	PrivKeyUrl          string    `json:"priv_key_url"`
 }
