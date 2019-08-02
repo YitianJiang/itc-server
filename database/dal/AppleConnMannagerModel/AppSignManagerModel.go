@@ -5,6 +5,16 @@ import (
 	"time"
 )
 
+//http request model
+type CreateAppBindAccountRequest struct {
+	AppId    string `json:"app_id" binding:"required"`
+	AppName  string `json:"app_name" binding:"required"`
+	AppType  string `json:"app_type" binding:"required"`
+	UserName string `json:"user_name" binding:"required"`
+	TeamId   string `json:"team_id" binding:"required"`
+}
+
+//db model
 type AppAccountCert struct {
 	gorm.Model
 	AppId               string `gorm:"app_id"                           json:"app_id"`
