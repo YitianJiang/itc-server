@@ -258,6 +258,8 @@ func UploadFile(c *gin.Context) {
 			//	logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",重新上传二进制包出错,%v", err)
 			//及时报警
 			for _, lark_people := range _const.LowLarkPeople {
+				dbDetectModel.ID = dbDetectModelId
+				DetectTaskErrorHandle(dbDetectModel,"2","上传二进制包出错")
 				utils.LarkDingOneInner(lark_people, "上传二进制包出错，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
 			}
 			//}
