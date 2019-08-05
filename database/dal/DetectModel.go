@@ -29,6 +29,7 @@ type DetectStruct struct {
 	ExtraInfo       string `gorm:"column:extra_info"             json:"extraInfo"`    //其他附加信息
 	DetectNoPass    int    `gorm:"column:detect_no_pass"         json:"detectNoPass"` //自查项确认未通过数目
 	SelftNoPass     int    `gorm:"column:self_no_pass"           json:"selfNoPass"`   //自查项确认未通过数目
+	ErrInfo			*string `gorm:"column:err_info"              json:"errInfo"`	//检测任务错误信息收集
 }
 type ExtraStruct struct {
 	CallBackAddr string `json:"callBackAddr"`
@@ -43,6 +44,10 @@ type RetDetectTasks struct {
 	Total   uint
 	NowPage uint
 	Tasks   []DetectStruct
+}
+type ErrorStruct struct {
+	ErrCode 			string 				`json:"errCode"`	//1--检测服务脚本报错，2--检测服务基础报错
+	ErrInfo				string				`json:"errInfo"`
 }
 
 //包检测工具
