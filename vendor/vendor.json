@@ -472,6 +472,18 @@
 			"revisionTime": "2019-07-09T08:03:38Z"
 		},
 		{
+			"checksumSHA1": "rSAYS8fffH0LcwG8dxRmvoDMElM=",
+			"path": "code.byted.org/yuyilei/bot-api/form",
+			"revision": "e919552623b3e0326def94b20c91b695947a6c35",
+			"revisionTime": "2019-07-19T02:59:05Z"
+		},
+		{
+			"checksumSHA1": "ehZpAh6JasxaujBfxdzmq1RGnhY=",
+			"path": "code.byted.org/yuyilei/bot-api/service",
+			"revision": "e919552623b3e0326def94b20c91b695947a6c35",
+			"revisionTime": "2019-07-19T02:59:05Z"
+		},
+		{
 			"checksumSHA1": "vhI3tzO5WLWc6ZHmjxR00g5nkPU=",
 			"path": "github.com/astaxie/beego/logs",
 			"revision": "32ee728078c84c28f2642c70745afc8f6830044d",
