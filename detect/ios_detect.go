@@ -800,11 +800,18 @@ func middleDataDeal(taskId, toolId, aId int) (bool, bool) {
 }
 
 func GetIOSSelfNum(appid, taskId int) (bool, int) {
-	url := "https://itc.bytedance.net/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
-	//url := "http://10.224.14.220:6789/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
-	resp, err := http.Get(url)
+	//url := "https://itc.bytedance.net/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
+	url := "http://10.224.14.220:6789/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
+	client := &http.Client{}
+	reqest, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		logs.Error("获取iOS自查项失败！", err.Error())
+		logs.Error("自查个数获取中构造request出错！", err.Error())
+		return false, 0
+	}
+	reqest.Header.Add("Authorization", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoieWluemhpaG9uZyJ9.iaNlMfXWMjVi4i5eRsEeOKdJUkH20GiFbEwDk8TC8AE")
+	resp, err := client.Do(reqest)
+	if err != nil {
+		logs.Error("访问iOS自查项返回失败！", err.Error())
 		return false, 0
 	}
 	defer resp.Body.Close()
