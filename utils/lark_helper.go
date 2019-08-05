@@ -196,7 +196,17 @@ const (
 	GET_Tenant_Access_Token_URL = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal/"
 	APP_ID                      = "cli_9a2d72678bb8d102"
 	APP_SECRET                  = "7aprfnGu8mU3KOTqV4RiSjhIde2gsvAM"
+	IOSCertificateBotAppId      = "cli_9dca86fa50ee5101"
+	IOSCertificateBotAppSecret  = "XbENqXBQGJeIYaU3oLk3jgdJC5IiuEAW"
+	CreateCertPrincipal         = "zhangmengqi.muki@bytedance.com"
 )
+
+var CreateCertMessage = "请根据配置信息登录Apple后台手动生成证书并上传至itc证书管理后台"
+var CreateCertAccountHeader = "账号名: "
+var CreateCertTypeHeader = "证书类型: "
+var CsrHeader = "CSR文件: "
+var CsrText = "点击链接下载"
+var GrayHeaderStyle = "color: gray"
 
 func CallLarkAPI(url string, token string, paramsIn interface{}, paramsOut interface{}) {
 	bodyByte, _ := json.Marshal(paramsIn)
