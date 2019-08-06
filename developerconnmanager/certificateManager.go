@@ -8,6 +8,8 @@ import (
 	"code.byted.org/gopkg/context"
 	"code.byted.org/gopkg/logs"
 	"code.byted.org/gopkg/tos"
+	"code.byted.org/yuyilei/bot-api/form"
+	"code.byted.org/yuyilei/bot-api/service"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -304,11 +306,55 @@ func InsertCertificate(c *gin.Context) {
 	if !checkResult {
 		return
 	}
-	tokenString := GetTokenStringByTeamId(body.TeamId)
 	strs := strings.Split(body.CertType, "_")
 	certTypeSufix := strs[len(strs)-1]
+
+	if body.AccountType == "Enterprise" {
+		//在数据库插入证书记录
+		var certInfo devconnmanager.CertInfo
+		certInfo.TeamId = body.TeamId
+		certInfo.AccountName = body.AccountName
+		certInfo.CertName = body.CertName
+		//todo 证书上传后是否可以解析到certType???
+		certInfo.CertType = body.CertType
+		if certTypeSufix == "DEVELOPMENT" {
+			certInfo.PrivKeyUrl = _const.TOS_PRIVATE_KEY_URL_DEV
+			certInfo.CsrFileUrl = _const.TOS_CSR_FILE_URL_DEV
+		}
+		if certTypeSufix == "DISTRIBUTION" {
+			certInfo.PrivKeyUrl = _const.TOS_PRIVATE_KEY_URL_DIST
+			certInfo.CsrFileUrl = _const.TOS_CSR_FILE_URL_DIST
+		}
+		dbResult := devconnmanager.InsertCertInfo(certInfo)
+		if !dbResult {
+			c.JSON(http.StatusOK, gin.H{
+				"data":      certInfo,
+				"errorCode": 9,
+				"errorInfo": "往数据库中插入证书信息失败",
+			})
+			return
+		}
+		//组装lark消息 发送给负责人（用户指定or系统默认）
+		botService := service.BotService{}
+		botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
+		if body.CertPrincipal == "" {
+			body.CertPrincipal = utils.CreateCertPrincipal
+		}
+		err := sendNodeAlertToLark(certInfo.AccountName, certInfo.CertType, certInfo.CsrFileUrl, body.CertPrincipal, &botService)
+		utils.RecordError("发送新建证书提醒lark失败：", err)
+
+		FilterCert(&certInfo)
+		c.JSON(http.StatusOK, gin.H{
+			"data":      certInfo,
+			"errorCode": 0,
+			"errorInfo": "",
+		})
+		return
+	}
+
+	tokenString := GetTokenStringByTeamId(body.TeamId)
 	creCertResponse := CreateCertInApple(tokenString, body.CertType, certTypeSufix)
-	if creCertResponse == nil ||creCertResponse.Data.Attributes.CertificateContent==""{
+	if creCertResponse == nil || creCertResponse.Data.Attributes.CertificateContent == "" {
 		logs.Error("从苹果获取证书失败")
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": 6,
@@ -367,6 +413,89 @@ func InsertCertificate(c *gin.Context) {
 		"errorCode": 0,
 		"errorInfo": "",
 	})
+}
+
+func sendNodeAlertToLark(accountName string, certType string, csrUrl string, principal string, botService *service.BotService) error {
+	cardMessage := generateSendMessageForm(accountName, certType, csrUrl)
+	//发送消息
+	email := principal
+	if !strings.Contains(principal, "@bytedance.com") {
+		email += "@bytedance.com"
+	}
+	cardMessage.Email = &email
+	sendMsgResp, err := botService.SendMessage(*cardMessage)
+	logs.Info("SendCardMessage response= %v", sendMsgResp)
+	return err
+}
+
+func generateSendMessageForm(accountName string, certType string, csrUrl string) *form.SendMessageForm {
+	cardInfoFormArray := generateCardInfoOfCreateCert(accountName, certType, csrUrl)
+	cardHeaderTitle := "iOS证书管理通知"
+	cardForm := form.GenerateCardForm(nil, getCardHeader(cardHeaderTitle), *cardInfoFormArray, nil)
+	cardMessageContent := form.GenerateCardMessageContent(cardForm)
+	cardMessage, err := form.GenerateMessage("interactive", cardMessageContent)
+	utils.RecordError("card信息生成出错: ", err)
+	return cardMessage
+}
+
+func getCardHeader(headerTitle string) *form.CardElementForm {
+	// 生成cardHeader
+	imageColor := "orange"
+	cardHeader, err := form.GenerateCardHeader(&headerTitle, nil, &imageColor, nil)
+	utils.RecordError("生成cardHeader错误: ", err)
+
+	return cardHeader
+}
+
+func generateCardInfoOfCreateCert(accountName string, certType string, csrUrl string) *[][]form.CardElementForm {
+	var cardFormArray [][]form.CardElementForm
+
+	//插入提示信息
+	messageText := utils.CreateCertMessage
+	messageForm := form.GenerateTextTag(&messageText, false, nil)
+	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
+
+	//插入账号信息
+	var accountFormList []form.CardElementForm
+
+	accountHeader := utils.CreateCertAccountHeader
+	accountHeaderForm := form.GenerateTextTag(&accountHeader, false, nil)
+	accountHeaderForm.Style = &utils.GrayHeaderStyle
+	accountFormList = append(accountFormList, *accountHeaderForm)
+
+	accountNameForm := form.GenerateTextTag(&accountName, false, nil)
+	accountFormList = append(accountFormList, *accountNameForm)
+
+	cardFormArray = append(cardFormArray, accountFormList)
+
+	//插入证书类型信息
+	var certTypeFormList []form.CardElementForm
+
+	certTypeHeader := utils.CreateCertTypeHeader
+	certTypeHeaderForm := form.GenerateTextTag(&certTypeHeader, false, nil)
+	certTypeHeaderForm.Style = &utils.GrayHeaderStyle
+	certTypeFormList = append(certTypeFormList, *certTypeHeaderForm)
+
+	certTypeTextForm := form.GenerateTextTag(&certType, false, nil)
+	certTypeFormList = append(certTypeFormList, *certTypeTextForm)
+
+	cardFormArray = append(cardFormArray, certTypeFormList)
+
+	//插入csr文件url信息
+	var csrInfoFormList []form.CardElementForm
+
+	csrHeader := utils.CsrHeader
+	csrHeaderForm := form.GenerateTextTag(&csrHeader, false, nil)
+	csrHeaderForm.Style = &utils.GrayHeaderStyle
+	csrInfoFormList = append(csrInfoFormList, *csrHeaderForm)
+
+	csrText := utils.CsrText
+	csrUrlForm := form.GenerateATag(&csrText, false, csrUrl)
+	csrInfoFormList = append(csrInfoFormList, *csrUrlForm)
+
+	cardFormArray = append(cardFormArray, csrInfoFormList)
+
+	return &cardFormArray
 }
 
 func FilterCert(certInfo *devconnmanager.CertInfo) {
@@ -517,7 +646,7 @@ func DeleteCertificate(c *gin.Context) {
 func CheckCertExpireDate(c *gin.Context) {
 	logs.Info("检查过期证书")
 	expiredCertInfos := devconnmanager.QueryExpiredCertInfos()
-	if expiredCertInfos==nil{
+	if expiredCertInfos == nil {
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": 1,
 			"errorInfo": "查询将要过期的证书信息失败",
