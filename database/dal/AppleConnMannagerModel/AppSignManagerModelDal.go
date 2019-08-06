@@ -67,6 +67,24 @@ func DeleteAppAccountCert(queryData map[string]interface{}) error {
 }
 
 /**
+更新操作
+ */
+func UpdateAppAccountCert(queryData map[string]interface{},item AppAccountCert) error{
+	conn, err := database.GetConneection()
+	if err != nil {
+		utils.RecordError("Get DB Connection Failed: ", err)
+		return err
+	}
+	defer conn.Close()
+	db := conn.Table(AppAccountCert{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	if err1 := db.Where(queryData).Update(&item).Error; err1 != nil {
+		utils.RecordError("删除 tt_app_account_cert失败，删除条件："+fmt.Sprint(queryData)+",errInfo：", err1)
+		return err1
+	}
+	return nil
+}
+
+/**
 查询操作，
 返回nil---查询fail，返回空数组--无相关数据
 */
@@ -80,7 +98,7 @@ func QueryAppBundleProfiles(queryData map[string]interface{}) *[]AppBundleProfil
 	db := conn.Table(AppBundleProfiles{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var result = make([]AppBundleProfiles, 0)
 	if err := db.Where(queryData).Find(&result).Error; err != nil {
-		utils.RecordError("查询 tt_app_account_cert失败，查询条件："+fmt.Sprint(queryData)+",errInfo：", err)
+		utils.RecordError("查询 tt_app_bundleId_profiles失败，查询条件："+fmt.Sprint(queryData)+",errInfo：", err)
 		return nil
 	}
 	return &result
@@ -99,7 +117,7 @@ func DeleteAppBundleProfiles(queryData map[string]interface{}) error {
 	db := conn.Table(AppBundleProfiles{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var t AppBundleProfiles
 	if err1 := db.Where(queryData).Delete(&t).Error; err1 != nil {
-		utils.RecordError("删除 tt_app_account_cert失败，删除条件："+fmt.Sprint(queryData)+",errInfo：", err1)
+		utils.RecordError("删除 tt_app_bundleId_profiles失败，删除条件："+fmt.Sprint(queryData)+",errInfo：", err1)
 		return err1
 	}
 	return nil

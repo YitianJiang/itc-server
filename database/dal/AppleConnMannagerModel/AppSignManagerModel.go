@@ -19,6 +19,13 @@ type DeleteAppAllInfoRequest struct {
 	AppName  string `form:"app_name" binding:"required"`
 }
 
+type AppChangeBindCertRequest struct {
+	AccountCertId int `json:"account_cert_id" binding:"required"`
+	CertId        string `json:"cert_id" binding:"required"`
+	CertType      string `json:"cert_type" binding:"required"`
+	UserName      string `json:"user_name" binding:"required"`
+}
+
 //db model
 type AppAccountCert struct {
 	gorm.Model

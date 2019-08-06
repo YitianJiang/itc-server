@@ -101,7 +101,8 @@ func GetBundleIdCapabilitiesInfo(c *gin.Context){
 //
 //}
 
-func DeleteAppAllInfoFromDB (c *gin.Context){
+func DeleteAppAllInfoFromDB(c *gin.Context){
+	logs.Info("在DB中删除该app关联的所有信息")
 	var requestData devconnmanager.DeleteAppAllInfoRequest
 	bindJsonError := c.ShouldBindQuery(&requestData)
 	utils.RecordError("绑定post请求body出错：%v", bindJsonError)
@@ -113,13 +114,13 @@ func DeleteAppAllInfoFromDB (c *gin.Context){
 	dbError := devconnmanager.DeleteAppAccountCert(conditionDB)
 	utils.RecordError("删除tt_app_account_cert表数据出错：%v", dbError)
 	if dbError != nil {
-		utils.AssembleJsonResponse(c, http.StatusBadRequest, "删除tt_app_account_cert表数据出错", "failed")
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "删除tt_app_account_cert表数据出错", "failed")
 		return
 	}
 	dbErrorInfo := devconnmanager.DeleteAppBundleProfiles(conditionDB)
 	utils.RecordError("删除tt_app_account_cert表数据出错：%v", dbErrorInfo)
 	if dbErrorInfo != nil {
-		utils.AssembleJsonResponse(c, http.StatusBadRequest, "删除tt_app_bundleId_profiles表数据出错", "failed")
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "删除tt_app_bundleId_profiles表数据出错", "failed")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -147,4 +148,39 @@ func CreateAppBindAccount(c *gin.Context) {
 	//todo 根据app_id和app_name执行update，如果返回的操作行数为0，则插入数据
 	//todo 等待kani提供根据资源和权限获取人员信息的接口，根据该接口获取需要发送审批消息的用户list
 	//todo lark消息生成并批量发送
+}
+
+//接口绑定\换绑签名证书接口
+func AppBindCert(c *gin.Context){
+	logs.Info("对app进行证书换绑")
+	var requestData devconnmanager.AppChangeBindCertRequest
+	bindJsonError := c.ShouldBindJSON(&requestData)
+	utils.RecordError("绑定post请求body出错：%v", bindJsonError)
+	if bindJsonError != nil {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
+		return
+	}
+	conditionDB := map[string]interface{}{"id":requestData.AccountCertId}
+	var appCertChange devconnmanager.AppAccountCert
+	appCertChange.UserName = requestData.UserName
+	if requestData.CertType == _const.CERT_TYPE_IOS_DEV || requestData.CertType == _const.CERT_TYPE_MAC_DEV {
+		appCertChange.DevCertId = requestData.CertId
+	}else if requestData.CertType == _const.CERT_TYPE_IOS_DIST || requestData.CertType == _const.CERT_TYPE_MAC_DIST {
+		appCertChange.DistCertId = requestData.CertId
+	}else {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数正证书类型不正确", "failed")
+		return
+	}
+	dbError := devconnmanager.UpdateAppAccountCert(conditionDB,appCertChange)
+	utils.RecordError("更新tt_app_account_cert表数据出错：%v", dbError)
+	if dbError != nil {
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "更新tt_app_account_cert表数据出错", "failed")
+		return
+	}else {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "update success",
+			"errorCode": 0,
+		})
+		return
+	}
 }

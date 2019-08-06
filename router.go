@@ -169,6 +169,10 @@ func InitRouter(r *ginex.Engine) {
 		appSignManager.GET("/getCapabilitiesInfo", developerconnmanager.GetBundleIdCapabilitiesInfo)
 		//appSignManager.GET("/appDetailInfoGet", developerconnmanager.GetAppDetailInfo)
 		appSignManager.GET("/createAppBindAccount", developerconnmanager.CreateAppBindAccount)
+		//接口删除app相关所有信息
 		appSignManager.GET("/deleteAppAllInfo",developerconnmanager.DeleteAppAllInfoFromDB)
+
+		//接口绑定\换绑签名证书接口
+		appSignManager.POST("/appBindCert",developerconnmanager.AppBindCert)
 	}
 }
