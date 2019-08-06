@@ -91,13 +91,13 @@ func CheckAdmin(perms []string) bool {
 	return checkResult
 }
 
-func TransferValues2AccInfoWithoutAuth(accountInfo *AccountInfo)*AccInfoWithoutAuth{
+func TransferValues2AccInfoWithoutAuth(accountInfo *AccountInfo,perms []string)*AccInfoWithoutAuth{
 	accInfoWithoutAuth:=AccInfoWithoutAuth{}
 	accInfoWithoutAuth.AccountType=accountInfo.AccountType
 	accInfoWithoutAuth.AccountName=accountInfo.AccountName
 	accInfoWithoutAuth.UserName=accountInfo.UserName
 	accInfoWithoutAuth.TeamId=accountInfo.TeamId
-	accInfoWithoutAuth.PermissionAction = []string{}
+	accInfoWithoutAuth.PermissionAction = perms
 	return &accInfoWithoutAuth
 }
 
@@ -132,7 +132,7 @@ func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]interface{} {
 		perms := resPerms.Data[strings.ToLower(accountInfo.TeamId)+"_space_account"]
 		checkResult := CheckAdmin(perms)
 		if !checkResult {
-			accInfoWithoutAuth:=TransferValues2AccInfoWithoutAuth(&accountInfo)
+			accInfoWithoutAuth:=TransferValues2AccInfoWithoutAuth(&accountInfo,perms)
 			accountsInfo = append(accountsInfo, accInfoWithoutAuth)
 		} else {
 			accInfoWithAuth:=TransferValues2AccInfoWithAuth(&accountInfo,perms)
