@@ -8,6 +8,7 @@ import (
 	"code.byted.org/gopkg/context"
 	"code.byted.org/gopkg/logs"
 	"code.byted.org/gopkg/tos"
+	"code.byted.org/yuyilei/bot-api/service"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -456,48 +457,85 @@ func DeleteCertificate(c *gin.Context) {
 	condition["cert_id"] = delCertRequest.CertId
 	appList := devconnmanager.QueryEffectAppList(delCertRequest.CertId, delCertRequest.CertType)
 	if len(appList) == 0 {
-		tokenString := GetTokenStringByTeamId(delCertRequest.TeamId)
-		delResult := DeleteCertInApple(tokenString, delCertRequest.CertId)
-		if delResult == -2 {
+		if delCertRequest.AccType == "Enterprise" {
+			//向负责人发送lark消息
+			abot := service.BotService{}
+			abot.SetAppIdAndAppSecret(utils.APP_ID,utils.APP_SECRET)
+
+
+
+
+
+			tosFilePath := "appleConnectFile/" + string(delCertRequest.TeamId) + "/" + delCertRequest.CertType + "/" + delCertRequest.CertId + "/" + DealCertName(delCertRequest.CertName) + ".cer"
+			delResultBool := DeleteTosCert(tosFilePath)
+			if !delResultBool {
+				c.JSON(http.StatusOK, gin.H{
+					"message":   "delete fail",
+					"errorCode": 8,
+					"errorInfo": "删除tos上的证书失败",
+				})
+				return
+			}
+			delResultBool = devconnmanager.DeleteCertInfo(condition)
+			if !delResultBool {
+				c.JSON(http.StatusOK, gin.H{
+					"message":   "delete fail",
+					"errorCode": 9,
+					"errorInfo": "从数据库中删除cert_id对应的证书失败",
+				})
+				return
+			}
 			c.JSON(http.StatusOK, gin.H{
-				"message":   "delete fail",
-				"errorCode": 6,
-				"errorInfo": "在苹果开发者网站删除对应证书失败,失败原因为不存在该certId对应的证书",
+				"message":   "delete success",
+				"errorCode": 0,
+				"errorInfo": "",
 			})
-			return
-		}
-		if delResult == -1 {
+
+		}else {
+			//原有逻辑---Apple open api
+			tokenString := GetTokenStringByTeamId(delCertRequest.TeamId)
+			delResult := DeleteCertInApple(tokenString, delCertRequest.CertId)
+			if delResult == -2 {
+				c.JSON(http.StatusOK, gin.H{
+					"message":   "delete fail",
+					"errorCode": 6,
+					"errorInfo": "在苹果开发者网站删除对应证书失败,失败原因为不存在该certId对应的证书",
+				})
+				return
+			}
+			if delResult == -1 {
+				c.JSON(http.StatusOK, gin.H{
+					"message":   "delete fail",
+					"errorCode": 7,
+					"errorInfo": "在苹果开发者网站删除对应证书失败",
+				})
+				return
+			}
+			tosFilePath := "appleConnectFile/" + string(delCertRequest.TeamId) + "/" + delCertRequest.CertType + "/" + delCertRequest.CertId + "/" + DealCertName(delCertRequest.CertName) + ".cer"
+			delResultBool := DeleteTosCert(tosFilePath)
+			if !delResultBool {
+				c.JSON(http.StatusOK, gin.H{
+					"message":   "delete fail",
+					"errorCode": 8,
+					"errorInfo": "删除tos上的证书失败",
+				})
+				return
+			}
+			delResultBool = devconnmanager.DeleteCertInfo(condition)
+			if !delResultBool {
+				c.JSON(http.StatusOK, gin.H{
+					"message":   "delete fail",
+					"errorCode": 9,
+					"errorInfo": "从数据库中删除cert_id对应的证书失败",
+				})
+				return
+			}
 			c.JSON(http.StatusOK, gin.H{
-				"message":   "delete fail",
-				"errorCode": 7,
-				"errorInfo": "在苹果开发者网站删除对应证书失败",
+				"message":   "delete success",
+				"errorCode": 0,
+				"errorInfo": "",
 			})
-			return
 		}
-		tosFilePath := "appleConnectFile/" + string(delCertRequest.TeamId) + "/" + delCertRequest.CertType + "/" + delCertRequest.CertId + "/" + DealCertName(delCertRequest.CertName) + ".cer"
-		delResultBool := DeleteTosCert(tosFilePath)
-		if !delResultBool {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "delete fail",
-				"errorCode": 8,
-				"errorInfo": "删除tos上的证书失败",
-			})
-			return
-		}
-		delResultBool = devconnmanager.DeleteCertInfo(condition)
-		if !delResultBool {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "delete fail",
-				"errorCode": 9,
-				"errorInfo": "从数据库中删除cert_id对应的证书失败",
-			})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "delete success",
-			"errorCode": 0,
-			"errorInfo": "",
-		})
 	} else {
 		userNames := devconnmanager.QueryUserNameByAppName(appList)
 		var appListStr string

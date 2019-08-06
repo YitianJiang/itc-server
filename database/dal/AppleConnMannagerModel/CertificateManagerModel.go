@@ -71,10 +71,12 @@ type GetPermsResponse struct {
 }
 
 type DelCertRequest struct {
-	CertId   string  `form:"cert_id"        binding:"required"`
-	CertName string  `form:"cert_name"      binding:"required"`
-	TeamId   string  `form:"team_id"        binding:"required"`
-	CertType string  `form:"cert_type"      binding:"required"`
+	CertId   			string  `form:"cert_id"        binding:"required"`
+	CertName 			string  `form:"cert_name"      binding:"required"`
+	TeamId   			string  `form:"team_id"        binding:"required"`
+	CertType 		   	string  `form:"cert_type"      binding:"required"`
+	AccountName        	string  `form:"account_name"   binding:"required"`
+	AccType  			string  `form:"account_type"`
 }
 
 type QueryCertRequest struct {
