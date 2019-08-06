@@ -87,23 +87,6 @@ func ReqToAppleGetInfo(url,tokenString string,obj interface{}) bool{
 	}
 }
 
-//type BundleIDCapabilitiesInfo struct {
-//	ICloudInfo string `json:"icloud_action" binding:"required"`
-//	PushCapInfo []string `json:"push_list"`
-//}
-//func AssertBunldIDInfo(c *gin.Context){
-//	logs.Info("确认bundle id的能力")
-//	var requestData BundleIDCapabilitiesInfo
-//	bindQueryError := c.ShouldBindJSON(&requestData)
-//	utils.RecordError("请求参数绑定错误: ", bindQueryError)
-//	c.JSON(http.StatusOK, gin.H{
-//		"message":   "success",
-//		"errorCode": 0,
-//		"data_push": requestData.PushCapInfo,
-//		"data":requestData.ICloudInfo,
-//	})
-//}
-
 //账号人员管理相关开发
 func UserRolesGetInfo(c *gin.Context){
 	logs.Info("返回角色列表以供前端筛选")
