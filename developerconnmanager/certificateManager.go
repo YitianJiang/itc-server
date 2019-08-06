@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"code.byted.org/clientQA/itc-server/const"
 	devconnmanager "code.byted.org/clientQA/itc-server/database/dal/AppleConnMannagerModel"
+	"code.byted.org/clientQA/itc-server/detect"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/context"
 	"code.byted.org/gopkg/logs"
@@ -15,6 +16,8 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
+	"math"
+	"mime/multipart"
 	"net/http"
 	"strings"
 	"time"
@@ -315,7 +318,6 @@ func InsertCertificate(c *gin.Context) {
 		certInfo.TeamId = body.TeamId
 		certInfo.AccountName = body.AccountName
 		certInfo.CertName = body.CertName
-		//todo 证书上传后是否可以解析到certType???
 		certInfo.CertType = body.CertType
 		if certTypeSufix == "DEVELOPMENT" {
 			certInfo.PrivKeyUrl = _const.TOS_PRIVATE_KEY_URL_DEV
@@ -325,7 +327,7 @@ func InsertCertificate(c *gin.Context) {
 			certInfo.PrivKeyUrl = _const.TOS_PRIVATE_KEY_URL_DIST
 			certInfo.CsrFileUrl = _const.TOS_CSR_FILE_URL_DIST
 		}
-		dbResult := devconnmanager.InsertCertInfo(certInfo)
+		dbResult := devconnmanager.InsertCertInfo(&certInfo)
 		if !dbResult {
 			c.JSON(http.StatusOK, gin.H{
 				"data":      certInfo,
@@ -398,7 +400,7 @@ func InsertCertificate(c *gin.Context) {
 		return
 	}
 	certInfo.CertDownloadUrl = _const.TOS_BUCKET_URL + tosFilePath
-	dbResult := devconnmanager.InsertCertInfo(certInfo)
+	dbResult := devconnmanager.InsertCertInfo(&certInfo)
 	if !dbResult {
 		c.JSON(http.StatusOK, gin.H{
 			"data":      certInfo,
@@ -501,7 +503,9 @@ func generateCardInfoOfCreateCert(accountName string, certType string, csrUrl st
 func FilterCert(certInfo *devconnmanager.CertInfo) {
 	certInfo.TeamId = ""
 	certInfo.AccountName = ""
-	certInfo.CsrFileUrl = ""
+	if certInfo.CertDownloadUrl != "" {
+		certInfo.CsrFileUrl = ""
+	}
 }
 
 func DeleteCertInApple(tokenString string, certId string) int {
@@ -793,6 +797,113 @@ func UploadPrivKey(c *gin.Context) {
 		"errorCode": 0,
 		"errorInfo": "",
 	})
+}
+
+func UploadCertificate(c *gin.Context) {
+	certFileByteInfo, certFileFullName := getFileFromRequest(c, "cert_file")
+	if len(certFileByteInfo) == 0 {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "缺少file参数，读取file失败", "failed")
+		return
+	}
+
+	splits := strings.Split(certFileFullName, ".")
+	if len(splits) < 2 {
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "文件名解析失败", "failed")
+		return
+	}
+	certFileName := splits[0]
+	certFileType := "." + splits[len(splits)-1]
+
+	var requestData devconnmanager.UploadCertRequest
+	bindError := c.ShouldBind(&requestData)
+	utils.RecordError("绑定post请求body出错：%v", bindError)
+	if bindError != nil {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败，查看是否缺少参数：", "failed")
+		return
+	}
+
+	certInfoInputs := make(map[string]interface{})
+	if requestData.CertName != "" {
+		certInfoInputs["cert_name"] = requestData.CertName
+	} else {
+		certInfoInputs["cert_name"] = certFileName
+	}
+	certInfoInputs["cert_id"] = requestData.CertId
+
+	//解析证书获得过期时间
+	expireTime := getCertExpireTime(certFileFullName, certFileType, certFileByteInfo, requestData.UserName)
+	certInfoInputs["cert_expire_date"] = expireTime
+	logs.Info("exp:", expireTime)
+
+	tosFilePath := "appleConnectFile/" + string(requestData.TeamId) + "/" + requestData.CertType + "/" + requestData.CertId + "/" + certFileName
+	uploadResult := UploadTos(certFileByteInfo, tosFilePath)
+	if !uploadResult {
+		utils.RecordError("上传证书文件到tos失败：", nil)
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "上传证书文件到tos失败", "failed")
+		return
+	}
+	certUrl := _const.TOS_BUCKET_URL + tosFilePath
+	certInfoInputs["cert_download_url"] = certUrl
+
+	condition := make(map[string]interface{})
+	condition["id"] = requestData.Id
+
+	//logs.Info("%v",condition)
+	//logs.Info("%v",certInfoInputs)
+	certInfo := devconnmanager.UpdateCertInfoAfterUpload(condition, certInfoInputs)
+
+	utils.AssembleJsonResponse(c, _const.SUCCESS, "success", certInfo)
+}
+
+func getFileFromRequest(c *gin.Context, paramName string) ([]byte, string) {
+	file, header, _ := c.Request.FormFile(paramName)
+
+	if header == nil {
+		utils.RecordError("没有文件上传", nil)
+		return nil, ""
+	}
+	logs.Info("上传File Name：" + header.Filename)
+	fileByteInfo, err := ioutil.ReadAll(file)
+	if err != nil {
+		utils.RecordError("读取上传文件失败", nil)
+		return nil, ""
+	}
+	return fileByteInfo, header.Filename
+}
+
+func getCertExpireTime(certFileName string, certFileType string, certFileBytes []byte, userName string) *time.Time {
+	getCertExpUrl := "http://" + detect.DETECT_URL_PRO + "/query_certificate_expire_date" //过期日期访问地址
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	fileWriter, err := writer.CreateFormFile("certificate", certFileName)
+	utils.RecordError("访问过期日期POST请求create form file错误！", err)
+
+	_, err = fileWriter.Write(certFileBytes)
+	utils.RecordError("访问过期日期POST请求复制文件错误！", err)
+
+	_ = writer.WriteField("username", userName)
+	_ = writer.WriteField("type", certFileType)
+	contentType := writer.FormDataContentType()
+	err = writer.Close()
+	utils.RecordError("关闭writer出错！！", err)
+
+	response, err := http.Post(getCertExpUrl, contentType, body)
+	utils.RecordError("获取证书过期信息失败！", err)
+
+	responseByte, err := ioutil.ReadAll(response.Body)
+
+	responseMap := make(map[string]interface{})
+	err = json.Unmarshal(responseByte, &responseMap)
+	utils.RecordError("证书过期信息结果解析失败！", err)
+
+	if _, ok := responseMap["expire_time"]; !ok {
+		return nil
+	}
+
+	expTimeStamp := int64(math.Floor(responseMap["expire_time"].(float64)))
+	exp := time.Unix(expTimeStamp, 0)
+
+	return &exp
 }
 
 func LarkNotifyUsers(groupName string, userNames []string, message string) bool {
