@@ -14,6 +14,11 @@ type CreateAppBindAccountRequest struct {
 	TeamId   string `json:"team_id" binding:"required"`
 }
 
+type DeleteAppAllInfoRequest struct {
+	AppId    string `form:"app_id" binding:"required"`
+	AppName  string `form:"app_name" binding:"required"`
+}
+
 //db model
 type AppAccountCert struct {
 	gorm.Model
@@ -26,19 +31,19 @@ type AppAccountCert struct {
 	AccountVerifyUser   string `gorm:"column:account_verify_user"       json:"account_verify_user"`
 	DevCertId           string `gorm:"column:dev_cert_id"               json:"dev_cert_id"`
 	DistCertId          string `gorm:"column:dist_cert_id"              json:"dist_cert_id"`
-	PushCertId          string `gorm:"column:push_cert_id"              json:"push_cert_id"`
 }
 
-type AppBoundleProfiles struct {
+type AppBundleProfiles struct {
 	gorm.Model
-	AppId              string `json:"app_id"`
-	AppName            string `json:"app_name"`
-	BundleidId         string `json:"bundleid_id"`
-	BundleidIsdel      string `json:"bundleid_isdel"`
-	DevProfileId       string `json:"dev_profile_id"`
-	UserName           string `json:"user_name"`
-	DistAdhocProfileId string `json:"dist_adhoc_profile_id"`
-	DistProfileId      string `json:"dist_profile_id"`
+	AppId              string `gorm:"app_id"                           json:"app_id"`
+	AppName            string `gorm:"column:app_name"                  json:"app_name"`
+	BundleidId         string `gorm:"column:bundleid_id"               json:"bundleid_id"`
+	BundleidIsdel      string `gorm:"column:bundleid_isdel"            json:"bundleid_isdel"`
+	PushCertId         string `gorm:"column:push_cert_id"              json:"push_cert_id"`
+	DevProfileId       string `gorm:"column:dev_profile_id"            json:"dev_profile_id"`
+	UserName           string `gorm:"column:user_name"                 json:"user_name"`
+	DistAdhocProfileId string `gorm:"column:dist_adhoc_profile_id"     json:"dist_adhoc_profile_id"`
+	DistProfileId      string `gorm:"column:dist_profile_id"           json:"dist_profile_id"`
 }
 
 type AppleBundleId struct {
@@ -85,7 +90,7 @@ func (AppAccountCert) TableName() string {
 	return "tt_app_account_cert"
 }
 
-func (AppBoundleProfiles) TableName() string {
+func (AppBundleProfiles) TableName() string {
 	return "tt_app_bundleId_profiles"
 }
 

@@ -129,7 +129,6 @@ func InitRouter(r *ginex.Engine) {
 	//todo 巩锐开始开发证书体系监管后台API
 	connapi := r.Group("/v1/devConnManage")
 	{
-		//connapi.GET("/bundleIdSearch",developerconnmanager.TestAskBundleId)
 		connapi.GET("/getBundleIdsList", developerconnmanager.GetBunldIdsObj)
 		connapi.GET("/testPrivatePrint", developerconnmanager.ParsePrivateKey)
 		connapi.GET("/createProvProfile", developerconnmanager.Test64DecodeToString)
@@ -153,8 +152,6 @@ func InitRouter(r *ginex.Engine) {
 	}
 	usermanagerapi := r.Group("/v1/userManage")
 	{
-		usermanagerapi.GET("/getCapabilitiesInfo", developerconnmanager.GetBundleIdCapabilitiesInfo)
-		//usermanagerapi.POST("/assertBunldCapabilities",developerconnmanager.AssertBunldIDInfo)
 		//账号人员管理相关开发
 		usermanagerapi.GET("/userRolesGet", developerconnmanager.UserRolesGetInfo)
 		usermanagerapi.GET("/userInfoGet", developerconnmanager.UserDetailInfoGet)
@@ -169,7 +166,9 @@ func InitRouter(r *ginex.Engine) {
 
 	appSignManager := r.Group("/v1/appleConnManage")
 	{
-		appSignManager.GET("/appDetailInfoGet", developerconnmanager.GetAppDetailInfo)
+		appSignManager.GET("/getCapabilitiesInfo", developerconnmanager.GetBundleIdCapabilitiesInfo)
+		//appSignManager.GET("/appDetailInfoGet", developerconnmanager.GetAppDetailInfo)
 		appSignManager.GET("/createAppBindAccount", developerconnmanager.CreateAppBindAccount)
+		appSignManager.GET("/deleteAppAllInfo",developerconnmanager.DeleteAppAllInfoFromDB)
 	}
 }
