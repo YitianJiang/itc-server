@@ -278,3 +278,17 @@ func CheckCertExit(teamId string) int{
 	}
 	return 0
 }
+
+func UpdateCertInfoByMap(condition map[string]interface{},updateInfo map[string]interface{}) bool {
+	conn, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Get DB Connection Failed: ", err)
+		return false
+	}
+	defer conn.Close()
+	if err= conn.LogMode(_const.DB_LOG_MODE).Table(CertInfo{}.TableName()).Unscoped().Where(condition).Update(updateInfo).Error;err!=nil{
+		logs.Error("Update DB Failed:", err)
+		return false
+	}
+	return true
+}
