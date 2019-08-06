@@ -17,6 +17,15 @@ type CertInfo struct {
 	OpUser 				string		`gorm:"column:op_user"                 json:"op_user"`
 }
 
+type UploadCertRequest struct {
+	TeamId   string `form:"team_id"       binding:"required"`
+	CertName string `form:"cert_name"`
+	CertId   string `form:"cert_id"       binding:"required"`
+	CertType string `form:"cert_type"     binding:"required"`
+	Id       string `form:"ID"            binding:"required"`
+	UserName string `form:"user_name"     binding:"required"`
+}
+
 type CreCertResponse struct {
 	Data                OutLayer        `json:"data"`
 	Links               Links           `json:"links"`
