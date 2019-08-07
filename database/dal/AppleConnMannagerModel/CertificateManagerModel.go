@@ -14,6 +14,7 @@ type CertInfo struct {
 	PrivKeyUrl      string   `gorm:"column:priv_key_url"            json:"priv_key_url"`
 	CsrFileUrl      string   `gorm:"column:csr_file_url"            json:"csr_file_url,omitempty"`
 	EffectAppList   []string `gorm:"-"                              json:"effect_app_list,omitempty"`
+	OpUser          string   `gorm:"column:op_user"                 json:"op_user"`
 }
 
 type UploadCertRequest struct {
@@ -82,10 +83,23 @@ type GetPermsResponse struct {
 }
 
 type DelCertRequest struct {
-	CertId   string `form:"cert_id"        binding:"required"`
-	CertName string `form:"cert_name"      binding:"required"`
-	TeamId   string `form:"team_id"        binding:"required"`
-	CertType string `form:"cert_type"      binding:"required"`
+	ID           string `form:"ID"             binding:"required"`
+	CertId       string `form:"cert_id"`
+	CertName     string `form:"cert_name"`
+	TeamId       string `form:"team_id"        binding:"required"`
+	CertType     string `form:"cert_type"      binding:"required"`
+	AccountName  string `form:"account_name"   binding:"required"`
+	UserName     string `form:"username"       binding:"required"`
+	AccType      string `form:"account_type"`
+	CertOperator string `form:"cert_principal"`
+}
+type DelCertFeedback struct {
+	CustomerJson DelCertFeedbackCustomer `json:"customer_parameter"`
+}
+
+type DelCertFeedbackCustomer struct {
+	CertId   string `json:"cert_id"        binding:"required"`
+	UserName string `json:"username"       binding:"required"`
 }
 
 type QueryCertRequest struct {

@@ -16,16 +16,17 @@ aar检测任务表结构
 */
 type OtherDetectModel struct {
 	gorm.Model
-	Creator      string `json:"creator"`
-	ToLarker     string `json:"toLarker"`
-	ToGroup      string `json:"toGroup"`
-	Platform     int    `json:"platform"`
-	OtherName    string `json:"name"`
-	OtherVersion string `json:"version"`
-	AppId        string `json:"appId"`
-	Status       int    `json:"status"`    //0---未完全确认；1---已完全确认
-	ExtraInfo    string `json:"extraInfo"` //其他附加信息,text信息
-	FileType     string `json:"fileType"`  //目前只有"aar"
+	Creator      string  `json:"creator"`
+	ToLarker     string  `json:"toLarker"`
+	ToGroup      string  `json:"toGroup"`
+	Platform     int     `json:"platform"`
+	OtherName    string  `json:"name"`
+	OtherVersion string  `json:"version"`
+	AppId        string  `json:"appId"`
+	Status       int     `json:"status"`    //0---未完全确认；1---已完全确认
+	ExtraInfo    string  `json:"extraInfo"` //其他附加信息,text信息
+	FileType     string  `json:"fileType"`  //目前只有"aar"
+	ErrInfo      *string `json:"errInfo"`   //检测任务错误信息收集
 }
 
 /**
@@ -67,6 +68,7 @@ type SMethodAarPlatform struct {
 	ClassName  string           `json:"className"`
 	Desc       string           `json:"desc"`
 	CallLoc    []MethodCallJson `json:"callLoc"`
+	RiskLevel  string           `json:"risk_level"`
 	GPFlag     int              `json:"gpFlag"`
 }
 type SStrAarPlatform struct {
@@ -233,5 +235,30 @@ func UpdateOtherDetailInfoByMap(condition string, param map[string]interface{}) 
 		logs.Error("update aar detect detail failed, taskId :"+condition+"errInfo :%v", err)
 		return err
 	}
+	return nil
+}
+
+/**
+批量更新aar旧报告内容
+*/
+func UpdateOldAArMethods(ids *[]string, infos *[]string) error {
+	connection, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return err
+	}
+	defer connection.Close()
+	db := connection.Table(OtherDetailInfoStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	db.Begin()
+	for i := 0; i < len(*ids); i++ {
+		condition := "id=" + (*ids)[i]
+		if err := db.Where(condition).Update(map[string]interface{}{
+			"detect_infos": (*infos)[i],
+		}).Error; err != nil {
+			db.Rollback()
+			return err
+		}
+	}
+	db.Commit()
 	return nil
 }
