@@ -24,83 +24,47 @@ import (
 )
 
 func QueryCertificatesInfo(c *gin.Context) {
-	logs.Info("从数据库中查询证书信息")
+	logs.Info("获取证书信息")
 	var queryCertRequest devconnmanager.QueryCertRequest
+
 	bindQueryError := c.ShouldBindQuery(&queryCertRequest)
+	utils.RecordError("参数绑定失败", bindQueryError)
 	if bindQueryError != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "delete fail",
-			"errorCode": 1,
-			"errorInfo": "请求参数绑定失败",
-		})
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
 		return
 	}
-	if queryCertRequest.TeamId == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 2,
-			"errorInfo": "team_id为空！",
-		})
-		return
-	}
-	if queryCertRequest.UserName == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 3,
-			"errorInfo": "user_name为空！",
-		})
-		return
-	}
-	condition := make(map[string]interface{})
-	condition["team_id"] = queryCertRequest.TeamId
+
+	//查询用户权限
 	teamIdLower := strings.ToLower(queryCertRequest.TeamId)
 	resourceKey := teamIdLower + "_space_account"
 	permsResult := queryResPerms(queryCertRequest.UserName, resourceKey)
 	if permsResult == -1 {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 4,
-			"errorInfo": "查询权限失败",
-		})
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "查询权限失败", "failed")
 		return
 	}
 	if permsResult == 3 {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": "无权限查看",
-			"errorInfo": "无权限查看",
-		})
+		utils.AssembleJsonResponse(c, http.StatusForbidden, "无权限查看", "failed")
 		return
 	}
-	var certsInfo *[]devconnmanager.CertInfo
-	certsInfo = devconnmanager.QueryCertInfo(condition, queryCertRequest.ExpireSoon, permsResult)
-	if certsInfo == nil {
-		logs.Error("从数据库中查询证书相关信息失败")
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 5,
-			"errorInfo": "从数据库中查询证书相关信息失败！",
-		})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"data":      certsInfo,
-		"errorCode": 0,
-		"errorInfo": "",
-	})
+
+	//获取证书信息
+	condition := make(map[string]interface{})
+	condition["team_id"] = queryCertRequest.TeamId
+	certsInfo := devconnmanager.QueryCertInfo(condition, queryCertRequest.ExpireSoon, permsResult)
+
+	utils.AssembleJsonResponse(c, _const.SUCCESS, "success", certsInfo)
 }
 
 func DeleteCertificate(c *gin.Context) {
-	logs.Info("根据cert_id删除证书")
+	logs.Info("删除证书")
 	var delCertRequest devconnmanager.DelCertRequest
 	bindQueryError := c.ShouldBindQuery(&delCertRequest)
+	utils.RecordError("参数绑定失败", bindQueryError)
 	if bindQueryError != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "delete fail",
-			"errorCode": 1,
-			"errorInfo": "请求参数绑定失败",
-		})
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
 		return
 	}
-	checkResult := checkDelCertRequest(c, &delCertRequest)
-	if !checkResult {
-		return
-	}
+
 	condition := make(map[string]interface{})
 	condition["cert_id"] = delCertRequest.CertId
 	appList := devconnmanager.QueryEffectAppList(delCertRequest.CertId, delCertRequest.CertType)
@@ -108,45 +72,26 @@ func DeleteCertificate(c *gin.Context) {
 		tokenString := GetTokenStringByTeamId(delCertRequest.TeamId)
 		delResult := deleteCertInApple(tokenString, delCertRequest.CertId)
 		if delResult == -2 {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "delete fail",
-				"errorCode": 6,
-				"errorInfo": "在苹果开发者网站删除对应证书失败,失败原因为不存在该certId对应的证书",
-			})
+			utils.AssembleJsonResponse(c, http.StatusBadRequest, "在苹果开发者网站删除对应证书失败,失败原因为不存在该certId对应的证书", "failed")
 			return
 		}
 		if delResult == -1 {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "delete fail",
-				"errorCode": 7,
-				"errorInfo": "在苹果开发者网站删除对应证书失败",
-			})
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "在苹果开发者网站删除对应证书失败", "failed")
 			return
 		}
 		tosFilePath := "appleConnectFile/" + string(delCertRequest.TeamId) + "/" + delCertRequest.CertType + "/" + delCertRequest.CertId + "/" + dealCertName(delCertRequest.CertName) + ".cer"
 		delResultBool := deleteTosCert(tosFilePath)
 		if !delResultBool {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "delete fail",
-				"errorCode": 8,
-				"errorInfo": "删除tos上的证书失败",
-			})
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "删除tos上的证书失败", "failed")
 			return
 		}
 		delResultBool = devconnmanager.DeleteCertInfo(condition)
 		if !delResultBool {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "delete fail",
-				"errorCode": 9,
-				"errorInfo": "从数据库中删除cert_id对应的证书失败",
-			})
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "从数据库中删除cert_id对应的证书失败", "failed")
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "delete success",
-			"errorCode": 0,
-			"errorInfo": "",
-		})
+		utils.AssembleJsonResponse(c, _const.SUCCESS, "success", nil)
+		return
 	} else {
 		userNames := devconnmanager.QueryUserNameByAppName(appList)
 		var appListStr string
@@ -155,11 +100,8 @@ func DeleteCertificate(c *gin.Context) {
 		}
 		message := "证书" + delCertRequest.CertId + "将要被删除," + "与该证书关联的app:" + appListStr + " 需要换绑新的证书"
 		larkNotifyUsers("证书"+delCertRequest.CertId+"将要被删除", userNames, message)
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "delete fail",
-			"errorCode": 10,
-			"errorInfo": "该证书对应的appList不为空,删除失败",
-		})
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "该证书对应的appList不为空,删除失败", "failed")
+		return
 	}
 }
 
@@ -167,17 +109,10 @@ func CheckCertExpireDate(c *gin.Context) {
 	logs.Info("检查过期证书")
 	expiredCertInfos := devconnmanager.QueryExpiredCertInfos()
 	if expiredCertInfos == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 1,
-			"errorInfo": "查询将要过期的证书信息失败",
-		})
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "查询将要过期的证书信息失败", "failed")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"data":      expiredCertInfos,
-		"errorCode": 0,
-		"errorInfo": "",
-	})
+	utils.AssembleJsonResponse(c, _const.SUCCESS, "查询将要过期的证书信息失败", expiredCertInfos)
 	for _, expiredCertInfo := range *expiredCertInfos {
 		userNames := devconnmanager.QueryUserNameByAppName(expiredCertInfo.EffectAppList)
 		larkNotifyUsers("证书将要过期提醒", userNames, "证书"+expiredCertInfo.CertId+"即将过期")
@@ -188,21 +123,13 @@ func UploadPrivKey(c *gin.Context) {
 	p12FileCont, p12filename := receiveP12file(c)
 	if len(p12FileCont) == 0 {
 		logs.Error("缺少priv_p12_file参数")
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "缺少priv_p12_file参数",
-			"errorCode": 1,
-			"data":      "缺少priv_p12_file参数",
-		})
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "缺少priv_p12_file参数", "failed")
 		return
 	}
 	var certInfo devconnmanager.CertInfo
 	bindError := c.ShouldBind(&certInfo)
 	if bindError != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "请求参数绑定失败",
-			"errorCode": 2,
-			"errorInfo": "请求参数绑定失败",
-		})
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
 		return
 	}
 	CheckResult := checkUploadRequest(c, &certInfo)
@@ -211,27 +138,18 @@ func UploadPrivKey(c *gin.Context) {
 	}
 	chkCertResult := devconnmanager.CheckCertExit(certInfo.TeamId)
 	if chkCertResult == -1 {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 6,
-			"errorInfo": "数据库查询失败",
-		})
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库查询失败", "failed")
 		return
 	}
 	if chkCertResult == -2 {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 7,
-			"errorInfo": "team_id对应的证书记录不存在",
-		})
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "team_id对应的证书记录不存在", "failed")
 		return
 	}
 	tosFilePath := "appleConnectFile/" + string(certInfo.TeamId) + "/" + certInfo.CertType + "/" + certInfo.CertId + "/" + p12filename
 	uploadResult := uploadTos(p12FileCont, tosFilePath)
 	if !uploadResult {
 		logs.Error("上传p12文件到tos失败！")
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 8,
-			"errorInfo": "上传p12文件到tos失败！",
-		})
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "上传p12文件到tos失败", "failed")
 		return
 	}
 	condition := make(map[string]interface{})
@@ -239,35 +157,28 @@ func UploadPrivKey(c *gin.Context) {
 	privKeyUrl := _const.TOS_BUCKET_URL + tosFilePath
 	dbResult := devconnmanager.UpdateCertInfo(condition, privKeyUrl)
 	if !dbResult {
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "更新数据库中的证书信息失败", "failed")
 		logs.Error("更新数据库中的证书信息失败！")
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 9,
-			"errorInfo": "更新数据库中的证书信息失败！",
-		})
 		return
 	}
 	certInfoNew := devconnmanager.QueryCertInfoByCertId(certInfo.CertId)
 	if certInfoNew == nil {
 		logs.Error("从数据库中查询证书相关信息失败")
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 10,
-			"errorInfo": "从数据库中查询证书相关信息失败！",
-		})
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "从数据库中查询证书相关信息失败", "failed")
 		return
 	}
 	filterCert(certInfoNew)
-	c.JSON(http.StatusOK, gin.H{
-		"data":      *certInfoNew,
-		"errorCode": 0,
-		"errorInfo": "",
-	})
+	utils.AssembleJsonResponse(c, _const.SUCCESS, "success", certInfoNew)
+	return
 }
 
 func InsertCertificate(c *gin.Context) {
-	logs.Info("从数据库中查询证书信息")
+	logs.Info("新建证书")
 	var body devconnmanager.InsertCertRequest
-	checkResult := checkParams(c, &body)
-	if !checkResult {
+	err := c.ShouldBindJSON(&body)
+	utils.RecordError("参数绑定失败", err)
+	if err != nil {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
 		return
 	}
 	strs := strings.Split(body.CertType, "_")
@@ -319,20 +230,14 @@ func InsertCertificate(c *gin.Context) {
 	creCertResponse := createCertInApple(tokenString, body.CertType, certTypeSufix)
 	if creCertResponse == nil || creCertResponse.Data.Attributes.CertificateContent == "" {
 		logs.Error("从苹果获取证书失败")
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 6,
-			"errorInfo": "从苹果获取证书失败！",
-		})
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "从苹果获取证书失败", "failed")
 		return
 	}
 	certContent := creCertResponse.Data.Attributes.CertificateContent
 	encryptedCert, err := base64.StdEncoding.DecodeString(certContent)
 	if err != nil {
 		logs.Error("%s", "base64 decode error"+err.Error())
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 7,
-			"errorInfo": "证书格式有误！",
-		})
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "证书格式有误", "failed")
 		return
 	}
 	var certInfo devconnmanager.CertInfo
@@ -353,32 +258,30 @@ func InsertCertificate(c *gin.Context) {
 	tosFilePath := "appleConnectFile/" + string(certInfo.TeamId) + "/" + certInfo.CertType + "/" + certInfo.CertId + "/" + dealCertName(certInfo.CertName) + ".cer"
 	uploadResult := uploadTos(encryptedCert, tosFilePath)
 	if !uploadResult {
-		c.JSON(http.StatusOK, gin.H{
-			"data":      certInfo,
-			"errorCode": 8,
-			"errorInfo": "往tos上传证书信息失败",
-		})
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "往tos上传证书信息失败", "failed")
 		return
 	}
 	certInfo.CertDownloadUrl = _const.TOS_BUCKET_URL + tosFilePath
 	dbResult := devconnmanager.InsertCertInfo(&certInfo)
 	if !dbResult {
-		c.JSON(http.StatusOK, gin.H{
-			"data":      certInfo,
-			"errorCode": 9,
-			"errorInfo": "往数据库中插入证书信息失败",
-		})
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "往数据库中插入证书信息失败", certInfo)
 		return
 	}
 	filterCert(&certInfo)
-	c.JSON(http.StatusOK, gin.H{
-		"data":      certInfo,
-		"errorCode": 0,
-		"errorInfo": "",
-	})
+	utils.AssembleJsonResponse(c, _const.SUCCESS, "请求参数绑定失败", certInfo)
+	return
 }
 
 func UploadCertificate(c *gin.Context) {
+	var requestData devconnmanager.UploadCertRequest
+	bindError := c.ShouldBind(&requestData)
+	utils.RecordError("绑定post请求body出错：%v", bindError)
+	if bindError != nil {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败，查看是否缺少参数", "failed")
+		return
+	}
+
+	//获取文件信息
 	certFileByteInfo, certFileFullName := getFileFromRequest(c, "cert_file")
 	if len(certFileByteInfo) == 0 {
 		utils.AssembleJsonResponse(c, http.StatusBadRequest, "缺少file参数，读取file失败", "failed")
@@ -387,19 +290,11 @@ func UploadCertificate(c *gin.Context) {
 
 	splits := strings.Split(certFileFullName, ".")
 	if len(splits) < 2 {
-		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "文件名解析失败", "failed")
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "文件名解析失败，请提供包含后缀名的证书文件（eg：.cer）", "failed")
 		return
 	}
 	certFileName := splits[0]
 	certFileType := "." + splits[len(splits)-1]
-
-	var requestData devconnmanager.UploadCertRequest
-	bindError := c.ShouldBind(&requestData)
-	utils.RecordError("绑定post请求body出错：%v", bindError)
-	if bindError != nil {
-		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败，查看是否缺少参数：", "failed")
-		return
-	}
 
 	certInfoInputs := make(map[string]interface{})
 	if requestData.CertName != "" {
@@ -414,7 +309,7 @@ func UploadCertificate(c *gin.Context) {
 	certInfoInputs["cert_expire_date"] = expireTime
 	logs.Info("exp:", expireTime)
 
-	tosFilePath := "appleConnectFile/" + string(requestData.TeamId) + "/" + requestData.CertType + "/" + requestData.CertId + "/" + certFileName
+	tosFilePath := "appleConnectFile/" + string(requestData.TeamId) + "/" + requestData.CertType + "/" + requestData.CertId + "/" + certFileFullName
 	uploadResult := uploadTos(certFileByteInfo, tosFilePath)
 	if !uploadResult {
 		utils.RecordError("上传证书文件到tos失败：", nil)
@@ -597,46 +492,6 @@ func deleteTosCert(tosFilePath string) bool {
 	return true
 }
 
-func checkParams(c *gin.Context, bodyAddr *devconnmanager.InsertCertRequest) bool {
-	err := c.ShouldBindJSON(bodyAddr)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 1,
-			"errorInfo": "请求参数绑定失败！",
-		})
-		return false
-	}
-	if bodyAddr.CertName == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 2,
-			"errorInfo": "cert_name为空！",
-		})
-		return false
-	}
-	if bodyAddr.CertType == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 3,
-			"errorInfo": "cert_type为空！",
-		})
-		return false
-	}
-	if bodyAddr.AccountName == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 4,
-			"errorInfo": "account_name为空！",
-		})
-		return false
-	}
-	if bodyAddr.TeamId == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 5,
-			"errorInfo": "team_id为空！",
-		})
-		return false
-	}
-	return true
-}
-
 func dealCertName(certName string) string {
 	var ret string
 	for i := 0; i < len(certName); i++ {
@@ -737,9 +592,6 @@ func generateCardInfoOfCreateCert(accountName string, certType string, csrUrl st
 func filterCert(certInfo *devconnmanager.CertInfo) {
 	certInfo.TeamId = ""
 	certInfo.AccountName = ""
-	if certInfo.CertDownloadUrl != "" {
-		certInfo.CsrFileUrl = ""
-	}
 }
 
 func deleteCertInApple(tokenString string, certId string) int {
@@ -769,38 +621,6 @@ func deleteCertInApple(tokenString string, certId string) int {
 		return 0
 	}
 	return -1
-}
-
-func checkDelCertRequest(c *gin.Context, delCertRequest *devconnmanager.DelCertRequest) bool {
-	if delCertRequest.TeamId == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 2,
-			"errorInfo": "team_id为空！",
-		})
-		return false
-	}
-	if delCertRequest.CertId == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 3,
-			"errorInfo": "cert_id为空！",
-		})
-		return false
-	}
-	if delCertRequest.CertType == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 4,
-			"errorInfo": "cert_type为空！",
-		})
-		return false
-	}
-	if delCertRequest.CertName == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 5,
-			"errorInfo": "cert_name为空！",
-		})
-		return false
-	}
-	return true
 }
 
 func receiveP12file(c *gin.Context) ([]byte, string) {

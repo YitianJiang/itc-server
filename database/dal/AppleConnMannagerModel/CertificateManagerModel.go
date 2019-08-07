@@ -55,7 +55,7 @@ type Attributes struct {
 type InsertCertRequest struct {
 	AccountName   string `json:"account_name" binding:"required"`
 	TeamId        string `json:"team_id"      binding:"required"`
-	CertName      string `json:"cert_name"    binding:"required"`
+	CertName      string `json:"cert_name"`
 	CertType      string `json:"cert_type"    binding:"required"`
 	CertPrincipal string `json:"cert_principal"`
 	AccountType   string `json:"account_type" binding:"required"`

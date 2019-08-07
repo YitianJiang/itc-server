@@ -72,7 +72,7 @@ func QueryCertInfo(condition map[string]interface{}, expireSoon string, permsRes
 		}
 		certInfos[i].TeamId = ""
 		certInfos[i].AccountName = ""
-		certInfos[i].CsrFileUrl = ""
+		//certInfos[i].CsrFileUrl = ""
 		if expireSoon == "1" && isExpired(certInfos[i]) == true {
 			ret = append(ret, certInfos[i])
 		}
