@@ -198,10 +198,11 @@ const (
 	APP_SECRET                  = "7aprfnGu8mU3KOTqV4RiSjhIde2gsvAM"
 	IOSCertificateBotAppId      = "cli_9dca86fa50ee5101"
 	IOSCertificateBotAppSecret  = "XbENqXBQGJeIYaU3oLk3jgdJC5IiuEAW"
-	CreateCertPrincipal         = "zhangmengqi.muki@bytedance.com"
-	APPLE_DELETE_CERT_URL       = "https://developer.apple.com/account/resources/certificates/download/"
-	DELCERT_FEEDBACK_URL_TEST   = "http://10.224.13.149:6789/v1/appleCertManage/asynDeleteFeedback"
-	DELCERT_FEEDBACK_URL        = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
+	//CreateCertPrincipal         = "zhangmengqi.muki@bytedance.com"
+	CreateCertPrincipal       = "gongrui@bytedance.com"
+	APPLE_DELETE_CERT_URL     = "https://developer.apple.com/account/resources/certificates/download/"
+	DELCERT_FEEDBACK_URL_TEST = "http://10.224.13.149:6789/v1/appleCertManage/asynDeleteFeedback"
+	DELCERT_FEEDBACK_URL      = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
 )
 
 //新建证书工单卡片基本信息
