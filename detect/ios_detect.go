@@ -110,6 +110,10 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 					blackMap["status"] = status
 					blackMap["confirmer"] = confirmer
 					blackMap["remark"] = remark
+				} else {
+					blackMap["status"] = 0
+					blackMap["confirmer"] = ""
+					blackMap["remark"] = ""
 				}
 			} else {
 				blackMap["status"] = 0
@@ -165,6 +169,10 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 					methodMap["status"] = status
 					methodMap["confirmer"] = confirmer
 					methodMap["remark"] = remark
+				} else {
+					methodMap["status"] = 0
+					methodMap["confirmer"] = ""
+					methodMap["remark"] = ""
 				}
 			} else {
 				methodMap["status"] = 0
@@ -260,6 +268,9 @@ func iosDetectDiff(newDetect map[string]interface{}, lastDetect []interface{}) (
 	content := newDetect["content"]
 	for _, last := range lastDetect {
 		if last.(map[string]interface{})["name"].(string) == name.(string) {
+			if _, ok := last.(map[string]interface{})["status"]; !ok { //bug导致异常修复后的兼容
+				return 0, "", ""
+			}
 			var status int
 			switch last.(map[string]interface{})["status"].(type) {
 			case float64:
@@ -791,9 +802,16 @@ func middleDataDeal(taskId, toolId, aId int) (bool, bool) {
 func GetIOSSelfNum(appid, taskId int) (bool, int) {
 	url := "https://itc.bytedance.net/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
 	//url := "http://10.224.14.220:6789/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
-	resp, err := http.Get(url)
+	client := &http.Client{}
+	reqest, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		logs.Error("获取iOS自查项失败！", err.Error())
+		logs.Error("自查个数获取中构造request出错！", err.Error())
+		return false, 0
+	}
+	reqest.Header.Add("Authorization", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoieWluemhpaG9uZyJ9.iaNlMfXWMjVi4i5eRsEeOKdJUkH20GiFbEwDk8TC8AE")
+	resp, err := client.Do(reqest)
+	if err != nil {
+		logs.Error("访问iOS自查项返回失败！", err.Error())
 		return false, 0
 	}
 	defer resp.Body.Close()

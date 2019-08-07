@@ -214,8 +214,19 @@ func VisibleAppsInfoGet(c *gin.Context) {
 			})
 			return
 		}
+		var objRes devconnmanager.FromAppleUserInfo
+		resultFromAppleGetHolder := ReqToAppleGetInfo(_const.APPLE_USER_INFO_URL_GET_HOLDER,tokenString,&objRes)
+		if !resultFromAppleGetHolder || len(objRes.DataList) == 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"error_info":   "苹果后台返回账户持有者数据错误",
+				"error_code": 1,
+				"data": "",
+			})
+			return
+		}
+		allVisibleReqUrl := _const.APPLE_USER_INFO_URL_NO_PARAM + "/" +objRes.DataList[0].UserIdApple + "/visibleApps?limit=200&fields[apps]=bundleId,name"
 		var obj devconnmanager.RetAllVisibleAppsFromApple
-		resultFromApple := ReqToAppleGetInfo(_const.APPLE_USER_VISIBLE_APPS_URL,tokenString,&obj)
+		resultFromApple := ReqToAppleGetInfo(allVisibleReqUrl,tokenString,&obj)
 		if !resultFromApple{
 			c.JSON(http.StatusOK, gin.H{
 				"error_info":   "苹果后台返回数据错误",
