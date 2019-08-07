@@ -26,6 +26,11 @@ type AppChangeBindCertRequest struct {
 	UserName      string `json:"user_name" binding:"required"`
 }
 
+type AppSignListRequest struct{
+	AppId     string `form:"app_id"   binding:"required"`
+	Username  string `form:"username" binding:"required"`
+}
+
 //db model
 type AppAccountCert struct {
 	gorm.Model
@@ -42,7 +47,7 @@ type AppAccountCert struct {
 
 type AppBundleProfiles struct {
 	gorm.Model
-	AppId              string `gorm:"app_id"                           json:"app_id"`
+	AppId              string `gorm:"column:app_id"                           json:"app_id"`
 	AppName            string `gorm:"column:app_name"                  json:"app_name"`
 	BundleidId         string `gorm:"column:bundleid_id"               json:"bundleid_id"`
 	BundleidIsdel      string `gorm:"column:bundleid_isdel"            json:"bundleid_isdel"`
@@ -123,18 +128,15 @@ type APPSignManagerInfo struct {
 	CertSection              AppCertGroupInfo    `json:"cert_section"`
 }
 type BundleProfileCert struct {
-	BoundleId          string             `json:"bundle_id"`
-	BundleIdIsDel      string             `json:"bundleid_isdel"`
-	BundleIdId         string             `json:"bundleid_id"`
-	BundleIdType       string             `json:"bundleid_type"`
-	EnableCapList      []string           `json:"enable_capabilities_list"`
-	ConfigCapObj       BundleConfigCap    `json:"config_capabilities_obj"`
-	ProfileCertSection BundleProfileGroup `json:"profile_cert_section"`
+	BoundleId          string             				 `json:"bundle_id"`
+	BundleIdIsDel      string           		   		 `json:"bundleid_isdel"`
+	BundleIdId         string            				 `json:"bundleid_id"`
+	BundleIdType       string           				 `json:"bundleid_type"`
+	EnableCapList      []string           				 `json:"enable_capabilities_list"`
+	ConfigCapObj       map[string]BundleConfigCapInfo    `json:"config_capabilities_obj"`
+	ProfileCertSection BundleProfileGroup				 `json:"profile_cert_section"`
 }
-type BundleConfigCap struct {
-	ICLOUD         BundleConfigCapInfo `json:"ICLOUD"`
-	DataProtection BundleConfigCapInfo `json:"DATA_PROTECTION"`
-}
+
 type BundleConfigCapInfo struct {
 	KeyInfo string         `json:"key"`
 	Options []OptionStruct `json:"options"`
