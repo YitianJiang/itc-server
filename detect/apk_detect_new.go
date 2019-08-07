@@ -23,7 +23,7 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 	if err_f != nil {
 		logs.Error("taskId:"+fmt.Sprint(mapInfo["taskId"])+",二进制静态包检测返回信息格式错误！,%v", err_f)
 		message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",二进制静态包检测返回信息格式错误，请解决;" + fmt.Sprint(err_f)
-		DetectTaskErrorHandle((*detect)[0],"1",info)
+		DetectTaskErrorHandle((*detect)[0], "1", info)
 		utils.LarkDingOneInner("fanjuan.xqp", message)
 		return err_f, 0
 	}
@@ -457,19 +457,19 @@ func GetAllAPIConfigs() *map[string]interface{} {
 }
 
 /**
-	检测任务发生问题逻辑处理
- */
+检测任务发生问题逻辑处理
+*/
 func DetectTaskErrorHandle(detect dal.DetectStruct, errCode string, errInfo string) error {
 	var errStruct dal.ErrorStruct
 	errStruct.ErrCode = errCode
 	errStruct.ErrInfo = errInfo
-	errBytes,_ := json.Marshal(errStruct)
+	errBytes, _ := json.Marshal(errStruct)
 	var errString = string(errBytes)
 	detect.ErrInfo = &errString
 	err := dal.UpdateDetectModelNew(detect)
 	if err != nil {
 		return err
-	}else {
+	} else {
 		return nil
 	}
 }

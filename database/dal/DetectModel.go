@@ -15,21 +15,21 @@ import (
 //二进制包检测任务
 type DetectStruct struct {
 	gorm.Model
-	Creator         string `gorm:"column:creator"                json:"creator"`
-	ToLarker        string `gorm:"column:to_larker"              json:"toLarker"`
-	ToGroup         string `gorm:"column:to_group"               json:"toGroup"`
-	Platform        int    `gorm:"column:platform"               json:"platform"`
-	AppName         string `gorm:"column:app_name"               json:"appName"`
-	AppVersion      string `gorm:"column:app_version"            json:"appVersion"`
-	AppId           string `gorm:"column:app_id"                 json:"appId"`
-	CheckContent    string `gorm:"column:check_content"          json:"checkContent"`
-	SelfCheckStatus int    `gorm:"column:self_check_status"      json:"selfCheckStatus"` //0-自查未完成；1-自查完成
-	TosUrl          string `gorm:"column:tos_url"                json:"tosUrl"`
-	Status          int    `gorm:"column:status"                 json:"status"`       //0---未完全确认；1---已完全确认
-	ExtraInfo       string `gorm:"column:extra_info"             json:"extraInfo"`    //其他附加信息
-	DetectNoPass    int    `gorm:"column:detect_no_pass"         json:"detectNoPass"` //自查项确认未通过数目
-	SelftNoPass     int    `gorm:"column:self_no_pass"           json:"selfNoPass"`   //自查项确认未通过数目
-	ErrInfo			*string `gorm:"column:err_info"              json:"errInfo"`	//检测任务错误信息收集
+	Creator         string  `gorm:"column:creator"                json:"creator"`
+	ToLarker        string  `gorm:"column:to_larker"              json:"toLarker"`
+	ToGroup         string  `gorm:"column:to_group"               json:"toGroup"`
+	Platform        int     `gorm:"column:platform"               json:"platform"`
+	AppName         string  `gorm:"column:app_name"               json:"appName"`
+	AppVersion      string  `gorm:"column:app_version"            json:"appVersion"`
+	AppId           string  `gorm:"column:app_id"                 json:"appId"`
+	CheckContent    string  `gorm:"column:check_content"          json:"checkContent"`
+	SelfCheckStatus int     `gorm:"column:self_check_status"      json:"selfCheckStatus"` //0-自查未完成；1-自查完成
+	TosUrl          string  `gorm:"column:tos_url"                json:"tosUrl"`
+	Status          int     `gorm:"column:status"                 json:"status"`       //0---未完全确认；1---已完全确认
+	ExtraInfo       string  `gorm:"column:extra_info"             json:"extraInfo"`    //其他附加信息
+	DetectNoPass    int     `gorm:"column:detect_no_pass"         json:"detectNoPass"` //自查项确认未通过数目
+	SelftNoPass     int     `gorm:"column:self_no_pass"           json:"selfNoPass"`   //自查项确认未通过数目
+	ErrInfo         *string `gorm:"column:err_info"              json:"errInfo"`       //检测任务错误信息收集
 }
 type ExtraStruct struct {
 	CallBackAddr string `json:"callBackAddr"`
@@ -46,8 +46,8 @@ type RetDetectTasks struct {
 	Tasks   []DetectStruct
 }
 type ErrorStruct struct {
-	ErrCode 			string 				`json:"errCode"`	//1--检测服务脚本报错，2--检测服务基础报错
-	ErrInfo				string				`json:"errInfo"`
+	ErrCode string `json:"errCode"` //1--检测服务脚本报错，2--检测服务基础报错
+	ErrInfo string `json:"errInfo"`
 }
 
 //包检测工具

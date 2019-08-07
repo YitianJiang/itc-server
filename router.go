@@ -151,7 +151,7 @@ func InitRouter(r *ginex.Engine) {
 		certificateapi.GET("/certExpireDateCheck", developerconnmanager.CheckCertExpireDate)
 		certificateapi.POST("/privUploadForCert", developerconnmanager.UploadPrivKey)
 		certificateapi.POST("/certificateUpload", developerconnmanager.UploadCertificate)
-		certificateapi.POST("/asynDeleteFeedback",developerconnmanager.AsynDeleteCertFeedback)
+		certificateapi.POST("/asynDeleteFeedback", developerconnmanager.AsynDeleteCertFeedback)
 	}
 	usermanagerapi := r.Group("/v1/userManage")
 	{

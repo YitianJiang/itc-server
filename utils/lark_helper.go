@@ -198,11 +198,13 @@ const (
 	APP_SECRET                  = "7aprfnGu8mU3KOTqV4RiSjhIde2gsvAM"
 	IOSCertificateBotAppId      = "cli_9dca86fa50ee5101"
 	IOSCertificateBotAppSecret  = "XbENqXBQGJeIYaU3oLk3jgdJC5IiuEAW"
-	CreateCertPrincipal         = "zhangmengqi.muki@bytedance.com"
-	APPLE_DELETE_CERT_URL   	= "https://developer.apple.com/account/resources/certificates/download/"
-	DELCERT_FEEDBACK_URL_TEST   = "http://10.224.13.149:6789/v1/appleCertManage/asynDeleteFeedback"
-	DELCERT_FEEDBACK_URL        = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
+	//CreateCertPrincipal         = "zhangmengqi.muki@bytedance.com"
+	CreateCertPrincipal       = "gongrui@bytedance.com"
+	APPLE_DELETE_CERT_URL     = "https://developer.apple.com/account/resources/certificates/download/"
+	DELCERT_FEEDBACK_URL_TEST = "http://10.224.13.149:6789/v1/appleCertManage/asynDeleteFeedback"
+	DELCERT_FEEDBACK_URL      = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
 )
+
 //新建证书工单卡片基本信息
 var CreateCertMessage = "请根据配置信息登录Apple后台手动生成证书并上传至itc证书管理后台"
 var CreateCertAccountHeader = "账号名: "
@@ -210,6 +212,7 @@ var CreateCertTypeHeader = "证书类型: "
 var CsrHeader = "CSR文件: "
 var CsrText = "点击链接下载"
 var GrayHeaderStyle = "color: gray"
+
 //删除证书工单卡片基本信息
 var DeleteCertMessage = "请根据账号信息登陆Apple后台，删除指定证书，点击删除链接可以直接跳转；删除完成后，请点击卡片\"已删除\"按钮。"
 var DeleteCertIdHeader = "证书ID："
