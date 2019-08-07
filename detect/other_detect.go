@@ -175,7 +175,7 @@ func NewOtherDetect(c *gin.Context) {
 			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",aar上传文件处理错误", err)
 			//及时报警
 			for _, lark_people := range _const.LowLarkPeople {
-				OtherDetectTaskErrorHandle(dbDetectModelId,"2","上传文件到检测服务出错")
+				OtherDetectTaskErrorHandle(dbDetectModelId, "2", "上传文件到检测服务出错")
 				utils.LarkDingOneInner(lark_people, "二进制包检测服务无响应，请及时进行检查！aar任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
 			}
 		}
@@ -490,7 +490,7 @@ func OtherJsonAnalysis_2(info string, mapInfo map[string]int) error {
 	if err_f != nil {
 		logs.Error("taskId:"+fmt.Sprint(mapInfo["taskId"])+",arr包检测返回信息格式错误！,%v", err_f)
 		message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",arr包检测返回信息格式错误，请解决;" + fmt.Sprint(err_f)
-		OtherDetectTaskErrorHandle(mapInfo["taskId"],"1",info)//检测服务问题记录
+		OtherDetectTaskErrorHandle(mapInfo["taskId"], "1", info) //检测服务问题记录
 		utils.LarkDingOneInner("fanjuan.xqp", message)
 		return err_f
 	}
@@ -519,7 +519,7 @@ func OtherJsonAnalysis_2(info string, mapInfo map[string]int) error {
 				mRepeat[keystr] = 1
 			}
 		}
-		infos = append(infos, otherMethodAna(&newMethods, mapInfo, index,apiMap))
+		infos = append(infos, otherMethodAna(&newMethods, mapInfo, index, apiMap))
 		infos = append(infos, otherStrAna(&strsInfo, mapInfo, index))
 
 		otherPerms, errP := otherPermAna(&appInfos.PermsInAppInfo, mapInfo, index)
@@ -651,8 +651,8 @@ func getOtherDetectDetail(c *gin.Context, infos *[]dal.OtherDetailInfoStruct, ta
 
 	//method显示危险等级+跳转链接相关标识
 	var updateFlag = false
-	var updateIds = make([]string,0)
-	var updateInfos = make([]string,0)
+	var updateIds = make([]string, 0)
+	var updateInfos = make([]string, 0)
 	var apiMap *map[string]interface{}
 
 	for i := 0; i < len(finalResult); i++ {
@@ -666,7 +666,7 @@ func getOtherDetectDetail(c *gin.Context, infos *[]dal.OtherDetailInfoStruct, ta
 					return nil
 				}
 				//判断是否需要更新
-				judageNeedsUpdate(&t,apiMap,&updateFlag,&updateIds,&updateInfos,detailOne.ID)
+				judageNeedsUpdate(&t, apiMap, &updateFlag, &updateIds, &updateInfos, detailOne.ID)
 				var result []dal.SMethod
 				var result_con []dal.SMethod
 				for _, method := range t {
@@ -723,7 +723,7 @@ func getOtherDetectDetail(c *gin.Context, infos *[]dal.OtherDetailInfoStruct, ta
 	}
 	//异步更新旧报告内容
 	if updateFlag {
-		go updateOldAarMethodInfo(&updateIds,&updateInfos)
+		go updateOldAarMethodInfo(&updateIds, &updateInfos)
 	}
 	return &finalResult
 }
@@ -762,7 +762,7 @@ func otherBasicInfoAna(info dal.AppInfoStruct, mapInfo map[string]int, index int
 /**
 解析敏感方法
 */
-func otherMethodAna(info *[]dal.MethodInfo, mapInfo map[string]int, index int,apiMap *map[string]interface{}) dal.OtherDetailInfoStruct {
+func otherMethodAna(info *[]dal.MethodInfo, mapInfo map[string]int, index int, apiMap *map[string]interface{}) dal.OtherDetailInfoStruct {
 	var detailInfo dal.OtherDetailInfoStruct
 	detailInfo.TaskId = mapInfo["taskId"]
 	detailInfo.ToolId = mapInfo["toolId"]
@@ -778,11 +778,11 @@ func otherMethodAna(info *[]dal.MethodInfo, mapInfo map[string]int, index int,ap
 		t.Desc = method.Desc
 		t.GPFlag = method.Flag
 		//更新risklevel和configId
-		if v,ok := (*apiMap)[t.ClassName+"."+t.MethodName]; ok {
+		if v, ok := (*apiMap)[t.ClassName+"."+t.MethodName]; ok {
 			info := v.(map[string]int)
 			t.RiskLevel = fmt.Sprint(info["priority"])
 			t.ConfigId = info["id"]
-		}else {
+		} else {
 			t.RiskLevel = "3"
 			t.ConfigId = 0
 		}
@@ -970,8 +970,8 @@ func GetAARInfoNotITC(c *gin.Context) {
 		return
 	}
 	if (*detect)[0].ErrInfo != nil {
-		logs.Error("检测出问题，%v",taskId)
-		errorReturn(c,"检测服务报错"+(*(*detect)[0].ErrInfo),-5)
+		logs.Error("检测出问题，%v", taskId)
+		errorReturn(c, "检测服务报错"+(*(*detect)[0].ErrInfo), -5)
 		return
 	}
 
@@ -984,18 +984,18 @@ func GetAARInfoNotITC(c *gin.Context) {
 		return
 	}
 	//获取检测结果
-	finalResult,summary := getOtherDetectDetailAARP(c, infos, &(*detect)[0])
+	finalResult, summary := getOtherDetectDetailAARP(c, infos, &(*detect)[0])
 
 	logs.Info("组件平台查询aar检测结果成果！")
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
 		"errorCode": 0,
 		"data":      *finalResult,
-		"summary": *summary,
+		"summary":   *summary,
 	})
 	return
 }
-func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct, task *dal.OtherDetectModel) (*[]dal.DetectQueryStructAarPlatform,*map[string]int) {
+func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct, task *dal.OtherDetectModel) (*[]dal.DetectQueryStructAarPlatform, *map[string]int) {
 	detailMap := make(map[int][]dal.OtherDetailInfoStruct)
 	finalResult := make([]dal.DetectQueryStructAarPlatform, 0)
 	var midResult []dal.DetectQueryStructAarPlatform
@@ -1006,7 +1006,7 @@ func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct
 			if err := json.Unmarshal([]byte(info.DetectInfos), &t); err != nil {
 				logs.Error("arr基础信息存储格式错误，taskID：" + fmt.Sprint(task.ID))
 				errorReturn(c, "arr基础信息存储格式错误，taskID："+fmt.Sprint(task.ID), -4)
-				return nil,nil
+				return nil, nil
 			}
 			if t.Name == task.OtherName {
 				firstResult.ApkName = t.Name
@@ -1035,16 +1035,16 @@ func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct
 	finalResult = append(finalResult, midResult...)
 	//概述信息
 	var summary = map[string]int{
-		"ordinary":0,
-		"low_risk":0,
-		"middle_risk":0,
-		"high_risk":0,
+		"ordinary":    0,
+		"low_risk":    0,
+		"middle_risk": 0,
+		"high_risk":   0,
 	}
 
 	//method显示危险等级+跳转链接相关标识
 	var updateFlag = false
-	var updateIds = make([]string,0)
-	var updateInfos = make([]string,0)
+	var updateIds = make([]string, 0)
+	var updateInfos = make([]string, 0)
 	var apiMap *map[string]interface{}
 
 	for i := 0; i < len(finalResult); i++ {
@@ -1055,11 +1055,11 @@ func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct
 				if err := json.Unmarshal([]byte(detailOne.DetectInfos), &t); err != nil {
 					logs.Error("arr敏感方法信息存储格式错误，taskID：" + fmt.Sprint(task.ID))
 					errorReturn(c, "arr敏感方法存储格式错误，taskID："+fmt.Sprint(task.ID), -4)
-					return nil,nil
+					return nil, nil
 				}
 				var result = make([]dal.SMethodAarPlatform, 0)
 				//判断是否需要更新
-				judageNeedsUpdate(&t,apiMap,&updateFlag,&updateIds,&updateInfos,detailOne.ID)
+				judageNeedsUpdate(&t, apiMap, &updateFlag, &updateIds, &updateInfos, detailOne.ID)
 				for _, method := range t {
 					var m dal.SMethodAarPlatform
 					m.Id = method.Id
@@ -1069,7 +1069,7 @@ func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct
 					m.MethodName = method.MethodName
 					m.GPFlag = method.GPFlag
 					m.RiskLevel = method.RiskLevel
-					UpdateSummaryMap(m.RiskLevel,&summary) //更新概述信息
+					UpdateSummaryMap(m.RiskLevel, &summary) //更新概述信息
 					result = append(result, m)
 				}
 				finalResult[i].SMethods = result
@@ -1078,7 +1078,7 @@ func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct
 				if err := json.Unmarshal([]byte(detailOne.DetectInfos), &t); err != nil {
 					logs.Error("arr敏感字符串信息存储格式错误，taskID：" + fmt.Sprint(task.ID))
 					errorReturn(c, "arr敏感字符串存储格式错误，taskID："+fmt.Sprint(task.ID), -4)
-					return nil,nil
+					return nil, nil
 				}
 				var result = make([]dal.SStrAarPlatform, 0)
 				for _, str := range t {
@@ -1096,7 +1096,7 @@ func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct
 				if err := json.Unmarshal([]byte(detailOne.DetectInfos), &t); err != nil {
 					logs.Error("arr权限信息存储格式错误，taskID：" + fmt.Sprint(task.ID))
 					errorReturn(c, "arr权限信息存储格式错误，taskID："+fmt.Sprint(task.ID), -4)
-					return nil,nil
+					return nil, nil
 				}
 				//权限排序
 				var result PermSlice = t
@@ -1109,7 +1109,7 @@ func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct
 					p.Priority = perm.Priority
 					p.Key = perm.Key
 					pResult = append(pResult, p)
-					UpdateSummaryMap(p.Priority,&summary)//更新概述信息
+					UpdateSummaryMap(p.Priority, &summary) //更新概述信息
 				}
 				finalResult[i].Permissions_2 = pResult
 			}
@@ -1117,36 +1117,36 @@ func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct
 	}
 	//异步更新旧报告内容
 	if updateFlag {
-		go updateOldAarMethodInfo(&updateIds,&updateInfos)
+		go updateOldAarMethodInfo(&updateIds, &updateInfos)
 	}
-	return &finalResult,&summary
+	return &finalResult, &summary
 }
 
 /**
-	aar任务检测问题记录
- */
-func OtherDetectTaskErrorHandle(taskId int,errCode string,errInfo string) error  {
+aar任务检测问题记录
+*/
+func OtherDetectTaskErrorHandle(taskId int, errCode string, errInfo string) error {
 	var errStruct dal.ErrorStruct
 	errStruct.ErrCode = errCode
 	errStruct.ErrInfo = errInfo
-	errBytes,_ := json.Marshal(errStruct)
+	errBytes, _ := json.Marshal(errStruct)
 	var errString = string(errBytes)
-	condition := "id = '"+fmt.Sprint(taskId)+"'"
+	condition := "id = '" + fmt.Sprint(taskId) + "'"
 	var updateData = map[string]interface{}{
-		"err_info" : errString,
+		"err_info": errString,
 	}
-	err := dal.UpdateOtherDetectModelByMap(condition,updateData)
+	err := dal.UpdateOtherDetectModelByMap(condition, updateData)
 	if err != nil {
 		return err
-	}else {
+	} else {
 		return nil
 	}
 }
 
 /**
-	组件平台概述内容
- */
-func UpdateSummaryMap(priority interface{},summary *map[string]int)  {
+组件平台概述内容
+*/
+func UpdateSummaryMap(priority interface{}, summary *map[string]int) {
 	switch fmt.Sprint(priority) {
 	case "0":
 		(*summary)["ordinary"] += 1
@@ -1160,16 +1160,16 @@ func UpdateSummaryMap(priority interface{},summary *map[string]int)  {
 }
 
 /**
-	判断报告是否需要更新，若需要更新--获取更新内容
- */
-func judageNeedsUpdate(t *[]dal.SMethod,apiMap *map[string]interface{},updateFlag *bool,updateIds *[]string,updateInfos *[]string,id uint)  {
-	if len(*t)>0 && (*t)[0].RiskLevel == ""{
+判断报告是否需要更新，若需要更新--获取更新内容
+*/
+func judageNeedsUpdate(t *[]dal.SMethod, apiMap *map[string]interface{}, updateFlag *bool, updateIds *[]string, updateInfos *[]string, id uint) {
+	if len(*t) > 0 && (*t)[0].RiskLevel == "" {
 		*updateFlag = true
 		if apiMap == nil {
 			apiMap = GetAllAPIConfigs()
 		}
-		*updateIds = append(*updateIds,fmt.Sprint(id))
-		for i:=0;i<len((*t));i++ {
+		*updateIds = append(*updateIds, fmt.Sprint(id))
+		for i := 0; i < len((*t)); i++ {
 			if v, ok := (*apiMap)[(*t)[i].ClassName+"."+(*t)[i].MethodName]; ok {
 				info := v.(map[string]int)
 				(*t)[i].RiskLevel = fmt.Sprint(info["priority"])
@@ -1179,15 +1179,15 @@ func judageNeedsUpdate(t *[]dal.SMethod,apiMap *map[string]interface{},updateFla
 				(*t)[i].ConfigId = 0
 			}
 		}
-		newInfos,_ := json.Marshal(t)
-		*updateInfos = append(*updateInfos,string(newInfos))
+		newInfos, _ := json.Marshal(t)
+		*updateInfos = append(*updateInfos, string(newInfos))
 	}
 }
 
 /**
-	旧报告详情中method增加risklevel和configID
- */
-func updateOldAarMethodInfo(ids *[]string,infos *[]string)  {
+旧报告详情中method增加risklevel和configID
+*/
+func updateOldAarMethodInfo(ids *[]string, infos *[]string) {
 	err := dal.UpdateOldAArMethods(ids, infos)
 	if err != nil {
 		logs.Error("更新旧任务敏感方法危险等级失败，id信息：" + fmt.Sprint((*ids)[0]))

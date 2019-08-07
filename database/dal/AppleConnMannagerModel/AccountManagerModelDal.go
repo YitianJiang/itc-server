@@ -15,9 +15,9 @@ func DeleteAccountInfo(teamId string) int {
 	}
 	defer connection.Close()
 	var teamIds []TeamID
-	if err= connection.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).
+	if err = connection.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).
 		Where("team_id=?", teamId).Find(&teamIds).
-		Error;err!=nil{
+		Error; err != nil {
 		logs.Error("Query DB Failed:", err)
 		return -1
 	}
@@ -41,19 +41,19 @@ func InsertAccountInfo(accountInfo AccountInfo) int {
 	}
 	defer conn.Close()
 	var teamIds []TeamID
-	if err= conn.LogMode(_const.DB_LOG_MODE).
+	if err = conn.LogMode(_const.DB_LOG_MODE).
 		Table(AccountInfo{}.TableName()).
 		Where("team_id=?", accountInfo.TeamId).Find(&teamIds).
-		Error;err!=nil{
+		Error; err != nil {
 		logs.Error("Query DB Failed:", err)
 		return -1
 	}
 	if len(teamIds) != 0 {
 		return -2
 	}
-	if err=conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).
+	if err = conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).
 		Create(&accountInfo).
-		Error;err!=nil{
+		Error; err != nil {
 		logs.Error("Insert DB Failed:", err)
 		return -1
 	}
@@ -91,26 +91,26 @@ func CheckAdmin(perms []string) bool {
 	return checkResult
 }
 
-func TransferValues2AccInfoWithoutAuth(accountInfo *AccountInfo,perms []string)*AccInfoWithoutAuth{
-	accInfoWithoutAuth:=AccInfoWithoutAuth{}
-	accInfoWithoutAuth.AccountType=accountInfo.AccountType
-	accInfoWithoutAuth.AccountName=accountInfo.AccountName
-	accInfoWithoutAuth.UserName=accountInfo.UserName
-	accInfoWithoutAuth.TeamId=accountInfo.TeamId
+func TransferValues2AccInfoWithoutAuth(accountInfo *AccountInfo, perms []string) *AccInfoWithoutAuth {
+	accInfoWithoutAuth := AccInfoWithoutAuth{}
+	accInfoWithoutAuth.AccountType = accountInfo.AccountType
+	accInfoWithoutAuth.AccountName = accountInfo.AccountName
+	accInfoWithoutAuth.UserName = accountInfo.UserName
+	accInfoWithoutAuth.TeamId = accountInfo.TeamId
 	accInfoWithoutAuth.PermissionAction = perms
 	return &accInfoWithoutAuth
 }
 
-func TransferValues2AccInfoWithAuth(accountInfo *AccountInfo,perms []string)*AccInfoWithAuth{
-	accInfoWithAuth:=AccInfoWithAuth{}
-	accInfoWithAuth.TeamId=accountInfo.TeamId
-	accInfoWithAuth.UserName=accountInfo.UserName
-	accInfoWithAuth.AccountName=accountInfo.AccountName
-	accInfoWithAuth.AccountType=accountInfo.AccountType
-	accInfoWithAuth.AccountP8file=accountInfo.AccountP8file
-	accInfoWithAuth.AccountP8fileName=accountInfo.AccountP8fileName
-	accInfoWithAuth.IssueId=accountInfo.IssueId
-	accInfoWithAuth.KeyId=accountInfo.KeyId
+func TransferValues2AccInfoWithAuth(accountInfo *AccountInfo, perms []string) *AccInfoWithAuth {
+	accInfoWithAuth := AccInfoWithAuth{}
+	accInfoWithAuth.TeamId = accountInfo.TeamId
+	accInfoWithAuth.UserName = accountInfo.UserName
+	accInfoWithAuth.AccountName = accountInfo.AccountName
+	accInfoWithAuth.AccountType = accountInfo.AccountType
+	accInfoWithAuth.AccountP8file = accountInfo.AccountP8file
+	accInfoWithAuth.AccountP8fileName = accountInfo.AccountP8fileName
+	accInfoWithAuth.IssueId = accountInfo.IssueId
+	accInfoWithAuth.KeyId = accountInfo.KeyId
 	accInfoWithAuth.PermissionAction = perms
 	return &accInfoWithAuth
 }
@@ -124,7 +124,7 @@ func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]interface{} {
 	defer conn.Close()
 	var accountsInfo []interface{}
 	var allAccountInfo []AccountInfo
-	if err= conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).Find(&allAccountInfo).Error;err!=nil{
+	if err = conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).Find(&allAccountInfo).Error; err != nil {
 		logs.Error("Query DB Failed:", err)
 		return nil
 	}
@@ -132,10 +132,10 @@ func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]interface{} {
 		perms := resPerms.Data[strings.ToLower(accountInfo.TeamId)+"_space_account"]
 		checkResult := CheckAdmin(perms)
 		if !checkResult {
-			accInfoWithoutAuth:=TransferValues2AccInfoWithoutAuth(&accountInfo,perms)
+			accInfoWithoutAuth := TransferValues2AccInfoWithoutAuth(&accountInfo, perms)
 			accountsInfo = append(accountsInfo, accInfoWithoutAuth)
 		} else {
-			accInfoWithAuth:=TransferValues2AccInfoWithAuth(&accountInfo,perms)
+			accInfoWithAuth := TransferValues2AccInfoWithAuth(&accountInfo, perms)
 			accountsInfo = append(accountsInfo, accInfoWithAuth)
 		}
 	}
@@ -150,18 +150,18 @@ func UpdateAccountInfo(accountInfo AccountInfo) int {
 	}
 	defer conn.Close()
 	var teamIds []TeamID
-	if err= conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).
+	if err = conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).
 		Where("team_id=?", accountInfo.TeamId).Find(&teamIds).
-		Error;err!=nil{
+		Error; err != nil {
 		logs.Error("Query DB Failed:", err)
 		return -1
 	}
 	if len(teamIds) == 0 {
 		return -2
 	}
-	if err= conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).
+	if err = conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).
 		Where("team_id=?", accountInfo.TeamId).Update(&accountInfo).
-		Error;err!=nil{
+		Error; err != nil {
 		logs.Error("Update DB Failed:", err)
 		return -1
 	}
