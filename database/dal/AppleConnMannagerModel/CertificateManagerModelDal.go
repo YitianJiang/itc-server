@@ -6,7 +6,6 @@ import (
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
-	"strconv"
 	"time"
 )
 
@@ -141,45 +140,11 @@ func QueryExpiredCertInfos() *[]CertInfo {
 	return &expiredCertInfos
 }
 
-func CountDays(y int, m int, d int) int {
-	if m < 3 {
-		y--
-		m += 12
-	}
-	return 365*y + (y >> 2) - y/100 + y/400 + (153*m-457)/5 + d - 306
-}
-
-func GetYMD(date string) []int {
-	var first int
-	var second int
-	var third int
-	count := 0
-	for i := 0; i < len(date); i++ {
-		if date[i] == '-' && count == 0 {
-			first = i
-			count++
-		}
-		if date[i] == '-' && count == 1 {
-			second = i
-		}
-		if date[i] == 'T' {
-			third = i
-			break
-		}
-	}
-	var ret []int
-	y, _ := strconv.Atoi(date[0:first])
-	m, _ := strconv.Atoi(date[first+1 : second])
-	d, _ := strconv.Atoi(date[second+1 : third])
-	ret = append(ret, y, m, d)
-	return ret
-}
-
 func isExpired(certInfo CertInfo) bool {
-	timeTemplate := "2006-01-02T15:04:05"
-	nowYMD := GetYMD(time.Now().Format(timeTemplate))
-	expireYMD := GetYMD(certInfo.CertExpireDate)
-	if CountDays(expireYMD[0], expireYMD[1], expireYMD[2])-CountDays(nowYMD[0], nowYMD[1], nowYMD[2]) <= 30 {
+	exp, err := time.Parse("2006-01-02T15:04:05", certInfo.CertExpireDate)
+	utils.RecordError("过期时间解析失败", err)
+
+	if err != nil || exp.Sub(time.Now()) <= time.Hour*24*30 {
 		return true
 	}
 	return false
