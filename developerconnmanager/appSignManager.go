@@ -1,13 +1,135 @@
 package developerconnmanager
 
 import (
+	"bytes"
 	_const "code.byted.org/clientQA/itc-server/const"
 	devconnmanager "code.byted.org/clientQA/itc-server/database/dal/AppleConnMannagerModel"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
+	"code.byted.org/gopkg/tos"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"io/ioutil"
 	"net/http"
+	"time"
+	"code.byted.org/gopkg/context"
 )
+func uploadProfileToTos(profileContent []byte, tosFilePath string) bool {
+	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME_JYT, _const.TOS_BUCKET_TOKEN_JYT)
+	context, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	tosPutClient, err := tos.NewTos(tosBucket)
+	err = tosPutClient.PutObject(context, tosFilePath, int64(len(profileContent)), bytes.NewBuffer(profileContent))
+	if err != nil {
+		logs.Error("%s", "上传tos失败："+err.Error())
+		return false
+	}
+	return true
+}
+
+func deleteTosObj(tosFilePath string) bool {
+	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME_JYT, _const.TOS_BUCKET_TOKEN_JYT)
+	context, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	client, err := tos.NewTos(tosBucket)
+	err = client.DelObject(context, tosFilePath)
+	if err != nil {
+		fmt.Println("Error Delete Tos Object:", err)
+		return false
+	}
+	return true
+}
+
+func AssertResStatusCodeOK(statusCode int) bool{
+	if statusCode == http.StatusOK || statusCode == http.StatusCreated || statusCode == http.StatusAccepted || statusCode == http.StatusNonAuthoritativeInfo ||
+		statusCode == http.StatusNoContent || statusCode == http.StatusResetContent || statusCode == http.StatusPartialContent ||
+		statusCode ==http.StatusMultiStatus || statusCode == http.StatusAlreadyReported || statusCode == http.StatusIMUsed {
+		return  true
+	}else {
+		return false
+	}
+}
+
+func TimeOutFunc(timeout chan bool){
+	time.Sleep(1 * time.Second)
+	timeout <- true
+}
+
+//请求苹果的Delete、Get等接口，不需要拿到苹果返回值
+func ReqToAppleNoObjMethod(method,url,tokenString string) bool{
+	client := &http.Client{}
+	request, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		logs.Info("新建request对象失败")
+		return false
+	}
+	request.Header.Set("Authorization", tokenString)
+	response, err := client.Do(request)
+	if err != nil {
+		logs.Info("发送get请求失败")
+		return false
+	}
+	defer response.Body.Close()
+	if AssertResStatusCodeOK(response.StatusCode) {
+		responseByte, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			logs.Info("读取respose的body内容失败")
+			return false
+		}
+		logs.Info(string(responseByte))
+		//json.Unmarshal(responseByte, &obj)
+		return true
+	} else {
+		logs.Info("查看返回状态码",response.StatusCode)
+		responseByte, _ := ioutil.ReadAll(response.Body)
+		logs.Info(string(responseByte))
+		return false
+	}
+}
+//objReq,objRes 请传地址
+func ReqToAppleHasObjMethod(method,url,tokenString string,objReq,objRes interface{}) bool{
+	var rbodyByte *bytes.Reader
+	if objReq != nil {
+		bodyByte, _ := json.Marshal(objReq)
+		logs.Info(string(bodyByte))
+		rbodyByte = bytes.NewReader(bodyByte)
+	}else {
+		rbodyByte = nil
+	}
+	client := &http.Client{}
+	request, err := http.NewRequest(method, url, rbodyByte)
+	if err != nil {
+		logs.Info("新建request对象失败")
+		return false
+	}
+	request.Header.Set("Authorization", tokenString)
+	request.Header.Set("Content-Type", "application/json")
+	response, err := client.Do(request)
+	if err != nil {
+		logs.Info("发送请求失败")
+		return false
+	}
+	defer response.Body.Close()
+	if !AssertResStatusCodeOK(response.StatusCode) {
+		logs.Info("查看返回状态码")
+		logs.Info(string(response.StatusCode))
+		responseByte, _ := ioutil.ReadAll(response.Body)
+		logs.Info("查看苹果的返回值")
+		logs.Info(string(responseByte))
+		return false
+	} else {
+		responseByte, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			logs.Info("读取respose的body内容失败")
+			return false
+		}
+		//logs.Info(string(responseByte))
+		json.Unmarshal(responseByte, objRes)
+		return true
+	}
+}
 
 //返回BundleID的能力给前端做展示
 type GetCapabilitiesInfoReq struct {
@@ -182,5 +304,154 @@ func AppBindCert(c *gin.Context){
 			"errorCode": 0,
 		})
 		return
+	}
+}
+
+//单独Profile创建\更新接口
+func DeleteProfileFromApple(method,url,tokenString string,ch chan int) {
+	ReqToAppleNoObjMethod(method,url,tokenString)
+	ch <- 1
+}
+
+func UpdateBundleProfilesRelation (bundleId,profileType,profileId string) error{
+	var bundleProfilesRelationObj devconnmanager.AppBundleProfiles
+	conditionDb := map[string]interface{}{"bundle_id":bundleId}
+	if profileType == _const.IOS_APP_STORE || profileType ==_const.IOS_APP_INHOUSE || profileType == _const.MAC_APP_STORE{
+		bundleProfilesRelationObj.DistProfileId = profileId
+	}else if profileType == _const.IOS_APP_DEVELOPMENT || profileType == _const.MAC_APP_DEVELOPMENT {
+		bundleProfilesRelationObj.DevProfileId = profileId
+	}else {
+		bundleProfilesRelationObj.DistAdhocProfileId = profileId
+	}
+	dbUpdateErr := devconnmanager.UpdateAppBundleProfiles(conditionDb,bundleProfilesRelationObj)
+	return dbUpdateErr
+}
+
+func CreateOrUpdateProfileFromApple(profileName,profileType,bundleidId,certId,token string) *devconnmanager.ProfileDataRes {
+	var profileCreateReqObj devconnmanager.ProfileDataReq
+	var profileCreateResObj devconnmanager.ProfileDataRes
+	profileCreateReqObj.Data.Type = "profiles"
+	profileCreateReqObj.Data.Attributes.Name = profileName
+	profileCreateReqObj.Data.Attributes.ProfileType = profileType
+	profileCreateReqObj.Data.Relationships.BundleId.Data.Type = "bundleIds"
+	profileCreateReqObj.Data.Relationships.BundleId.Data.Id = bundleidId
+	profileCreateReqObj.Data.Relationships.Certificates.Data = make([]devconnmanager.IdAndTypeItem,1)
+	profileCreateReqObj.Data.Relationships.Certificates.Data[0].Type = "certificates"
+	profileCreateReqObj.Data.Relationships.Certificates.Data[0].Id = certId
+	url := _const.APPLE_PROFILE_MANAGER_URL
+	result := ReqToAppleHasObjMethod("POST",url,token,&profileCreateReqObj,&profileCreateResObj)
+	if result{
+		return &profileCreateResObj
+	}else {
+		return nil
+	}
+}
+
+func CreateOrUpdateProfile(c *gin.Context){
+	logs.Info("单独Profile创建&更新接口")
+	var requestData devconnmanager.ProfileCreateOrUpdateRequest
+	bindJsonError := c.ShouldBindJSON(&requestData)
+	utils.RecordError("绑定post请求body出错：%v", bindJsonError)
+	if bindJsonError != nil {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
+		return
+	}
+	//todo 企业分发类型账号，通知工单处理人进行处理
+	if requestData.AccountType == _const.Enterprise {
+		logs.Info("企业分发类型账号，通知工单处理人进行处理")
+		logs.Info(requestData.AccountName,requestData.AccountType,requestData.BundleId, requestData.UseCertId,
+			requestData.ProfileName,requestData.ProfileType,requestData.UserName)
+		//todo 发送Lark消息
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "lark success",
+			"errorCode": 0,
+		})
+		return
+	}else {
+		logs.Info("普通企业类型账号，苹果api自动处理")
+		tokenString := GetTokenStringByTeamId(requestData.TeamId)
+		if requestData.ProfileId != "" {
+			deleteUrl := _const.APPLE_PROFILE_MANAGER_URL + "/" + requestData.ProfileId
+			delRes := ReqToAppleNoObjMethod("DELETE",deleteUrl,tokenString)
+			if !delRes{
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"message":   "delete profile fail from apple server",
+					"errorCode": 7,
+				})
+				return
+			}
+			//tos中只删除重名的profile，以免出现覆盖问题
+			deleteTosObj("appleConnectFile/" + requestData.TeamId + "/Profile/" + requestData.ProfileType + "/" + requestData.ProfileName + ".mobileprovision")
+			dbError := devconnmanager.DeleteAppleProfile(map[string]interface{}{"profile_id":requestData.ProfileId})
+			utils.RecordError("删除tt_apple_profile失败：%v", dbError)
+			if dbError != nil {
+				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "删除tt_apple_profile失败", "failed")
+				return
+			}
+			dbUpdateErr := UpdateBundleProfilesRelation(requestData.BundleId,requestData.ProfileType,"NULL")
+			if dbUpdateErr != nil{
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"message":   "update apple response to tt_app_bundleId_profiles error",
+					"errorCode": 1,
+				})
+				return
+			}
+		}
+		appleResult := CreateOrUpdateProfileFromApple(requestData.ProfileName,requestData.ProfileType,requestData.BundleidId,requestData.UseCertId,tokenString)
+		if appleResult != nil{
+			decoded, err := base64.StdEncoding.DecodeString(appleResult.Data.Attributes.ProfileContent)
+			if err != nil{
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"message":   "pp file decoded error",
+					"errorCode": 2,
+				})
+				return
+			}else {
+				pathTos := "appleConnectFile/" + requestData.TeamId + "/Profile/" + requestData.ProfileType + "/" + requestData.ProfileName + ".mobileprovision"
+				uploadResult := uploadProfileToTos(decoded,pathTos)
+				if !uploadResult{
+					c.JSON(http.StatusInternalServerError, gin.H{
+						"message":   "upload profile tos error",
+						"errorCode": 3,
+					})
+					return
+				}
+				exp, _ := time.Parse("2006-01-02T15:04:05", appleResult.Data.Attributes.ExpirationDate)
+				var profileItem devconnmanager.AppleProfile
+				profileItem.ProfileId = appleResult.Data.Id
+				profileItem.ProfileName = requestData.ProfileName
+				profileItem.ProfileExpireDate = exp
+				profileItem.ProfileType = requestData.ProfileType
+				profileItem.ProfileDownloadUrl = _const.TOS_BUCKET_URL + pathTos
+				dbInsertErr := devconnmanager.InsertRecord(&profileItem)
+				if dbInsertErr != nil{
+					c.JSON(http.StatusInternalServerError, gin.H{
+						"message":   "insert tt_apple_profile error",
+						"errorCode": 4,
+					})
+					return
+				}
+				dbUpdateErr := UpdateBundleProfilesRelation(requestData.BundleId,requestData.ProfileType,appleResult.Data.Id)
+				if dbUpdateErr != nil{
+					c.JSON(http.StatusInternalServerError, gin.H{
+						"message":   "update apple response to tt_app_bundleId_profiles error",
+						"errorCode": 5,
+					})
+					return
+				}
+				c.JSON(http.StatusOK, gin.H{
+					"message":   "success",
+					"errorCode": 0,
+					"data": appleResult,
+				})
+				return
+			}
+		}else {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message":   "apple response error",
+				"errorCode": 6,
+			})
+			return
+		}
 	}
 }
