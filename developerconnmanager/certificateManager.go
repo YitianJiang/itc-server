@@ -23,6 +23,7 @@ import (
 	"time"
 )
 
+//todo 重构-数据库操作，错误处理，时间解析
 func QueryCertificatesInfo(c *gin.Context) {
 	logs.Info("获取证书信息")
 	var queryCertRequest devconnmanager.QueryCertRequest
