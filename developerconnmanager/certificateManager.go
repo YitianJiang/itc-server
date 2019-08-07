@@ -284,6 +284,11 @@ func UploadCertificate(c *gin.Context) {
 
 	//获取文件信息
 	certFileByteInfo, certFileFullName := getFileFromRequest(c, "cert_file")
+	//将文件名中的空格替换为下划线
+	certFileFullName = strings.Replace(certFileFullName, " ", "_", -1)
+	certFileFullName = strings.Replace(certFileFullName, "(", "", -1)
+	certFileFullName = strings.Replace(certFileFullName, ")", "", -1)
+	//logs.Info("文件名:%s",certFileFullName)
 	if len(certFileByteInfo) == 0 {
 		utils.AssembleJsonResponse(c, http.StatusBadRequest, "缺少file参数，读取file失败", "failed")
 		return
