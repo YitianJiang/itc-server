@@ -257,13 +257,13 @@ func CheckParams(c *gin.Context, bodyAddr *devconnmanager.InsertCertRequest) boo
 		})
 		return false
 	}
-	if bodyAddr.CertName == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 2,
-			"errorInfo": "cert_name为空！",
-		})
-		return false
-	}
+	//if bodyAddr.CertName == "" {
+	//	c.JSON(http.StatusOK, gin.H{
+	//		"errorCode": 2,
+	//		"errorInfo": "cert_name为空！",
+	//	})
+	//	return false
+	//}
 	if bodyAddr.CertType == "" {
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": 3,
@@ -628,6 +628,7 @@ func DeleteCertificate(c *gin.Context) {
 				})
 				return
 			}
+			//删除tos文件
 			tosFilePath := "appleConnectFile/" + string(delCertRequest.TeamId) + "/" + delCertRequest.CertType + "/" + delCertRequest.CertId + "/" + DealCertName(delCertRequest.CertName) + ".cer"
 			delResultBool := DeleteTosCert(tosFilePath)
 			if !delResultBool {
@@ -638,6 +639,7 @@ func DeleteCertificate(c *gin.Context) {
 				})
 				return
 			}
+			//db删除，只更新deleted_at
 			updateInfo := map[string]interface{}{
 				"deleted_at":time.Now(),
 			}
@@ -693,6 +695,7 @@ func DeleteCertificate(c *gin.Context) {
 		})
 	}
 }
+
 //证书数据库删除操作--前端交互版
 func certDBDelete(c *gin.Context,condition *map[string]interface{},updateInfo *map[string]interface{} )  {
 	delResultBool := devconnmanager.UpdateCertInfoByMap(*condition,*updateInfo)
@@ -711,7 +714,7 @@ func certDBDelete(c *gin.Context,condition *map[string]interface{},updateInfo *m
 	})
 }
 
-
+//lark卡片点击已删除后异步更新db操作人信息
 func AsynDeleteCertFeedback(c *gin.Context){
 	var feedbackInfo devconnmanager.DelCertFeedback
 	err := c.ShouldBindJSON(&feedbackInfo)
@@ -733,6 +736,7 @@ func AsynDeleteCertFeedback(c *gin.Context){
 		"cert_id":feedbackInfo.CustomerJson.CertId,
 	}
 	updateInfo := map[string]interface{}{
+		"deleted_at":time.Now(),
 		"op_user":feedbackInfo.CustomerJson.UserName,
 	}
 	okU := devconnmanager.UpdateCertInfoByMap(condition,updateInfo)
@@ -1062,7 +1066,7 @@ func UploadCertificate(c *gin.Context) {
 	certInfoInputs["cert_expire_date"] = expireTime
 	logs.Info("exp:", expireTime)
 
-	tosFilePath := "appleConnectFile/" + string(requestData.TeamId) + "/" + requestData.CertType + "/" + requestData.CertId + "/" + certFileName
+	tosFilePath := "appleConnectFile/" + string(requestData.TeamId) + "/" + requestData.CertType + "/" + requestData.CertId + "/" + certFileFullName
 	uploadResult := UploadTos(certFileByteInfo, tosFilePath)
 	if !uploadResult {
 		utils.RecordError("上传证书文件到tos失败：", nil)
