@@ -13,9 +13,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 	"code.byted.org/gopkg/context"
 )
+//tos通用处理逻辑
 func uploadProfileToTos(profileContent []byte, tosFilePath string) bool {
 	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME_JYT, _const.TOS_BUCKET_TOKEN_JYT)
 	context, cancel := context.WithTimeout(context.Background(), time.Minute)
@@ -41,7 +43,7 @@ func deleteTosObj(tosFilePath string) bool {
 	}
 	return true
 }
-
+//判断是否请求成功的通用逻辑，根据response status code判断
 func AssertResStatusCodeOK(statusCode int) bool{
 	if statusCode == http.StatusOK || statusCode == http.StatusCreated || statusCode == http.StatusAccepted || statusCode == http.StatusNonAuthoritativeInfo ||
 		statusCode == http.StatusNoContent || statusCode == http.StatusResetContent || statusCode == http.StatusPartialContent ||
@@ -50,11 +52,6 @@ func AssertResStatusCodeOK(statusCode int) bool{
 	}else {
 		return false
 	}
-}
-
-func TimeOutFunc(timeout chan bool){
-	time.Sleep(1 * time.Second)
-	timeout <- true
 }
 
 //请求苹果的Delete、Get等接口，不需要拿到苹果返回值
@@ -308,11 +305,6 @@ func AppBindCert(c *gin.Context){
 }
 
 //单独Profile创建\更新接口
-func DeleteProfileFromApple(method,url,tokenString string,ch chan int) {
-	ReqToAppleNoObjMethod(method,url,tokenString)
-	ch <- 1
-}
-
 func UpdateBundleProfilesRelation (bundleId,profileType,profileId string) error{
 	var bundleProfilesRelationObj devconnmanager.AppBundleProfiles
 	conditionDb := map[string]interface{}{"bundle_id":bundleId}
@@ -325,6 +317,17 @@ func UpdateBundleProfilesRelation (bundleId,profileType,profileId string) error{
 	}
 	dbUpdateErr := devconnmanager.UpdateAppBundleProfiles(conditionDb,bundleProfilesRelationObj)
 	return dbUpdateErr
+}
+
+func InsertProfileInfoToDB(profileId,profileName,profileType,tosPath string,timeStringDb time.Time) error {
+	var profileItem devconnmanager.AppleProfile
+	profileItem.ProfileId = profileId
+	profileItem.ProfileName = profileName
+	profileItem.ProfileExpireDate = timeStringDb
+	profileItem.ProfileType = profileType
+	profileItem.ProfileDownloadUrl = tosPath
+	dbInsertErr := devconnmanager.InsertRecord(&profileItem)
+	return dbInsertErr
 }
 
 func CreateOrUpdateProfileFromApple(profileName,profileType,bundleidId,certId,token string) *devconnmanager.ProfileDataRes {
@@ -374,11 +377,7 @@ func CreateOrUpdateProfile(c *gin.Context){
 			deleteUrl := _const.APPLE_PROFILE_MANAGER_URL + "/" + requestData.ProfileId
 			delRes := ReqToAppleNoObjMethod("DELETE",deleteUrl,tokenString)
 			if !delRes{
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"message":   "delete profile fail from apple server",
-					"errorCode": 7,
-				})
-				return
+				logs.Info("delete profile fail from apple server")
 			}
 			//tos中只删除重名的profile，以免出现覆盖问题
 			deleteTosObj("appleConnectFile/" + requestData.TeamId + "/Profile/" + requestData.ProfileType + "/" + requestData.ProfileName + ".mobileprovision")
@@ -388,6 +387,7 @@ func CreateOrUpdateProfile(c *gin.Context){
 				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "删除tt_apple_profile失败", "failed")
 				return
 			}
+			//todo 不要传字符串NULL，让数据库操作逻辑统一处理
 			dbUpdateErr := UpdateBundleProfilesRelation(requestData.BundleId,requestData.ProfileType,"NULL")
 			if dbUpdateErr != nil{
 				c.JSON(http.StatusInternalServerError, gin.H{
@@ -416,14 +416,9 @@ func CreateOrUpdateProfile(c *gin.Context){
 					})
 					return
 				}
-				exp, _ := time.Parse("2006-01-02T15:04:05", appleResult.Data.Attributes.ExpirationDate)
-				var profileItem devconnmanager.AppleProfile
-				profileItem.ProfileId = appleResult.Data.Id
-				profileItem.ProfileName = requestData.ProfileName
-				profileItem.ProfileExpireDate = exp
-				profileItem.ProfileType = requestData.ProfileType
-				profileItem.ProfileDownloadUrl = _const.TOS_BUCKET_URL + pathTos
-				dbInsertErr := devconnmanager.InsertRecord(&profileItem)
+				timeString := strings.Split(appleResult.Data.Attributes.ExpirationDate,"+")[0]
+				exp, _ := time.Parse("2006-01-02T15:04:05", timeString)
+				dbInsertErr := InsertProfileInfoToDB(appleResult.Data.Id,requestData.ProfileName,requestData.ProfileType,_const.TOS_BUCKET_URL + pathTos,exp)
 				if dbInsertErr != nil{
 					c.JSON(http.StatusInternalServerError, gin.H{
 						"message":   "insert tt_apple_profile error",
