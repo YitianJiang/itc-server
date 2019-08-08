@@ -63,7 +63,7 @@ func QueryAccount(c *gin.Context) {
 	}
 	var resPerms devconnmanager.GetPermsResponse
 	url := _const.USER_ALL_RESOURCES_PERMS_URL + "userName=" + userName
-	result := QueryPerms(url, &resPerms)
+	result := queryPerms(url, &resPerms)
 	if !result {
 		c.JSON(http.StatusOK, gin.H{
 			"errcode": 2,
@@ -268,7 +268,7 @@ func GetTokenStringByTeamId(teamId string) string {
 	condition := make(map[string]interface{})
 	condition["team_id"] = teamId
 	accountsInfo := devconnmanager.QueryAccountInfo(condition)
-	if accountsInfo == nil{
+	if accountsInfo == nil {
 		logs.Error("从数据库查询账号信息失败，无法签出token")
 		return ""
 	}

@@ -20,6 +20,7 @@ const LARK_Email2Id_URL = "https://open.feishu.cn/open-apis/user/v3/email2id"
 var LowLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong"}
 var MiddleLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong", "gongrui", "zhangshuai.02"}
 var HighLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong", "gongrui", "zhangshuai.02", "chenyujun"}
+var PermLarkPeople = []string{"kanghuaisong","lirensheng"}
 var AppVersionProject = map[string]string{"13": "1", "27": "35", "32": "23", "1128": "375", "1112": "397"}
 
 const (

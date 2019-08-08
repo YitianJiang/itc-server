@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/gin-gonic/gin"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -84,6 +85,14 @@ func RecordError(message string, err error) {
 	if err != nil {
 		logs.Error(message+"%v", err)
 	}
+}
+
+func AssembleJsonResponse(c *gin.Context, errorCode int, message string, data interface{}) {
+	c.JSON(http.StatusOK, gin.H{
+		"errorCode": errorCode,
+		"message":   message,
+		"data":      data,
+	})
 }
 
 func NewGetAppMap() map[int]string {
