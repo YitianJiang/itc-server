@@ -203,6 +203,8 @@ const (
 	APPLE_DELETE_CERT_URL     = "https://developer.apple.com/account/resources/certificates/download/"
 	DELCERT_FEEDBACK_URL_TEST = "http://10.224.13.149:6789/v1/appleCertManage/asynDeleteFeedback"
 	DELCERT_FEEDBACK_URL      = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
+	//ApproveAppBindAccountUrl      = "http://10.224.15.119:6789/v1/appleConnManage/approveAppBindAccountFeedback"
+	ApproveAppBindAccountUrl = "https://itc.bytedance.net/v1/appleConnManage/approveAppBindAccountFeedback"
 )
 
 //新建证书工单卡片基本信息
@@ -220,6 +222,16 @@ var DeleteCertNameHeader = "证书名称："
 var AppleUrlHeader = "删除链接："
 var AppleUrlText = "点击跳转"
 var DeleteButtonText = "已删除"
+
+//审核绑定账号请求基本信息
+var ApproveBindAccountMessage = "用户正在申请将app绑定至指定账号，批准后app将被绑定至新账号下"
+var AppIdHeader = "APP ID: "
+var AppNameHeader = "APP名称: "
+var AppTypeHeader = "APP类型: "
+var TeamIdHeader = "目标Team ID: "
+var UserNameHeader = "申请人: "
+var ApproveButtonText = "同意"
+var RejectButtonText = "拒绝"
 
 func CallLarkAPI(url string, token string, paramsIn interface{}, paramsOut interface{}) {
 	bodyByte, _ := json.Marshal(paramsIn)

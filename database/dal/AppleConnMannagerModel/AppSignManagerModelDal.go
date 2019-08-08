@@ -4,6 +4,7 @@ import (
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/logs"
 	"fmt"
 )
 
@@ -68,8 +69,8 @@ func DeleteAppAccountCert(queryData map[string]interface{}) error {
 
 /**
 更新操作
- */
-func UpdateAppAccountCert(queryData,item map[string]interface{}) error{
+*/
+func UpdateAppAccountCert(queryData, item map[string]interface{}) error {
 	conn, err := database.GetConneection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
@@ -82,6 +83,43 @@ func UpdateAppAccountCert(queryData,item map[string]interface{}) error{
 		return err1
 	}
 	return nil
+}
+
+/**
+更新操作
+返回记录model
+*/
+func UpdateAppAccountCertAndGetModelByMap(condition map[string]interface{}, updateInfo map[string]interface{}) (error, *AppAccountCert) {
+	conn, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Get DB Connection Failed: ", err)
+		return err, nil
+	}
+	defer conn.Close()
+	var appAccountCert AppAccountCert
+	if err = conn.LogMode(_const.DB_LOG_MODE).Table(AppAccountCert{}.TableName()).Unscoped().Where(condition).Update(updateInfo).Find(&appAccountCert).Error; err != nil {
+		logs.Error("Update DB Failed:", err)
+		return err, nil
+	}
+	return nil, &appAccountCert
+}
+
+/**
+更新操作
+不返回model
+*/
+func UpdateAppAccountCertByMap(condition map[string]interface{}, updateInfo map[string]interface{}) bool {
+	conn, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Get DB Connection Failed: ", err)
+		return false
+	}
+	defer conn.Close()
+	if err = conn.LogMode(_const.DB_LOG_MODE).Table(AppAccountCert{}.TableName()).Unscoped().Where(condition).Update(updateInfo).Error; err != nil {
+		logs.Error("Update DB Failed:", err)
+		return false
+	}
+	return true
 }
 
 /**
@@ -123,7 +161,7 @@ func DeleteAppBundleProfiles(queryData map[string]interface{}) error {
 	return nil
 }
 
-func UpdateAppBundleProfiles(queryData,item map[string]interface{}) error{
+func UpdateAppBundleProfiles(queryData, item map[string]interface{}) error {
 	conn, err := database.GetConneection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
