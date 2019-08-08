@@ -179,5 +179,7 @@ func InitRouter(r *ginex.Engine) {
 
 		//接口生成Profile描述文件
 		appSignManager.POST("/createOrUpdateProfile",developerconnmanager.CreateOrUpdateProfile)
+		//接口上传Profile描述文件
+		appSignManager.POST("/profileUpload",developerconnmanager.ProfileUploadFunc)
 	}
 }

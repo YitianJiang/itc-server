@@ -38,6 +38,16 @@ type ProfileCreateOrUpdateRequest struct {
 	ProfileType string    `json:"profile_type"   binding:"required"`
 	UserName    string    `json:"user_name"      binding:"required"`
 }
+
+type ProfileUploadRequest struct {
+	TeamId      string    `form:"team_id"        binding:"required"`
+	BundleId    string    `form:"bundle_id"      binding:"required"`
+	ProfileId   string    `form:"profile_id"     binding:"required"`
+	ProfileName string    `form:"profile_name"   binding:"required"`
+	ProfileType string    `form:"profile_type"   binding:"required"`
+	UserName    string    `form:"user_name"      binding:"required"`
+}
+
 //和苹果req res的Model
 
 //Profile的苹果req的Model ******Start******

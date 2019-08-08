@@ -363,7 +363,7 @@ func CreateOrUpdateProfile(c *gin.Context){
 		logs.Info("企业分发类型账号，通知工单处理人进行处理")
 		logs.Info(requestData.AccountName,requestData.AccountType,requestData.BundleId, requestData.UseCertId,
 			requestData.ProfileName,requestData.ProfileType,requestData.UserName)
-		//todo 发送Lark消息
+		//todo 发送Lark消息 @zhangmengqi 如上面logs.Info，Lark消息卡片提供account_name、account_type、bundle_id、use_cert_id、profile_name、profile_type、user_name信息
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "lark success",
 			"errorCode": 0,
@@ -447,4 +447,50 @@ func CreateOrUpdateProfile(c *gin.Context){
 			return
 		}
 	}
+}
+
+func ProfileUploadFunc(c *gin.Context) {
+	logs.Info("单独上传profile描述文件接口")
+	var requestData devconnmanager.ProfileUploadRequest
+	bindError := c.ShouldBind(&requestData)
+	utils.RecordError("绑定post请求body出错：%v", bindError)
+	if bindError != nil {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败，查看是否缺少参数", "failed")
+		return
+	}
+	profileFileByteInfo, profileFileFullName := getFileFromRequest(c, "profile_file")
+	pathTos := "appleConnectFile/" + requestData.TeamId + "/Profile/" + requestData.ProfileType + "/" + profileFileFullName
+	deleteTosObj(pathTos)
+	uploadResult := uploadProfileToTos(profileFileByteInfo,pathTos)
+	if !uploadResult{
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message":   "upload profile tos error",
+			"errorCode": 3,
+		})
+		return
+	}
+	exp := utils.GetFileExpireTime(profileFileFullName,".mobileprovision",profileFileByteInfo,requestData.UserName)
+	dbInsertErr := InsertProfileInfoToDB(requestData.ProfileId,requestData.ProfileName,requestData.ProfileType,_const.TOS_BUCKET_URL + pathTos,*exp)
+	if dbInsertErr != nil{
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message":   "insert tt_apple_profile error",
+			"errorCode": 4,
+		})
+		return
+	}
+	dbUpdateErr := UpdateBundleProfilesRelation(requestData.BundleId,requestData.ProfileType,&requestData.ProfileId)
+	if dbUpdateErr != nil{
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message":   "update apple response to tt_app_bundleId_profiles error",
+			"errorCode": 5,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "upload success",
+		"errorCode": 0,
+		"profile_download_url": _const.TOS_BUCKET_URL + pathTos,
+		"profile_expire_date": exp,
+	})
+	return
 }
