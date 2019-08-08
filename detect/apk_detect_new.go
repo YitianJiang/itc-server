@@ -114,7 +114,7 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 	}
 
 	//任务状态更新----该app无需要特别确认的敏感方法、字符串或权限
-	errTaskUpdate, unConfirms := taskStatusUpdate(mapInfo["taskId"], mapInfo["toolId"], &(*detect)[0], false)
+	errTaskUpdate, unConfirms := taskStatusUpdate(mapInfo["taskId"], mapInfo["toolId"], &(*detect)[0], false, 0)
 	if errTaskUpdate != "" {
 		return fmt.Errorf(errTaskUpdate), 0
 	}
