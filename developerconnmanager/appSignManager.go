@@ -280,17 +280,16 @@ func AppBindCert(c *gin.Context){
 		return
 	}
 	conditionDB := map[string]interface{}{"id":requestData.AccountCertId}
-	var appCertChange devconnmanager.AppAccountCert
-	appCertChange.UserName = requestData.UserName
+	appCertChangeMap := map[string]interface{}{"user_name":requestData.UserName}
 	if requestData.CertType == _const.CERT_TYPE_IOS_DEV || requestData.CertType == _const.CERT_TYPE_MAC_DEV {
-		appCertChange.DevCertId = requestData.CertId
+		appCertChangeMap["dev_cert_id"] = requestData.CertId
 	}else if requestData.CertType == _const.CERT_TYPE_IOS_DIST || requestData.CertType == _const.CERT_TYPE_MAC_DIST {
-		appCertChange.DistCertId = requestData.CertId
+		appCertChangeMap["dist_cert_id"] = requestData.CertId
 	}else {
 		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数正证书类型不正确", "failed")
 		return
 	}
-	dbError := devconnmanager.UpdateAppAccountCert(conditionDB,appCertChange)
+	dbError := devconnmanager.UpdateAppAccountCert(conditionDB,appCertChangeMap)
 	utils.RecordError("更新tt_app_account_cert表数据出错：%v", dbError)
 	if dbError != nil {
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "更新tt_app_account_cert表数据出错", "failed")
@@ -305,15 +304,15 @@ func AppBindCert(c *gin.Context){
 }
 
 //单独Profile创建\更新接口
-func UpdateBundleProfilesRelation (bundleId,profileType,profileId string) error{
-	var bundleProfilesRelationObj devconnmanager.AppBundleProfiles
+func UpdateBundleProfilesRelation (bundleId,profileType string,profileId *string) error{
 	conditionDb := map[string]interface{}{"bundle_id":bundleId}
+	bundleProfilesRelationObj := make(map[string]interface{})
 	if profileType == _const.IOS_APP_STORE || profileType ==_const.IOS_APP_INHOUSE || profileType == _const.MAC_APP_STORE{
-		bundleProfilesRelationObj.DistProfileId = profileId
+		bundleProfilesRelationObj["dist_profile_id"] = profileId
 	}else if profileType == _const.IOS_APP_DEVELOPMENT || profileType == _const.MAC_APP_DEVELOPMENT {
-		bundleProfilesRelationObj.DevProfileId = profileId
+		bundleProfilesRelationObj["dev_profile_id"] = profileId
 	}else {
-		bundleProfilesRelationObj.DistAdhocProfileId = profileId
+		bundleProfilesRelationObj["dist_adhoc_profile_id"] = profileId
 	}
 	dbUpdateErr := devconnmanager.UpdateAppBundleProfiles(conditionDb,bundleProfilesRelationObj)
 	return dbUpdateErr
@@ -387,8 +386,7 @@ func CreateOrUpdateProfile(c *gin.Context){
 				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "删除tt_apple_profile失败", "failed")
 				return
 			}
-			//todo 不要传字符串NULL，让数据库操作逻辑统一处理
-			dbUpdateErr := UpdateBundleProfilesRelation(requestData.BundleId,requestData.ProfileType,"NULL")
+			dbUpdateErr := UpdateBundleProfilesRelation(requestData.BundleId,requestData.ProfileType,nil)
 			if dbUpdateErr != nil{
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"message":   "update apple response to tt_app_bundleId_profiles error",
@@ -426,7 +424,7 @@ func CreateOrUpdateProfile(c *gin.Context){
 					})
 					return
 				}
-				dbUpdateErr := UpdateBundleProfilesRelation(requestData.BundleId,requestData.ProfileType,appleResult.Data.Id)
+				dbUpdateErr := UpdateBundleProfilesRelation(requestData.BundleId,requestData.ProfileType,&appleResult.Data.Id)
 				if dbUpdateErr != nil{
 					c.JSON(http.StatusInternalServerError, gin.H{
 						"message":   "update apple response to tt_app_bundleId_profiles error",

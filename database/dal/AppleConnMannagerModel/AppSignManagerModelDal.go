@@ -69,7 +69,7 @@ func DeleteAppAccountCert(queryData map[string]interface{}) error {
 /**
 更新操作
  */
-func UpdateAppAccountCert(queryData map[string]interface{},item AppAccountCert) error{
+func UpdateAppAccountCert(queryData,item map[string]interface{}) error{
 	conn, err := database.GetConneection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
@@ -77,7 +77,7 @@ func UpdateAppAccountCert(queryData map[string]interface{},item AppAccountCert) 
 	}
 	defer conn.Close()
 	db := conn.Table(AppAccountCert{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	if err1 := db.Where(queryData).Update(&item).Error; err1 != nil {
+	if err1 := db.Where(queryData).Update(item).Error; err1 != nil {
 		utils.RecordError("删除 tt_app_account_cert失败，删除条件："+fmt.Sprint(queryData)+",errInfo：", err1)
 		return err1
 	}
@@ -123,7 +123,7 @@ func DeleteAppBundleProfiles(queryData map[string]interface{}) error {
 	return nil
 }
 
-func UpdateAppBundleProfiles(queryData map[string]interface{},item AppBundleProfiles) error{
+func UpdateAppBundleProfiles(queryData,item map[string]interface{}) error{
 	conn, err := database.GetConneection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
@@ -131,8 +131,8 @@ func UpdateAppBundleProfiles(queryData map[string]interface{},item AppBundleProf
 	}
 	defer conn.Close()
 	db := conn.Table(AppBundleProfiles{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	if err1 := db.Where(queryData).Update(&item).Error; err1 != nil {
-		utils.RecordError("更新 tt_app_account_cert失败，条件："+fmt.Sprint(queryData)+",errInfo：", err1)
+	if err1 := db.Where(queryData).Update(item).Error; err1 != nil {
+		utils.RecordError("更新 tt_app_bundleId_profiles失败，条件："+fmt.Sprint(queryData)+",errInfo：", err1)
 		return err1
 	}
 	return nil
