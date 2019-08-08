@@ -97,6 +97,14 @@ func AssembleJsonResponse(c *gin.Context, errorCode int, message string, data in
 	})
 }
 
+func AssembleJsonResponseWithStatusCode(c *gin.Context, statusCode int, message string, data interface{}) {
+	c.JSON(statusCode, gin.H{
+		"errorNo": statusCode,
+		"message": message,
+		"data":    data,
+	})
+}
+
 func NewGetAppMap() map[int]string {
 	var mapInfo map[string]interface{}
 	appMaps := Get(_const.ROCKET_URL)
