@@ -15,8 +15,8 @@ type CreateAppBindAccountRequest struct {
 }
 
 type DeleteAppAllInfoRequest struct {
-	AppId    string `form:"app_id"   binding:"required"`
-	AppName  string `form:"app_name" binding:"required"`
+	AppId   string `form:"app_id"   binding:"required"`
+	AppName string `form:"app_name" binding:"required"`
 }
 
 type AppChangeBindCertRequest struct {
@@ -27,16 +27,16 @@ type AppChangeBindCertRequest struct {
 }
 
 type ProfileCreateOrUpdateRequest struct {
-	AccountName string    `json:"account_name"   binding:"required"`
-	AccountType string    `json:"account_type"   binding:"required"`
-	TeamId      string    `json:"team_id"        binding:"required"`
-	BundleId    string    `json:"bundle_id"      binding:"required"`
-	BundleidId  string    `json:"bundleid_id"    binding:"exists"`
-	UseCertId   string    `json:"use_cert_id"    binding:"required"`
-	ProfileId   string    `json:"profile_id"     binding:"exists"`
-	ProfileName string    `json:"profile_name"   binding:"required"`
-	ProfileType string    `json:"profile_type"   binding:"required"`
-	UserName    string    `json:"user_name"      binding:"required"`
+	AccountName string `json:"account_name"   binding:"required"`
+	AccountType string `json:"account_type"   binding:"required"`
+	TeamId      string `json:"team_id"        binding:"required"`
+	BundleId    string `json:"bundle_id"      binding:"required"`
+	BundleidId  string `json:"bundleid_id"    binding:"exists"`
+	UseCertId   string `json:"use_cert_id"    binding:"required"`
+	ProfileId   string `json:"profile_id"     binding:"exists"`
+	ProfileName string `json:"profile_name"   binding:"required"`
+	ProfileType string `json:"profile_type"   binding:"required"`
+	UserName    string `json:"user_name"      binding:"required"`
 }
 
 type ProfileUploadRequest struct {
@@ -65,7 +65,7 @@ type DataIdAndTypeItemObj struct {
 }
 
 type ProfileRelationShipSec struct {
-	BundleId DataIdAndTypeItemObj `json:"bundleId" binding:"required"`
+	BundleId     DataIdAndTypeItemObj  `json:"bundleId" binding:"required"`
 	Certificates DataIdAndTypeItemList `json:"certificates" binding:"required"`
 }
 
@@ -75,14 +75,15 @@ type ProfileAttributes struct {
 }
 
 type ProfileDataObj struct {
-	Type          string                  `json:"type"       binding:"required"`
-	Attributes    ProfileAttributes       `json:"attributes" binding:"required"`
-	Relationships ProfileRelationShipSec  `json:"relationships" binding:"required"`
+	Type          string                 `json:"type"       binding:"required"`
+	Attributes    ProfileAttributes      `json:"attributes" binding:"required"`
+	Relationships ProfileRelationShipSec `json:"relationships" binding:"required"`
 }
 
 type ProfileDataReq struct {
-	Data ProfileDataObj		`json:"data"       binding:"required"`
+	Data ProfileDataObj `json:"data"       binding:"required"`
 }
+
 //Profile的苹果req的Model ******End******
 //Profile的苹果res的Model ******Start******
 type ProfileAttributesRes struct {
@@ -92,15 +93,24 @@ type ProfileAttributesRes struct {
 }
 
 type ProfileDataObjRes struct {
-	Id            string                     `json:"id"         binding:"required"`
-	Attributes    ProfileAttributesRes       `json:"attributes" binding:"required"`
+	Id         string               `json:"id"         binding:"required"`
+	Attributes ProfileAttributesRes `json:"attributes" binding:"required"`
 }
 
 type ProfileDataRes struct {
-	Data ProfileDataObjRes		`json:"data"       binding:"required"`
+	Data ProfileDataObjRes `json:"data"       binding:"required"`
 }
+
 //Profile的苹果res的Model ******End******
 
+type ApproveAppBindAccountParamFromLark struct {
+	ApproveAppBindAccountCustomerParam `json:"customer_parameter"`
+}
+
+type ApproveAppBindAccountCustomerParam struct {
+	AppAccountCertId uint `json:"appAccountCertId" binding:"required"`
+	IsApproved       int  `json:"isApproved"       binding:"required"`
+}
 
 //db model
 type AppAccountCert struct {
