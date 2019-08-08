@@ -843,6 +843,8 @@ func StatusDeal(detect dal.DetectStruct, confirmLark int) error {
 			logs.Error("回调ci出错！", err.Error())
 			return err
 		}
+	}
+	if detect.Status != 0 && (detect.Platform == 0 || detect.SelfCheckStatus != 0) {
 		//diff时调用，不用发冗余消息提醒
 		if confirmLark == 0 {
 			return nil
