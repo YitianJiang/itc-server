@@ -1,6 +1,7 @@
 package detect
 
 import (
+	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
@@ -14,18 +15,19 @@ import (
 */
 func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 	logs.Info("新的安卓解析开始～～～～")
+	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
+		"id": mapInfo["taskId"],
+	})
 	var fisrtResult dal.JSONResultStruct
 	err_f := json.Unmarshal([]byte(info), &fisrtResult)
 	if err_f != nil {
 		logs.Error("taskId:"+fmt.Sprint(mapInfo["taskId"])+",二进制静态包检测返回信息格式错误！,%v", err_f)
 		message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",二进制静态包检测返回信息格式错误，请解决;" + fmt.Sprint(err_f)
+		DetectTaskErrorHandle((*detect)[0], "1", info)
 		utils.LarkDingOneInner("fanjuan.xqp", message)
 		return err_f, 0
 	}
 
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": mapInfo["taskId"],
-	})
 	//遍历结果数组，并将每组检测结果信息插入数据库
 	for index, result := range fisrtResult.Result {
 		appInfos := result.AppInfo
@@ -112,7 +114,7 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 	}
 
 	//任务状态更新----该app无需要特别确认的敏感方法、字符串或权限
-	errTaskUpdate, unConfirms := taskStatusUpdate(mapInfo["taskId"], mapInfo["toolId"], &(*detect)[0], false)
+	errTaskUpdate, unConfirms := taskStatusUpdate(mapInfo["taskId"], mapInfo["toolId"], &(*detect)[0], false, 0)
 	if errTaskUpdate != "" {
 		return fmt.Errorf(errTaskUpdate), 0
 	}
@@ -244,8 +246,8 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 			conf.KeyInfo = pers
 			//将该权限的优先级定为--3高危
 			conf.Priority = 3
-			//暂时定为固定人选
-			conf.Creator = "kanghuaisong"
+			//暂时定为固定---标识itc检测新增
+			conf.Creator = "itc"
 			conf.Platform = 0
 			perm_id, err := dal.InsertDetectConfig(conf)
 
@@ -316,11 +318,10 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 		message := "你好，安卓二进制静态包检测出未知权限，请去权限配置页面完善权限信息,需要完善的权限信息有：\n"
 		message += larkPerms
 		message += "修改链接：http://cloud.bytedance.net/rocket/itc/permission?biz=13"
-		utils.LarkDingOneInner("kanghuaisong", message)
-		//测试时使用
-		//utils.LarkDingOneInner("fanjuan.xqp",message)
-		//上线时使用
-		//utils.LarkDingOneInner("lirensheng",message)
+
+		for _,people := range _const.PermLarkPeople {
+			utils.LarkDingOneInner(people,message)
+		}
 	}
 
 	return string(bytePerms), nil
@@ -453,4 +454,22 @@ func GetAllAPIConfigs() *map[string]interface{} {
 	}
 	return &apiMap
 
+}
+
+/**
+检测任务发生问题逻辑处理
+*/
+func DetectTaskErrorHandle(detect dal.DetectStruct, errCode string, errInfo string) error {
+	var errStruct dal.ErrorStruct
+	errStruct.ErrCode = errCode
+	errStruct.ErrInfo = errInfo
+	errBytes, _ := json.Marshal(errStruct)
+	var errString = string(errBytes)
+	detect.ErrInfo = &errString
+	err := dal.UpdateDetectModelNew(detect)
+	if err != nil {
+		return err
+	} else {
+		return nil
+	}
 }
