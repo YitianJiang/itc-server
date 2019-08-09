@@ -29,6 +29,7 @@ type AppChangeBindCertRequest struct {
 type AppSignListRequest struct{
 	AppId     string `form:"app_id"   binding:"required"`
 	Username  string `form:"username" binding:"required"`
+	TeamId    string `form:"team_id"  binding:"required"`
 }
 
 //db model
@@ -57,12 +58,13 @@ type AppBundleProfiles struct {
 	DistAdhocProfileId string `gorm:"column:dist_adhoc_profile_id"     json:"dist_adhoc_profile_id"`
 	DistProfileId      string `gorm:"column:dist_profile_id"           json:"dist_profile_id"`
 }
-
+//todo db工单注意新增bundleid_isdel
 type AppleBundleId struct {
 	gorm.Model
 	BundleidId                       string `gorm:"column:bundleid_id"                         json:"bundleid_id"`
 	BundleidName                     string `gorm:"column:bundleid_name"                       json:"bundleid_name"`
 	BundleId                         string `gorm:"column:bundle_id"                           json:"bundle_id"`
+	BundleIdIsDel					 string `gorm:"column:bundleid_isdel"                      json:"bundleid_isdel"`
 	BundleidType                     string `gorm:"column:bundleid_type"                       json:"bundleid_type"`
 	ICLOUD                           string `gorm:"column:ICLOUD"                              json:"ICLOUD"`
 	IN_APP_PURCHASE                  string `gorm:"column:IN_APP_PURCHASE"                     json:"IN_APP_PURCHASE"`
@@ -129,21 +131,19 @@ type APPSignManagerInfo struct {
 }
 type BundleProfileCert struct {
 	BoundleId          string             				 `json:"bundle_id"`
+	BundleIdName       string                            `json:"bundle_name"`
 	BundleIdIsDel      string           		   		 `json:"bundleid_isdel"`
 	BundleIdId         string            				 `json:"bundleid_id"`
 	BundleIdType       string           				 `json:"bundleid_type"`
-	EnableCapList      []string           				 `json:"enable_capabilities_list"`
+	EnableCapList      []string     		      		 `json:"enable_capabilities_list"`
 	ConfigCapObj       map[string]BundleConfigCapInfo    `json:"config_capabilities_obj"`
 	ProfileCertSection BundleProfileGroup				 `json:"profile_cert_section"`
+	PushCert           AppCertInfo 						 `json:"push_cert"`
 }
 
 type BundleConfigCapInfo struct {
 	KeyInfo string         `json:"key"`
-	Options []OptionStruct `json:"options"`
-}
-
-type OptionStruct struct {
-	Key string `json:"key"`
+	Options string 		   `json:"options"`
 }
 
 type BundleProfileGroup struct {
@@ -163,7 +163,6 @@ type BundleProfileInfo struct {
 type AppCertGroupInfo struct {
 	DistCert AppCertInfo `json:"dist_cert"`
 	DevCert  AppCertInfo `json:"dev_cert"`
-	PushCert AppCertInfo `json:"push_cert"`
 }
 
 type AppCertInfo struct {
@@ -177,7 +176,7 @@ type AppCertInfo struct {
 /**
 数据库联查struct
 */
-
+//app信息，账号信息和证书信息
 type APPandCert struct {
 	AppName             string    `json:"app_name"`
 	AppType             string    `json:"app_type"`
@@ -191,4 +190,16 @@ type APPandCert struct {
 	CertExpireDate      time.Time `json:"cert_expire_date"`
 	CertDownloadUrl     string    `json:"cert_download_url"`
 	PrivKeyUrl          string    `json:"priv_key_url"`
+}
+//appname、bundle信息和profile信息
+type APPandBundle struct {
+	AppName            string    						 `json:"app_name"`
+	BundleIdIndex 	   string							 `json:"bundle_id_index"`
+	AppleBundleId
+	PushCertId		   string							 `json:"push_cert_id"`
+	ProfileId		   string							 `json:"profile_id"`
+	ProfileName		   string							 `json:"profile_name"`
+	ProfileType        string							 `json:"profile_type"`
+	ProfileExpireDate  time.Time						 `json:"profile_expire_date"`
+	ProfileDownloadUrl string							 `json:"profile_download_url"`
 }

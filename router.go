@@ -168,6 +168,7 @@ func InitRouter(r *ginex.Engine) {
 
 	appSignManager := r.Group("/v1/appleConnManage")
 	{
+		appSignManager.GET("/appDetailInfoGet",developerconnmanager.GetAppSignListDetailInfo)
 		appSignManager.GET("/getCapabilitiesInfo", developerconnmanager.GetBundleIdCapabilitiesInfo)
 		//appSignManager.GET("/appDetailInfoGet", developerconnmanager.GetAppDetailInfo)
 		appSignManager.GET("/createAppBindAccount", developerconnmanager.CreateAppBindAccount)
