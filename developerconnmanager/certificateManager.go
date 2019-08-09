@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"code.byted.org/clientQA/itc-server/const"
 	devconnmanager "code.byted.org/clientQA/itc-server/database/dal/AppleConnMannagerModel"
-	"code.byted.org/clientQA/itc-server/detect"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/context"
 	"code.byted.org/gopkg/logs"
@@ -16,8 +15,6 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
-	"math"
-	"mime/multipart"
 	"net/http"
 	"strings"
 	"time"
@@ -261,7 +258,7 @@ func UploadCertificate(c *gin.Context) {
 	certInfoInputs["cert_id"] = requestData.CertId
 
 	//解析证书获得过期时间
-	expireTime := getCertExpireTime(certFileFullName, certFileType, certFileByteInfo, requestData.UserName)
+	expireTime := utils.GetFileExpireTime(certFileFullName, certFileType, certFileByteInfo, requestData.UserName)
 	certInfoInputs["cert_expire_date"] = expireTime
 	logs.Info("exp:", expireTime)
 
@@ -986,41 +983,6 @@ func getFileFromRequest(c *gin.Context, paramName string) ([]byte, string) {
 		return nil, ""
 	}
 	return fileByteInfo, header.Filename
-}
-
-func getCertExpireTime(certFileName string, certFileType string, certFileBytes []byte, userName string) *time.Time {
-	getCertExpUrl := "http://" + detect.DETECT_URL_PRO + "/query_certificate_expire_date" //过期日期访问地址
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	fileWriter, err := writer.CreateFormFile("certificate", certFileName)
-	utils.RecordError("访问过期日期POST请求create form file错误！", err)
-
-	_, err = fileWriter.Write(certFileBytes)
-	utils.RecordError("访问过期日期POST请求复制文件错误！", err)
-
-	_ = writer.WriteField("username", userName)
-	_ = writer.WriteField("type", certFileType)
-	contentType := writer.FormDataContentType()
-	err = writer.Close()
-	utils.RecordError("关闭writer出错！！", err)
-
-	response, err := http.Post(getCertExpUrl, contentType, body)
-	utils.RecordError("获取证书过期信息失败！", err)
-
-	responseByte, err := ioutil.ReadAll(response.Body)
-
-	responseMap := make(map[string]interface{})
-	err = json.Unmarshal(responseByte, &responseMap)
-	utils.RecordError("证书过期信息结果解析失败！", err)
-
-	if _, ok := responseMap["expire_time"]; !ok {
-		return nil
-	}
-
-	expTimeStamp := int64(math.Floor(responseMap["expire_time"].(float64)))
-	exp := time.Unix(expTimeStamp, 0)
-
-	return &exp
 }
 
 func larkNotifyUsers(groupName string, userNames []string, message string) bool {

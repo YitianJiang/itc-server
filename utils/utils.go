@@ -2,20 +2,22 @@ package utils
 
 import (
 	"bytes"
+	_const "code.byted.org/clientQA/itc-server/const"
+	"code.byted.org/gopkg/logs"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"io"
 	"io/ioutil"
+	"math"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
-
-	_const "code.byted.org/clientQA/itc-server/const"
-	"code.byted.org/gopkg/logs"
 )
+
+const DETECT_URL_PRO = "10.1.221.188:9527"
 
 //发送http post请求，其中rbody是一个json串
 func PostJsonHttp(url string, rbody []byte) (int, []byte) {
@@ -92,6 +94,14 @@ func AssembleJsonResponse(c *gin.Context, errorCode int, message string, data in
 		"errorCode": errorCode,
 		"message":   message,
 		"data":      data,
+	})
+}
+
+func AssembleJsonResponseWithStatusCode(c *gin.Context, statusCode int, message string, data interface{}) {
+	c.JSON(statusCode, gin.H{
+		"errorNo": statusCode,
+		"message": message,
+		"data":    data,
 	})
 }
 
@@ -291,6 +301,40 @@ func GetLarkInfo(url string, rbody map[string]string) string {
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	return string(body)
+}
+func GetFileExpireTime(fileName string, fileType string, fileBytes []byte, userName string) *time.Time {
+	getCertExpUrl := "http://" + DETECT_URL_PRO + "/query_certificate_expire_date" //过期日期访问地址
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	fileWriter, err := writer.CreateFormFile("certificate", fileName)
+	RecordError("访问过期日期POST请求create form file错误！", err)
+
+	_, err = fileWriter.Write(fileBytes)
+	RecordError("访问过期日期POST请求复制文件错误！", err)
+
+	_ = writer.WriteField("username", userName)
+	_ = writer.WriteField("type", fileType)
+	contentType := writer.FormDataContentType()
+	err = writer.Close()
+	RecordError("关闭writer出错！！", err)
+
+	response, err := http.Post(getCertExpUrl, contentType, body)
+	RecordError("获取文件过期信息失败！", err)
+
+	responseByte, err := ioutil.ReadAll(response.Body)
+
+	responseMap := make(map[string]interface{})
+	err = json.Unmarshal(responseByte, &responseMap)
+	RecordError("文件过期信息结果解析失败！", err)
+
+	if _, ok := responseMap["expire_time"]; !ok {
+		return nil
+	}
+
+	expTimeStamp := int64(math.Floor(responseMap["expire_time"].(float64)))
+	exp := time.Unix(expTimeStamp, 0)
+
+	return &exp
 }
 
 func GetItcToken(username string) string {

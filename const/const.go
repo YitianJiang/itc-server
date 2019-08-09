@@ -42,6 +42,9 @@ const (
 	APPLE_USER_INVITED_URL = "https://api.appstoreconnect.apple.com/v1/userInvitations"
 )
 const (
+	APPLE_PROFILE_MANAGER_URL = "https://api.appstoreconnect.apple.com/v1/profiles"
+)
+const (
 	TOS_BUCKET_URL            = "http://tosv.byted.org/obj/staticanalysisresult/"
 	TOS_BUCKET_NAME_JYT       = "staticanalysisresult"
 	TOS_BUCKET_TOKEN_JYT      = "C5V4TROQGXMCTPXLIJFT"
@@ -70,6 +73,14 @@ const (
 const (
 	Organization = "Organization"
 	Enterprise   = "Enterprise"
+)
+const (
+	IOS_APP_STORE = "IOS_APP_STORE"
+	IOS_APP_INHOUSE = "IOS_APP_INHOUSE"
+	MAC_APP_STORE = "MAC_APP_STORE"
+	IOS_APP_ADHOC = "IOS_APP_ADHOC"
+	IOS_APP_DEVELOPMENT = "IOS_APP_DEVELOPMENT"
+	MAC_APP_DEVELOPMENT = "MAC_APP_DEVELOPMENT"
 )
 
 var IOSSelectCapabilities = []string{"ACCESS_WIFI_INFORMATION", "APP_GROUPS", "ASSOCIATED_DOMAINS", "AUTOFILL_CREDENTIAL_PROVIDER", "CLASSKIT", "GAME_CENTER",
