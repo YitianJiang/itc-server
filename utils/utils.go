@@ -303,6 +303,7 @@ func GetLarkInfo(url string, rbody map[string]string) string {
 	return string(body)
 }
 
+//通用获取文件过期时间方法
 func GetFileExpireTime(fileName string, fileType string, fileBytes []byte, userName string) *time.Time {
 	getCertExpUrl := "http://" + DETECT_URL_PRO + "/query_certificate_expire_date" //过期日期访问地址
 	body := &bytes.Buffer{}
@@ -336,4 +337,76 @@ func GetFileExpireTime(fileName string, fileType string, fileBytes []byte, userN
 	exp := time.Unix(expTimeStamp, 0)
 
 	return &exp
+}
+
+//通用发送get请求方法
+func SendHttpGet(url string, values map[string]string, withAuthorization bool) (error, []byte) {
+	client := &http.Client{}
+
+	//组装请求
+	if values != nil {
+		if url[len(url)-1] != '?' {
+			url += "?"
+		}
+		for k, v := range values {
+			url += k + "=" + v + "&"
+		}
+		url = strings.TrimSuffix(url, "&")
+	}
+	logs.Info("%v", url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err, nil
+	}
+	if withAuthorization {
+		req.Header.Set("Authorization", "Basic "+_const.KANI_APP_ID_AND_SECRET_BASE64)
+	}
+
+	//发送请求
+	resp, err := client.Do(req)
+	if err != nil {
+		logs.Error(err.Error())
+		return err, nil
+	}
+	defer resp.Body.Close()
+
+	//读取响应
+	bodyText, err := ioutil.ReadAll(resp.Body)
+	return nil, bodyText
+}
+
+//http response model
+type GetResourceAdminListResponse struct {
+	ResourceAdminListData `json:"data"`
+	ErrorNo               int    `json:"errno"`
+	Message               string `json:"message"`
+}
+
+type ResourceAdminListData struct {
+	OwnerKeys []string `json:"owner_keys"`
+}
+
+//通用调用pmc获取资源负责人列表方法
+func GetAccountAdminList(teamId string) *[]string {
+	teamId = strings.ToLower(teamId) + "_space_account"
+	err, responseBytes := SendHttpGet(_const.GET_ACCOUNT_ADMIN_LIST_URL, map[string]string{"resourceKey": teamId}, true)
+	RecordError("查询某资源的admin列表请求失败：", err)
+	if err != nil {
+		return nil
+	}
+
+	var responseObject GetResourceAdminListResponse
+
+	err = json.Unmarshal(responseBytes, &responseObject)
+	RecordError("查询某资源的admin列表请求结果解析失败：", err)
+	if err != nil {
+		return nil
+	}
+
+	logs.Info("查询某资源的admin列表请求结果：%v", responseObject.OwnerKeys)
+	if responseObject.ErrorNo != 0 {
+		logs.Error("查询某资源的admin列表请求结果出错：%s", responseObject.Message)
+		return nil
+	}
+	return &responseObject.OwnerKeys
 }

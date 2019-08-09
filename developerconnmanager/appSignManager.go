@@ -311,17 +311,28 @@ func CreateAppBindAccount(c *gin.Context) {
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "存在多条app_id和app_name都相同的数据，无法更新", "failed")
 		return
 	}
-	//todo 等待kani提供根据资源和权限获取人员信息的接口，根据该接口获取需要发送审批消息的用户list
-	var userList = []string{"zhangmengqi.muki@bytedance.com"}
-	//lark消息生成并批量发送 todo 加go协程
+	//调用根据资源获取admin人员信息的接口，根据该接口获取需要发送审批消息的用户list
+	//todo 暂时写死admin list
+	//var userList = utils.GetAccountAdminList(requestData.TeamId)
+	var userList = &[]string{"zhangmengqi.muki"} //,"fanjuan.xqp"
+	//lark消息生成并批量发送 使用go协程
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 	cardInfos := generateCardOfApproveBindAccount(&appAccountCert)
-	cardActions := generateActionsOfApproveBindAccount(appAccountCert.ID)
-	err := sendIOSCertLarkMessage(cardInfos, cardActions, userList[0], &botService)
-	utils.RecordError("发送lark消息错误", err)
+
+	for _, adminEmailPrefix := range *userList {
+		go alertApproveToUser(adminEmailPrefix, appAccountCert.ID, cardInfos, &botService)
+	}
+
+	logs.Info("%v", userList)
 	utils.AssembleJsonResponse(c, _const.SUCCESS, "success", appAccountCert)
 	return
+}
+
+func alertApproveToUser(adminEmailPrefix string, id uint, cardInfos *[][]form.CardElementForm, botService *service.BotService) {
+	cardActions := generateActionsOfApproveBindAccount(id, adminEmailPrefix)
+	err := sendIOSCertLarkMessage(cardInfos, cardActions, adminEmailPrefix, botService)
+	utils.RecordError("发送lark消息错误", err)
 }
 
 func ApproveAppBindAccountFeedback(c *gin.Context) {
@@ -340,21 +351,20 @@ func ApproveAppBindAccountFeedback(c *gin.Context) {
 		return
 	}
 
-	logs.Info("accountCertInfo:%v", (*accountCertInfos)[0])
-	logs.Info("accountCertInfos:%v", *accountCertInfos)
+	//logs.Info("accountCertInfos:%v", *accountCertInfos)
 	switch (*accountCertInfos)[0].AccountVerifyStatus {
 	case "0":
 		//还未进行审核
 		switch requestData.IsApproved {
 		case -1:
-			if !devconnmanager.UpdateAppAccountCertByMap(map[string]interface{}{"id": requestData.AppAccountCertId}, map[string]interface{}{"account_verify_status": -1}) {
+			if !devconnmanager.UpdateAppAccountCertByMap(map[string]interface{}{"id": requestData.AppAccountCertId}, map[string]interface{}{"account_verify_status": -1, "account_verify_user": requestData.UserName}) {
 				utils.AssembleJsonResponseWithStatusCode(c, http.StatusInternalServerError, "审核失败:内部服务器错误", nil)
 				return
 			}
 			utils.AssembleJsonResponse(c, _const.SUCCESS, "success", "审核成功：绑定请求已被拒绝")
 			return
 		case 1:
-			if !devconnmanager.UpdateAppAccountCertByMap(map[string]interface{}{"id": requestData.AppAccountCertId}, map[string]interface{}{"account_verify_status": 1}) {
+			if !devconnmanager.UpdateAppAccountCertByMap(map[string]interface{}{"id": requestData.AppAccountCertId}, map[string]interface{}{"account_verify_status": 1, "account_verify_user": requestData.UserName}) {
 				utils.AssembleJsonResponseWithStatusCode(c, http.StatusInternalServerError, "审核失败:内部服务器错误", nil)
 				return
 			}
@@ -382,7 +392,6 @@ func ApproveAppBindAccountFeedback(c *gin.Context) {
 			return
 		}
 	}
-
 }
 
 //接口绑定\换绑签名证书接口
@@ -477,8 +486,8 @@ func CreateOrUpdateProfile(c *gin.Context) {
 	//todo 企业分发类型账号，通知工单处理人进行处理
 	if requestData.AccountType == _const.Enterprise {
 		logs.Info("企业分发类型账号，通知工单处理人进行处理")
-		logs.Info(requestData.AccountName,requestData.AccountType,requestData.BundleId, requestData.UseCertId,
-			requestData.ProfileName,requestData.ProfileType,requestData.UserName)
+		logs.Info(requestData.AccountName, requestData.AccountType, requestData.BundleId, requestData.UseCertId,
+			requestData.ProfileName, requestData.ProfileType, requestData.UserName)
 		//todo 发送Lark消息 @zhangmengqi 如上面logs.Info，Lark消息卡片提供account_name、account_type、bundle_id、use_cert_id、profile_name、profile_type、user_name信息
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "lark success",
@@ -577,25 +586,25 @@ func ProfileUploadFunc(c *gin.Context) {
 	profileFileByteInfo, profileFileFullName := getFileFromRequest(c, "profile_file")
 	pathTos := "appleConnectFile/" + requestData.TeamId + "/Profile/" + requestData.ProfileType + "/" + profileFileFullName
 	deleteTosObj(pathTos)
-	uploadResult := uploadProfileToTos(profileFileByteInfo,pathTos)
-	if !uploadResult{
+	uploadResult := uploadProfileToTos(profileFileByteInfo, pathTos)
+	if !uploadResult {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message":   "upload profile tos error",
 			"errorCode": 3,
 		})
 		return
 	}
-	exp := utils.GetFileExpireTime(profileFileFullName,".mobileprovision",profileFileByteInfo,requestData.UserName)
-	dbInsertErr := InsertProfileInfoToDB(requestData.ProfileId,requestData.ProfileName,requestData.ProfileType,_const.TOS_BUCKET_URL + pathTos,*exp)
-	if dbInsertErr != nil{
+	exp := utils.GetFileExpireTime(profileFileFullName, ".mobileprovision", profileFileByteInfo, requestData.UserName)
+	dbInsertErr := InsertProfileInfoToDB(requestData.ProfileId, requestData.ProfileName, requestData.ProfileType, _const.TOS_BUCKET_URL+pathTos, *exp)
+	if dbInsertErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message":   "insert tt_apple_profile error",
 			"errorCode": 4,
 		})
 		return
 	}
-	dbUpdateErr := UpdateBundleProfilesRelation(requestData.BundleId,requestData.ProfileType,&requestData.ProfileId)
-	if dbUpdateErr != nil{
+	dbUpdateErr := UpdateBundleProfilesRelation(requestData.BundleId, requestData.ProfileType, &requestData.ProfileId)
+	if dbUpdateErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message":   "update apple response to tt_app_bundleId_profiles error",
 			"errorCode": 5,
@@ -603,10 +612,10 @@ func ProfileUploadFunc(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"message":   "upload success",
-		"errorCode": 0,
+		"message":              "upload success",
+		"errorCode":            0,
 		"profile_download_url": _const.TOS_BUCKET_URL + pathTos,
-		"profile_expire_date": exp,
+		"profile_expire_date":  exp,
 	})
 	return
 }
@@ -633,18 +642,24 @@ func generateCardOfApproveBindAccount(appAccountCert *devconnmanager.AppAccountC
 	messageForm := form.GenerateTextTag(&messageText, false, nil)
 	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
 
-	//插入userName, appId, appName, appType, teamId
+	//插入userName, appId, appName, appType, teamId, accountName
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, appAccountCert.UserName))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AppIdHeader, appAccountCert.AppId))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AppNameHeader, appAccountCert.AppName))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AppTypeHeader, appAccountCert.AppType))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TeamIdHeader, appAccountCert.TeamId))
 
+	accountInfos := devconnmanager.QueryAccountInfo(map[string]interface{}{"team_id": appAccountCert.TeamId})
+	if len(*accountInfos) != 1 {
+		logs.Error("获取teamId对应的account失败：%s 错误原因：teamId对应的account记录数不等于1", appAccountCert.TeamId)
+	} else {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountNameHeader, (*accountInfos)[0].AccountName))
+	}
 	return &cardFormArray
 }
 
 //生成绑定账号审核消息卡片action
-func generateActionsOfApproveBindAccount(appAccountCertId uint) *[]form.CardActionForm {
+func generateActionsOfApproveBindAccount(appAccountCertId uint, userName string) *[]form.CardActionForm {
 	var cardActions []form.CardActionForm
 	var cardAction form.CardActionForm
 	var buttons []form.CardButtonForm
@@ -653,8 +668,8 @@ func generateActionsOfApproveBindAccount(appAccountCertId uint) *[]form.CardActi
 	var hideOther = false
 	var url = utils.ApproveAppBindAccountUrl
 
-	approveButtonParams := map[string]interface{}{"isApproved": 1, "appAccountCertId": appAccountCertId}
-	rejectButtonParams := map[string]interface{}{"isApproved": -1, "appAccountCertId": appAccountCertId}
+	approveButtonParams := map[string]interface{}{"isApproved": 1, "appAccountCertId": appAccountCertId, "userName": userName}
+	rejectButtonParams := map[string]interface{}{"isApproved": -1, "appAccountCertId": appAccountCertId, "userName": userName}
 
 	approveButton, err := form.GenerateButtonForm(&approveButtonText, nil, nil, nil, "post", url, false, false, &approveButtonParams, nil, &hideOther)
 	if err != nil {

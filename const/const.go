@@ -37,8 +37,8 @@ const (
 	APPLE_USER_INFO_URL_NO_PARAM         = "https://api.appstoreconnect.apple.com/v1/users"
 	APPLE_USER_INFO_URL_GET_HOLDER       = "https://api.appstoreconnect.apple.com/v1/users?filter[roles]=ACCOUNT_HOLDER"
 	APPLE_USER_INVITED_INFO_URL_NO_PARAM = "https://api.appstoreconnect.apple.com/v1/userInvitations"
-	APPLE_USER_PERM_EDIT_URL = "https://api.appstoreconnect.apple.com/v1/users"
-	APPLE_USER_INVITED_URL = "https://api.appstoreconnect.apple.com/v1/userInvitations"
+	APPLE_USER_PERM_EDIT_URL             = "https://api.appstoreconnect.apple.com/v1/users"
+	APPLE_USER_INVITED_URL               = "https://api.appstoreconnect.apple.com/v1/userInvitations"
 )
 const (
 	APPLE_PROFILE_MANAGER_URL = "https://api.appstoreconnect.apple.com/v1/profiles"
@@ -59,6 +59,7 @@ const (
 	KANI_APP_ID_AND_SECRET_BASE64  = "MzE5OjU4RDM4NTVGRUVBRjQ0QzJBMEJBNERBRDExRDdFNUEw" //kani 应用id:主secret 对的base64编码
 	Certain_Resource_All_PERMS_URL = "http://pmc.bytedance.net/v1/config/permission/query/use/resource?"
 	USER_ALL_RESOURCES_PERMS_URL   = "http://pmc.bytedance.net/v1/config/permission/query/user/all?"
+	GET_ACCOUNT_ADMIN_LIST_URL     = "http://pmc.bytedance.net/v1/config/resource/query/info?"
 	Create_RESOURCE_URL            = "http://pmc.bytedance.net/v1/config/resource/create"
 )
 
@@ -74,10 +75,10 @@ const (
 	Enterprise   = "Enterprise"
 )
 const (
-	IOS_APP_STORE = "IOS_APP_STORE"
-	IOS_APP_INHOUSE = "IOS_APP_INHOUSE"
-	MAC_APP_STORE = "MAC_APP_STORE"
-	IOS_APP_ADHOC = "IOS_APP_ADHOC"
+	IOS_APP_STORE       = "IOS_APP_STORE"
+	IOS_APP_INHOUSE     = "IOS_APP_INHOUSE"
+	MAC_APP_STORE       = "MAC_APP_STORE"
+	IOS_APP_ADHOC       = "IOS_APP_ADHOC"
 	IOS_APP_DEVELOPMENT = "IOS_APP_DEVELOPMENT"
 	MAC_APP_DEVELOPMENT = "MAC_APP_DEVELOPMENT"
 )
