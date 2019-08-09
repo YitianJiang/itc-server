@@ -31,7 +31,7 @@ var PermToModify = map[string]int{
 	"yangzhiqian":1,
 	"zhaoxuan.li":1,
 	//测试加入
-	"fanjuan.xqp":1,
+	//"fanjuan.xqp":1,
 	//"liyixian.lym":1,
 }
 const (
