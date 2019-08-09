@@ -93,7 +93,6 @@ func AddDetectConfig(c *gin.Context) {
 	})
 	go func() {
 		if data.Creator != "lirensheng" && data.Creator != "kanghuaisong" {
-			//logs.Notice("lark通知！")
 			message := data.Creator+"同学新增了检测项，请关注！检测项名称："+data.KeyInfo
 			message += "\n 地址链接：http://cloud.bytedance.net/rocket/itc/permission"
 			for _,larkpeople := range _const.PermLarkPeople {
