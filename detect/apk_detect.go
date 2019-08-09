@@ -1,17 +1,18 @@
 package detect
 
 import (
-	"code.byted.org/clientQA/itc-server/database/dal"
-	"code.byted.org/clientQA/itc-server/utils"
-	"code.byted.org/gopkg/logs"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
+
+	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/logs"
+	"github.com/gin-gonic/gin"
 )
 
 //权限排序
@@ -834,7 +835,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 	}
 
 	//任务状态更新
-	updateInfo, _ := taskStatusUpdate(t.TaskId, t.ToolId, &(*detect)[0], notPassFlag)
+	updateInfo, _ := taskStatusUpdate(t.TaskId, t.ToolId, &(*detect)[0], notPassFlag, 1)
 	if updateInfo != "" {
 		errorReturn(c, updateInfo)
 	}
@@ -850,7 +851,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 /**
 任务确认状态更新
 */
-func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassFlag bool) (string, int) {
+func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassFlag bool, confirmLark int) (string, int) {
 	condition := "deleted_at IS NULL and task_id='" + strconv.Itoa(taskId) + "' and tool_id='" + strconv.Itoa(toolId) + "'"
 	counts, countsUn := dal.QueryUnConfirmDetectContent(condition)
 
@@ -899,7 +900,7 @@ func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassF
 			utils.LarkDingOneInner("fanjuan.xqp", "任务ID："+fmt.Sprint(taskId)+"确认状态更新失败，失败原因："+err.Error())
 			return "任务确认状态更新失败！", 0
 		}
-		if err := StatusDeal(*detect); err != nil {
+		if err := StatusDeal(*detect, confirmLark); err != nil {
 			return err.Error(), 0
 		}
 	}
