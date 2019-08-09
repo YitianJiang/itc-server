@@ -1,6 +1,7 @@
 package detect
 
 import (
+	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
@@ -15,16 +16,6 @@ import (
 	"time"
 )
 
-//权限配置页面操作人员
-var permToModify = map[string]int{
-	"kanghuaisong":  1,
-	"zhangshuai.02": 1,
-	"lirensheng":    1,
-	//测试加入
-	//"fanjuan.xqp":1,
-	//"liyixian.lym":1,
-}
-
 /**
 新增权限
 */
@@ -32,7 +23,7 @@ func AddDetectConfig(c *gin.Context) {
 	username, _ := c.Get("username")
 
 	//权限配置页面操作人员判断
-	if v, ok := permToModify[username.(string)]; !ok || v != 1 {
+	if v, ok := _const.PermToModify[username.(string)]; !ok || v != 1 {
 		logs.Error("该用户不允许对权限配置进行操作！")
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "该用户不允许对权限配置进行操作！",
@@ -100,6 +91,16 @@ func AddDetectConfig(c *gin.Context) {
 		"message":   "success",
 		"errorCode": 0,
 	})
+	go func() {
+		if data.Creator != "lirensheng" && data.Creator != "kanghuaisong" {
+			//logs.Notice("lark通知！")
+			message := data.Creator+"同学新增了检测项，请关注！检测项名称："+data.KeyInfo
+			message += "\n 地址链接：http://cloud.bytedance.net/rocket/itc/permission"
+			for _,larkpeople := range _const.PermLarkPeople {
+				utils.LarkDingOneInner(larkpeople,message)
+			}
+		}
+	}()
 	return
 }
 
@@ -114,6 +115,7 @@ func QueryDectecConfig(c *gin.Context) {
 		Info     string      `json:"info"`
 		Platform interface{} `json:"platform"`
 		Type     interface{} `json:"type"`
+		Priority interface{} `json:"priority"`
 	}
 	var t queryStruct
 	param, _ := ioutil.ReadAll(c.Request.Body)
@@ -140,7 +142,7 @@ func QueryDectecConfig(c *gin.Context) {
 	var operRight = 1
 	username, _ := c.Get("username")
 	//权限配置页面操作人员判断
-	if v, ok := permToModify[username.(string)]; !ok || v != 1 {
+	if v, ok := _const.PermToModify[username.(string)]; !ok || v != 1 {
 		operRight = 0
 	}
 
@@ -158,6 +160,9 @@ func QueryDectecConfig(c *gin.Context) {
 	}
 	if t.Type != nil {
 		condition += " and check_type = '" + fmt.Sprint(t.Type) + "'"
+	}
+	if t.Priority != nil {
+		condition += " and priority = '"+fmt.Sprint(t.Priority) +"'"
 	}
 
 	result, count, errQ := dal.QueryDetectConfigList(condition, pageInfo)
@@ -217,7 +222,7 @@ func EditDectecConfig(c *gin.Context) {
 	username, _ := c.Get("username")
 
 	//权限配置页面操作人员判断
-	if v, ok := permToModify[username.(string)]; !ok || v != 1 {
+	if v, ok := _const.PermToModify[username.(string)]; !ok || v != 1 {
 		logs.Error("该用户不允许对权限配置进行操作！")
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "该用户不允许对权限配置进行操作！",
