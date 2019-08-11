@@ -170,7 +170,6 @@ func InitRouter(r *ginex.Engine) {
 	{
 		appSignManager.GET("/appDetailInfoGet", developerconnmanager.GetAppSignListDetailInfo)
 		appSignManager.GET("/getCapabilitiesInfo", developerconnmanager.GetBundleIdCapabilitiesInfo)
-		//appSignManager.GET("/appDetailInfoGet", developerconnmanager.GetAppDetailInfo)
 		appSignManager.POST("/createAppBindAccount", developerconnmanager.CreateAppBindAccount)
 		appSignManager.POST("/approveAppBindAccountFeedback", developerconnmanager.ApproveAppBindAccountFeedback)
 		//接口删除app相关所有信息
@@ -183,5 +182,7 @@ func InitRouter(r *ginex.Engine) {
 		appSignManager.POST("/createOrUpdateProfile", developerconnmanager.CreateOrUpdateProfile)
 		//接口上传Profile描述文件
 		appSignManager.POST("/profileUpload", developerconnmanager.ProfileUploadFunc)
+		appSignManager.DELETE("/deleteProfile", developerconnmanager.DeleteProfile)
+		appSignManager.POST("/asynDeleteProfileFeedback", developerconnmanager.AsynProfileDeleteFeedback)
 	}
 }

@@ -47,6 +47,17 @@ type ProfileUploadRequest struct {
 	ProfileType string `form:"profile_type"   binding:"required"`
 	UserName    string `form:"user_name"      binding:"required"`
 }
+type ProfileDeleteRequest struct {
+	ProfileId   string `form:"profile_id"     binding:"required"`
+	ProfileName string `form:"profile_name"   binding:"required"`
+	UserName    string `form:"user_name"      binding:"required"`
+	ProfileType string `form:"profile_type"   binding:"required"`
+	TeamId      string `form:"team_id"        binding:"required"`
+	BundleId    string `form:"bundle_id"      binding:"required"`
+	AccountName string `form:"account_name"`
+	AccountType string `form:"account_type"`
+	Operator    string `form:"profile_principal"`
+}
 
 //和苹果req res的Model
 
@@ -180,13 +191,15 @@ type AppleBundleId struct {
 	ACCESS_WIFI_INFORMATION          string `gorm:"column:ACCESS_WIFI_INFORMATION"             json:"ACCESS_WIFI_INFORMATION"`
 }
 
+//todo db新增op_user
 type AppleProfile struct {
 	gorm.Model
-	ProfileId          string    `json:"profile_id"`
-	ProfileName        string    `json:"profile_name"`
-	ProfileExpireDate  time.Time `json:"profile_expire_date"`
-	ProfileType        string    `json:"profile_type"`
-	ProfileDownloadUrl string    `json:"profile_download_url"`
+	ProfileId          string    `gorm:"column:profile_id"              json:"profile_id"`
+	ProfileName        string    `gorm:"column:profile_name"            json:"profile_name"`
+	ProfileExpireDate  time.Time `gorm:"column:profile_expire_date"     json:"profile_expire_date"`
+	ProfileType        string    `gorm:"column:profile_type"            json:"profile_type"`
+	ProfileDownloadUrl string    `gorm:"column:profile_download_url"    json:"profile_download_url"`
+	OpUser             string    `gorm:"column:op_user"                 json:"op_user"`
 }
 
 func (AppAccountCert) TableName() string {
@@ -292,4 +305,14 @@ type APPandBundle struct {
 	ProfileType        string    `json:"profile_type"`
 	ProfileExpireDate  time.Time `json:"profile_expire_date"`
 	ProfileDownloadUrl string    `json:"profile_download_url"`
+}
+
+//Profile删除反馈参数struct
+type DelProfileFeedback struct {
+	CustomerJson DelProfileFeedbackCustomer `json:"customer_parameter"`
+}
+
+type DelProfileFeedbackCustomer struct {
+	ProfileId string `json:"profile_id"        binding:"required"`
+	UserName  string `json:"username"       binding:"required"`
 }
