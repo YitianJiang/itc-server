@@ -364,9 +364,15 @@ func ApproveAppBindAccountFeedback(c *gin.Context) {
 			utils.AssembleJsonResponse(c, _const.SUCCESS, "success", "审核成功：绑定请求已被拒绝")
 			return
 		case 1:
-			if !devconnmanager.UpdateAppAccountCertByMap(map[string]interface{}{"id": requestData.AppAccountCertId}, map[string]interface{}{"account_verify_status": 1, "account_verify_user": requestData.UserName}) {
+			err, appAccountCert := devconnmanager.UpdateAppAccountCertAndGetModelByMap(map[string]interface{}{"id": requestData.AppAccountCertId}, map[string]interface{}{"account_verify_status": 1, "account_verify_user": requestData.UserName})
+			if err != nil {
 				utils.AssembleJsonResponseWithStatusCode(c, http.StatusInternalServerError, "审核失败:内部服务器错误", nil)
 				return
+			}
+			//给user赋予权限
+			teamId := strings.ToLower(appAccountCert.TeamId) + "_space_account"
+			if !utils.GiveUsersPermission(&[]string{requestData.UserName}, teamId, &[]string{"all_cert_manager"}) {
+				utils.AssembleJsonResponseWithStatusCode(c, http.StatusInternalServerError, "审核失败:权限赋予失败", nil)
 			}
 			utils.AssembleJsonResponse(c, _const.SUCCESS, "success", "审核成功：绑定请求已被通过")
 			return

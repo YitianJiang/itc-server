@@ -375,11 +375,43 @@ func SendHttpGet(url string, values map[string]string, withAuthorization bool) (
 	return nil, bodyText
 }
 
+//通用发送post请求方法，其中postBody是一个json串。withAuthorization表示是否需要在头部携带token信息
+func SendHttpPostByJson(url string, postBody []byte, withAuthorization bool) (error, []byte) {
+	//组装请求
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(postBody)))
+	if err != nil {
+		return err, nil
+	}
+	req.Header.Set("Content-Type", "application/json;charset=utf-8")
+	if withAuthorization {
+		req.Header.Set("Authorization", "Basic "+_const.KANI_APP_ID_AND_SECRET_BASE64)
+	}
+	//logs.Warn("%s",req)
+
+	//发送请求
+	resp, err := client.Do(req)
+	if err != nil {
+		return err, nil
+	}
+	defer resp.Body.Close()
+
+	//读取响应
+	body, err := ioutil.ReadAll(resp.Body)
+	logs.Warn("%s", string(body))
+	return err, body
+}
+
 //http response model
 type GetResourceAdminListResponse struct {
 	ResourceAdminListData `json:"data"`
-	ErrorNo               int    `json:"errno"`
-	Message               string `json:"message"`
+	CommonResponse
+}
+
+type CommonResponse struct {
+	ErrorNo      int    `json:"errno"`
+	Message      string `json:"message"`
+	ErrorMessage string `json:"errmsg"`
 }
 
 type ResourceAdminListData struct {
@@ -405,8 +437,43 @@ func GetAccountAdminList(teamId string) *[]string {
 
 	logs.Info("查询某资源的admin列表请求结果：%v", responseObject.OwnerKeys)
 	if responseObject.ErrorNo != 0 {
-		logs.Error("查询某资源的admin列表请求结果出错：%s", responseObject.Message)
+		logs.Error("查询某资源的admin列表请求结果出错：%s", responseObject.ErrorMessage)
 		return nil
 	}
 	return &responseObject.OwnerKeys
+}
+
+//通用调用pmc给指定用户添加权限方法
+func GiveUsersPermission(userNames *[]string, resourceKey string, actions *[]string) bool {
+	params := map[string]interface{}{
+		"resourceKey":  resourceKey,
+		"actions":      *actions,
+		"employeeKeys": *userNames,
+		"groupIds":     &[]string{},
+	}
+	bodyBytes, err := json.Marshal(params)
+	RecordError("marshal失败：", err)
+	if err != nil {
+		return false
+	}
+
+	err, responseByte := SendHttpPostByJson(_const.GIVE_PERMISSION_TO_USER_URL, bodyBytes, true)
+	RecordError("发送post请求失败：", err)
+	if err != nil {
+		return false
+	}
+
+	var responseObject CommonResponse
+	err = json.Unmarshal(responseByte, &responseObject)
+
+	RecordError("post请求结果解析失败：", err)
+	if err != nil {
+		return false
+	}
+
+	if responseObject.ErrorNo != 0 {
+		logs.Error("为用户(%v)添加权限(%v)失败：%s", userNames, actions, responseObject.ErrorMessage)
+		return false
+	}
+	return true
 }
