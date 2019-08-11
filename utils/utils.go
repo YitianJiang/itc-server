@@ -302,6 +302,8 @@ func GetLarkInfo(url string, rbody map[string]string) string {
 	body, err := ioutil.ReadAll(resp.Body)
 	return string(body)
 }
+
+//通用获取文件过期时间方法
 func GetFileExpireTime(fileName string, fileType string, fileBytes []byte, userName string) *time.Time {
 	getCertExpUrl := "http://" + DETECT_URL_PRO + "/query_certificate_expire_date" //过期日期访问地址
 	body := &bytes.Buffer{}
@@ -335,6 +337,145 @@ func GetFileExpireTime(fileName string, fileType string, fileBytes []byte, userN
 	exp := time.Unix(expTimeStamp, 0)
 
 	return &exp
+}
+
+//通用发送get请求方法
+func SendHttpGet(url string, values map[string]string, withAuthorization bool) (error, []byte) {
+	client := &http.Client{}
+
+	//组装请求
+	if values != nil {
+		if url[len(url)-1] != '?' {
+			url += "?"
+		}
+		for k, v := range values {
+			url += k + "=" + v + "&"
+		}
+		url = strings.TrimSuffix(url, "&")
+	}
+	logs.Info("%v", url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err, nil
+	}
+	if withAuthorization {
+		req.Header.Set("Authorization", "Basic "+_const.KANI_APP_ID_AND_SECRET_BASE64)
+	}
+
+	//发送请求
+	resp, err := client.Do(req)
+	if err != nil {
+		logs.Error(err.Error())
+		return err, nil
+	}
+	defer resp.Body.Close()
+
+	//读取响应
+	bodyText, err := ioutil.ReadAll(resp.Body)
+	return nil, bodyText
+}
+
+//通用发送post请求方法，其中postBody是一个json串。withAuthorization表示是否需要在头部携带token信息
+func SendHttpPostByJson(url string, postBody []byte, withAuthorization bool) (error, []byte) {
+	//组装请求
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(postBody)))
+	if err != nil {
+		return err, nil
+	}
+	req.Header.Set("Content-Type", "application/json;charset=utf-8")
+	if withAuthorization {
+		req.Header.Set("Authorization", "Basic "+_const.KANI_APP_ID_AND_SECRET_BASE64)
+	}
+	//logs.Warn("%s",req)
+
+	//发送请求
+	resp, err := client.Do(req)
+	if err != nil {
+		return err, nil
+	}
+	defer resp.Body.Close()
+
+	//读取响应
+	body, err := ioutil.ReadAll(resp.Body)
+	logs.Warn("%s", string(body))
+	return err, body
+}
+
+//http response model
+type GetResourceAdminListResponse struct {
+	ResourceAdminListData `json:"data"`
+	CommonResponse
+}
+
+type CommonResponse struct {
+	ErrorNo      int    `json:"errno"`
+	Message      string `json:"message"`
+	ErrorMessage string `json:"errmsg"`
+}
+
+type ResourceAdminListData struct {
+	OwnerKeys []string `json:"owner_keys"`
+}
+
+//通用调用pmc获取资源负责人列表方法
+func GetAccountAdminList(teamId string) *[]string {
+	teamId = strings.ToLower(teamId) + "_space_account"
+	err, responseBytes := SendHttpGet(_const.GET_ACCOUNT_ADMIN_LIST_URL, map[string]string{"resourceKey": teamId}, true)
+	RecordError("查询某资源的admin列表请求失败：", err)
+	if err != nil {
+		return nil
+	}
+
+	var responseObject GetResourceAdminListResponse
+
+	err = json.Unmarshal(responseBytes, &responseObject)
+	RecordError("查询某资源的admin列表请求结果解析失败：", err)
+	if err != nil {
+		return nil
+	}
+
+	logs.Info("查询某资源的admin列表请求结果：%v", responseObject.OwnerKeys)
+	if responseObject.ErrorNo != 0 {
+		logs.Error("查询某资源的admin列表请求结果出错：%s", responseObject.ErrorMessage)
+		return nil
+	}
+	return &responseObject.OwnerKeys
+}
+
+//通用调用pmc给指定用户添加权限方法
+func GiveUsersPermission(userNames *[]string, resourceKey string, actions *[]string) bool {
+	params := map[string]interface{}{
+		"resourceKey":  resourceKey,
+		"actions":      *actions,
+		"employeeKeys": *userNames,
+		"groupIds":     &[]string{},
+	}
+	bodyBytes, err := json.Marshal(params)
+	RecordError("marshal失败：", err)
+	if err != nil {
+		return false
+	}
+
+	err, responseByte := SendHttpPostByJson(_const.GIVE_PERMISSION_TO_USER_URL, bodyBytes, true)
+	RecordError("发送post请求失败：", err)
+	if err != nil {
+		return false
+	}
+
+	var responseObject CommonResponse
+	err = json.Unmarshal(responseByte, &responseObject)
+
+	RecordError("post请求结果解析失败：", err)
+	if err != nil {
+		return false
+	}
+
+	if responseObject.ErrorNo != 0 {
+		logs.Error("为用户(%v)添加权限(%v)失败：%s", userNames, actions, responseObject.ErrorMessage)
+		return false
+	}
+	return true
 }
 
 func GetItcToken(username string) string {

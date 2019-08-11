@@ -253,10 +253,11 @@ func DeleteAppleProfile(queryData map[string]interface{}) error {
 	}
 	return nil
 }
+
 /**
 更新操作
- */
-func UpdateAppleProfile(queryData map[string]interface{},updateData map[string]interface{}) error {
+*/
+func UpdateAppleProfile(queryData map[string]interface{}, updateData map[string]interface{}) error {
 	conn, err := database.GetConneection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)

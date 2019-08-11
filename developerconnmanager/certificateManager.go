@@ -322,7 +322,7 @@ func DeleteCertificate(c *gin.Context) {
 			abot := service.BotService{}
 			abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 			appleUrl := utils.APPLE_DELETE_CERT_URL + delCertRequest.CertId
-			cardElementForms := generateCardOfCertDelete(delCertRequest.AccountName, delCertRequest.CertId, delCertRequest.CertName, appleUrl,delCertRequest.UserName)
+			cardElementForms := generateCardOfCertDelete(delCertRequest.AccountName, delCertRequest.CertId, delCertRequest.CertName, appleUrl, delCertRequest.UserName)
 			if delCertRequest.CertOperator == "" {
 				delCertRequest.CertOperator = utils.CreateCertPrincipal
 			}
@@ -809,7 +809,7 @@ func sendIOSCertLarkMessage(cardInfoFormArray *[][]form.CardElementForm, cardAct
 }
 
 //生成删除工单通知卡片---文字信息
-func generateCardOfCertDelete(accountName string, certId string, certName string, appleUrl string,username string) *[][]form.CardElementForm {
+func generateCardOfCertDelete(accountName string, certId string, certName string, appleUrl string, username string) *[][]form.CardElementForm {
 	var cardFormArray [][]form.CardElementForm
 
 	//插入提示信息

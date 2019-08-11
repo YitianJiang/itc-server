@@ -292,7 +292,7 @@ func EditDectecConfig(c *gin.Context) {
 		flag = true
 		data["sensi_flag"] = int(t.SensiFlag.(float64))
 	}
-	if t.Type != nil{
+	if t.Type != nil {
 		flag = true
 		data["check_type"] = int(t.Type.(float64))
 	}

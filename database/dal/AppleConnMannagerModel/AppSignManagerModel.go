@@ -119,8 +119,9 @@ type ApproveAppBindAccountParamFromLark struct {
 }
 
 type ApproveAppBindAccountCustomerParam struct {
-	AppAccountCertId uint `json:"appAccountCertId" binding:"required"`
-	IsApproved       int  `json:"isApproved"       binding:"required"`
+	AppAccountCertId uint   `json:"appAccountCertId" binding:"required"`
+	IsApproved       int    `json:"isApproved"       binding:"required"`
+	UserName         string `json:"userName"       binding:"required"`
 }
 
 type AppSignListRequest struct{

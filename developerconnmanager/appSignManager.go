@@ -7,17 +7,17 @@ import (
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/context"
 	"code.byted.org/gopkg/logs"
-	"github.com/gin-gonic/gin"
-	"io/ioutil"
-	"net/http"
-	"strings"
-	"time"
 	"code.byted.org/gopkg/tos"
 	"code.byted.org/yuyilei/bot-api/form"
 	"code.byted.org/yuyilei/bot-api/service"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"io/ioutil"
+	"net/http"
+	"strings"
+	"time"
 )
 
 //tos通用处理逻辑
@@ -135,17 +135,18 @@ func ReqToAppleHasObjMethod(method, url, tokenString string, objReq, objRes inte
 
 //返回BundleID的能力给前端做展示
 type GetCapabilitiesInfoReq struct {
-	AppType     string  `form:"app_type" json:"app_type" binding:"required"`
+	AppType string `form:"app_type" json:"app_type" binding:"required"`
 }
 
 type CapabilitiesInfo struct {
-	SelectCapabilitiesInfo []string `json:"select_capabilities"`
+	SelectCapabilitiesInfo   []string            `json:"select_capabilities"`
 	SettingsCapabilitiesInfo map[string][]string `json:"settings_capabilities"`
 }
+
 //列表联查中间结构体--bundle和appName关联
 type BundleResortStruct struct {
-	BundleInfo 			devconnmanager.BundleProfileCert
-	AppName				string
+	BundleInfo devconnmanager.BundleProfileCert
+	AppName    string
 }
 
 func GetBundleIdCapabilitiesInfo(c *gin.Context) {
@@ -160,16 +161,16 @@ func GetBundleIdCapabilitiesInfo(c *gin.Context) {
 	}
 	responseData.SettingsCapabilitiesInfo = make(map[string][]string)
 	responseData.SettingsCapabilitiesInfo[_const.ICLOUD] = _const.CloudSettings
-	if requestData.AppType == "iOS"{
+	if requestData.AppType == "iOS" {
 		responseData.SelectCapabilitiesInfo = _const.IOSSelectCapabilities
 		responseData.SettingsCapabilitiesInfo[_const.DATA_PROTECTION] = _const.ProtectionSettings
-	}else {
+	} else {
 		responseData.SelectCapabilitiesInfo = _const.MacSelectCapabilities
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
 		"errorCode": 0,
-		"data": responseData,
+		"data":      responseData,
 	})
 }
 
@@ -181,77 +182,77 @@ func GetAppSignListDetailInfo(c *gin.Context) {
 	var requestInfo devconnmanager.AppSignListRequest
 	err := c.ShouldBindQuery(&requestInfo)
 	if err != nil {
-		utils.RecordError("AppSignList请求参数绑定失败,",err)
-		utils.AssembleJsonResponse(c,http.StatusBadRequest,"请求参数绑定失败","")
+		utils.RecordError("AppSignList请求参数绑定失败,", err)
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "")
 		return
 	}
 	//权限判断，showType为1（超级权限），showType为2(dev权限），showType为0（无权限）
-	showType := getPermType(c,requestInfo.Username,requestInfo.TeamId)
+	showType := getPermType(c, requestInfo.Username, requestInfo.TeamId)
 	if showType == 0 {
-		utils.AssembleJsonResponse(c,http.StatusBadRequest,"无权限查看！","")
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "无权限查看！", "")
 		return
 	}
 	//根据app_id和team_id获取appName基本信息以及证书信息
 	var cQueryResult []devconnmanager.APPandCert
 	sql := "select aac.app_name,aac.app_type,aac.id as app_acount_id,aac.team_id,aac.account_verify_status,aac.account_verify_user," +
 		"ac.cert_id,ac.cert_type,ac.cert_expire_date,ac.cert_download_url,ac.priv_key_url from tt_app_account_cert aac, tt_apple_certificate ac" +
-		" where aac.app_id = '" + requestInfo.AppId + "' and aac.team_id = '"+requestInfo.TeamId+"' and aac.deleted_at IS NULL and (aac.dev_cert_id = ac.cert_id or aac.dist_cert_id = ac.cert_id)" +
+		" where aac.app_id = '" + requestInfo.AppId + "' and aac.team_id = '" + requestInfo.TeamId + "' and aac.deleted_at IS NULL and (aac.dev_cert_id = ac.cert_id or aac.dist_cert_id = ac.cert_id)" +
 		" and ac.deleted_at IS NULL "
 	query_c := devconnmanager.QueryWithSql(sql, &cQueryResult)
 	if query_c != nil {
-		utils.AssembleJsonResponse(c,http.StatusInternalServerError,"查询失败","")
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "查询失败", "")
 		return
-	}else if len(cQueryResult)== 0{
+	} else if len(cQueryResult) == 0 {
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "未查询到该app_id在本账号下的信息！", "")
 		return
 	}
 	//以appName为单位重组基本信息，appappNameMap为最终结果的map
 	appNameList := "("
 	appNameMap := make(map[string]devconnmanager.APPSignManagerInfo)
-	for _,fqr := range cQueryResult {
-		if v,ok := appNameMap[fqr.AppName]; ok {
-			packCertSection(&fqr,showType,&v.CertSection)
+	for _, fqr := range cQueryResult {
+		if v, ok := appNameMap[fqr.AppName]; ok {
+			packCertSection(&fqr, showType, &v.CertSection)
 			appNameMap[fqr.AppName] = v
-		}else{
+		} else {
 			var appInfo devconnmanager.APPSignManagerInfo
-			packAppNameInfo(&appInfo,&fqr,showType)
-			appNameMap[fqr.AppName]= appInfo
-			appNameList += "'"+fqr.AppName +"',"
+			packAppNameInfo(&appInfo, &fqr, showType)
+			appNameMap[fqr.AppName] = appInfo
+			appNameList += "'" + fqr.AppName + "',"
 		}
 	}
-	appNameList = strings.TrimSuffix(appNameList,",")
+	appNameList = strings.TrimSuffix(appNameList, ",")
 	appNameList += ")"
 	//根据app_id和app_name获取bundleid信息+profile信息
 	var bQueryResult []devconnmanager.APPandBundle
 	sql_c := "select abp.app_name,abp.bundle_id as bundle_id_index,abp.bundleid_isdel as bundle_id_is_del,abp.push_cert_id,ap.profile_id,ap.profile_name,ap.profile_expire_date,ap.profile_type,ap.profile_download_url,ab.*" +
 		" from tt_app_bundleId_profiles abp, tt_apple_bundleId ab, tt_apple_profile ap " +
-		"where abp.app_id = '"+requestInfo.AppId+"' and abp.app_name in "+appNameList+" and abp.bundle_id = ab.bundle_id and (abp.dev_profile_id = ap.profile_id or abp.dist_profile_id = ap.profile_id) " +
+		"where abp.app_id = '" + requestInfo.AppId + "' and abp.app_name in " + appNameList + " and abp.bundle_id = ab.bundle_id and (abp.dev_profile_id = ap.profile_id or abp.dist_profile_id = ap.profile_id) " +
 		"and abp.deleted_at IS NULL and ab.deleted_at IS NULL and ap.deleted_at IS NULL"
-	query_b := devconnmanager.QueryWithSql(sql_c,&bQueryResult)
+	query_b := devconnmanager.QueryWithSql(sql_c, &bQueryResult)
 	if query_b != nil {
-		utils.AssembleJsonResponse(c,http.StatusInternalServerError,"查询失败","")
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "查询失败", "")
 		return
 	}
 	//以bundle为单位重组信息，appName作为附加信息
 	bundleMap := make(map[string]BundleResortStruct)
-	for _,bqr := range bQueryResult{
-		if v,ok := bundleMap[bqr.BundleId];ok{
-			packProfileSection(&bqr,showType,&v.BundleInfo.ProfileCertSection)
+	for _, bqr := range bQueryResult {
+		if v, ok := bundleMap[bqr.BundleId]; ok {
+			packProfileSection(&bqr, showType, &v.BundleInfo.ProfileCertSection)
 			bundleMap[bqr.BundleId] = v
-		}else {
+		} else {
 			var bundleResort BundleResortStruct
 			bundleResort.AppName = bqr.AppName
-			bundles :=packeBundleProfileCert(c,&bqr,showType)
+			bundles := packeBundleProfileCert(c, &bqr, showType)
 			//查询push证书失败
 			if bundles == nil {
 				return
 			}
-			bundleResort.BundleInfo =(*bundles)
-			bundleMap[bqr.BundleId]=bundleResort
+			bundleResort.BundleInfo = (*bundles)
+			bundleMap[bqr.BundleId] = bundleResort
 		}
 	}
 	//重组最终结果，appNameMap同bundleMap
-	for _,bundleDetail := range bundleMap {
+	for _, bundleDetail := range bundleMap {
 		//1--补全profile中的cert_id
 		if bundleDetail.BundleInfo.ProfileCertSection.DistProfile.ProfileId != "" {
 			bundleDetail.BundleInfo.ProfileCertSection.DistProfile.UserCertId = appNameMap[bundleDetail.AppName].CertSection.DistCert.CertId
@@ -261,15 +262,15 @@ func GetAppSignListDetailInfo(c *gin.Context) {
 		}
 		//2--bundle信息整合到appNameMap中
 		appInfo := appNameMap[bundleDetail.AppName]
-		appInfo.BundleProfileCertSection = append(appInfo.BundleProfileCertSection,bundleDetail.BundleInfo)
-		appNameMap[bundleDetail.AppName]= appInfo
+		appInfo.BundleProfileCertSection = append(appInfo.BundleProfileCertSection, bundleDetail.BundleInfo)
+		appNameMap[bundleDetail.AppName] = appInfo
 	}
 	//结果为appNameMap的value集合
-	result := make([]devconnmanager.APPSignManagerInfo,0)
-	for _,info := range appNameMap {
-		result = append(result,info)
+	result := make([]devconnmanager.APPSignManagerInfo, 0)
+	for _, info := range appNameMap {
+		result = append(result, info)
 	}
-	utils.AssembleJsonResponse(c,http.StatusOK,"success",result)
+	utils.AssembleJsonResponse(c, http.StatusOK, "success", result)
 }
 
 func DeleteAppAllInfoFromDB(c *gin.Context) {
@@ -358,17 +359,28 @@ func CreateAppBindAccount(c *gin.Context) {
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "存在多条app_id和app_name都相同的数据，无法更新", "failed")
 		return
 	}
-	//todo 等待kani提供根据资源和权限获取人员信息的接口，根据该接口获取需要发送审批消息的用户list
-	var userList = []string{"zhangmengqi.muki@bytedance.com"}
-	//lark消息生成并批量发送 todo 加go协程
+	//调用根据资源获取admin人员信息的接口，根据该接口获取需要发送审批消息的用户list
+	//todo 暂时写死admin list
+	//var userList = utils.GetAccountAdminList(requestData.TeamId)
+	var userList = &[]string{"zhangmengqi.muki"} //,"fanjuan.xqp"
+	//lark消息生成并批量发送 使用go协程
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 	cardInfos := generateCardOfApproveBindAccount(&appAccountCert)
-	cardActions := generateActionsOfApproveBindAccount(appAccountCert.ID)
-	err := sendIOSCertLarkMessage(cardInfos, cardActions, userList[0], &botService)
-	utils.RecordError("发送lark消息错误", err)
+
+	for _, adminEmailPrefix := range *userList {
+		go alertApproveToUser(adminEmailPrefix, appAccountCert.ID, cardInfos, &botService)
+	}
+
+	logs.Info("%v", userList)
 	utils.AssembleJsonResponse(c, _const.SUCCESS, "success", appAccountCert)
 	return
+}
+
+func alertApproveToUser(adminEmailPrefix string, id uint, cardInfos *[][]form.CardElementForm, botService *service.BotService) {
+	cardActions := generateActionsOfApproveBindAccount(id, adminEmailPrefix)
+	err := sendIOSCertLarkMessage(cardInfos, cardActions, adminEmailPrefix, botService)
+	utils.RecordError("发送lark消息错误", err)
 }
 
 func ApproveAppBindAccountFeedback(c *gin.Context) {
@@ -387,23 +399,28 @@ func ApproveAppBindAccountFeedback(c *gin.Context) {
 		return
 	}
 
-	logs.Info("accountCertInfo:%v", (*accountCertInfos)[0])
-	logs.Info("accountCertInfos:%v", *accountCertInfos)
+	//logs.Info("accountCertInfos:%v", *accountCertInfos)
 	switch (*accountCertInfos)[0].AccountVerifyStatus {
 	case "0":
 		//还未进行审核
 		switch requestData.IsApproved {
 		case -1:
-			if !devconnmanager.UpdateAppAccountCertByMap(map[string]interface{}{"id": requestData.AppAccountCertId}, map[string]interface{}{"account_verify_status": -1}) {
+			if !devconnmanager.UpdateAppAccountCertByMap(map[string]interface{}{"id": requestData.AppAccountCertId}, map[string]interface{}{"account_verify_status": -1, "account_verify_user": requestData.UserName}) {
 				utils.AssembleJsonResponseWithStatusCode(c, http.StatusInternalServerError, "审核失败:内部服务器错误", nil)
 				return
 			}
 			utils.AssembleJsonResponse(c, _const.SUCCESS, "success", "审核成功：绑定请求已被拒绝")
 			return
 		case 1:
-			if !devconnmanager.UpdateAppAccountCertByMap(map[string]interface{}{"id": requestData.AppAccountCertId}, map[string]interface{}{"account_verify_status": 1}) {
+			err, appAccountCert := devconnmanager.UpdateAppAccountCertAndGetModelByMap(map[string]interface{}{"id": requestData.AppAccountCertId}, map[string]interface{}{"account_verify_status": 1, "account_verify_user": requestData.UserName})
+			if err != nil {
 				utils.AssembleJsonResponseWithStatusCode(c, http.StatusInternalServerError, "审核失败:内部服务器错误", nil)
 				return
+			}
+			//给user赋予权限
+			teamId := strings.ToLower(appAccountCert.TeamId) + "_space_account"
+			if !utils.GiveUsersPermission(&[]string{requestData.UserName}, teamId, &[]string{"all_cert_manager"}) {
+				utils.AssembleJsonResponseWithStatusCode(c, http.StatusInternalServerError, "审核失败:权限赋予失败", nil)
 			}
 			utils.AssembleJsonResponse(c, _const.SUCCESS, "success", "审核成功：绑定请求已被通过")
 			return
@@ -429,16 +446,15 @@ func ApproveAppBindAccountFeedback(c *gin.Context) {
 			return
 		}
 	}
-
 }
 
-func DeleteProfile(c *gin.Context){
+func DeleteProfile(c *gin.Context) {
 	logs.Info("删除单个Profile")
 	var deleteRequest devconnmanager.ProfileDeleteRequest
 	err := c.ShouldBindQuery(&deleteRequest)
 	if err != nil {
-		utils.RecordError("delete profile error:",err)
-		utils.AssembleJsonResponse(c,http.StatusBadRequest,"请求参数绑定失败","")
+		utils.RecordError("delete profile error:", err)
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "")
 		return
 	}
 	//企业分发账号删除，提工单处理---此if内容，待apple openAPI ready，可删除
@@ -451,22 +467,22 @@ func DeleteProfile(c *gin.Context){
 			deleteRequest.Operator = utils.CreateCertPrincipal
 		}
 		param := map[string]interface{}{
-			"profile_id":  deleteRequest.ProfileId,
-			"username": deleteRequest.Operator,
+			"profile_id": deleteRequest.ProfileId,
+			"username":   deleteRequest.Operator,
 		}
 		cardElementForms := generateCardOfProfileDelete(&deleteRequest, appleUrl)
 		cardActions := generateActionOfProfileDelete(&param)
 		err := sendIOSCertLarkMessage(cardElementForms, cardActions, deleteRequest.Operator, &abot)
 		if err != nil {
 			utils.RecordError("发送lark消息通知负责人删除证书失败，", err)
-			utils.AssembleJsonResponse(c,http.StatusInternalServerError,"发送lark消息通知负责人删除证书失败","")
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送lark消息通知负责人删除证书失败", "")
 			return
 		}
 		//profile tos+db删除
-		if isDel :=deleteProfileDBandTos(c,deleteRequest.ProfileId,deleteRequest.ProfileName,deleteRequest.ProfileType,deleteRequest.TeamId,deleteRequest.BundleId); !isDel{
+		if isDel := deleteProfileDBandTos(c, deleteRequest.ProfileId, deleteRequest.ProfileName, deleteRequest.ProfileType, deleteRequest.TeamId, deleteRequest.BundleId); !isDel {
 			return
 		}
-		utils.AssembleJsonResponse(c,0,"success","")
+		utils.AssembleJsonResponse(c, 0, "success", "")
 		return
 	}
 	//普通账号处理
@@ -476,19 +492,19 @@ func DeleteProfile(c *gin.Context){
 	if !delRes {
 		logs.Info("delete profile fail from apple server")
 	}
-	if isDel :=deleteProfileDBandTos(c,deleteRequest.ProfileId,deleteRequest.ProfileName,deleteRequest.ProfileType,deleteRequest.TeamId,deleteRequest.BundleId); !isDel{
+	if isDel := deleteProfileDBandTos(c, deleteRequest.ProfileId, deleteRequest.ProfileName, deleteRequest.ProfileType, deleteRequest.TeamId, deleteRequest.BundleId); !isDel {
 		return
 	}
-	utils.AssembleJsonResponse(c,0,"success","")
+	utils.AssembleJsonResponse(c, 0, "success", "")
 }
 
 //证书删除异步确认
-func AsynProfileDeleteFeedback(c *gin.Context)  {
+func AsynProfileDeleteFeedback(c *gin.Context) {
 	var feedbackInfo devconnmanager.DelProfileFeedback
 	err := c.ShouldBindJSON(&feedbackInfo)
 	if err != nil {
 		utils.RecordError("请求参数绑定失败！", err)
-		utils.AssembleJsonResponse(c,http.StatusBadRequest,"请求参数绑定失败","")
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "")
 		return
 	}
 	//更新对应cert_id的op_user信息
@@ -500,12 +516,12 @@ func AsynProfileDeleteFeedback(c *gin.Context)  {
 		"op_user":    feedbackInfo.CustomerJson.UserName,
 	}
 	errInfo := devconnmanager.UpdateAppleProfile(condition, updateInfo)
-	if errInfo != nil  {
+	if errInfo != nil {
 		utils.RecordError("异步更新删除信息操作人失败，证书ID："+feedbackInfo.CustomerJson.ProfileId, errInfo)
-		utils.AssembleJsonResponse(c,http.StatusInternalServerError,"数据库异步更新删除信息操作人失败","")
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库异步更新删除信息操作人失败", "")
 		return
 	}
-	utils.AssembleJsonResponse(c,0,"success","")
+	utils.AssembleJsonResponse(c, 0, "success", "")
 	return
 }
 
@@ -542,6 +558,7 @@ func AppBindCert(c *gin.Context) {
 		return
 	}
 }
+
 //单独Profile创建\更新接口
 func UpdateBundleProfilesRelation(bundleId, profileType string, profileId *string) error {
 	conditionDb := map[string]interface{}{"bundle_id": bundleId}
@@ -600,8 +617,8 @@ func CreateOrUpdateProfile(c *gin.Context) {
 	//todo 企业分发类型账号，通知工单处理人进行处理
 	if requestData.AccountType == _const.Enterprise {
 		logs.Info("企业分发类型账号，通知工单处理人进行处理")
-		logs.Info(requestData.AccountName,requestData.AccountType,requestData.BundleId, requestData.UseCertId,
-			requestData.ProfileName,requestData.ProfileType,requestData.UserName)
+		logs.Info(requestData.AccountName, requestData.AccountType, requestData.BundleId, requestData.UseCertId,
+			requestData.ProfileName, requestData.ProfileType, requestData.UserName)
 		//todo 发送Lark消息 @zhangmengqi 如上面logs.Info，Lark消息卡片提供account_name、account_type、bundle_id、use_cert_id、profile_name、profile_type、user_name信息
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "lark success",
@@ -617,7 +634,7 @@ func CreateOrUpdateProfile(c *gin.Context) {
 			if !delRes {
 				logs.Info("delete profile fail from apple server")
 			}
-			if isDel :=deleteProfileDBandTos(c,requestData.ProfileId,requestData.ProfileName,requestData.ProfileType,requestData.TeamId,requestData.BundleId); !isDel{
+			if isDel := deleteProfileDBandTos(c, requestData.ProfileId, requestData.ProfileName, requestData.ProfileType, requestData.TeamId, requestData.BundleId); !isDel {
 				return
 			}
 		}
@@ -687,25 +704,25 @@ func ProfileUploadFunc(c *gin.Context) {
 	profileFileByteInfo, profileFileFullName := getFileFromRequest(c, "profile_file")
 	pathTos := "appleConnectFile/" + requestData.TeamId + "/Profile/" + requestData.ProfileType + "/" + profileFileFullName
 	deleteTosObj(pathTos)
-	uploadResult := uploadProfileToTos(profileFileByteInfo,pathTos)
-	if !uploadResult{
+	uploadResult := uploadProfileToTos(profileFileByteInfo, pathTos)
+	if !uploadResult {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message":   "upload profile tos error",
 			"errorCode": 3,
 		})
 		return
 	}
-	exp := utils.GetFileExpireTime(profileFileFullName,".mobileprovision",profileFileByteInfo,requestData.UserName)
-	dbInsertErr := InsertProfileInfoToDB(requestData.ProfileId,requestData.ProfileName,requestData.ProfileType,_const.TOS_BUCKET_URL + pathTos,*exp)
-	if dbInsertErr != nil{
+	exp := utils.GetFileExpireTime(profileFileFullName, ".mobileprovision", profileFileByteInfo, requestData.UserName)
+	dbInsertErr := InsertProfileInfoToDB(requestData.ProfileId, requestData.ProfileName, requestData.ProfileType, _const.TOS_BUCKET_URL+pathTos, *exp)
+	if dbInsertErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message":   "insert tt_apple_profile error",
 			"errorCode": 4,
 		})
 		return
 	}
-	dbUpdateErr := UpdateBundleProfilesRelation(requestData.BundleId,requestData.ProfileType,&requestData.ProfileId)
-	if dbUpdateErr != nil{
+	dbUpdateErr := UpdateBundleProfilesRelation(requestData.BundleId, requestData.ProfileType, &requestData.ProfileId)
+	if dbUpdateErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message":   "update apple response to tt_app_bundleId_profiles error",
 			"errorCode": 5,
@@ -713,10 +730,10 @@ func ProfileUploadFunc(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"message":   "upload success",
-		"errorCode": 0,
+		"message":              "upload success",
+		"errorCode":            0,
 		"profile_download_url": _const.TOS_BUCKET_URL + pathTos,
-		"profile_expire_date": exp,
+		"profile_expire_date":  exp,
 	})
 	return
 }
@@ -743,18 +760,24 @@ func generateCardOfApproveBindAccount(appAccountCert *devconnmanager.AppAccountC
 	messageForm := form.GenerateTextTag(&messageText, false, nil)
 	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
 
-	//插入userName, appId, appName, appType, teamId
+	//插入userName, appId, appName, appType, teamId, accountName
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, appAccountCert.UserName))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AppIdHeader, appAccountCert.AppId))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AppNameHeader, appAccountCert.AppName))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AppTypeHeader, appAccountCert.AppType))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TeamIdHeader, appAccountCert.TeamId))
 
+	accountInfos := devconnmanager.QueryAccountInfo(map[string]interface{}{"team_id": appAccountCert.TeamId})
+	if len(*accountInfos) != 1 {
+		logs.Error("获取teamId对应的account失败：%s 错误原因：teamId对应的account记录数不等于1", appAccountCert.TeamId)
+	} else {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountNameHeader, (*accountInfos)[0].AccountName))
+	}
 	return &cardFormArray
 }
 
 //生成绑定账号审核消息卡片action
-func generateActionsOfApproveBindAccount(appAccountCertId uint) *[]form.CardActionForm {
+func generateActionsOfApproveBindAccount(appAccountCertId uint, userName string) *[]form.CardActionForm {
 	var cardActions []form.CardActionForm
 	var cardAction form.CardActionForm
 	var buttons []form.CardButtonForm
@@ -763,8 +786,8 @@ func generateActionsOfApproveBindAccount(appAccountCertId uint) *[]form.CardActi
 	var hideOther = false
 	var url = utils.ApproveAppBindAccountUrl
 
-	approveButtonParams := map[string]interface{}{"isApproved": 1, "appAccountCertId": appAccountCertId}
-	rejectButtonParams := map[string]interface{}{"isApproved": -1, "appAccountCertId": appAccountCertId}
+	approveButtonParams := map[string]interface{}{"isApproved": 1, "appAccountCertId": appAccountCertId, "userName": userName}
+	rejectButtonParams := map[string]interface{}{"isApproved": -1, "appAccountCertId": appAccountCertId, "userName": userName}
 
 	approveButton, err := form.GenerateButtonForm(&approveButtonText, nil, nil, nil, "post", url, false, false, &approveButtonParams, nil, &hideOther)
 	if err != nil {
@@ -782,21 +805,21 @@ func generateActionsOfApproveBindAccount(appAccountCertId uint) *[]form.CardActi
 }
 
 //根据team_id获取权限类型，返回值：0--无任何权限，1--admin权限，2--dev权限
-func getPermType(c *gin.Context,username string,team_id string) int {
+func getPermType(c *gin.Context, username string, team_id string) int {
 	var resourcPerm devconnmanager.GetPermsResponse
-	resourceKey := strings.ToLower(team_id)+"_space_account"
+	resourceKey := strings.ToLower(team_id) + "_space_account"
 	url := _const.Certain_Resource_All_PERMS_URL + "employeeKey=" + username + "&resourceKeys=" + resourceKey
 	result := queryPerms(url, &resourcPerm)
 	if !result {
-		utils.AssembleJsonResponse(c,http.StatusInternalServerError,"权限获取失败！","")
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "权限获取失败！", "")
 		return 0
 	}
 	var showType = 0
-	for _,permInfo := range resourcPerm.Data[resourceKey] {
+	for _, permInfo := range resourcPerm.Data[resourceKey] {
 		if permInfo == "admin" || permInfo == "all_cert_manager" {
 			showType = 1
 			break
-		}else if permInfo == "dev_cert_manager" {
+		} else if permInfo == "dev_cert_manager" {
 			showType = 2
 			break
 		}
@@ -805,7 +828,7 @@ func getPermType(c *gin.Context,username string,team_id string) int {
 }
 
 //API3-1，重组app和账号信息
-func packAppNameInfo(appInfo *devconnmanager.APPSignManagerInfo,fqr *devconnmanager.APPandCert,showType int) {
+func packAppNameInfo(appInfo *devconnmanager.APPSignManagerInfo, fqr *devconnmanager.APPandCert, showType int) {
 	appInfo.AppName = fqr.AppName
 	appInfo.TeamId = fqr.TeamId
 	appInfo.AccountType = fqr.AccountType
@@ -813,39 +836,39 @@ func packAppNameInfo(appInfo *devconnmanager.APPSignManagerInfo,fqr *devconnmana
 	appInfo.AccountVerifyUser = fqr.AccountVerifyUser
 	appInfo.AppAcountId = fqr.AppAcountId
 	appInfo.AppType = fqr.AppType
-	appInfo.BundleProfileCertSection = make([]devconnmanager.BundleProfileCert,0)
-	packCertSection(fqr,showType,&appInfo.CertSection)
+	appInfo.BundleProfileCertSection = make([]devconnmanager.BundleProfileCert, 0)
+	packCertSection(fqr, showType, &appInfo.CertSection)
 }
 
 //API3-1，重组bundle信息
-func packeBundleProfileCert(c *gin.Context,bqr *devconnmanager.APPandBundle,showType int) *devconnmanager.BundleProfileCert{
+func packeBundleProfileCert(c *gin.Context, bqr *devconnmanager.APPandBundle, showType int) *devconnmanager.BundleProfileCert {
 	var bundleInfo devconnmanager.BundleProfileCert
 	bundleInfo.BoundleId = bqr.BundleIdIndex
 	bundleInfo.BundleIdIsDel = bqr.BundleIdIsDel
 	bundleInfo.BundleIdId = bqr.BundleidId
 	bundleInfo.BundleIdName = bqr.BundleidName
 	bundleInfo.BundleIdType = bqr.BundleidType
-	packProfileSection(bqr,showType,&bundleInfo.ProfileCertSection)
+	packProfileSection(bqr, showType, &bundleInfo.ProfileCertSection)
 	//push_cert信息整合--
-	if bqr.PushCertId != ""{
+	if bqr.PushCertId != "" {
 		pushCert := devconnmanager.QueryCertInfoByCertId(bqr.PushCertId)
 		if pushCert == nil {
-			utils.AssembleJsonResponse(c,http.StatusInternalServerError,"数据库查询push证书信息失败","")
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库查询push证书信息失败", "")
 			return nil
 		}
 		bundleInfo.PushCert.CertId = (*pushCert).CertId
 		bundleInfo.PushCert.CertType = (*pushCert).CertType
-		bundleInfo.PushCert.CertExpireDate,_ = time.Parse((*pushCert).CertExpireDate,"2006-01-02 15：04：05")
+		bundleInfo.PushCert.CertExpireDate, _ = time.Parse((*pushCert).CertExpireDate, "2006-01-02 15：04：05")
 		bundleInfo.PushCert.CertDownloadUrl = (*pushCert).CertDownloadUrl
 		bundleInfo.PushCert.PrivKeyUrl = (*pushCert).PrivKeyUrl
 	}
 	//enablelist重组+capacity_obj重组
-	bundleCapacityRepack(bqr,&bundleInfo)
+	bundleCapacityRepack(bqr, &bundleInfo)
 	return &bundleInfo
 }
 
 //API3-1，重组bundle能力
-func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle,bundleInfo *devconnmanager.BundleProfileCert)  {
+func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle, bundleInfo *devconnmanager.BundleProfileCert) {
 	//config_capacibilitie_obj
 	var icloud devconnmanager.BundleConfigCapInfo
 	icloud.KeyInfo = "ICLOUD_VERSION"
@@ -858,25 +881,25 @@ func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle,bundleInfo *
 	bundleInfo.ConfigCapObj["DATA_PROTECTION"] = dataProtect
 
 	//enableList
-	param,_:=json.Marshal(bundleStruct)
+	param, _ := json.Marshal(bundleStruct)
 	bundleMap := make(map[string]interface{})
-	json.Unmarshal(param,&bundleMap)
-	for k,v := range bundleMap{
-		if _,ok := _const.IOSSelectCapabilitiesMap[k];ok && v=="1" {
-			bundleInfo.EnableCapList = append(bundleInfo.EnableCapList,k)
+	json.Unmarshal(param, &bundleMap)
+	for k, v := range bundleMap {
+		if _, ok := _const.IOSSelectCapabilitiesMap[k]; ok && v == "1" {
+			bundleInfo.EnableCapList = append(bundleInfo.EnableCapList, k)
 		}
 	}
 }
 
 //API3-1，重组profile信息
-func packProfileSection(bqr *devconnmanager.APPandBundle,showType int,profile *devconnmanager.BundleProfileGroup)  {
-	if strings.Contains(bqr.ProfileType,"APP_DEVELOPMENT"){
+func packProfileSection(bqr *devconnmanager.APPandBundle, showType int, profile *devconnmanager.BundleProfileGroup) {
+	if strings.Contains(bqr.ProfileType, "APP_DEVELOPMENT") {
 		profile.DevProfile.ProfileType = bqr.ProfileType
 		profile.DevProfile.ProfileId = bqr.ProfileId
 		profile.DevProfile.ProfileName = bqr.ProfileName
 		profile.DevProfile.ProfileDownloadUrl = bqr.ProfileDownloadUrl
 		profile.DevProfile.ProfileExpireDate = bqr.ProfileExpireDate
-	}else if showType == 1{
+	} else if showType == 1 {
 		profile.DistProfile.ProfileType = bqr.ProfileType
 		profile.DistProfile.ProfileName = bqr.ProfileName
 		profile.DistProfile.ProfileId = bqr.ProfileId
@@ -886,13 +909,13 @@ func packProfileSection(bqr *devconnmanager.APPandBundle,showType int,profile *d
 }
 
 //API3-1，重组证书信息
-func packCertSection(fqr *devconnmanager.APPandCert,showType int,certSection *devconnmanager.AppCertGroupInfo)  {
-	if strings.Contains(fqr.CertType,"DISTRIBUTION") && showType == 1{
+func packCertSection(fqr *devconnmanager.APPandCert, showType int, certSection *devconnmanager.AppCertGroupInfo) {
+	if strings.Contains(fqr.CertType, "DISTRIBUTION") && showType == 1 {
 		certSection.DistCert.CertType = fqr.CertType
 		certSection.DistCert.CertId = fqr.CertId
 		certSection.DistCert.CertDownloadUrl = fqr.CertDownloadUrl
 		certSection.DistCert.CertExpireDate = fqr.CertExpireDate
-	}else if strings.Contains(fqr.CertType,"DEVELOPMENT"){
+	} else if strings.Contains(fqr.CertType, "DEVELOPMENT") {
 		certSection.DevCert.CertType = fqr.CertType
 		certSection.DevCert.CertId = fqr.CertId
 		certSection.DevCert.CertDownloadUrl = fqr.CertDownloadUrl
@@ -901,7 +924,7 @@ func packCertSection(fqr *devconnmanager.APPandCert,showType int,certSection *de
 }
 
 //删除profile--tos删除+db删除
-func deleteProfileDBandTos(c *gin.Context,profileId string,profileName string,profileType string,teamId string,bundleId string) bool {
+func deleteProfileDBandTos(c *gin.Context, profileId string, profileName string, profileType string, teamId string, bundleId string) bool {
 	//tos中只删除重名的profile，以免出现覆盖问题
 	deleteTosObj("appleConnectFile/" + teamId + "/Profile/" + profileType + "/" + profileName + ".mobileprovision")
 	dbError := devconnmanager.DeleteAppleProfile(map[string]interface{}{"profile_id": profileId})
@@ -912,14 +935,14 @@ func deleteProfileDBandTos(c *gin.Context,profileId string,profileName string,pr
 	}
 	dbUpdateErr := UpdateBundleProfilesRelation(bundleId, profileType, nil)
 	if dbUpdateErr != nil {
-		utils.AssembleJsonResponse(c,http.StatusInternalServerError,"update apple response to tt_app_bundleId_profiles error","")
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "update apple response to tt_app_bundleId_profiles error", "")
 		return false
 	}
 	return true
 }
 
 //profile删除工单lark消息---消息卡片文字内容
-func generateCardOfProfileDelete(deleteInfo *devconnmanager.ProfileDeleteRequest,appleUrl string) *[][]form.CardElementForm {
+func generateCardOfProfileDelete(deleteInfo *devconnmanager.ProfileDeleteRequest, appleUrl string) *[][]form.CardElementForm {
 	var cardFormArray [][]form.CardElementForm
 	//插入提示信息
 	messageText := utils.DeleteProfileMessage
@@ -945,7 +968,7 @@ func generateCardOfProfileDelete(deleteInfo *devconnmanager.ProfileDeleteRequest
 }
 
 //profile删除工单lark消息--action
-func generateActionOfProfileDelete(param *map[string]interface{}) *[]form.CardActionForm{
+func generateActionOfProfileDelete(param *map[string]interface{}) *[]form.CardActionForm {
 	var cardActions []form.CardActionForm
 	var cardAction form.CardActionForm
 	var buttons []form.CardButtonForm

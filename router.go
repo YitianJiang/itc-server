@@ -168,7 +168,7 @@ func InitRouter(r *ginex.Engine) {
 
 	appSignManager := r.Group("/v1/appleConnManage")
 	{
-		appSignManager.GET("/appDetailInfoGet",developerconnmanager.GetAppSignListDetailInfo)
+		appSignManager.GET("/appDetailInfoGet", developerconnmanager.GetAppSignListDetailInfo)
 		appSignManager.GET("/getCapabilitiesInfo", developerconnmanager.GetBundleIdCapabilitiesInfo)
 		appSignManager.POST("/createAppBindAccount", developerconnmanager.CreateAppBindAccount)
 		appSignManager.POST("/approveAppBindAccountFeedback", developerconnmanager.ApproveAppBindAccountFeedback)
@@ -179,10 +179,10 @@ func InitRouter(r *ginex.Engine) {
 		appSignManager.POST("/appBindCert", developerconnmanager.AppBindCert)
 
 		//接口生成Profile描述文件
-		appSignManager.POST("/createOrUpdateProfile",developerconnmanager.CreateOrUpdateProfile)
+		appSignManager.POST("/createOrUpdateProfile", developerconnmanager.CreateOrUpdateProfile)
 		//接口上传Profile描述文件
-		appSignManager.POST("/profileUpload",developerconnmanager.ProfileUploadFunc)
-		appSignManager.DELETE("/deleteProfile",developerconnmanager.DeleteProfile)
-		appSignManager.POST("/asynDeleteProfileFeedback",developerconnmanager.AsynProfileDeleteFeedback)
+		appSignManager.POST("/profileUpload", developerconnmanager.ProfileUploadFunc)
+		appSignManager.DELETE("/deleteProfile", developerconnmanager.DeleteProfile)
+		appSignManager.POST("/asynDeleteProfileFeedback", developerconnmanager.AsynProfileDeleteFeedback)
 	}
 }
