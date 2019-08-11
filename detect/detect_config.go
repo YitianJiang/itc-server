@@ -292,6 +292,10 @@ func EditDectecConfig(c *gin.Context) {
 		flag = true
 		data["sensi_flag"] = int(t.SensiFlag.(float64))
 	}
+	if t.Type != nil {
+		flag = true
+		data["check_type"] = int(t.Type.(float64))
+	}
 	if !flag {
 		logs.Error("无修改参数！")
 		c.JSON(http.StatusOK, gin.H{

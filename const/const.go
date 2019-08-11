@@ -20,6 +20,7 @@ const LARK_Email2Id_URL = "https://open.feishu.cn/open-apis/user/v3/email2id"
 var LowLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong"}
 var MiddleLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong", "gongrui", "zhangshuai.02"}
 var HighLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong", "gongrui", "zhangshuai.02", "chenyujun"}
+var PermLarkPeople = []string{"kanghuaisong", "lirensheng"}
 var AppVersionProject = map[string]string{"13": "1", "27": "35", "32": "23", "1128": "375", "1112": "397"}
 
 const (
@@ -94,3 +95,24 @@ var ProtectionSettings = []string{"COMPLETE_PROTECTION", "PROTECTED_UNLESS_OPEN"
 var RolesInfoMap = map[string]string{"账号持有者": "ACCOUNT_HOLDER", "管理": "ADMIN", "财务": "FINANCE", "App管理": "APP_MANAGER", "开发人员": "DEVELOPER", "营销": "MARKETING", "销售": "SALES", "用户支持": "CUSTOMER_SUPPORT"}
 var RolesIndexList = []string{"ACCOUNT_HOLDER", "ADMIN", "FINANCE", "APP_MANAGER", "DEVELOPER", "MARKETING", "SALES", "CUSTOMER_SUPPORT"}
 var PermsMap = map[string]string{"user_manager": "user_manager", "all_cert_manager": "all_cert_manager", "dev_cert_manager": "dev_cert_manager"}
+var IOSSelectCapabilitiesMap = map[string]string{
+	"ACCESS_WIFI_INFORMATION":          "ACCESS_WIFI_INFORMATION",
+	"APP_GROUPS":                       "APP_GROUPS",
+	"ASSOCIATED_DOMAINS":               "ASSOCIATED_DOMAINS",
+	"AUTOFILL_CREDENTIAL_PROVIDER":     "AUTOFILL_CREDENTIAL_PROVIDER",
+	"CLASSKIT":                         "CLASSKIT",
+	"GAME_CENTER":                      "GAME_CENTER",
+	"HEALTHKIT":                        "HEALTHKIT",
+	"HOMEKIT":                          "HOMEKIT",
+	"HOT_SPOT":                         "HOT_SPOT",
+	"IN_APP_PURCHASE":                  "IN_APP_PURCHASE",
+	"INTER_APP_AUDIO":                  "INTER_APP_AUDIO",
+	"MULTIPATH":                        "MULTIPATH",
+	"NETWORK_EXTENSIONS":               "NETWORK_EXTENSIONS",
+	"NFC_TAG_READING":                  "NFC_TAG_READING",
+	"PERSONAL_VPN":                     "PERSONAL_VPN",
+	"PUSH_NOTIFICATIONS":               "PUSH_NOTIFICATIONS",
+	"SIRIKIT":                          "SIRIKIT",
+	"WALLET":                           "WALLET",
+	"WIRELESS_ACCESSORY_CONFIGURATION": "WIRELESS_ACCESSORY_CONFIGURATION",
+}

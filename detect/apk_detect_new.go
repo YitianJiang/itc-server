@@ -1,6 +1,7 @@
 package detect
 
 import (
+	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
@@ -113,7 +114,7 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 	}
 
 	//任务状态更新----该app无需要特别确认的敏感方法、字符串或权限
-	errTaskUpdate, unConfirms := taskStatusUpdate(mapInfo["taskId"], mapInfo["toolId"], &(*detect)[0], false)
+	errTaskUpdate, unConfirms := taskStatusUpdate(mapInfo["taskId"], mapInfo["toolId"], &(*detect)[0], false, 0)
 	if errTaskUpdate != "" {
 		return fmt.Errorf(errTaskUpdate), 0
 	}
@@ -245,8 +246,8 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 			conf.KeyInfo = pers
 			//将该权限的优先级定为--3高危
 			conf.Priority = 3
-			//暂时定为固定人选
-			conf.Creator = "kanghuaisong"
+			//暂时定为固定---标识itc检测新增
+			conf.Creator = "itc"
 			conf.Platform = 0
 			perm_id, err := dal.InsertDetectConfig(conf)
 
@@ -317,11 +318,10 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 		message := "你好，安卓二进制静态包检测出未知权限，请去权限配置页面完善权限信息,需要完善的权限信息有：\n"
 		message += larkPerms
 		message += "修改链接：http://cloud.bytedance.net/rocket/itc/permission?biz=13"
-		utils.LarkDingOneInner("kanghuaisong", message)
-		//测试时使用
-		//utils.LarkDingOneInner("fanjuan.xqp",message)
-		//上线时使用
-		//utils.LarkDingOneInner("lirensheng",message)
+
+		for _, people := range _const.PermLarkPeople {
+			utils.LarkDingOneInner(people, message)
+		}
 	}
 
 	return string(bytePerms), nil

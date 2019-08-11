@@ -477,3 +477,21 @@ func GiveUsersPermission(userNames *[]string, resourceKey string, actions *[]str
 	}
 	return true
 }
+
+func GetItcToken(username string) string {
+	url := "https://itc.bytedance.net/t/generateToken?username=" + username
+	resp, err := http.Get(url)
+	if err != nil {
+		logs.Error("请求itc token出错！", err.Error())
+		return ""
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logs.Error("itc token读取返回出错！", err.Error())
+		return ""
+	}
+	m := make(map[string]interface{})
+	json.Unmarshal(body, &m)
+	return m["data"].(string)
+}

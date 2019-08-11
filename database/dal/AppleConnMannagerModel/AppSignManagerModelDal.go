@@ -79,7 +79,7 @@ func UpdateAppAccountCert(queryData, item map[string]interface{}) error {
 	defer conn.Close()
 	db := conn.Table(AppAccountCert{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	if err1 := db.Where(queryData).Update(item).Error; err1 != nil {
-		utils.RecordError("删除 tt_app_account_cert失败，删除条件："+fmt.Sprint(queryData)+",errInfo：", err1)
+		utils.RecordError("更新 tt_app_account_cert失败，更新条件："+fmt.Sprint(queryData)+",errInfo：", err1)
 		return err1
 	}
 	return nil
@@ -190,7 +190,7 @@ func QueryAppleBundleId(queryData map[string]interface{}) *[]AppleBundleId {
 	db := conn.Table(AppleBundleId{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var result = make([]AppleBundleId, 0)
 	if err := db.Where(queryData).Find(&result).Error; err != nil {
-		utils.RecordError("查询 tt_app_account_cert失败，查询条件："+fmt.Sprint(queryData)+",errInfo：", err)
+		utils.RecordError("查询 tt_apple_bundleId 失败，查询条件："+fmt.Sprint(queryData)+",errInfo：", err)
 		return nil
 	}
 	return &result
@@ -209,7 +209,7 @@ func DeleteAppleBundleId(queryData map[string]interface{}) error {
 	db := conn.Table(AppleBundleId{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var t AppleBundleId
 	if err1 := db.Where(queryData).Delete(&t).Error; err1 != nil {
-		utils.RecordError("删除 tt_app_account_cert失败，删除条件："+fmt.Sprint(queryData)+",errInfo：", err1)
+		utils.RecordError("删除 tt_apple_bundleId失败，删除条件："+fmt.Sprint(queryData)+",errInfo：", err1)
 		return err1
 	}
 	return nil
@@ -265,7 +265,7 @@ func QueryWithSql(sql string, result interface{}) error {
 	}
 	defer conn.Close()
 	if err := conn.LogMode(_const.DB_LOG_MODE).Raw(sql).Scan(result).Error; err != nil {
-		utils.RecordError("query detectConfig failed,", err)
+		utils.RecordError("query with sql failed,", err)
 		return err
 	}
 	return nil
