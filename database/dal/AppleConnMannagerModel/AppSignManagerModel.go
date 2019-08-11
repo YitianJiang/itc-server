@@ -156,13 +156,12 @@ type AppBundleProfiles struct {
 	DistAdhocProfileId string `gorm:"column:dist_adhoc_profile_id"     json:"dist_adhoc_profile_id"`
 	DistProfileId      string `gorm:"column:dist_profile_id"           json:"dist_profile_id"`
 }
-//todo db工单注意新增bundleid_isdel
+
 type AppleBundleId struct {
 	gorm.Model
 	BundleidId                       string `gorm:"column:bundleid_id"                         json:"bundleid_id"`
 	BundleidName                     string `gorm:"column:bundleid_name"                       json:"bundleid_name"`
 	BundleId                         string `gorm:"column:bundle_id"                           json:"bundle_id"`
-	BundleIdIsDel					 string `gorm:"column:bundleid_isdel"                      json:"bundleid_isdel"`
 	BundleidType                     string `gorm:"column:bundleid_type"                       json:"bundleid_type"`
 	ICLOUD                           string `gorm:"column:ICLOUD"                              json:"ICLOUD"`
 	IN_APP_PURCHASE                  string `gorm:"column:IN_APP_PURCHASE"                     json:"IN_APP_PURCHASE"`
@@ -294,6 +293,7 @@ type APPandCert struct {
 type APPandBundle struct {
 	AppName            string    						 `json:"app_name"`
 	BundleIdIndex 	   string							 `json:"bundle_id_index"`
+	BundleIdIsDel	   string    						 `json:"bundleid_isdel"`
 	AppleBundleId
 	PushCertId		   string							 `json:"push_cert_id"`
 	ProfileId		   string							 `json:"profile_id"`
