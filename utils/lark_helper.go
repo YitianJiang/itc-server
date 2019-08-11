@@ -201,8 +201,11 @@ const (
 	//CreateCertPrincipal         = "zhangmengqi.muki@bytedance.com"
 	CreateCertPrincipal       = "gongrui@bytedance.com"
 	APPLE_DELETE_CERT_URL     = "https://developer.apple.com/account/resources/certificates/download/"
+	APPLE_DELETE_PROFILE_URL  = "https://developer.apple.com/account/resources/profiles/review/"
 	DELCERT_FEEDBACK_URL_TEST = "http://10.224.13.149:6789/v1/appleCertManage/asynDeleteFeedback"
 	DELCERT_FEEDBACK_URL      = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
+	DELPROFILE_FEEDBACK_URL_TEST = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteProfileFeedback"
+	DELPROFILE_FEEDBACK_URL   = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteProfileFeedback"
 	//ApproveAppBindAccountUrl      = "http://10.224.15.119:6789/v1/appleConnManage/approveAppBindAccountFeedback"
 	ApproveAppBindAccountUrl = "https://itc.bytedance.net/v1/appleConnManage/approveAppBindAccountFeedback"
 )
@@ -222,6 +225,11 @@ var DeleteCertNameHeader = "证书名称："
 var AppleUrlHeader = "删除链接："
 var AppleUrlText = "点击跳转"
 var DeleteButtonText = "已删除"
+
+//删除profile工单卡片信息
+var DeleteProfileMessage = "请根据账号信息登陆Apple后台，删除指定profile文件，点击删除链接可以直接跳转；删除完成后，请点击卡片\"已删除\"按钮。"
+var DeleteProfileIdHeader = "profile ID："
+var DeleteProfileNameHeader = "profile名称："
 
 //审核绑定账号请求基本信息
 var ApproveBindAccountMessage = "用户正在申请将app绑定至指定账号，批准后app将被绑定至新账号下"

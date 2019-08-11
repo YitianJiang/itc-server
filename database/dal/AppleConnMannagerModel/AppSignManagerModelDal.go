@@ -253,6 +253,23 @@ func DeleteAppleProfile(queryData map[string]interface{}) error {
 	}
 	return nil
 }
+/**
+更新操作
+ */
+func UpdateAppleProfile(queryData map[string]interface{},updateData map[string]interface{}) error {
+	conn, err := database.GetConneection()
+	if err != nil {
+		utils.RecordError("Get DB Connection Failed: ", err)
+		return err
+	}
+	defer conn.Close()
+	db := conn.Table(AppleProfile{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	if err1 := db.Where(queryData).Update(updateData).Error; err1 != nil {
+		utils.RecordError("更新 tt_apple_profile失败，更新条件："+fmt.Sprint(queryData)+",errInfo：", err1)
+		return err1
+	}
+	return nil
+}
 
 /**
 根据app_id联查，获取cert_section

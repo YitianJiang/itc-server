@@ -322,7 +322,7 @@ func DeleteCertificate(c *gin.Context) {
 			abot := service.BotService{}
 			abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 			appleUrl := utils.APPLE_DELETE_CERT_URL + delCertRequest.CertId
-			cardElementForms := generateCardOfCertDelete(delCertRequest.AccountName, delCertRequest.CertId, delCertRequest.CertName, appleUrl)
+			cardElementForms := generateCardOfCertDelete(delCertRequest.AccountName, delCertRequest.CertId, delCertRequest.CertName, appleUrl,delCertRequest.UserName)
 			if delCertRequest.CertOperator == "" {
 				delCertRequest.CertOperator = utils.CreateCertPrincipal
 			}
@@ -419,11 +419,6 @@ func AsynDeleteCertFeedback(c *gin.Context) {
 			"errorCode": 1,
 			"errorInfo": "请求参数绑定失败！",
 		})
-		return
-	}
-	ok := CheckDelCertFeedbackRequest(c, &feedbackInfo)
-	if !ok {
-		utils.RecordError("关键参数为空！", nil)
 		return
 	}
 	//更新对应cert_id的op_user信息
@@ -794,24 +789,6 @@ func certDBDelete(c *gin.Context, condition *map[string]interface{}, updateInfo 
 	})
 }
 
-func CheckDelCertFeedbackRequest(c *gin.Context, request *devconnmanager.DelCertFeedback) bool {
-	if request.CustomerJson.CertId == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 2,
-			"errorInfo": "cert_id为空！",
-		})
-		return false
-	}
-	if request.CustomerJson.UserName == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 3,
-			"errorInfo": "username为空！",
-		})
-		return false
-	}
-	return true
-}
-
 //发送IOS证书管理卡片消息
 func sendIOSCertLarkMessage(cardInfoFormArray *[][]form.CardElementForm, cardActions *[]form.CardActionForm, certOperator string, botService *service.BotService) error {
 	//生成卡片
@@ -832,7 +809,7 @@ func sendIOSCertLarkMessage(cardInfoFormArray *[][]form.CardElementForm, cardAct
 }
 
 //生成删除工单通知卡片---文字信息
-func generateCardOfCertDelete(accountName string, certId string, certName string, appleUrl string) *[][]form.CardElementForm {
+func generateCardOfCertDelete(accountName string, certId string, certName string, appleUrl string,username string) *[][]form.CardElementForm {
 	var cardFormArray [][]form.CardElementForm
 
 	//插入提示信息
@@ -840,43 +817,11 @@ func generateCardOfCertDelete(accountName string, certId string, certName string
 	messageForm := form.GenerateTextTag(&messageText, false, nil)
 	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
 
-	//插入账号信息
-	var accountFormList []form.CardElementForm
-
-	accountHeader := utils.CreateCertAccountHeader
-	accountHeaderForm := form.GenerateTextTag(&accountHeader, false, nil)
-	accountHeaderForm.Style = &utils.GrayHeaderStyle
-	accountFormList = append(accountFormList, *accountHeaderForm)
-
-	accountNameForm := form.GenerateTextTag(&accountName, false, nil)
-	accountFormList = append(accountFormList, *accountNameForm)
-
-	cardFormArray = append(cardFormArray, accountFormList)
-
-	//插入证书ID
-	var certTypeFormList []form.CardElementForm
-
-	certTypeHeader := utils.DeleteCertIdHeader
-	certTypeHeaderForm := form.GenerateTextTag(&certTypeHeader, false, nil)
-	certTypeHeaderForm.Style = &utils.GrayHeaderStyle
-	certTypeFormList = append(certTypeFormList, *certTypeHeaderForm)
-
-	certTypeTextForm := form.GenerateTextTag(&certId, false, nil)
-	certTypeFormList = append(certTypeFormList, *certTypeTextForm)
-
-	cardFormArray = append(cardFormArray, certTypeFormList)
-
-	//插入证书Name
-	var certNameFormList []form.CardElementForm
-	certNameHeader := utils.DeleteCertNameHeader
-	certNameHeaderForm := form.GenerateTextTag(&certNameHeader, false, nil)
-	certNameHeaderForm.Style = &utils.GrayHeaderStyle
-	certNameFormList = append(certNameFormList, *certNameHeaderForm)
-
-	certNameTextForm := form.GenerateTextTag(&certName, false, nil)
-	certNameFormList = append(certNameFormList, *certNameTextForm)
-
-	cardFormArray = append(cardFormArray, certNameFormList)
+	//插入账号信息,证书ID，证书name,申请人
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.CreateCertAccountHeader, accountName))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeleteCertIdHeader, certId))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeleteCertNameHeader, certName))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, username))
 
 	//插入apple后台url信息
 	var csrInfoFormList []form.CardElementForm
