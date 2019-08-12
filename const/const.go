@@ -50,6 +50,9 @@ const (
 )
 
 const (
+	APPLE_DEVICES_MANAGER_URL = "https://api.appstoreconnect.apple.com/v1/devices"
+)
+const (
 	TOS_BUCKET_URL            = "http://tosv.byted.org/obj/staticanalysisresult/"
 	TOS_BUCKET_NAME_JYT       = "staticanalysisresult"
 	TOS_BUCKET_TOKEN_JYT      = "C5V4TROQGXMCTPXLIJFT"
