@@ -76,8 +76,9 @@ type DataIdAndTypeItemObj struct {
 }
 
 type ProfileRelationShipSec struct {
-	BundleId     DataIdAndTypeItemObj  `json:"bundleId" binding:"required"`
-	Certificates DataIdAndTypeItemList `json:"certificates" binding:"required"`
+	BundleId     DataIdAndTypeItemObj   `json:"bundleId" binding:"required"`
+	Certificates DataIdAndTypeItemList  `json:"certificates" binding:"required"`
+	Devices      *DataIdAndTypeItemList `json:"devices,omitempty"`
 }
 
 type ProfileAttributes struct {
@@ -113,6 +114,27 @@ type ProfileDataRes struct {
 }
 
 //Profile的苹果res的Model ******End******
+//Devices的苹果res的Model ******Start******
+type DevicesAttributesRes struct {
+	Name           string      `json:"name"           binding:"required"`
+	AddedDate      string      `json:"addedDate"      binding:"required"`
+	DeviceClass    string      `json:"deviceClass"    binding:"required"`
+	Model     	   string      `json:"model"          binding:"required"`
+	Udid		   string      `json:"udid"           binding:"required"`
+	Platform	   string      `json:"platform"       binding:"required"`
+	Status   	   string      `json:"status"         binding:"required"`
+}
+
+type DevicesDataObjRes struct {
+	Id         string               `json:"id"         binding:"required"`
+	Type       string               `json:"type"       binding:"required"`
+	Attributes DevicesAttributesRes `json:"attributes" binding:"required"`
+}
+
+type DevicesDataRes struct {
+	Data []DevicesDataObjRes `json:"data"       binding:"required"`
+}
+//Devices的苹果res的Model ******End******
 
 type ApproveAppBindAccountParamFromLark struct {
 	ApproveAppBindAccountCustomerParam `json:"customer_parameter"`

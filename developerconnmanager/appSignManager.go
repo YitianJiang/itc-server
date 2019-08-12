@@ -101,7 +101,13 @@ func ReqToAppleHasObjMethod(method, url, tokenString string, objReq, objRes inte
 		rbodyByte = nil
 	}
 	client := &http.Client{}
-	request, err := http.NewRequest(method, url, rbodyByte)
+	var err error
+	var request *http.Request
+	if rbodyByte != nil {
+		request, err = http.NewRequest(method, url, rbodyByte)
+	}else {
+		request, err = http.NewRequest(method, url, nil)
+	}
 	if err != nil {
 		logs.Info("新建request对象失败")
 		return false
@@ -574,13 +580,14 @@ func UpdateBundleProfilesRelation(bundleId, profileType string, profileId *strin
 	return dbUpdateErr
 }
 
-func InsertProfileInfoToDB(profileId, profileName, profileType, tosPath string, timeStringDb time.Time) error {
+func InsertProfileInfoToDB(profileId, profileName, profileType, tosPath , opUser string, timeStringDb time.Time) error {
 	var profileItem devconnmanager.AppleProfile
 	profileItem.ProfileId = profileId
 	profileItem.ProfileName = profileName
 	profileItem.ProfileExpireDate = timeStringDb
 	profileItem.ProfileType = profileType
 	profileItem.ProfileDownloadUrl = tosPath
+	profileItem.OpUser = opUser
 	dbInsertErr := devconnmanager.InsertRecord(&profileItem)
 	return dbInsertErr
 }
@@ -596,6 +603,29 @@ func CreateOrUpdateProfileFromApple(profileName, profileType, bundleidId, certId
 	profileCreateReqObj.Data.Relationships.Certificates.Data = make([]devconnmanager.IdAndTypeItem, 1)
 	profileCreateReqObj.Data.Relationships.Certificates.Data[0].Type = "certificates"
 	profileCreateReqObj.Data.Relationships.Certificates.Data[0].Id = certId
+	if profileType == _const.IOS_APP_DEVELOPMENT || profileType == _const.MAC_APP_DEVELOPMENT {
+		var devicesResObj devconnmanager.DevicesDataRes
+		platformType := "IOS"
+		if profileType == _const.MAC_APP_DEVELOPMENT{
+			platformType = "MAC_OS"
+		}
+		deviceResult := GetAllEnableDevicesObj(platformType,"ENABLED",token,&devicesResObj)
+		if deviceResult{
+			if len(devicesResObj.Data) != 0{
+				profileCreateReqObj.Data.Relationships.Devices = &devconnmanager.DataIdAndTypeItemList{}
+				profileCreateReqObj.Data.Relationships.Devices.Data = make([]devconnmanager.IdAndTypeItem,0)
+				for _,deviceItem :=range devicesResObj.Data {
+					var itemId devconnmanager.IdAndTypeItem
+					itemId.Id = deviceItem.Id
+					itemId.Type = deviceItem.Type
+					profileCreateReqObj.Data.Relationships.Devices.Data = append(profileCreateReqObj.Data.Relationships.Devices.Data,itemId)
+				}
+			}
+		}else {
+			logs.Info("获取Devices信息失败")
+			return nil
+		}
+	}
 	url := _const.APPLE_PROFILE_MANAGER_URL
 	result := ReqToAppleHasObjMethod("POST", url, token, &profileCreateReqObj, &profileCreateResObj)
 	if result {
@@ -659,7 +689,7 @@ func CreateOrUpdateProfile(c *gin.Context) {
 				}
 				timeString := strings.Split(appleResult.Data.Attributes.ExpirationDate, "+")[0]
 				exp, _ := time.Parse("2006-01-02T15:04:05", timeString)
-				dbInsertErr := InsertProfileInfoToDB(appleResult.Data.Id, requestData.ProfileName, requestData.ProfileType, _const.TOS_BUCKET_URL+pathTos, exp)
+				dbInsertErr := InsertProfileInfoToDB(appleResult.Data.Id, requestData.ProfileName, requestData.ProfileType, _const.TOS_BUCKET_URL+pathTos, requestData.UserName, exp)
 				if dbInsertErr != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{
 						"message":   "insert tt_apple_profile error",
@@ -713,7 +743,7 @@ func ProfileUploadFunc(c *gin.Context) {
 		return
 	}
 	exp := utils.GetFileExpireTime(profileFileFullName, ".mobileprovision", profileFileByteInfo, requestData.UserName)
-	dbInsertErr := InsertProfileInfoToDB(requestData.ProfileId, requestData.ProfileName, requestData.ProfileType, _const.TOS_BUCKET_URL+pathTos, *exp)
+	dbInsertErr := InsertProfileInfoToDB(requestData.ProfileId, requestData.ProfileName, requestData.ProfileType, _const.TOS_BUCKET_URL+pathTos, requestData.UserName, *exp)
 	if dbInsertErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message":   "insert tt_apple_profile error",
@@ -986,4 +1016,17 @@ func generateActionOfProfileDelete(param *map[string]interface{}) *[]form.CardAc
 	cardAction.Buttons = buttons
 	cardActions = append(cardActions, cardAction)
 	return &cardActions
+}
+
+func GetAllEnableDevicesObj(devicePlatform,enableStatus,tokenString string,devicesResObj *devconnmanager.DevicesDataRes) bool{
+	urlGet := _const.APPLE_DEVICES_MANAGER_URL + "?limit=200"
+	if devicePlatform != "ALL"{
+		urlGet = urlGet + "&filter[platform]=" + devicePlatform
+	}
+	if enableStatus != "ALL" {
+		urlGet = urlGet + "&filter[status]=" + enableStatus
+	}
+	//var devicesResObj devconnmanager.DevicesDataRes
+	reqResult := ReqToAppleHasObjMethod("GET",urlGet,tokenString,nil,devicesResObj)
+	return reqResult
 }
