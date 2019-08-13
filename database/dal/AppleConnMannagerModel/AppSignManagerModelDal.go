@@ -222,7 +222,7 @@ func UpdateAppleBundleId(queryData, item map[string]interface{}) error {
 		return err
 	}
 	defer conn.Close()
-	db := conn.Table(AppBundleProfiles{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	db := conn.Table(AppleBundleId{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	if err1 := db.Where(queryData).Update(item).Error; err1 != nil {
 		utils.RecordError("更新 tt_apple_bundleId失败，条件："+fmt.Sprint(queryData)+",errInfo：", err1)
 		return err1
