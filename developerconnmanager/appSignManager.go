@@ -466,24 +466,25 @@ func CreateBundleProfile(c *gin.Context) {
 }
 
 //在苹果后台为bundle id打开能力
-func openCapabilitiesInApple(enableCapabilitiesChange *[]string, bundleIdId, tokenString string) (chan string, chan string) {
+func openCapabilitiesInApple(enableCapabilitiesChange *[]string, bundleIdId, tokenString string) (chan []string, chan string) {
 	capabilityNum := len(*enableCapabilitiesChange)
 	var wg sync.WaitGroup
 	wg.Add(capabilityNum)
-	successChannel := make(chan string, capabilityNum)
+	successChannel := make(chan []string, capabilityNum)
 	failChannel := make(chan string, capabilityNum)
 	for _, capability := range *enableCapabilitiesChange {
 		//go openCapabilityInApple(capability,createBundleIdResponseFromApple.Data.Id,tokenString,failChannel,successChannel)
 		go func(capability string) {
 			var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
+			var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
 			openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
 			openBundleIdCapabilityRequest.Data.Attributes.CapabilityType = capability
 			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type = "bundleIds"
 			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = bundleIdId
-			if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, nil) {
+			if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, &openBundleIdCapabilityResponse) {
 				failChannel <- capability
 			} else {
-				successChannel <- capability
+				successChannel <- []string{capability, openBundleIdCapabilityResponse.Data.Id}
 			}
 			wg.Done()
 		}(capability)
@@ -566,7 +567,7 @@ func updateDatabaseAfterCreateBundleId(requestData *devconnmanager.CreateBundleP
 		logs.Info("capabilityName:%s", capabilityName)
 		//写入数据库
 		field := appleBundleIdElem.FieldByName(capabilityName)
-		field.SetString("1")
+		field.SetString(capability.Id)
 	}
 	appleBundleId.BundleidId = res.Data.Id
 	appleBundleId.BundleidName = requestData.BundleIdName
@@ -583,7 +584,7 @@ func updateDatabaseAfterCreateBundleId(requestData *devconnmanager.CreateBundleP
 }
 
 //在苹果后台为bundle id打开能力后更新数据库的操作
-func updateDBAfterOpenCapabilities(failChannel chan string, successChannel chan string, bundleIdRecordId uint) (error, *[]string) {
+func updateDBAfterOpenCapabilities(failChannel chan string, successChannel chan []string, bundleIdRecordId uint) (error, *[]string) {
 	close(failChannel)
 	close(successChannel)
 
@@ -591,7 +592,10 @@ func updateDBAfterOpenCapabilities(failChannel chan string, successChannel chan 
 
 	changedCapabilities := make(map[string]interface{})
 	for capability := range successChannel {
-		changedCapabilities[capability] = "1"
+		if len(capability) != 2 {
+			continue
+		}
+		changedCapabilities[capability[0]] = capability[1]
 	}
 	err := devconnmanager.UpdateAppleBundleId(map[string]interface{}{"id": bundleIdRecordId}, changedCapabilities)
 	if err != nil {
