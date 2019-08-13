@@ -43,6 +43,7 @@ const (
 )
 const (
 	APPLE_PROFILE_MANAGER_URL = "https://api.appstoreconnect.apple.com/v1/profiles"
+	APPLE_BUNDLE_MANAGER_URL = "https://api.appstoreconnect.apple.com/v1/bundleIds/"
 )
 const (
 	TOS_BUCKET_URL            = "http://tosv.byted.org/obj/staticanalysisresult/"

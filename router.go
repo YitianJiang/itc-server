@@ -184,5 +184,7 @@ func InitRouter(r *ginex.Engine) {
 		appSignManager.POST("/profileUpload", developerconnmanager.ProfileUploadFunc)
 		appSignManager.DELETE("/deleteProfile", developerconnmanager.DeleteProfile)
 		appSignManager.POST("/asynDeleteProfileFeedback", developerconnmanager.AsynProfileDeleteFeedback)
+		appSignManager.DELETE("/deleteBundleid",developerconnmanager.DeleteBundleid)
+		appSignManager.POST("/asynDeleteBundleFeedback",developerconnmanager.AsynBundleDeleteFeedback)
 	}
 }
