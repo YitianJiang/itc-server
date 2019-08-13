@@ -60,25 +60,25 @@ type ProfileDeleteRequest struct {
 }
 
 type CreateBundleProfileRequest struct {
-	AccountType   string `json:"account_type"   binding:"required"`
-	TeamId        string `json:"team_id"        binding:"required"`
-	AppId         string `json:"app_id"         binding:"required"`
-	AppName       string `json:"app_name"       binding:"required"`
-	BundleIdIsDel string `json:"bundleid_isdel"`
-	BundleIdId    string `json:"bundleid_id"`
+	AccountType string `json:"account_type"   binding:"required"`
+	TeamId      string `json:"team_id"        binding:"required"`
+	AppId       string `json:"app_id"         binding:"required"`
+	AppName     string `json:"app_name"       binding:"required"`
 	BundleIdInfo
-	UserName                  string                         `json:"user_name"      binding:"required"`
-	DevProfileInfo            ProfileInfo                    `json:"dev_info_data"`
-	DistProfileInfo           ProfileInfo                    `json:"dist_info_data"`
-	EnableCapabilitiesChange  []string                       `json:"enable_capabilities_change"`
-	DisableCapabilitiesChange []string                       `json:"disable_capabilities_change"`
-	ConfigCapabilitiesChange  map[string]BundleConfigCapInfo `json:"config_capabilities_change"`
+	UserName                  string            `json:"user_name"      binding:"required"`
+	DevProfileInfo            ProfileInfo       `json:"dev_info_data"`
+	DistProfileInfo           ProfileInfo       `json:"dist_info_data"`
+	EnableCapabilitiesChange  []string          `json:"enable_capabilities_change"`
+	DisableCapabilitiesChange []string          `json:"disable_capabilities_change"`
+	ConfigCapabilitiesChange  map[string]string `json:"config_capabilities_change"`
 }
 
 type BundleIdInfo struct {
-	BundleIdName string `json:"bundleid_name"      binding:"required"`
-	BundleId     string `json:"bundle_id"      binding:"required"`
-	BundleType   string `json:"bundleid_type"      binding:"required"`
+	BundleIdName  string `json:"bundleid_name"      binding:"required"`
+	BundleId      string `json:"bundle_id"      binding:"required"`
+	BundleType    string `json:"bundleid_type"      binding:"required"`
+	BundleIdIsDel string `json:"bundleid_isdel"`
+	BundleIdId    string `json:"bundleid_id"`
 }
 
 type ProfileInfo struct {
@@ -198,13 +198,13 @@ type ProfileDataRes struct {
 //Profile的苹果res的Model ******End******
 //Devices的苹果res的Model ******Start******
 type DevicesAttributesRes struct {
-	Name           string      `json:"name"           binding:"required"`
-	AddedDate      string      `json:"addedDate"      binding:"required"`
-	DeviceClass    string      `json:"deviceClass"    binding:"required"`
-	Model     	   string      `json:"model"          binding:"required"`
-	Udid		   string      `json:"udid"           binding:"required"`
-	Platform	   string      `json:"platform"       binding:"required"`
-	Status   	   string      `json:"status"         binding:"required"`
+	Name        string `json:"name"           binding:"required"`
+	AddedDate   string `json:"addedDate"      binding:"required"`
+	DeviceClass string `json:"deviceClass"    binding:"required"`
+	Model       string `json:"model"          binding:"required"`
+	Udid        string `json:"udid"           binding:"required"`
+	Platform    string `json:"platform"       binding:"required"`
+	Status      string `json:"status"         binding:"required"`
 }
 
 type DevicesDataObjRes struct {
@@ -216,6 +216,7 @@ type DevicesDataObjRes struct {
 type DevicesDataRes struct {
 	Data []DevicesDataObjRes `json:"data"       binding:"required"`
 }
+
 //Devices的苹果res的Model ******End******
 
 type ApproveAppBindAccountParamFromLark struct {

@@ -46,7 +46,8 @@ const (
 )
 
 const (
-	APPLE_BUNDLE_ID_MANAGER_URL = "https://api.appstoreconnect.apple.com/v1/bundleIds"
+	APPLE_BUNDLE_ID_MANAGER_URL              = "https://api.appstoreconnect.apple.com/v1/bundleIds"
+	APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL = "https://api.appstoreconnect.apple.com/v1/bundleIdCapabilities"
 )
 
 const (

@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
 	"reflect"
@@ -107,7 +108,7 @@ func ReqToAppleHasObjMethod(method, url, tokenString string, objReq, objRes inte
 	var request *http.Request
 	if rbodyByte != nil {
 		request, err = http.NewRequest(method, url, rbodyByte)
-	}else {
+	} else {
 		request, err = http.NewRequest(method, url, nil)
 	}
 	if err != nil {
@@ -385,6 +386,8 @@ func CreateAppBindAccount(c *gin.Context) {
 	return
 }
 
+//Bundle id（连带Profile）创建\更新\恢复接口
+//todo profile不能和已有的重名
 func CreateBundleProfile(c *gin.Context) {
 	logs.Info("创建/更新/恢复bundle id")
 	var requestData devconnmanager.CreateBundleProfileRequest
@@ -417,7 +420,7 @@ func CreateBundleProfile(c *gin.Context) {
 				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "在苹果后台创建bundle id失败", nil)
 				return
 			}
-
+			requestData.BundleIdId = createBundleIdResponseFromApple.Data.Id
 			//更新数据库
 			resBool, bundleIdRecordId := updateDatabaseAfterCreateBundleId(&requestData, &createBundleIdResponseFromApple, c)
 			if !resBool {
@@ -425,29 +428,8 @@ func CreateBundleProfile(c *gin.Context) {
 			}
 
 			//在苹果后台打开能力
-			capabilityNum := len(requestData.EnableCapabilitiesChange)
-			var wg sync.WaitGroup
-			wg.Add(capabilityNum)
-			successChannel := make(chan string, capabilityNum)
-			failChannel := make(chan string, capabilityNum)
-
-			for _, capability := range requestData.EnableCapabilitiesChange {
-				//go openCapabilityInApple(capability,createBundleIdResponseFromApple.Data.Id,tokenString,failChannel,successChannel)
-				go func() {
-					var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
-					openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
-					openBundleIdCapabilityRequest.Data.Attributes.CapabilityType = capability
-					openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type = "bundleIds"
-					openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = createBundleIdResponseFromApple.Data.Id
-					if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, nil) {
-						failChannel <- capability
-					} else {
-						successChannel <- capability
-					}
-					wg.Done()
-				}()
-			}
-			wg.Wait()
+			//todo 配置能力打开
+			successChannel, failChannel := openCapabilitiesInApple(&requestData.EnableCapabilitiesChange, requestData.BundleIdId, tokenString)
 			//更新能力表
 			err, failedList := updateDBAfterOpenCapabilities(failChannel, successChannel, bundleIdRecordId)
 			if err != nil {
@@ -458,13 +440,23 @@ func CreateBundleProfile(c *gin.Context) {
 				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "苹果后台为bundle id更新能力失败", failedList)
 				return
 			}
-			//todo 在苹果后台新建描述文件
+			//在苹果后台新建描述文件并更新数据库
 			if requestData.DevProfileInfo != (devconnmanager.ProfileInfo{}) {
-
+				err = createProfile(&requestData.DevProfileInfo, &requestData.BundleIdInfo, tokenString, requestData.TeamId, requestData.UserName)
+				if err != nil {
+					utils.AssembleJsonResponse(c, http.StatusInternalServerError, "苹果后台创建dev profile失败", err.Error())
+					return
+				}
 			}
-
-			//todo 更新数据库
-
+			if requestData.DistProfileInfo != (devconnmanager.ProfileInfo{}) {
+				err = createProfile(&requestData.DistProfileInfo, &requestData.BundleIdInfo, tokenString, requestData.TeamId, requestData.UserName)
+				if err != nil {
+					utils.AssembleJsonResponse(c, http.StatusInternalServerError, "苹果后台创建dist profile失败", err.Error())
+					return
+				}
+			}
+			utils.AssembleJsonResponse(c, _const.SUCCESS, "bundle id创建成功", nil)
+			return
 		} else {
 			//todo 更新bundle id
 		}
@@ -473,6 +465,66 @@ func CreateBundleProfile(c *gin.Context) {
 	}
 }
 
+//在苹果后台为bundle id打开能力
+func openCapabilitiesInApple(enableCapabilitiesChange *[]string, bundleIdId, tokenString string) (chan string, chan string) {
+	capabilityNum := len(*enableCapabilitiesChange)
+	var wg sync.WaitGroup
+	wg.Add(capabilityNum)
+	successChannel := make(chan string, capabilityNum)
+	failChannel := make(chan string, capabilityNum)
+	for _, capability := range *enableCapabilitiesChange {
+		//go openCapabilityInApple(capability,createBundleIdResponseFromApple.Data.Id,tokenString,failChannel,successChannel)
+		go func(capability string) {
+			var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
+			openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
+			openBundleIdCapabilityRequest.Data.Attributes.CapabilityType = capability
+			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type = "bundleIds"
+			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = bundleIdId
+			if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, nil) {
+				failChannel <- capability
+			} else {
+				successChannel <- capability
+			}
+			wg.Done()
+		}(capability)
+	}
+	wg.Wait()
+	return successChannel, failChannel
+}
+
+//为bundleId创建profile并建立绑定关系。苹果后台创建profile->上传tos->数据库创建profile记录->数据库更新bundleId对应的profileId
+func createProfile(profileInfo *devconnmanager.ProfileInfo, bundleIdInfo *devconnmanager.BundleIdInfo, tokenString string, teamId string, userName string) error {
+	appleResult := CreateOrUpdateProfileFromApple(profileInfo.ProfileName, profileInfo.ProfileType, bundleIdInfo.BundleIdId, profileInfo.CertId, tokenString)
+	if appleResult != nil {
+		decoded, err := base64.StdEncoding.DecodeString(appleResult.Data.Attributes.ProfileContent)
+		if err != nil {
+			return errors.New("pp file decoded error")
+		}
+		//上传tos
+		pathTos := "appleConnectFile/" + teamId + "/Profile/" + profileInfo.ProfileType + "/" + profileInfo.ProfileName + ".mobileprovision"
+		uploadResult := uploadProfileToTos(decoded, pathTos)
+		if !uploadResult {
+			return errors.New("upload profile tos error")
+		}
+		timeString := strings.Split(appleResult.Data.Attributes.ExpirationDate, "+")[0]
+		exp, _ := time.Parse("2006-01-02T15:04:05", timeString)
+		//插入profile记录
+		dbInsertErr := InsertProfileInfoToDB(appleResult.Data.Id, profileInfo.ProfileName, profileInfo.ProfileType, _const.TOS_BUCKET_URL+pathTos, userName, exp)
+		if dbInsertErr != nil {
+			return errors.New("insert tt_apple_profile error")
+		}
+		//更新bundleId对应的profileId
+		dbUpdateErr := UpdateBundleProfilesRelation(bundleIdInfo.BundleId, profileInfo.ProfileType, &appleResult.Data.Id)
+		if dbUpdateErr != nil {
+			return errors.New("update apple response to tt_app_bundleId_profiles error")
+		}
+	} else {
+		return errors.New("苹果后台生成profile失败")
+	}
+	return nil
+}
+
+//在苹果后台创建bundle id
 func createBundleInApple(tokenString string, bundleIdInfo *devconnmanager.BundleIdInfo, res *devconnmanager.CreateBundleIdResponse) bool {
 	var createBundleIdRequest devconnmanager.CreateBundleIdRequest
 	//var createBundleIdResponseFromApple devconnmanager.CreateBundleIdResponse
@@ -486,12 +538,15 @@ func createBundleInApple(tokenString string, bundleIdInfo *devconnmanager.Bundle
 	return true
 }
 
+//在苹果后台创建 bundle id之后更新数据库的操作
 func updateDatabaseAfterCreateBundleId(requestData *devconnmanager.CreateBundleProfileRequest, res *devconnmanager.CreateBundleIdResponse, c *gin.Context) (bool, uint) {
 	var appBundleProfiles devconnmanager.AppBundleProfiles
 	appBundleProfiles.BundleId = requestData.BundleId
 	appBundleProfiles.BundleidId = res.Data.Id
 	appBundleProfiles.BundleidIsdel = "0"
 	appBundleProfiles.UserName = requestData.UserName
+	appBundleProfiles.AppId = requestData.AppId
+	appBundleProfiles.AppName = requestData.AppName
 	err := devconnmanager.InsertRecord(&appBundleProfiles)
 	if err != nil {
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundle id数据插入数据库失败", nil)
@@ -507,11 +562,16 @@ func updateDatabaseAfterCreateBundleId(requestData *devconnmanager.CreateBundleP
 			logs.Error("")
 			continue
 		}
-		capabilityName := capability.Id[begin:end]
+		capabilityName := capability.Id[begin+1 : end]
+		logs.Info("capabilityName:%s", capabilityName)
 		//写入数据库
 		field := appleBundleIdElem.FieldByName(capabilityName)
 		field.SetString("1")
 	}
+	appleBundleId.BundleidId = res.Data.Id
+	appleBundleId.BundleidName = requestData.BundleIdName
+	appleBundleId.BundleId = requestData.BundleId
+	appleBundleId.BundleidType = requestData.BundleType
 
 	logs.Info("bundle id能力对象：%v", appleBundleId)
 	err = devconnmanager.InsertRecord(&appleBundleId)
@@ -522,6 +582,7 @@ func updateDatabaseAfterCreateBundleId(requestData *devconnmanager.CreateBundleP
 	return true, appleBundleId.ID
 }
 
+//在苹果后台为bundle id打开能力后更新数据库的操作
 func updateDBAfterOpenCapabilities(failChannel chan string, successChannel chan string, bundleIdRecordId uint) (error, *[]string) {
 	close(failChannel)
 	close(successChannel)
@@ -756,7 +817,7 @@ func UpdateBundleProfilesRelation(bundleId, profileType string, profileId *strin
 	return dbUpdateErr
 }
 
-func InsertProfileInfoToDB(profileId, profileName, profileType, tosPath , opUser string, timeStringDb time.Time) error {
+func InsertProfileInfoToDB(profileId, profileName, profileType, tosPath, opUser string, timeStringDb time.Time) error {
 	var profileItem devconnmanager.AppleProfile
 	profileItem.ProfileId = profileId
 	profileItem.ProfileName = profileName
@@ -782,22 +843,22 @@ func CreateOrUpdateProfileFromApple(profileName, profileType, bundleidId, certId
 	if profileType == _const.IOS_APP_DEVELOPMENT || profileType == _const.MAC_APP_DEVELOPMENT {
 		var devicesResObj devconnmanager.DevicesDataRes
 		platformType := "IOS"
-		if profileType == _const.MAC_APP_DEVELOPMENT{
+		if profileType == _const.MAC_APP_DEVELOPMENT {
 			platformType = "MAC_OS"
 		}
-		deviceResult := GetAllEnableDevicesObj(platformType,"ENABLED",token,&devicesResObj)
-		if deviceResult{
-			if len(devicesResObj.Data) != 0{
+		deviceResult := GetAllEnableDevicesObj(platformType, "ENABLED", token, &devicesResObj)
+		if deviceResult {
+			if len(devicesResObj.Data) != 0 {
 				profileCreateReqObj.Data.Relationships.Devices = &devconnmanager.DataIdAndTypeItemList{}
-				profileCreateReqObj.Data.Relationships.Devices.Data = make([]devconnmanager.IdAndTypeItem,0)
-				for _,deviceItem :=range devicesResObj.Data {
+				profileCreateReqObj.Data.Relationships.Devices.Data = make([]devconnmanager.IdAndTypeItem, 0)
+				for _, deviceItem := range devicesResObj.Data {
 					var itemId devconnmanager.IdAndTypeItem
 					itemId.Id = deviceItem.Id
 					itemId.Type = deviceItem.Type
-					profileCreateReqObj.Data.Relationships.Devices.Data = append(profileCreateReqObj.Data.Relationships.Devices.Data,itemId)
+					profileCreateReqObj.Data.Relationships.Devices.Data = append(profileCreateReqObj.Data.Relationships.Devices.Data, itemId)
 				}
 			}
-		}else {
+		} else {
 			logs.Info("获取Devices信息失败")
 			return nil
 		}
@@ -1194,15 +1255,15 @@ func generateActionOfProfileDelete(param *map[string]interface{}) *[]form.CardAc
 	return &cardActions
 }
 
-func GetAllEnableDevicesObj(devicePlatform,enableStatus,tokenString string,devicesResObj *devconnmanager.DevicesDataRes) bool{
+func GetAllEnableDevicesObj(devicePlatform, enableStatus, tokenString string, devicesResObj *devconnmanager.DevicesDataRes) bool {
 	urlGet := _const.APPLE_DEVICES_MANAGER_URL + "?limit=200"
-	if devicePlatform != "ALL"{
+	if devicePlatform != "ALL" {
 		urlGet = urlGet + "&filter[platform]=" + devicePlatform
 	}
 	if enableStatus != "ALL" {
 		urlGet = urlGet + "&filter[status]=" + enableStatus
 	}
 	//var devicesResObj devconnmanager.DevicesDataRes
-	reqResult := ReqToAppleHasObjMethod("GET",urlGet,tokenString,nil,devicesResObj)
+	reqResult := ReqToAppleHasObjMethod("GET", urlGet, tokenString, nil, devicesResObj)
 	return reqResult
 }
