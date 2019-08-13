@@ -215,7 +215,7 @@ func DeleteAppleBundleId(queryData map[string]interface{}) error {
 	return nil
 }
 
-func UpdateAppleBundleId(queryData map[string]interface{}, updateData map[string]interface{}) error {
+func UpdateAppleBundleId(queryData, item map[string]interface{}) error {
 	conn, err := database.GetConneection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
@@ -223,8 +223,8 @@ func UpdateAppleBundleId(queryData map[string]interface{}, updateData map[string
 	}
 	defer conn.Close()
 	db := conn.Table(AppleBundleId{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	if err1 := db.Where(queryData).Update(updateData).Error; err1 != nil {
-		utils.RecordError("更新 tt_apple_bundleid失败，更新条件："+fmt.Sprint(queryData)+",errInfo：", err1)
+	if err1 := db.Where(queryData).Update(item).Error; err1 != nil {
+		utils.RecordError("更新 tt_apple_bundleId失败，条件："+fmt.Sprint(queryData)+",errInfo：", err1)
 		return err1
 	}
 	return nil

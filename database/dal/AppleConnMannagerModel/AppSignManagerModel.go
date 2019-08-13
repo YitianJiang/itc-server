@@ -40,23 +40,23 @@ type ProfileCreateOrUpdateRequest struct {
 }
 
 type ProfileUploadRequest struct {
-	TeamId      string    `form:"team_id"        binding:"required"`
-	BundleId    string    `form:"bundle_id"      binding:"required"`
-	ProfileId   string    `form:"profile_id"     binding:"required"`
-	ProfileName string    `form:"profile_name"   binding:"required"`
-	ProfileType string    `form:"profile_type"   binding:"required"`
-	UserName    string    `form:"user_name"      binding:"required"`
+	TeamId      string `form:"team_id"        binding:"required"`
+	BundleId    string `form:"bundle_id"      binding:"required"`
+	ProfileId   string `form:"profile_id"     binding:"required"`
+	ProfileName string `form:"profile_name"   binding:"required"`
+	ProfileType string `form:"profile_type"   binding:"required"`
+	UserName    string `form:"user_name"      binding:"required"`
 }
 type ProfileDeleteRequest struct {
-	ProfileId   string    `form:"profile_id"     binding:"required"`
-	ProfileName string    `form:"profile_name"   binding:"required"`
-	UserName    string    `form:"user_name"      binding:"required"`
-	ProfileType string    `form:"profile_type"   binding:"required"`
-	TeamId      string    `form:"team_id"        binding:"required"`
-	BundleId    string    `form:"bundle_id"      binding:"required"`
-	AccountName string    `form:"account_name"`
-	AccountType string    `form:"account_type"`
-	Operator    string    `form:"profile_principal"`
+	ProfileId   string `form:"profile_id"     binding:"required"`
+	ProfileName string `form:"profile_name"   binding:"required"`
+	UserName    string `form:"user_name"      binding:"required"`
+	ProfileType string `form:"profile_type"   binding:"required"`
+	TeamId      string `form:"team_id"        binding:"required"`
+	BundleId    string `form:"bundle_id"      binding:"required"`
+	AccountName string `form:"account_name"`
+	AccountType string `form:"account_type"`
+	Operator    string `form:"profile_principal"`
 }
 type BundleDeleteRequest struct {
 	DevProfileId    string    `form:"dev_profile_id"`
@@ -94,7 +94,89 @@ type DelBundleFeedbackCustomer struct {
 }
 
 
+type CreateBundleProfileRequest struct {
+	AccountType   string `json:"account_type"   binding:"required"`
+	TeamId        string `json:"team_id"        binding:"required"`
+	AppId         string `json:"app_id"         binding:"required"`
+	AppName       string `json:"app_name"       binding:"required"`
+	BundleIdIsDel string `json:"bundleid_isdel"`
+	BundleIdId    string `json:"bundleid_id"`
+	BundleIdInfo
+	UserName                  string                         `json:"user_name"      binding:"required"`
+	DevProfileInfo            ProfileInfo                    `json:"dev_info_data"`
+	DistProfileInfo           ProfileInfo                    `json:"dist_info_data"`
+	EnableCapabilitiesChange  []string                       `json:"enable_capabilities_change"`
+	DisableCapabilitiesChange []string                       `json:"disable_capabilities_change"`
+	ConfigCapabilitiesChange  map[string]string              `json:"config_capabilities_change"`
+}
+
+type BundleIdInfo struct {
+	BundleIdName string `json:"bundleid_name"      binding:"required"`
+	BundleId     string `json:"bundle_id"      binding:"required"`
+	BundleType   string `json:"bundleid_type"      binding:"required"`
+}
+
+type ProfileInfo struct {
+	ProfileId   string `json:"profile_id"`
+	ProfileName string `json:"profile_name"`
+	ProfileType string `json:"profile_type"`
+	CertId      string `json:"cert_id"`
+}
+
 //和苹果req res的Model
+
+//Bundle id的苹果req的Model ******Start******
+type CreateBundleIdRequest struct {
+	Data BundleIdDataObj `json:"data"       binding:"required"`
+}
+
+type BundleIdDataObj struct {
+	Type       string             `json:"type"       binding:"required"`
+	Attributes BundleIdAttributes `json:"attributes" binding:"required"`
+}
+
+type BundleIdAttributes struct {
+	Identifier string `json:"identifier" binding:"required"`
+	Name       string `json:"name" binding:"required"`
+	Platform   string `json:"platform" binding:"required"`
+}
+
+type CreateBundleIdResponse struct {
+	Data BundleData `json:"data"`
+}
+
+type BundleData struct {
+	IdAndTypeItem
+	Relationships BundleIdRelationships `json:"relationships"`
+}
+
+type BundleIdRelationships struct {
+	BundleIdCapabilities BundleIdCapabilities `json:"bundleIdCapabilities"`
+}
+
+type BundleIdCapabilities struct {
+	Data []IdAndTypeItem `json:"data"`
+}
+
+type OpenBundleIdCapabilityRequest struct {
+	Data BundleIdCapabilityObj `json:"data"`
+}
+
+type BundleIdCapabilityObj struct {
+	Type          string                       `json:"type"`
+	Attributes    BundleCapabilityAttributes   `json:"attributes"`
+	Relationships BundleCapabilityRelationship `json:"relationships" binding:"required"`
+}
+
+type BundleCapabilityRelationship struct {
+	BundleId DataIdAndTypeItemObj `json:"bundleId" binding:"required"`
+}
+
+type BundleCapabilityAttributes struct {
+	CapabilityType string `json:"capabilityType" binding:"required"`
+}
+
+//Bundle id的苹果req的Model ******End******
 
 //Profile的苹果req的Model ******Start******
 type IdAndTypeItem struct {
@@ -111,8 +193,9 @@ type DataIdAndTypeItemObj struct {
 }
 
 type ProfileRelationShipSec struct {
-	BundleId     DataIdAndTypeItemObj  `json:"bundleId" binding:"required"`
-	Certificates DataIdAndTypeItemList `json:"certificates" binding:"required"`
+	BundleId     DataIdAndTypeItemObj   `json:"bundleId" binding:"required"`
+	Certificates DataIdAndTypeItemList  `json:"certificates" binding:"required"`
+	Devices      *DataIdAndTypeItemList `json:"devices,omitempty"`
 }
 
 type ProfileAttributes struct {
@@ -148,6 +231,27 @@ type ProfileDataRes struct {
 }
 
 //Profile的苹果res的Model ******End******
+//Devices的苹果res的Model ******Start******
+type DevicesAttributesRes struct {
+	Name           string      `json:"name"           binding:"required"`
+	AddedDate      string      `json:"addedDate"      binding:"required"`
+	DeviceClass    string      `json:"deviceClass"    binding:"required"`
+	Model     	   string      `json:"model"          binding:"required"`
+	Udid		   string      `json:"udid"           binding:"required"`
+	Platform	   string      `json:"platform"       binding:"required"`
+	Status   	   string      `json:"status"         binding:"required"`
+}
+
+type DevicesDataObjRes struct {
+	Id         string               `json:"id"         binding:"required"`
+	Type       string               `json:"type"       binding:"required"`
+	Attributes DevicesAttributesRes `json:"attributes" binding:"required"`
+}
+
+type DevicesDataRes struct {
+	Data []DevicesDataObjRes `json:"data"       binding:"required"`
+}
+//Devices的苹果res的Model ******End******
 
 type ApproveAppBindAccountParamFromLark struct {
 	ApproveAppBindAccountCustomerParam `json:"customer_parameter"`
@@ -159,10 +263,10 @@ type ApproveAppBindAccountCustomerParam struct {
 	UserName         string `json:"userName"       binding:"required"`
 }
 
-type AppSignListRequest struct{
-	AppId     string `form:"app_id"   binding:"required"`
-	Username  string `form:"username" binding:"required"`
-	TeamId    string `form:"team_id"  binding:"required"`
+type AppSignListRequest struct {
+	AppId    string `form:"app_id"   binding:"required"`
+	Username string `form:"username" binding:"required"`
+	TeamId   string `form:"team_id"  binding:"required"`
 }
 
 //db model
@@ -181,7 +285,7 @@ type AppAccountCert struct {
 
 type AppBundleProfiles struct {
 	gorm.Model
-	AppId              string `gorm:"column:app_id"                           json:"app_id"`
+	AppId              string `gorm:"column:app_id"                    json:"app_id"`
 	AppName            string `gorm:"column:app_name"                  json:"app_name"`
 	BundleId           string `gorm:"column:bundle_id"                 json:"bundle_id"`
 	BundleidId         string `gorm:"column:bundleid_id"               json:"bundleid_id"`
@@ -222,7 +326,6 @@ type AppleBundleId struct {
 	CLASSKIT                         string `gorm:"column:CLASSKIT"                            json:"CLASSKIT"`
 	AUTOFILL_CREDENTIAL_PROVIDER     string `gorm:"column:AUTOFILL_CREDENTIAL_PROVIDER"        json:"AUTOFILL_CREDENTIAL_PROVIDER"`
 	ACCESS_WIFI_INFORMATION          string `gorm:"column:ACCESS_WIFI_INFORMATION"             json:"ACCESS_WIFI_INFORMATION"`
-	UserName           				 string `gorm:"column:user_name"                           json:"user_name"`
 }
 type AppleProfile struct {
 	gorm.Model
@@ -275,6 +378,7 @@ type BundleProfileCert struct {
 	ProfileCertSection BundleProfileGroup				 `json:"profile_cert_section"`
 	PushCert           AppCertInfo 						 `json:"push_cert"`
 }
+
 
 type BundleProfileGroup struct {
 	DistProfile BundleProfileInfo `json:"dist_profile"`
