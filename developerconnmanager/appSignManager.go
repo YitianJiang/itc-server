@@ -104,7 +104,13 @@ func ReqToAppleHasObjMethod(method, url, tokenString string, objReq, objRes inte
 		rbodyByte = nil
 	}
 	client := &http.Client{}
-	request, err := http.NewRequest(method, url, rbodyByte)
+	var err error
+	var request *http.Request
+	if rbodyByte != nil {
+		request, err = http.NewRequest(method, url, rbodyByte)
+	} else {
+		request, err = http.NewRequest(method, url, nil)
+	}
 	if err != nil {
 		logs.Info("新建request对象失败")
 		return false
