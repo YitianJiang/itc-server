@@ -251,6 +251,27 @@ func QueryAppleProfile(queryData map[string]interface{}) *[]AppleProfile {
 }
 
 /**
+查询操作，多值查询
+返回nil---查询fail，返回空数组--无相关数据
+*/
+func QueryAppleProfileWithList(col string, datas *[]interface{}) *[]AppleProfile {
+	conn, err := database.GetConneection()
+	if err != nil {
+		utils.RecordError("Get DB Connection Failed: ", err)
+		return nil
+	}
+	defer conn.Close()
+	db := conn.Table(AppleProfile{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	var result = make([]AppleProfile, 0)
+	if err := db.Where(col+" in (?) and deleted_at IS NULL", *datas).Find(&result).Error; err != nil {
+		utils.RecordError("查询 tt_apple_profile失败，查询条件："+fmt.Sprint(col)+fmt.Sprint((*datas)[0])+",errInfo：", err)
+		return nil
+	}
+	return &result
+
+}
+
+/**
 删除操作
 */
 func DeleteAppleProfile(queryData map[string]interface{}) error {
@@ -282,6 +303,20 @@ func UpdateAppleProfile(queryData map[string]interface{}, updateData map[string]
 	db := conn.Table(AppleProfile{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	if err1 := db.Where(queryData).Update(updateData).Error; err1 != nil {
 		utils.RecordError("更新 tt_apple_profile失败，更新条件："+fmt.Sprint(queryData)+",errInfo：", err1)
+		return err1
+	}
+	return nil
+}
+func UpdateAppleProfileBatch(col string, rangeData *[]interface{}, updateData map[string]interface{}) error {
+	conn, err := database.GetConneection()
+	if err != nil {
+		utils.RecordError("Get DB Connection Failed: ", err)
+		return err
+	}
+	defer conn.Close()
+	db := conn.Table(AppleProfile{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	if err1 := db.Where(col+" in (?)", *rangeData).Update(updateData).Error; err1 != nil {
+		utils.RecordError("更新 tt_apple_profile失败，更新条件："+fmt.Sprint(col)+",errInfo：", err1)
 		return err1
 	}
 	return nil

@@ -317,7 +317,7 @@ func DeleteCertificate(c *gin.Context) {
 	if len(appList) == 0 {
 
 		//企业分发账号和push证书工单处理逻辑---此if下操作待apple open API ready后可删除或不执行
-		if delCertRequest.AccType == "Enterprise" || delCertRequest.CertType == "IOS_PUSH" {
+		if delCertRequest.AccType == _const.Enterprise || delCertRequest.CertType == "IOS_PUSH" {
 			//向负责人发送lark消息
 			abot := service.BotService{}
 			abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
@@ -355,6 +355,19 @@ func DeleteCertificate(c *gin.Context) {
 			//db删除，只更新deleted_at
 			updateInfo := map[string]interface{}{
 				"deleted_at": time.Now(),
+			}
+			if delCertRequest.CertType == "IOS_PUSH" { //push证书删除时，更新和bundle之间关系
+				condition := map[string]interface{}{
+					"bundle_id": delCertRequest.BundleID,
+				}
+				updateInfo := map[string]interface{}{
+					"push_cert_id": nil,
+					"user_name":    delCertRequest.UserName,
+				}
+				if updateErr := devconnmanager.UpdateAppBundleProfiles(condition, updateInfo); updateErr != nil {
+					utils.AssembleJsonResponse(c, http.StatusInternalServerError, "删除Push证书时更新bundle-profile信息失败", "")
+					return
+				}
 			}
 			certDBDelete(c, &condition, &updateInfo)
 			return

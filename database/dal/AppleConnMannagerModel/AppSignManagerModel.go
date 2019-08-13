@@ -58,6 +58,40 @@ type ProfileDeleteRequest struct {
 	AccountType string `form:"account_type"`
 	Operator    string `form:"profile_principal"`
 }
+type BundleDeleteRequest struct {
+	DevProfileId string `form:"dev_profile_id"`
+	DisProfileId string `form:"dist_profile_id"`
+	UserName     string `form:"user_name"      binding:"required"`
+	IsDel        string `form:"is_del"         binding:"required"`
+	TeamId       string `form:"team_id"        binding:"required"`
+	BundleidId   string `form:"bundleid_id"    binding:"required"`
+	AccountName  string `form:"account_name"`
+	AccountType  string `form:"account_type"`
+	Operator     string `form:"bundle_principal"`
+}
+
+//Profile删除反馈参数struct
+type DelProfileFeedback struct {
+	CustomerJson DelProfileFeedbackCustomer `json:"customer_parameter"`
+}
+
+type DelProfileFeedbackCustomer struct {
+	ProfileId string `json:"profile_id"        binding:"required"`
+	UserName  string `json:"username"       binding:"required"`
+}
+
+//Profile删除反馈参数struct
+type DelBundleFeedback struct {
+	CustomerJson DelBundleFeedbackCustomer `json:"customer_parameter"`
+}
+
+type DelBundleFeedbackCustomer struct {
+	BundleIdId    string `json:"bundleid_id"        binding:"required"`
+	UserName      string `json:"username"           binding:"required"`
+	IsDel         string `json:"is_del"             binding:"required"`
+	DistProfileId string `json:"dist_profile_id"`
+	DevProfileId  string `json:"dev_profile_id"`
+}
 
 type CreateBundleProfileRequest struct {
 	AccountType string `json:"account_type"   binding:"required"`
@@ -293,8 +327,6 @@ type AppleBundleId struct {
 	AUTOFILL_CREDENTIAL_PROVIDER     string `gorm:"column:AUTOFILL_CREDENTIAL_PROVIDER"        json:"AUTOFILL_CREDENTIAL_PROVIDER"`
 	ACCESS_WIFI_INFORMATION          string `gorm:"column:ACCESS_WIFI_INFORMATION"             json:"ACCESS_WIFI_INFORMATION"`
 }
-
-//todo db新增op_user
 type AppleProfile struct {
 	gorm.Model
 	ProfileId          string    `gorm:"column:profile_id"              json:"profile_id"`
@@ -313,6 +345,7 @@ func (AppBundleProfiles) TableName() string {
 	return "tt_app_bundleId_profiles"
 }
 
+//todo 线上该dbname为"tt_apple_bundleid"
 func (AppleBundleId) TableName() string {
 	return "tt_apple_bundleId"
 }
@@ -335,20 +368,15 @@ type APPSignManagerInfo struct {
 	CertSection              AppCertGroupInfo    `json:"cert_section"`
 }
 type BundleProfileCert struct {
-	BoundleId          string                         `json:"bundle_id"`
-	BundleIdName       string                         `json:"bundle_name"`
-	BundleIdIsDel      string                         `json:"bundleid_isdel"`
-	BundleIdId         string                         `json:"bundleid_id"`
-	BundleIdType       string                         `json:"bundleid_type"`
-	EnableCapList      []string                       `json:"enable_capabilities_list"`
-	ConfigCapObj       map[string]BundleConfigCapInfo `json:"config_capabilities_obj"`
-	ProfileCertSection BundleProfileGroup             `json:"profile_cert_section"`
-	PushCert           AppCertInfo                    `json:"push_cert"`
-}
-
-type BundleConfigCapInfo struct {
-	KeyInfo string `json:"key"`
-	Options string `json:"options"`
+	BoundleId          string             `json:"bundle_id"`
+	BundleIdName       string             `json:"bundle_name"`
+	BundleIdIsDel      string             `json:"bundleid_isdel"`
+	BundleIdId         string             `json:"bundleid_id"`
+	BundleIdType       string             `json:"bundleid_type"`
+	EnableCapList      []string           `json:"enable_capabilities_list"`
+	ConfigCapObj       map[string]string  `json:"config_capabilities_obj"`
+	ProfileCertSection BundleProfileGroup `json:"profile_cert_section"`
+	PushCert           AppCertInfo        `json:"push_cert"`
 }
 
 type BundleProfileGroup struct {
@@ -409,14 +437,4 @@ type APPandBundle struct {
 	ProfileType        string    `json:"profile_type"`
 	ProfileExpireDate  time.Time `json:"profile_expire_date"`
 	ProfileDownloadUrl string    `json:"profile_download_url"`
-}
-
-//Profile删除反馈参数struct
-type DelProfileFeedback struct {
-	CustomerJson DelProfileFeedbackCustomer `json:"customer_parameter"`
-}
-
-type DelProfileFeedbackCustomer struct {
-	ProfileId string `json:"profile_id"        binding:"required"`
-	UserName  string `json:"username"       binding:"required"`
 }
