@@ -92,7 +92,6 @@ type DelCertRequest struct {
 	UserName     string `form:"username"       binding:"required"`
 	AccType      string `form:"account_type"`
 	CertOperator string `form:"cert_principal"`
-	BundleID     string `form:"bundle_id"`
 }
 type DelCertFeedback struct {
 	CustomerJson DelCertFeedbackCustomer `json:"customer_parameter"`

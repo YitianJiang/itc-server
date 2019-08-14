@@ -317,7 +317,7 @@ func DeleteCertificate(c *gin.Context) {
 	if len(appList) == 0 {
 
 		//企业分发账号和push证书工单处理逻辑---此if下操作待apple open API ready后可删除或不执行
-		if delCertRequest.AccType == _const.Enterprise || delCertRequest.CertType == "IOS_PUSH" {
+		if delCertRequest.AccType == _const.Enterprise || delCertRequest.CertType == _const.IOS_PUSH {
 			//向负责人发送lark消息
 			abot := service.BotService{}
 			abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
@@ -356,9 +356,9 @@ func DeleteCertificate(c *gin.Context) {
 			updateInfo := map[string]interface{}{
 				"deleted_at": time.Now(),
 			}
-			if delCertRequest.CertType == "IOS_PUSH" { //push证书删除时，更新和bundle之间关系
+			if delCertRequest.CertType == _const.IOS_PUSH { //push证书删除时，更新和bundle之间关系
 				condition := map[string]interface{}{
-					"bundle_id": delCertRequest.BundleID,
+					"push_cert_id": delCertRequest.CertId,
 				}
 				updateInfo := map[string]interface{}{
 					"push_cert_id": nil,
@@ -809,7 +809,7 @@ func sendIOSCertLarkMessage(cardInfoFormArray *[][]form.CardElementForm, cardAct
 	cardForm := form.GenerateCardForm(nil, getCardHeader(cardHeaderTitle), *cardInfoFormArray, *cardActions)
 	cardMessageContent := form.GenerateCardMessageContent(cardForm)
 	cardMessage, err := form.GenerateMessage("interactive", cardMessageContent)
-	utils.RecordError("card信息生成出错: ", err)
+	//utils.RecordError("card信息生成出错: ", err)
 	//发送消息
 	email := certOperator
 	if !strings.Contains(certOperator, "@bytedance.com") {
@@ -861,10 +861,7 @@ func generateActionsOfCertDelete(param *map[string]interface{}) *[]form.CardActi
 	var buttons []form.CardButtonForm
 	var text = utils.DeleteButtonText
 	var hideOther = false
-	//online
 	var url = utils.DELCERT_FEEDBACK_URL
-	//test
-	//var url = utils.DELCERT_FEEDBACK_URL_TEST
 	button, err := form.GenerateButtonForm(&text, nil, nil, nil, "post", url, false, false, param, nil, &hideOther)
 	if err != nil {
 		utils.RecordError("生成卡片button失败，", err)
