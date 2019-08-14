@@ -123,6 +123,7 @@ func ReqToAppleHasObjMethod(method, url, tokenString string, objReq, objRes inte
 		return false
 	}
 	defer response.Body.Close()
+	logs.Info("状态码：%d", response.StatusCode)
 	if !AssertResStatusCodeOK(response.StatusCode) {
 		logs.Info("查看返回状态码")
 		logs.Info(string(response.StatusCode))
@@ -132,6 +133,8 @@ func ReqToAppleHasObjMethod(method, url, tokenString string, objReq, objRes inte
 		return false
 	} else {
 		responseByte, err := ioutil.ReadAll(response.Body)
+		logs.Info("查看苹果的返回值")
+		logs.Info(string(responseByte))
 		if err != nil {
 			logs.Info("读取respose的body内容失败")
 			return false
@@ -400,8 +403,9 @@ func CreateBundleProfile(c *gin.Context) {
 	}
 	logs.Info("request:%v", requestData)
 
-	if requestData.AccountType == "Enterprise" {
+	if requestData.AccountType == _const.Enterprise {
 		//todo 走工单逻辑
+		return
 	}
 	switch requestData.BundleIdIsDel {
 	case "0":
@@ -428,8 +432,8 @@ func CreateBundleProfile(c *gin.Context) {
 			}
 
 			//在苹果后台打开能力
-			//todo 配置能力打开
-			successChannel, failChannel := openCapabilitiesInApple(&requestData.EnableCapabilitiesChange, requestData.BundleIdId, tokenString)
+			//successChannel, failChannel := openCapabilitiesInApple(&requestData.EnableCapabilitiesChange, requestData.BundleIdId, tokenString)
+			successChannel, failChannel := updateAllCapabilitiesInApple(&requestData.EnableCapabilitiesChange, nil, &requestData.ConfigCapabilitiesChange, requestData.BundleIdId, tokenString)
 			//更新能力表
 			err, failedList := updateDBAfterOpenCapabilities(failChannel, successChannel, bundleIdRecordId)
 			if err != nil {
@@ -481,6 +485,7 @@ func openCapabilitiesInApple(enableCapabilitiesChange *[]string, bundleIdId, tok
 			openBundleIdCapabilityRequest.Data.Attributes.CapabilityType = capability
 			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type = "bundleIds"
 			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = bundleIdId
+			logs.Info("openBundleIdCapabilityRequest::%v", openBundleIdCapabilityRequest)
 			if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, &openBundleIdCapabilityResponse) {
 				failChannel <- capability
 			} else {
@@ -490,6 +495,125 @@ func openCapabilitiesInApple(enableCapabilitiesChange *[]string, bundleIdId, tok
 		}(capability)
 	}
 	wg.Wait()
+	return successChannel, failChannel
+}
+
+func updateAllCapabilitiesInApple(enableChange *[]string, disableChange *[]string, configChange *map[string]string, bundleIdId, tokenString string) (chan []string, chan string) {
+	//处理传参，将nil更改为对应的空数组或空字符串，方便之后for循环遍历
+	emptyListPointer := &[]string{}
+	emptyMapPointer := &map[string]string{}
+	if enableChange == nil {
+		enableChange = emptyListPointer
+	}
+	if disableChange == nil {
+		disableChange = emptyListPointer
+	}
+	if configChange == nil {
+		configChange = emptyMapPointer
+	}
+
+	//协程相关参数、channel、waitGroup初始化
+	capabilityNum := len(*enableChange) + len(*configChange) + len(*disableChange)
+	logs.Info("%d", capabilityNum)
+	var wg sync.WaitGroup
+	wg.Add(capabilityNum)
+	successChannel := make(chan []string, capabilityNum)
+	failChannel := make(chan string, capabilityNum)
+	for _, capability := range *enableChange {
+		go func(capability string) {
+			var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
+			var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
+			openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
+			openBundleIdCapabilityRequest.Data.Attributes.CapabilityType = capability
+			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type = "bundleIds"
+			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = bundleIdId
+			if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, &openBundleIdCapabilityResponse) {
+				failChannel <- capability
+			} else {
+				successChannel <- []string{capability, openBundleIdCapabilityResponse.Data.Id}
+			}
+			wg.Done()
+		}(capability)
+	}
+	//关闭disableChange
+	bundleIdCapabilities := devconnmanager.QueryAppleBundleId(map[string]interface{}{"bundleid_id": bundleIdId})
+	if len(*bundleIdCapabilities) != 1 {
+		logs.Error("tt_apple_bundleId表存在%d条bundleIdId=%s的记录", len(*bundleIdCapabilities), bundleIdId)
+	}
+	if len(*bundleIdCapabilities) > 0 {
+		param, _ := json.Marshal((*bundleIdCapabilities)[0])
+		bundleIdCapabilitiesMap := make(map[string]interface{})
+		_ = json.Unmarshal(param, &bundleIdCapabilitiesMap)
+
+		for _, capability := range *disableChange {
+			bundleIdCapabilityId := bundleIdCapabilitiesMap[capability]
+			if bundleIdCapabilityId == "" || bundleIdCapabilityId == "0" {
+				successChannel <- []string{capability, ""}
+				wg.Done()
+			}
+			switch bundleIdCapabilityId.(type) {
+			case string:
+				go func(capability, bundleIdCapabilityIdString string) {
+					deleteUrl := _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL + "/" + bundleIdCapabilityIdString
+					logs.Info("delete capability url:%s", deleteUrl)
+					delRes := ReqToAppleNoObjMethod("DELETE", deleteUrl, tokenString)
+					if !delRes {
+						logs.Error("delete capability fail from apple server")
+						failChannel <- capability
+					} else {
+						successChannel <- []string{capability, ""}
+					}
+					wg.Done()
+				}(capability, bundleIdCapabilityId.(string))
+			default:
+				failChannel <- capability
+				wg.Done()
+			}
+		}
+	}
+
+	//更改能力config配置
+	for configName, configValue := range *configChange {
+		/*//go func(configName,configValue string) {
+		var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
+		var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
+		openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
+		openBundleIdCapabilityRequest.Data.Attributes.CapabilityType = configName
+		var setting devconnmanager.Setting
+		setting.Key=_const.ConfigCapabilityMap[configName]
+		setting.Options=append(setting.Options,devconnmanager.ConfigKey{Key: configValue})
+		openBundleIdCapabilityRequest.Data.Attributes.Settings=append(openBundleIdCapabilityRequest.Data.Attributes.Settings,setting)
+		openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type = "bundleIds"
+		openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = bundleIdId
+
+		ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, &openBundleIdCapabilityResponse)
+		logs.Info("打开配置能力response：%v",openBundleIdCapabilityResponse)
+		//}(configName,configValue)*/
+
+		go func(configName, configValue string) {
+			var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
+			var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
+			openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
+			openBundleIdCapabilityRequest.Data.Attributes.CapabilityType = configName
+			var setting devconnmanager.Setting
+			setting.Key = _const.ConfigCapabilityMap[configName]
+			setting.Options = append(setting.Options, devconnmanager.ConfigKey{Key: configValue})
+			openBundleIdCapabilityRequest.Data.Attributes.Settings = append(openBundleIdCapabilityRequest.Data.Attributes.Settings, setting)
+			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type = "bundleIds"
+			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = bundleIdId
+			if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, &openBundleIdCapabilityResponse) {
+				failChannel <- configName
+			} else {
+				successChannel <- []string{configName, configValue}
+			}
+			wg.Done()
+		}(configName, configValue)
+	}
+
+	//todo wait增加超时设置
+	wg.Wait()
+	close(successChannel)
+	close(failChannel)
 	return successChannel, failChannel
 }
 
@@ -585,9 +709,8 @@ func updateDatabaseAfterCreateBundleId(requestData *devconnmanager.CreateBundleP
 
 //在苹果后台为bundle id打开能力后更新数据库的操作
 func updateDBAfterOpenCapabilities(failChannel chan string, successChannel chan []string, bundleIdRecordId uint) (error, *[]string) {
-	close(failChannel)
-	close(successChannel)
-
+	//close(failChannel)
+	//close(successChannel)
 	var failedList []string
 
 	changedCapabilities := make(map[string]interface{})

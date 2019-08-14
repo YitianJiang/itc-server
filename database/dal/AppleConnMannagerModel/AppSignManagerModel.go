@@ -172,7 +172,17 @@ type BundleCapabilityRelationship struct {
 }
 
 type BundleCapabilityAttributes struct {
-	CapabilityType string `json:"capabilityType" binding:"required"`
+	CapabilityType string    `json:"capabilityType" binding:"required"`
+	Settings       []Setting `json:"settings"`
+}
+
+type Setting struct {
+	ConfigKey
+	Options []ConfigKey `json:"options"`
+}
+
+type ConfigKey struct {
+	Key string `json:"key"`
 }
 
 type OpenBundleIdCapabilityResponse struct {
