@@ -1314,6 +1314,7 @@ func updateDatabaseAfterUpdateBundleId(needUpdateDevProfile, needUpdateDistProfi
 	newBundleIdInfo := map[string]interface{}{
 		"dev_profile_id":  devProfileId,
 		"dist_profile_id": distProfileId,
+		"push_cert_id":    "",
 	}
 	err := devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId}, newBundleIdInfo)
 
@@ -1955,7 +1956,7 @@ func CreateOrUpdateProfile(c *gin.Context) {
 			requestData.BundlePrincipal = utils.CreateCertPrincipal
 		}
 		cardInfos := generateCardOfCreateOrUpdateProfile(&requestData)
-		err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--更新BundleId")
+		err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--创建Profile")
 		utils.RecordError("发送更新bundleId工单失败：", err)
 		if err != nil {
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送创建profile工单失败", nil)
