@@ -803,9 +803,12 @@ func certDBDelete(c *gin.Context, condition *map[string]interface{}, updateInfo 
 }
 
 //发送IOS证书管理卡片消息
-func sendIOSCertLarkMessage(cardInfoFormArray *[][]form.CardElementForm, cardActions *[]form.CardActionForm, certOperator string, botService *service.BotService) error {
+func sendIOSCertLarkMessage(cardInfoFormArray *[][]form.CardElementForm, cardActions *[]form.CardActionForm, certOperator string, botService *service.BotService, suffixs ...string) error {
 	//生成卡片
 	cardHeaderTitle := "iOS证书管理通知"
+	for _, suffix := range suffixs {
+		cardHeaderTitle += suffix
+	}
 	var cardForm *form.CardForm
 	if cardActions != nil {
 		cardForm = form.GenerateCardForm(nil, getCardHeader(cardHeaderTitle), *cardInfoFormArray, *cardActions)
