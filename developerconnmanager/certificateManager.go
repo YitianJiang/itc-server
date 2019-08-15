@@ -806,7 +806,12 @@ func certDBDelete(c *gin.Context, condition *map[string]interface{}, updateInfo 
 func sendIOSCertLarkMessage(cardInfoFormArray *[][]form.CardElementForm, cardActions *[]form.CardActionForm, certOperator string, botService *service.BotService) error {
 	//生成卡片
 	cardHeaderTitle := "iOS证书管理通知"
-	cardForm := form.GenerateCardForm(nil, getCardHeader(cardHeaderTitle), *cardInfoFormArray, *cardActions)
+	var cardForm *form.CardForm
+	if cardActions != nil {
+		cardForm = form.GenerateCardForm(nil, getCardHeader(cardHeaderTitle), *cardInfoFormArray, *cardActions)
+	} else {
+		cardForm = form.GenerateCardForm(nil, getCardHeader(cardHeaderTitle), *cardInfoFormArray, nil)
+	}
 	cardMessageContent := form.GenerateCardMessageContent(cardForm)
 	cardMessage, err := form.GenerateMessage("interactive", cardMessageContent)
 	//utils.RecordError("card信息生成出错: ", err)
