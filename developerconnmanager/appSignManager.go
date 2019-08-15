@@ -1283,6 +1283,7 @@ func updateDatabaseAfterRestoreBundleId(oldBundleIdId, newBundleIdId, userName s
 		"bundleid_isdel":  "0",
 		"dev_profile_id":  devProfileId,
 		"dist_profile_id": distProfileId,
+		"push_cert_id":    "",
 		"user_name":       userName,
 	}
 	err := devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundleid_id": oldBundleIdId}, newBundleIdInfo)
