@@ -178,6 +178,13 @@ func UpdateBundleIdIdOfBundleId(c *gin.Context) {
 		return
 	}
 	logs.Info("request:%v", requestData)
+	bundleId := devconnmanager.QueryAppleBundleId(map[string]interface{}{
+		"bundleid_id": requestData.BundleIdId,
+	})
+	if len(*bundleId) != 0 {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "bundleid_id重复，请检查输入", "")
+		return
+	}
 	err := devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundle_id": requestData.BundleId}, map[string]interface{}{"bundleid_id": requestData.BundleIdId})
 	if err != nil {
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库更新失败", nil)
@@ -1665,8 +1672,8 @@ func DeleteBundleid(c *gin.Context) {
 		return
 	}
 	//此if条件兼容，bundleid_id未录入时该bundle_id的删除操作
-	if delRequest.BundleidId == ""{
-		bundleDelete(c,&delRequest)
+	if delRequest.BundleidId == "" {
+		bundleDelete(c, &delRequest)
 		return
 	}
 	//获取bundle信息
@@ -1741,7 +1748,7 @@ func DeleteBundleid(c *gin.Context) {
 			}
 		}
 		//bundleid删除
-		bundleDelete(c,&delRequest)
+		bundleDelete(c, &delRequest)
 		return
 	}
 
@@ -1780,7 +1787,7 @@ func DeleteBundleid(c *gin.Context) {
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleid_id苹果后台删除失败", "")
 		return
 	}
-	bundleDelete(c,&delRequest)
+	bundleDelete(c, &delRequest)
 }
 
 //bundle删除异步确认
@@ -1911,10 +1918,10 @@ func CreateOrUpdateProfile(c *gin.Context) {
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送创建profile工单失败", nil)
 			return
 		}
-		profileId:= _const.NeedUpdate
-		updateRelationError := UpdateBundleProfilesRelation(requestData.BundleId,requestData.ProfileType,&profileId,requestData.UserName)
+		profileId := _const.NeedUpdate
+		updateRelationError := UpdateBundleProfilesRelation(requestData.BundleId, requestData.ProfileType, &profileId, requestData.UserName)
 		if updateRelationError != nil {
-			utils.AssembleJsonResponse(c,http.StatusInternalServerError,"更新app_bundle_profiles失败","")
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "更新app_bundle_profiles失败", "")
 			return
 		}
 		utils.AssembleJsonResponse(c, _const.SUCCESS, "发送创建profile工单成功", nil)
@@ -2212,10 +2219,10 @@ func packeBundleProfileCert(c *gin.Context, bqr *devconnmanager.APPandBundle, sh
 func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle, bundleInfo *devconnmanager.BundleProfileCert) {
 	//config_capacibilitie_obj
 	bundleInfo.ConfigCapObj = make(map[string]string)
-	if(bundleStruct.ICLOUD != ""){
+	if bundleStruct.ICLOUD != "" {
 		bundleInfo.ConfigCapObj["ICLOUD"] = bundleStruct.ICLOUD
 	}
-	if bundleStruct.DATA_PROTECTION !="" {
+	if bundleStruct.DATA_PROTECTION != "" {
 		bundleInfo.ConfigCapObj["DATA_PROTECTION"] = bundleStruct.DATA_PROTECTION
 	}
 
@@ -2479,13 +2486,13 @@ func generateCenterText(text string) []form.CardElementForm {
 	return []form.CardElementForm{*textForm}
 }
 
-func bundleDelete(c *gin.Context,delRequest *devconnmanager.BundleDeleteRequest){
+func bundleDelete(c *gin.Context, delRequest *devconnmanager.BundleDeleteRequest) {
 	queryData := map[string]interface{}{
 		"bundle_id": delRequest.BundleId,
 	}
 	updateData := make(map[string]interface{})
 	if delRequest.AccountType != _const.Enterprise {
-		updateData["user_name"]= delRequest.UserName
+		updateData["user_name"] = delRequest.UserName
 	}
 	if delRequest.IsDel == "1" {
 		updateData = map[string]interface{}{
