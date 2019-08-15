@@ -964,9 +964,9 @@ func openCapabilitiesInApple(enableCapabilitiesChange *[]string, bundleIdId, tok
 }
 
 func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanager.CreateBundleProfileRequest) (chan []string, chan string) {
-	enableChange := &requestData.EnableCapabilitiesChange
-	disableChange := &requestData.DisableCapabilitiesChange
-	configChange := &requestData.ConfigCapabilitiesChange
+	enableChange := &(requestData.EnableCapabilitiesChange)
+	disableChange := &(requestData.DisableCapabilitiesChange)
+	configChange := &(requestData.ConfigCapabilitiesChange)
 	//处理传参，将nil更改为对应的空数组或空字符串，方便之后for循环遍历
 	emptyListPointer := &[]string{}
 	emptyMapPointer := &map[string]string{}
@@ -981,12 +981,12 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 	}
 
 	//协程相关参数、channel、waitGroup初始化
-	capabilityNum := len(*enableChange) + len(*disableChange) + 1 // + len(*configChange)
+	capabilityNum := len(*enableChange) + len(*disableChange) // + len(*configChange)
 	logs.Info("%d", capabilityNum)
 	var wg sync.WaitGroup
 	wg.Add(capabilityNum)
-	successChannel := make(chan []string, capabilityNum)
-	failChannel := make(chan string, capabilityNum)
+	successChannel := make(chan []string, capabilityNum+len(*configChange))
+	failChannel := make(chan string, capabilityNum+len(*configChange))
 	for _, capability := range *enableChange {
 		if capability == "PUSH_NOTIFICATIONS" {
 			//push证书创建工单
@@ -1053,7 +1053,7 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 
 	//更改能力config配置
 	for configName, configValue := range *configChange {
-		//go func(configName,configValue string) {
+		logs.Info("%s", configName+configValue)
 		var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
 		var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
 		openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
@@ -1071,30 +1071,32 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 			successChannel <- []string{configName, configValue}
 		}
 		logs.Info("打开配置能力response：%v", openBundleIdCapabilityResponse)
-		//}(configName,configValue)
-
-		/*go func(configName, configValue string) {
-			var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
-			var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
-			openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
-			openBundleIdCapabilityRequest.Data.Attributes.CapabilityType = configName
-			var setting devconnmanager.Setting
-			setting.Key = _const.ConfigCapabilityMap[configName]
-			setting.Options = append(setting.Options, devconnmanager.ConfigKey{Key: configValue})
-			openBundleIdCapabilityRequest.Data.Attributes.Settings = append(openBundleIdCapabilityRequest.Data.Attributes.Settings, setting)
-			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type = "bundleIds"
-			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = bundleIdId
-			if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, &openBundleIdCapabilityResponse) {
-				failChannel <- configName
-			} else {
-				successChannel <- []string{configName, configValue}
-			}
-			wg.Done()
-		}(configName, configValue)*/
 	}
-	wg.Done()
+
+	/*go func(configName, configValue string) {
+		var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
+		var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
+		openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
+		openBundleIdCapabilityRequest.Data.Attributes.CapabilityType = configName
+		var setting devconnmanager.Setting
+		setting.Key = _const.ConfigCapabilityMap[configName]
+		setting.Options = append(setting.Options, devconnmanager.ConfigKey{Key: configValue})
+		openBundleIdCapabilityRequest.Data.Attributes.Settings = append(openBundleIdCapabilityRequest.Data.Attributes.Settings, setting)
+		openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type = "bundleIds"
+		openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = bundleIdId
+		if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, &openBundleIdCapabilityResponse) {
+			failChannel <- configName
+		} else {
+			successChannel <- []string{configName, configValue}
+		}
+		wg.Done()
+	}(configName, configValue)*/
+
+	//wg.Done()
 	//todo wait增加超时设置
+	logs.Info("wait")
 	wg.Wait()
+	logs.Info("wait over")
 	close(successChannel)
 	close(failChannel)
 	return successChannel, failChannel
