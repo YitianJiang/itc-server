@@ -183,7 +183,15 @@ func InsertCertificate(c *gin.Context) {
 		csrFileUrl := _const.TOS_CSR_FILE_URL_PUSH
 		err := sendNodeAlertToLark(body.AccountName, body.CertType, csrFileUrl, body.CertPrincipal, body.UserName, &botService, body.BundleId)
 		utils.RecordError("发送新建证书提醒lark失败：", err)
-
+		if err != nil {
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送新建证书提醒lark失败", nil)
+			return
+		}
+		err = devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundle_id": body.BundleId}, map[string]interface{}{"push_cert_id": _const.NeedUpdate})
+		if err != nil {
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "更新app_bundle_id_profile表失败", nil)
+			return
+		}
 		c.JSON(http.StatusOK, gin.H{
 			"data":      nil,
 			"errorCode": 0,
