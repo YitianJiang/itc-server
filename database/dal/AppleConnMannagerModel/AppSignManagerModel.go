@@ -91,6 +91,7 @@ type DelBundleFeedbackCustomer struct {
 	IsDel         string `json:"is_del"             binding:"required"`
 	DistProfileId string `json:"dist_profile_id"`
 	DevProfileId  string `json:"dev_profile_id"`
+	PushCertId    string `json:"push_cert_id"`
 }
 
 type CreateBundleProfileRequest struct {
@@ -265,7 +266,7 @@ type ApproveAppBindAccountCustomerParam struct {
 
 type AppSignListRequest struct {
 	AppId    string `form:"app_id"   binding:"required"`
-	Username string `form:"username" binding:"required"`
+	Username string `form:"user_name" binding:"required"`
 	TeamId   string `form:"team_id"  binding:"required"`
 }
 
