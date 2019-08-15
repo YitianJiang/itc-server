@@ -257,7 +257,7 @@ var RejectButtonText = "拒绝"
 
 //新建bundleId工单基本信息
 //证书？id或者url
-var CreateBundleIdMessage = "请根据账号信息登陆Apple后台，按照信息创建BundleId，配置能力，创建Profile文件"
+var CreateBundleIdMessage = "请根据账号信息登陆Apple后台，按照信息创建BundleId，配置能力，创建Profile文件并上传至rocket证书管理系统"
 var AccountHeader = "账号名: "
 var TeamIdHeader = "TeamId: "
 var BundleIdNameHeader = "BundleId名称: "
@@ -273,6 +273,11 @@ var DistCertUrlHeader = "Dist证书: "
 var DistProfileNameHeader = "Dist描述文件名称: "
 var DistProfileTypeHeader = "Dist描述文件类型: "
 var SectionTextStyle = "textDecoration: underLine; fontWeight: bold"
+
+//更新bundleId工单基本信息
+var UpdateBundleIdMessage = "请根据账号信息登陆Apple后台，按照信息更新BundleId能力，创建Profile文件并上传至rocket证书管理系统"
+var BundleIdEnableCapabilityListHeader = "打开BundleId能力: "
+var BundleIdDisableCapabilityListHeader = "关闭BundleId能力: "
 
 func CallLarkAPI(url string, token string, paramsIn interface{}, paramsOut interface{}) {
 	bodyByte, _ := json.Marshal(paramsIn)

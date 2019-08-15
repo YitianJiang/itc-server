@@ -584,6 +584,9 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.CreateBundleProfileRequest) {
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
+	if requestData.BundlePrincipal == "" {
+		requestData.BundlePrincipal = utils.CreateCertPrincipal
+	}
 	switch requestData.BundleIdIsDel {
 	case "0":
 		if requestData.BundleIdId == "" {
@@ -591,14 +594,15 @@ func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.Cr
 			logs.Info("工单创建bundleId")
 			cardInfos := generateCardOfCreateBundleId(requestData)
 			//logs.Info("%v",*cardInfos)
-			if requestData.BundlePrincipal == "" {
-				requestData.BundlePrincipal = utils.CreateCertPrincipal
-			}
-			err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService)
+			err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--创建BundleId")
 			utils.RecordError("发送创建bundleId工单失败：", err)
 		} else {
 			//更新
 			logs.Info("工单更新bundleId")
+			cardInfos := generateCardOfUpdateBundleId(requestData)
+			//logs.Info("%v",*cardInfos)
+			err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--更新BundleId")
+			utils.RecordError("发送更新bundleId工单失败：", err)
 		}
 	case "1":
 		//恢复
@@ -668,20 +672,113 @@ func generateCardOfCreateBundleId(requestData *devconnmanager.CreateBundleProfil
 	cardFormArray = append(cardFormArray, getDividerOfCard())
 
 	//插入devProfile部分
-	cardFormArray = append(cardFormArray, generateCenterText("创建Dev类型profile部分"))
 	if requestData.DevProfileInfo != (devconnmanager.ProfileInfo{}) {
-		certUrl := devconnmanager.QueryCertInfoByCertId(requestData.DevProfileInfo.CertId).CertDownloadUrl
-		cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.DevCertUrlHeader, utils.CsrText, certUrl))
+		cardFormArray = append(cardFormArray, generateCenterText("创建Dev类型profile部分"))
+		certName := devconnmanager.QueryCertInfoByCertId(requestData.DevProfileInfo.CertId).CertName
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeleteCertNameHeader, certName))
+		certAppleUrl := utils.APPLE_DELETE_CERT_URL + requestData.DevProfileInfo.CertId
+		cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.DevCertUrlHeader, utils.AppleUrlText, certAppleUrl))
 		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DevProfileNameHeader, requestData.DevProfileInfo.ProfileName))
 		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DevProfileTypeHeader, requestData.DevProfileInfo.ProfileType))
 		cardFormArray = append(cardFormArray, getDividerOfCard())
 	}
 
 	//插入distProfile部分
-	cardFormArray = append(cardFormArray, generateCenterText("创建Dist类型profile部分"))
 	if requestData.DistProfileInfo != (devconnmanager.ProfileInfo{}) {
-		certUrl := devconnmanager.QueryCertInfoByCertId(requestData.DistProfileInfo.CertId).CertDownloadUrl
-		cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.DistCertUrlHeader, utils.CsrText, certUrl))
+		cardFormArray = append(cardFormArray, generateCenterText("创建Dist类型profile部分"))
+		certName := devconnmanager.QueryCertInfoByCertId(requestData.DistProfileInfo.CertId).CertName
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeleteCertNameHeader, certName))
+		certAppleUrl := utils.APPLE_DELETE_CERT_URL + requestData.DistProfileInfo.CertId
+		cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.DistCertUrlHeader, utils.AppleUrlText, certAppleUrl))
+
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DistProfileNameHeader, requestData.DistProfileInfo.ProfileName))
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DistProfileTypeHeader, requestData.DistProfileInfo.ProfileType))
+	}
+	return &cardFormArray
+}
+
+func generateCardOfUpdateBundleId(requestData *devconnmanager.CreateBundleProfileRequest) *[][]form.CardElementForm {
+	var cardFormArray [][]form.CardElementForm
+
+	//插入提示信息
+	messageText := utils.UpdateBundleIdMessage
+	messageForm := form.GenerateTextTag(&messageText, false, nil)
+	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
+
+	//插入用户名，账户名，bundleId，能力列表，配置能力，dev相关，dist相关
+
+	//插入基本信息
+	cardFormArray = append(cardFormArray, generateCenterText("基本信息部分"))
+	accountInfos := devconnmanager.QueryAccountInfo(map[string]interface{}{"team_id": requestData.TeamId})
+	if len(*accountInfos) != 1 {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TeamIdHeader, requestData.TeamId))
+		logs.Error("获取teamId对应的account失败：%s 错误原因：teamId对应的account记录数不等于1", requestData.TeamId)
+	} else {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountHeader, (*accountInfos)[0].AccountName))
+	}
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, requestData.UserName))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdHeader, requestData.BundleId))
+	cardFormArray = append(cardFormArray, getDividerOfCard())
+
+	//插入bundle id能力配置部分
+	cardFormArray = append(cardFormArray, generateCenterText("配置BundleId能力部分"))
+	disableCapabilitiesString := ""
+	for _, capability := range requestData.DisableCapabilitiesChange {
+		disableCapabilitiesString = disableCapabilitiesString + capability + ", "
+	}
+	if len(disableCapabilitiesString) > 2 {
+		disableCapabilitiesString = disableCapabilitiesString[0 : len(disableCapabilitiesString)-2]
+	}
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdDisableCapabilityListHeader, disableCapabilitiesString))
+
+	capabilitiesString := ""
+	needPushCert := false
+	for _, capability := range requestData.EnableCapabilitiesChange {
+		if !needPushCert && capability == "PUSH_NOTIFICATIONS" {
+			needPushCert = true
+		}
+		capabilitiesString = capabilitiesString + capability + ", "
+	}
+	if len(capabilitiesString) > 2 {
+		capabilitiesString = capabilitiesString[0 : len(capabilitiesString)-2]
+	}
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdEnableCapabilityListHeader, capabilitiesString))
+	//push证书信息需要在打开push能力时提供
+	if needPushCert {
+		cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.PushCertHeader, utils.CsrText, _const.TOS_CSR_FILE_URL_PUSH))
+	}
+
+	iCloudVersion, ok := requestData.ConfigCapabilitiesChange[_const.ICLOUD]
+	if ok {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.ICloudVersionHeader, iCloudVersion))
+	}
+
+	dataProtection, ok := requestData.ConfigCapabilitiesChange[_const.DATA_PROTECTION]
+	if ok {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DataProtectHeader, dataProtection))
+	}
+	cardFormArray = append(cardFormArray, getDividerOfCard())
+
+	//插入devProfile部分
+	if requestData.DevProfileInfo != (devconnmanager.ProfileInfo{}) {
+		cardFormArray = append(cardFormArray, generateCenterText("创建Dev类型profile部分"))
+		certName := devconnmanager.QueryCertInfoByCertId(requestData.DevProfileInfo.CertId).CertName
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeleteCertNameHeader, certName))
+		certAppleUrl := utils.APPLE_DELETE_CERT_URL + requestData.DevProfileInfo.CertId
+		cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.DevCertUrlHeader, utils.AppleUrlText, certAppleUrl))
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DevProfileNameHeader, requestData.DevProfileInfo.ProfileName))
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DevProfileTypeHeader, requestData.DevProfileInfo.ProfileType))
+		cardFormArray = append(cardFormArray, getDividerOfCard())
+	}
+
+	//插入distProfile部分
+	if requestData.DistProfileInfo != (devconnmanager.ProfileInfo{}) {
+		cardFormArray = append(cardFormArray, generateCenterText("创建Dist类型profile部分"))
+		certName := devconnmanager.QueryCertInfoByCertId(requestData.DistProfileInfo.CertId).CertName
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeleteCertNameHeader, certName))
+		certAppleUrl := utils.APPLE_DELETE_CERT_URL + requestData.DistProfileInfo.CertId
+		cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.DistCertUrlHeader, utils.AppleUrlText, certAppleUrl))
+
 		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DistProfileNameHeader, requestData.DistProfileInfo.ProfileName))
 		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DistProfileTypeHeader, requestData.DistProfileInfo.ProfileType))
 	}
