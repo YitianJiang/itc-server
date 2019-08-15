@@ -455,6 +455,8 @@ type APPandBundle struct {
 	AppName       string `json:"app_name"`
 	BundleIdIndex string `json:"bundle_id_index"`
 	BundleIdIsDel string `json:"bundleid_isdel"`
+	DistProfileId string `json:"dist_profile_id"`
+	DevProfileId  string `json:"dev_profile_id"`
 	AppleBundleId
 	PushCertId         string    `json:"push_cert_id"`
 	ProfileId          string    `json:"profile_id"`

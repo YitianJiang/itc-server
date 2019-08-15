@@ -262,7 +262,7 @@ func GetAppSignListDetailInfo(c *gin.Context) {
 	appNameList += ")"
 	//根据app_id和app_name获取bundleid信息+profile信息
 	var bQueryResult []devconnmanager.APPandBundle
-	sql_c := "select abp.app_name,abp.bundle_id as bundle_id_index,abp.bundleid_isdel as bundle_id_is_del,abp.push_cert_id,ap.profile_id,ap.profile_name,ap.profile_expire_date,ap.profile_type,ap.profile_download_url,ab.*" +
+	sql_c := "select abp.app_name,abp.bundle_id as bundle_id_index,abp.bundleid_isdel as bundle_id_is_del,abp.push_cert_id,abp.dev_profile_id,abp.dist_profile_id,ap.profile_id,ap.profile_name,ap.profile_expire_date,ap.profile_type,ap.profile_download_url,ab.*" +
 		" from tt_apple_bundleId ab,tt_app_bundleId_profiles abp left join tt_apple_profile ap " +
 		"on (abp.dev_profile_id = ap.profile_id or abp.dist_profile_id = ap.profile_id) where abp.app_id = '" + requestInfo.AppId + "' and abp.app_name in " + appNameList + " and abp.bundle_id = ab.bundle_id " +
 		"and abp.deleted_at IS NULL and ab.deleted_at IS NULL and ap.deleted_at IS NULL"
@@ -1738,32 +1738,6 @@ func DeleteBundleid(c *gin.Context) {
 		}
 		//bundleid删除
 		bundleDelete(c,&delRequest)
-		//queryData := map[string]interface{}{
-		//	"bundleid_id": delRequest.BundleidId,
-		//}
-		//if delRequest.IsDel == "1" {
-		//	updateData := map[string]interface{}{
-		//		"bundleid_isdel": "1",
-		//		"push_cert_id":   nil,
-		//	}
-		//	updateErr := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
-		//	if updateErr != nil {
-		//		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId软删除失败", "")
-		//		return
-		//	}
-		//	utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId软删除成功", "")
-		//} else {
-		//	updateData := map[string]interface{}{
-		//		"deleted_at": time.Now(),
-		//	}
-		//	delErr1 := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
-		//	delErr2 := devconnmanager.UpdateAppleBundleId(queryData, updateData)
-		//	if delErr1 != nil || delErr2 != nil {
-		//		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId完全删除失败", "")
-		//		return
-		//	}
-		//	utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId完全删除成功", "")
-		//}
 		return
 	}
 
@@ -1803,35 +1777,6 @@ func DeleteBundleid(c *gin.Context) {
 		return
 	}
 	bundleDelete(c,&delRequest)
-	//queryData := map[string]interface{}{
-	//	"bundleid_id": delRequest.BundleidId,
-	//}
-	//if delRequest.IsDel == "1" {
-	//	updateData := map[string]interface{}{
-	//		"bundleid_isdel": "1",
-	//		"push_cert_id":   nil,
-	//		"user_name":      delRequest.UserName,
-	//	}
-	//	updateErr := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
-	//	if updateErr != nil {
-	//		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId软删除失败", "")
-	//		return
-	//	}
-	//	utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId软删除成功", "")
-	//} else {
-	//	//删除并更新操作人
-	//	updateData := map[string]interface{}{
-	//		"deleted_at": time.Now(),
-	//		"user_name":  delRequest.UserName,
-	//	}
-	//	delErr1 := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
-	//	delErr2 := devconnmanager.UpdateAppleBundleId(queryData, updateData)
-	//	if delErr1 != nil || delErr2 != nil {
-	//		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId完全删除失败", "")
-	//		return
-	//	}
-	//	utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId完全删除成功", "")
-	//}
 }
 
 //bundle删除异步确认
@@ -1960,6 +1905,12 @@ func CreateOrUpdateProfile(c *gin.Context) {
 		utils.RecordError("发送更新bundleId工单失败：", err)
 		if err != nil {
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送创建profile工单失败", nil)
+			return
+		}
+		profileId:= _const.NeedUpdate
+		updateRelationError := UpdateBundleProfilesRelation(requestData.BundleId,requestData.ProfileType,&profileId,requestData.UserName)
+		if updateRelationError != nil {
+			utils.AssembleJsonResponse(c,http.StatusInternalServerError,"更新app_bundle_profiles失败","")
 			return
 		}
 		utils.AssembleJsonResponse(c, _const.SUCCESS, "发送创建profile工单成功", nil)
@@ -2279,14 +2230,14 @@ func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle, bundleInfo 
 func packProfileSection(bqr *devconnmanager.APPandBundle, showType int, profile *devconnmanager.BundleProfileGroup) {
 	if strings.Contains(bqr.ProfileType, "APP_DEVELOPMENT") {
 		profile.DevProfile.ProfileType = bqr.ProfileType
-		profile.DevProfile.ProfileId = bqr.ProfileId
+		profile.DevProfile.ProfileId = bqr.DevProfileId
 		profile.DevProfile.ProfileName = bqr.ProfileName
 		profile.DevProfile.ProfileDownloadUrl = bqr.ProfileDownloadUrl
 		profile.DevProfile.ProfileExpireDate = &bqr.ProfileExpireDate
 	} else if showType == 1 {
 		profile.DistProfile.ProfileType = bqr.ProfileType
 		profile.DistProfile.ProfileName = bqr.ProfileName
-		profile.DistProfile.ProfileId = bqr.ProfileId
+		profile.DistProfile.ProfileId = bqr.DistProfileId
 		profile.DistProfile.ProfileDownloadUrl = bqr.ProfileDownloadUrl
 		profile.DistProfile.ProfileExpireDate = &bqr.ProfileExpireDate
 	}
