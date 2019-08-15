@@ -182,6 +182,11 @@ func UpdateBundleIdIdOfBundleId(c *gin.Context) {
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库更新失败", nil)
 		return
 	}
+	err = devconnmanager.UpdateAppleBundleId(map[string]interface{}{"bundle_id": requestData.BundleId}, map[string]interface{}{"bundleid_id": requestData.BundleIdId})
+	if err != nil {
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库更新失败", nil)
+		return
+	}
 	utils.AssembleJsonResponse(c, _const.SUCCESS, "数据库更新成功", nil)
 	return
 }
