@@ -1038,8 +1038,9 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 				logs.Error("数据库中不存在bundleid_id=%s 的记录", requestData.BundleIdId)
 			} else if (*bundleIdProfile)[0].PushCertId == "" {
 				//发送创建push证书的工单
-				sendPushCertLark(requestData)
-				_ = devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId}, map[string]interface{}{"push_cert_id": _const.NeedUpdate})
+				if sendPushCertLark(requestData) {
+					_ = devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId}, map[string]interface{}{"push_cert_id": _const.NeedUpdate})
+				}
 			}
 		}
 		go func(capability string) {
@@ -1146,14 +1147,17 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 	return successChannel, failChannel
 }
 
-func sendPushCertLark(requestData *devconnmanager.CreateBundleProfileRequest) {
+func sendPushCertLark(requestData *devconnmanager.CreateBundleProfileRequest) bool {
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 	cardInfos := generateCardOfPushCert(requestData)
 	//logs.Info("%v",*cardInfos)
 	err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--创建push证书")
 	utils.RecordError("发送创建push证书工单失败：", err)
-	return
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 //生成创建push证书消息卡片内容
