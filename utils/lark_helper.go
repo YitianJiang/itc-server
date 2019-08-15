@@ -211,7 +211,7 @@ const (
 	//DELPROFILE_FEEDBACK_URL      = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteProfileFeedback"
 	//DELBUNDLE_FEEDBACK_URL       = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteBundleFeedback"
 	//DELCERT_FEEDBACK_URL         = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
-	ApproveAppBindAccountUrl      = "http://10.224.13.149:6789/v1/appleConnManage/approveAppBindAccountFeedback"
+	ApproveAppBindAccountUrl = "http://10.224.13.149:6789/v1/appleConnManage/approveAppBindAccountFeedback"
 	//ApproveAppBindAccountUrl = "https://itc.bytedance.net/v1/appleConnManage/approveAppBindAccountFeedback"
 )
 
@@ -279,6 +279,10 @@ var SectionTextStyle = "textDecoration: underLine; fontWeight: bold"
 var UpdateBundleIdMessage = "请根据账号信息登陆Apple后台，按照信息更新BundleId能力，创建Profile文件并上传至rocket证书管理系统"
 var BundleIdEnableCapabilityListHeader = "打开BundleId能力: "
 var BundleIdDisableCapabilityListHeader = "关闭BundleId能力: "
+
+var Horizontal = "horizontal"
+var Gray = "gray"
+var DividerSize = "0.5"
 
 func CallLarkAPI(url string, token string, paramsIn interface{}, paramsOut interface{}) {
 	bodyByte, _ := json.Marshal(paramsIn)

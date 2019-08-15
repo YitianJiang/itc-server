@@ -137,3 +137,5 @@ var ConfigCapabilityMap = map[string]string{
 const (
 	Divider = "divider"
 )
+
+const NeedUpdate = "needUpdate"
