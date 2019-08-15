@@ -159,10 +159,10 @@ type BundleIdCapabilities struct {
 }
 
 type OpenBundleIdCapabilityRequest struct {
-	Data BundleIdCapabilityObj `json:"data"`
+	Data BundleIdCapabilityReqObj `json:"data"`
 }
 
-type BundleIdCapabilityObj struct {
+type BundleIdCapabilityReqObj struct {
 	Type          string                       `json:"type"`
 	Attributes    BundleCapabilityAttributes   `json:"attributes"`
 	Relationships BundleCapabilityRelationship `json:"relationships" binding:"required"`
@@ -173,7 +173,21 @@ type BundleCapabilityRelationship struct {
 }
 
 type BundleCapabilityAttributes struct {
-	CapabilityType string `json:"capabilityType" binding:"required"`
+	CapabilityType string    `json:"capabilityType" binding:"required"`
+	Settings       []Setting `json:"settings"`
+}
+
+type Setting struct {
+	ConfigKey
+	Options []ConfigKey `json:"options"`
+}
+
+type ConfigKey struct {
+	Key string `json:"key"`
+}
+
+type OpenBundleIdCapabilityResponse struct {
+	Data IdAndTypeItem `json:"data"`
 }
 
 //Bundle id的苹果req的Model ******End******
@@ -370,7 +384,7 @@ type APPSignManagerInfo struct {
 }
 type BundleProfileCert struct {
 	BoundleId          string             `json:"bundle_id"`
-	BundleIdName       string             `json:"bundle_name"`
+	BundleIdName       string             `json:"bundleid_name"`
 	BundleIdIsDel      string             `json:"bundleid_isdel"`
 	BundleIdId         string             `json:"bundleid_id"`
 	BundleIdType       string             `json:"bundleid_type"`

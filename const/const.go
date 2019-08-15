@@ -127,3 +127,8 @@ var IOSSelectCapabilitiesMap = map[string]string{
 	"WALLET":                           "WALLET",
 	"WIRELESS_ACCESSORY_CONFIGURATION": "WIRELESS_ACCESSORY_CONFIGURATION",
 }
+
+var ConfigCapabilityMap = map[string]string{
+	ICLOUD:          "ICLOUD_VERSION",
+	DATA_PROTECTION: "DATA_PROTECTION_PERMISSION_LEVEL",
+}
