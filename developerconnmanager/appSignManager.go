@@ -439,7 +439,6 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 			}
 
 			//在苹果后台打开能力
-			//successChannel, failChannel := openCapabilitiesInApple(&requestData.EnableCapabilitiesChange, requestData.BundleIdId, tokenString)
 			successChannel, failChannel := updateAllCapabilitiesInApple(&requestData.EnableCapabilitiesChange, nil, &requestData.ConfigCapabilitiesChange, requestData.BundleIdId, tokenString)
 			//更新能力表
 			err, failedList := updateDBAfterChangeCapabilities(failChannel, successChannel, requestData.BundleIdId)
@@ -532,6 +531,7 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 			return
 		}
 
+		requestData.BundleIdId = createBundleIdResponseFromApple.Data.Id
 		//在苹果后台打开能力
 		successChannel, failChannel := updateAllCapabilitiesInApple(&requestData.EnableCapabilitiesChange, &requestData.DisableCapabilitiesChange, &requestData.ConfigCapabilitiesChange, requestData.BundleIdId, tokenString)
 		//更新能力表
@@ -983,6 +983,10 @@ func updateAllCapabilitiesInApple(enableChange *[]string, disableChange *[]strin
 	successChannel := make(chan []string, capabilityNum)
 	failChannel := make(chan string, capabilityNum)
 	for _, capability := range *enableChange {
+		if capability == "PUSH_NOTIFICATIONS" {
+			//push证书创建工单
+
+		}
 		go func(capability string) {
 			var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
 			var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
