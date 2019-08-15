@@ -1313,6 +1313,7 @@ func updateDatabaseAfterUpdateBundleId(needUpdateDevProfile, needUpdateDistProfi
 	newBundleIdInfo := map[string]interface{}{
 		"dev_profile_id":  devProfileId,
 		"dist_profile_id": distProfileId,
+		"push_cert_id":    "",
 	}
 	err := devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId}, newBundleIdInfo)
 
