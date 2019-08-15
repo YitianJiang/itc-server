@@ -129,7 +129,6 @@ func InitRouter(r *ginex.Engine) {
 	//todo 巩锐开始开发证书体系监管后台API
 	connapi := r.Group("/v1/devConnManage")
 	{
-		//connapi.GET("/bundleIdSearch",developerconnmanager.TestAskBundleId)
 		connapi.GET("/getBundleIdsList", developerconnmanager.GetBunldIdsObj)
 		connapi.GET("/testPrivatePrint", developerconnmanager.ParsePrivateKey)
 		connapi.GET("/createProvProfile", developerconnmanager.Test64DecodeToString)
@@ -155,8 +154,6 @@ func InitRouter(r *ginex.Engine) {
 	}
 	usermanagerapi := r.Group("/v1/userManage")
 	{
-		usermanagerapi.GET("/getCapabilitiesInfo", developerconnmanager.GetBundleIdCapabilitiesInfo)
-		//usermanagerapi.POST("/assertBunldCapabilities",developerconnmanager.AssertBunldIDInfo)
 		//账号人员管理相关开发
 		usermanagerapi.GET("/userRolesGet", developerconnmanager.UserRolesGetInfo)
 		usermanagerapi.GET("/userInfoGet", developerconnmanager.UserDetailInfoGet)
@@ -167,5 +164,29 @@ func InitRouter(r *ginex.Engine) {
 		usermanagerapi.POST("/userInvitations", developerconnmanager.UserInvitedFunc)
 		usermanagerapi.POST("/userDelete", developerconnmanager.UserDeleteFunc)
 		usermanagerapi.POST("/userInvitationsDelete", developerconnmanager.UserInvitedDeleteFunc)
+	}
+
+	appSignManager := r.Group("/v1/appleConnManage")
+	{
+		appSignManager.GET("/appDetailInfoGet", developerconnmanager.GetAppSignListDetailInfo)
+		appSignManager.GET("/getCapabilitiesInfo", developerconnmanager.GetBundleIdCapabilitiesInfo)
+		appSignManager.POST("/createAppBindAccount", developerconnmanager.CreateAppBindAccount)
+		appSignManager.POST("/approveAppBindAccountFeedback", developerconnmanager.ApproveAppBindAccountFeedback)
+		//接口删除app相关所有信息
+		appSignManager.DELETE("/deleteAppAllInfo", developerconnmanager.DeleteAppAllInfoFromDB)
+
+		//接口绑定\换绑签名证书接口
+		appSignManager.POST("/appBindCert", developerconnmanager.AppBindCert)
+
+		//接口生成Profile描述文件
+		appSignManager.POST("/createOrUpdateProfile", developerconnmanager.CreateOrUpdateProfile)
+		//接口上传Profile描述文件
+		appSignManager.POST("/profileUpload", developerconnmanager.ProfileUploadFunc)
+		appSignManager.DELETE("/deleteProfile", developerconnmanager.DeleteProfile)
+		appSignManager.POST("/asynDeleteProfileFeedback", developerconnmanager.AsynProfileDeleteFeedback)
+		appSignManager.DELETE("/deleteBundleid", developerconnmanager.DeleteBundleid)
+		appSignManager.POST("/asynDeleteBundleFeedback", developerconnmanager.AsynBundleDeleteFeedback)
+		appSignManager.POST("/createBundleProfile", developerconnmanager.CreateOrUpdateOrRestoreBundleId)
+		appSignManager.POST("/updateBundleIdId", developerconnmanager.UpdateBundleIdIdOfBundleId)
 	}
 }

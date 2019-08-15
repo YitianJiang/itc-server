@@ -8,7 +8,7 @@ import (
 	"code.byted.org/gopkg/logs"
 	"time"
 )
-
+//todo apple OpenAPI 操作失败报警至群中
 func DeleteCertInfo(condition map[string]interface{}) bool {
 	connection, err := database.GetConneection()
 	if err != nil {

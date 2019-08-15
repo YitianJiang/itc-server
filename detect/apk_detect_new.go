@@ -319,8 +319,8 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 		message += larkPerms
 		message += "修改链接：http://cloud.bytedance.net/rocket/itc/permission"
 
-		for _,people := range _const.PermLarkPeople {
-			utils.LarkDingOneInner(people,message)
+		for _, people := range _const.PermLarkPeople {
+			utils.LarkDingOneInner(people, message)
 		}
 	}
 
