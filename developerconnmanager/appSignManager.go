@@ -1912,11 +1912,20 @@ func CreateOrUpdateProfile(c *gin.Context) {
 		logs.Info("企业分发类型账号，通知工单处理人进行处理")
 		logs.Info(requestData.AccountName, requestData.AccountType, requestData.BundleId, requestData.UseCertId,
 			requestData.ProfileName, requestData.ProfileType, requestData.UserName)
-		//todo 发送Lark消息 @zhangmengqi 如上面logs.Info，Lark消息卡片提供account_name、account_type、bundle_id、use_cert_id、profile_name、profile_type、user_name信息
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "lark success",
-			"errorCode": 0,
-		})
+		//发送Lark消息 @zhangmengqi 如上面logs.Info，Lark消息卡片提供account_name、account_type、bundle_id、use_cert_id、profile_name、profile_type、user_name信息
+		botService := service.BotService{}
+		botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
+		if requestData.BundlePrincipal == "" {
+			requestData.BundlePrincipal = utils.CreateCertPrincipal
+		}
+		cardInfos := generateCardOfCreateOrUpdateProfile(&requestData)
+		err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--更新BundleId")
+		utils.RecordError("发送更新bundleId工单失败：", err)
+		if err != nil {
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送创建profile工单失败", nil)
+			return
+		}
+		utils.AssembleJsonResponse(c, _const.SUCCESS, "发送创建profile工单成功", nil)
 		return
 	} else {
 		logs.Info("普通企业类型账号，苹果api自动处理")
@@ -1987,6 +1996,37 @@ func CreateOrUpdateProfile(c *gin.Context) {
 			return
 		}
 	}
+}
+
+//生成创建profile消息卡片内容
+func generateCardOfCreateOrUpdateProfile(requestData *devconnmanager.ProfileCreateOrUpdateRequest) *[][]form.CardElementForm {
+	var cardFormArray [][]form.CardElementForm
+
+	//插入提示信息
+	messageText := utils.CreateOrUpdateProfileCertMessage
+	messageForm := form.GenerateTextTag(&messageText, false, nil)
+	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
+
+	//插入account_name、account_type、bundle_id、use_cert_id、profile_name、profile_type、user_name
+
+	//插入基本信息
+	cardFormArray = append(cardFormArray, generateCenterText("基本信息部分"))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountHeader, requestData.AccountName))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountTypeHeader, requestData.AccountType))
+
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, requestData.UserName))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdHeader, requestData.BundleId))
+	cardFormArray = append(cardFormArray, getDividerOfCard())
+
+	cardFormArray = append(cardFormArray, generateCenterText("Profile证书信息部分"))
+	certName := devconnmanager.QueryCertInfoByCertId(requestData.UseCertId).CertName
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeleteCertNameHeader, certName))
+	certAppleUrl := utils.APPLE_DELETE_CERT_URL + requestData.UseCertId
+	cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.CertUrlHeader, utils.AppleUrlText, certAppleUrl))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.ProfileNameHeader, requestData.ProfileName))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.ProfileTypeHeader, requestData.ProfileType))
+	cardFormArray = append(cardFormArray, getDividerOfCard())
+	return &cardFormArray
 }
 
 func ProfileUploadFunc(c *gin.Context) {
