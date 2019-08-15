@@ -199,14 +199,14 @@ const (
 	IOSCertificateBotAppId      = "cli_9dca86fa50ee5101"
 	IOSCertificateBotAppSecret  = "XbENqXBQGJeIYaU3oLk3jgdJC5IiuEAW"
 	//CreateCertPrincipal         = "zhangmengqi.muki@bytedance.com"
-	CreateCertPrincipal          = "gongrui@bytedance.com"
-	APPLE_DELETE_CERT_URL        = "https://developer.apple.com/account/resources/certificates/download/"
-	APPLE_DELETE_PROFILE_URL     = "https://developer.apple.com/account/resources/profiles/review/"
-	APPLE_DELETE_BUNDLE_URL      = "https://developer.apple.com/account/resources/identifiers/bundleId/edit/V4K75THKFW"
+	CreateCertPrincipal      = "gongrui@bytedance.com"
+	APPLE_DELETE_CERT_URL    = "https://developer.apple.com/account/resources/certificates/download/"
+	APPLE_DELETE_PROFILE_URL = "https://developer.apple.com/account/resources/profiles/review/"
+	APPLE_DELETE_BUNDLE_URL  = "https://developer.apple.com/account/resources/identifiers/bundleId/edit/V4K75THKFW"
 	//test---actionURL
-	DELCERT_FEEDBACK_URL   		 = "http://10.224.13.149:6789/v1/appleCertManage/asynDeleteFeedback"
-	DELPROFILE_FEEDBACK_URL 	 = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteProfileFeedback"
-	DELBUNDLE_FEEDBACK_URL       = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteBundleFeedback"
+	DELCERT_FEEDBACK_URL    = "http://10.224.13.149:6789/v1/appleCertManage/asynDeleteFeedback"
+	DELPROFILE_FEEDBACK_URL = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteProfileFeedback"
+	DELBUNDLE_FEEDBACK_URL  = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteBundleFeedback"
 	//online----actionURL
 	//DELPROFILE_FEEDBACK_URL      = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteProfileFeedback"
 	//DELBUNDLE_FEEDBACK_URL       = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteBundleFeedback"
@@ -250,11 +250,35 @@ var ApproveBindAccountMessage = "用户正在申请将app绑定至指定账号�
 var AppIdHeader = "APP ID: "
 var AppNameHeader = "APP名称: "
 var AppTypeHeader = "APP类型: "
-var TeamIdHeader = "目标Team ID: "
-var AccountNameHeader = "目标账号名: "
+var TargetTeamIdHeader = "目标Team ID: "
+var TargetAccountNameHeader = "目标账号名: "
 var UserNameHeader = "申请人: "
 var ApproveButtonText = "同意"
 var RejectButtonText = "拒绝"
+
+//新建bundleId工单基本信息
+//证书？id或者url
+var CreateBundleIdMessage = "请根据账号信息登陆Apple后台，按照信息创建BundleId，配置能力，创建Profile文件并上传至rocket证书管理系统"
+var AccountHeader = "账号名: "
+var TeamIdHeader = "TeamId: "
+var BundleIdNameHeader = "BundleId名称: "
+var BundleIdHeader = "BundleId: "
+var BundleIdCapabilityListHeader = "BundleId能力列表: "
+var ICloudVersionHeader = "ICLOUD_VERSION配置: "
+var DataProtectHeader = "DATA_PROTECTION配置: "
+var PushCertHeader = "Push证书csr文件: "
+var DevCertUrlHeader = "Dev证书: "
+var DevProfileNameHeader = "Dev描述文件名称: "
+var DevProfileTypeHeader = "Dev描述文件类型: "
+var DistCertUrlHeader = "Dist证书: "
+var DistProfileNameHeader = "Dist描述文件名称: "
+var DistProfileTypeHeader = "Dist描述文件类型: "
+var SectionTextStyle = "textDecoration: underLine; fontWeight: bold"
+
+//更新bundleId工单基本信息
+var UpdateBundleIdMessage = "请根据账号信息登陆Apple后台，按照信息更新BundleId能力，创建Profile文件并上传至rocket证书管理系统"
+var BundleIdEnableCapabilityListHeader = "打开BundleId能力: "
+var BundleIdDisableCapabilityListHeader = "关闭BundleId能力: "
 
 func CallLarkAPI(url string, token string, paramsIn interface{}, paramsOut interface{}) {
 	bodyByte, _ := json.Marshal(paramsIn)

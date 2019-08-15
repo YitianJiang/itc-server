@@ -64,6 +64,7 @@ const (
 	TOS_CSR_FILE_FOR_DIST_KEY = "appleConnectFile/fullFileAccept/CertificateSigningRequest.certSigningRequest"
 	TOS_CSR_FILE_URL_DEV      = "http://tosv.byted.org/obj/staticanalysisresult/appleConnectFile/fullFileDevAccept/CertificateSigningRequest.certSigningRequest"
 	TOS_CSR_FILE_URL_DIST     = "http://tosv.byted.org/obj/staticanalysisresult/appleConnectFile/fullFileAccept/CertificateSigningRequest.certSigningRequest"
+	TOS_CSR_FILE_URL_PUSH     = "http://tosv.byted.org/obj/staticanalysisresult/appleConnectFile/fullFilePushAccept/CertificateSigningRequest.certSigningRequest"
 )
 
 const (
@@ -93,7 +94,7 @@ const (
 	IOS_APP_ADHOC       = "IOS_APP_ADHOC"
 	IOS_APP_DEVELOPMENT = "IOS_APP_DEVELOPMENT"
 	MAC_APP_DEVELOPMENT = "MAC_APP_DEVELOPMENT"
-	IOS_PUSH 			= "IOS_PUSH"
+	IOS_PUSH            = "IOS_PUSH"
 )
 
 var IOSSelectCapabilities = []string{"ACCESS_WIFI_INFORMATION", "APP_GROUPS", "ASSOCIATED_DOMAINS", "AUTOFILL_CREDENTIAL_PROVIDER", "CLASSKIT", "GAME_CENTER",
@@ -132,3 +133,7 @@ var ConfigCapabilityMap = map[string]string{
 	ICLOUD:          "ICLOUD_VERSION",
 	DATA_PROTECTION: "DATA_PROTECTION_PERMISSION_LEVEL",
 }
+
+const (
+	Divider = "divider"
+)

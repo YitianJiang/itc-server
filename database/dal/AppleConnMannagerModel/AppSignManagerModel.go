@@ -57,17 +57,17 @@ type ProfileDeleteRequest struct {
 	Operator    string `form:"profile_principal"`
 }
 type BundleDeleteRequest struct {
-	DevProfileId 	string `form:"dev_profile_id"`
-	DisProfileId 	string `form:"dist_profile_id"`
-	UserName     	string `form:"user_name"      binding:"required"`
-	IsDel        	string `form:"is_del"         binding:"required"`
-	TeamId       	string `form:"team_id"        binding:"required"`
-	BundleidId   	string `form:"bundleid_id"    binding:"required"`
-	AccountName  	string `form:"account_name"`
-	AccountType  	string `form:"account_type"`
-	Operator     	string `form:"bundle_principal"`
-	DevProfileName  string `form:"dev_profile_name"`
-	DisProfileName  string `form:"dist_profile_name"`
+	DevProfileId   string `form:"dev_profile_id"`
+	DisProfileId   string `form:"dist_profile_id"`
+	UserName       string `form:"user_name"      binding:"required"`
+	IsDel          string `form:"is_del"         binding:"required"`
+	TeamId         string `form:"team_id"        binding:"required"`
+	BundleidId     string `form:"bundleid_id"    binding:"required"`
+	AccountName    string `form:"account_name"`
+	AccountType    string `form:"account_type"`
+	Operator       string `form:"bundle_principal"`
+	DevProfileName string `form:"dev_profile_name"`
+	DisProfileName string `form:"dist_profile_name"`
 }
 
 //Profile删除反馈参数struct
@@ -95,10 +95,11 @@ type DelBundleFeedbackCustomer struct {
 }
 
 type CreateBundleProfileRequest struct {
-	AccountType string `json:"account_type"   binding:"required"`
-	TeamId      string `json:"team_id"        binding:"required"`
-	AppId       string `json:"app_id"         binding:"required"`
-	AppName     string `json:"app_name"       binding:"required"`
+	AccountType     string `json:"account_type"   binding:"required"`
+	TeamId          string `json:"team_id"        binding:"required"`
+	AppId           string `json:"app_id"         binding:"required"`
+	AppName         string `json:"app_name"       binding:"required"`
+	BundlePrincipal string `json:"bundle_principal"`
 	BundleIdInfo
 	UserName                  string            `json:"user_name"      binding:"required"`
 	DevProfileInfo            ProfileInfo       `json:"dev_info_data"`
@@ -400,12 +401,12 @@ type BundleProfileGroup struct {
 }
 
 type BundleProfileInfo struct {
-	UserCertId         string    `json:"user_cert_id"`
-	ProfileId          string    `json:"profile_id"`
-	ProfileName        string    `json:"profile_name"`
-	ProfileType        string    `json:"profile_type"`
-	ProfileExpireDate  *time.Time`json:"profile_expire_date"`
-	ProfileDownloadUrl string    `json:"profile_download_url"`
+	UserCertId         string     `json:"user_cert_id"`
+	ProfileId          string     `json:"profile_id"`
+	ProfileName        string     `json:"profile_name"`
+	ProfileType        string     `json:"profile_type"`
+	ProfileExpireDate  *time.Time `json:"profile_expire_date"`
+	ProfileDownloadUrl string     `json:"profile_download_url"`
 }
 
 type AppCertGroupInfo struct {
@@ -414,12 +415,12 @@ type AppCertGroupInfo struct {
 }
 
 type AppCertInfo struct {
-	CertId          string    `json:"cert_id"`
-	CertName        string    `json:"cert_name"`
-	CertType        string    `json:"cert_type"`
+	CertId          string     `json:"cert_id"`
+	CertName        string     `json:"cert_name"`
+	CertType        string     `json:"cert_type"`
 	CertExpireDate  *time.Time `json:"cert_expire_date"`
-	CertDownloadUrl string    `json:"cert_download_url"`
-	PrivKeyUrl      string    `json:"priv_key_url"`
+	CertDownloadUrl string     `json:"cert_download_url"`
+	PrivKeyUrl      string     `json:"priv_key_url"`
 }
 
 /**
@@ -435,7 +436,7 @@ type APPandCert struct {
 	AccountVerifyStatus string    `json:"account_verify_status"`
 	AccountVerifyUser   string    `json:"account_verify_user"`
 	CertId              string    `json:"cert_id"`
-	CertName			string	  `json:"cert_name"`
+	CertName            string    `json:"cert_name"`
 	CertType            string    `json:"cert_type"`
 	CertExpireDate      time.Time `json:"cert_expire_date"`
 	CertDownloadUrl     string    `json:"cert_download_url"`
