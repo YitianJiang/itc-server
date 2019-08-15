@@ -141,3 +141,4 @@ const (
 )
 
 const NeedUpdate = "needUpdate"
+const UNDEFINED = "undefined"

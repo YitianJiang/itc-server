@@ -422,6 +422,7 @@ type AppCertGroupInfo struct {
 }
 
 type AppCertInfo struct {
+	CertIDID        string     `json:"ID"`
 	CertId          string     `json:"cert_id"`
 	CertName        string     `json:"cert_name"`
 	CertType        string     `json:"cert_type"`
@@ -442,6 +443,7 @@ type APPandCert struct {
 	AccountType         string    `json:"account_type"`
 	AccountVerifyStatus string    `json:"account_verify_status"`
 	AccountVerifyUser   string    `json:"account_verify_user"`
+	CertIdId            string    `json:"ID"`
 	CertId              string    `json:"cert_id"`
 	CertName            string    `json:"cert_name"`
 	CertType            string    `json:"cert_type"`

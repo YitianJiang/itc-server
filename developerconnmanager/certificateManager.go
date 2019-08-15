@@ -335,7 +335,7 @@ func DeleteCertificate(c *gin.Context) {
 				"username": delCertRequest.CertOperator,
 			}
 			cardActions := generateActionsOfCertDelete(&param)
-			err := sendIOSCertLarkMessage(cardElementForms, cardActions, delCertRequest.CertOperator, &abot)
+			err := sendIOSCertLarkMessage(cardElementForms, cardActions, delCertRequest.CertOperator, &abot,"--删除证书")
 			if err != nil {
 				utils.RecordError("发送lark消息通知负责人删除证书失败，", err)
 				c.JSON(http.StatusOK, gin.H{
@@ -360,7 +360,7 @@ func DeleteCertificate(c *gin.Context) {
 			updateInfo := map[string]interface{}{
 				"deleted_at": time.Now(),
 			}
-			if delCertRequest.CertType == _const.IOS_PUSH { //push证书删除时，更新和bundle之间关系
+			if delCertRequest.CertType == _const.IOS_PUSH || delCertRequest.CertType == _const.MAC_PUSH { //push证书删除时，更新和bundle之间关系
 				condition := map[string]interface{}{
 					"push_cert_id": delCertRequest.CertId,
 				}

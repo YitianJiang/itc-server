@@ -245,7 +245,7 @@ func GetAppSignListDetailInfo(c *gin.Context) {
 	//根据app_id和team_id获取appName基本信息以及证书信息
 	var cQueryResult []devconnmanager.APPandCert
 	sql := "select aac.app_name,aac.app_type,aac.id as app_acount_id,aac.team_id,aac.account_verify_status,aac.account_verify_user," +
-		"ac.cert_id,ac.cert_type,ac.cert_name,ac.cert_expire_date,ac.cert_download_url,ac.priv_key_url from tt_app_account_cert aac left join tt_apple_certificate ac " +
+		"ac.id as cert_id_id,ac.cert_id,ac.cert_type,ac.cert_name,ac.cert_expire_date,ac.cert_download_url,ac.priv_key_url from tt_app_account_cert aac left join tt_apple_certificate ac " +
 		"on (aac.dev_cert_id = ac.cert_id or aac.dist_cert_id = ac.cert_id) " +
 		"where aac.app_id = '" + requestInfo.AppId + "' and aac.team_id = '" + requestInfo.TeamId + "' and aac.deleted_at IS NULL and ac.deleted_at IS NULL "
 	query_c := devconnmanager.QueryWithSql(sql, &cQueryResult)
@@ -1558,10 +1558,10 @@ func DeleteProfile(c *gin.Context) {
 		}
 		cardElementForms := generateCardOfProfileDelete(&deleteRequest, appleUrl, profileInfo.ProfileName)
 		cardActions := generateActionOfProfileDelete(&param)
-		err := sendIOSCertLarkMessage(cardElementForms, cardActions, deleteRequest.Operator, &abot)
+		err := sendIOSCertLarkMessage(cardElementForms, cardActions, deleteRequest.Operator, &abot,"--删除Profile")
 		if err != nil {
-			utils.RecordError("发送lark消息通知负责人删除证书失败，", err)
-			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送lark消息通知负责人删除证书失败", "")
+			utils.RecordError("发送lark消息通知负责人删除Profile失败，", err)
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送lark消息通知负责人删除Profile失败", "")
 			return
 		}
 		//profile tos+db删除
@@ -1672,7 +1672,7 @@ func DeleteBundleid(c *gin.Context) {
 		return
 	}
 	//此if条件兼容，bundleid_id未录入时该bundle_id的删除操作
-	if delRequest.BundleidId == "" {
+	if delRequest.BundleidId == "" || delRequest.BundleidId == _const.UNDEFINED{
 		bundleDelete(c, &delRequest)
 		return
 	}
@@ -1711,7 +1711,7 @@ func DeleteBundleid(c *gin.Context) {
 		url := utils.APPLE_DELETE_BUNDLE_URL + delRequest.BundleidId
 		param := map[string]interface{}{
 			"bundleid_id":     delRequest.BundleidId,
-			"username":        delRequest.UserName,
+			"username":        delRequest.Operator,
 			"dist_profile_id": delRequest.DisProfileId,
 			"dev_profile_id":  delRequest.DevProfileId,
 			"push_cert_id":    (*bundleid)[0].PushCertId,
@@ -1722,7 +1722,7 @@ func DeleteBundleid(c *gin.Context) {
 		if delRequest.Operator == "" {
 			delRequest.Operator = utils.CreateCertPrincipal
 		}
-		sendErr := sendIOSCertLarkMessage(cardContent, cardAction, delRequest.Operator, &abot)
+		sendErr := sendIOSCertLarkMessage(cardContent, cardAction, delRequest.Operator, &abot,"--删除BundleId")
 		if sendErr != nil {
 			utils.RecordError("工单发送lark消息失败，", sendErr)
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送工单lark消息失败", "")
@@ -2262,12 +2262,14 @@ func packProfileSection(bqr *devconnmanager.APPandBundle, showType int, profile 
 func packCertSection(fqr *devconnmanager.APPandCert, showType int, certSection *devconnmanager.AppCertGroupInfo) {
 	if fqr.CertId != "" {
 		if strings.Contains(fqr.CertType, "DISTRIBUTION") && showType == 1 {
+			certSection.DistCert.CertIDID = fqr.CertIdId
 			certSection.DistCert.CertName = fqr.CertName
 			certSection.DistCert.CertType = fqr.CertType
 			certSection.DistCert.CertId = fqr.CertId
 			certSection.DistCert.CertDownloadUrl = fqr.CertDownloadUrl
 			certSection.DistCert.CertExpireDate = &fqr.CertExpireDate
 		} else if strings.Contains(fqr.CertType, "DEVELOPMENT") {
+			certSection.DevCert.CertIDID = fqr.CertIdId
 			certSection.DevCert.CertName = fqr.CertName
 			certSection.DevCert.CertType = fqr.CertType
 			certSection.DevCert.CertId = fqr.CertId
@@ -2386,26 +2388,26 @@ func generateCardOfBundleDelete(deleteInfo *devconnmanager.BundleDeleteRequest, 
 	//插入删除跳转链接
 	cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.AppleUrlHeader, utils.AppleUrlText, appleUrl))
 	//插入profile删除提示
-	if deleteInfo.DevProfileId != "" || deleteInfo.DisProfileId != "" || pushCertInfo != nil {
+	if (deleteInfo.DevProfileId != _const.UNDEFINED && deleteInfo.DevProfileId != "" && deleteInfo.DevProfileId != _const.NeedUpdate) || (deleteInfo.DisProfileId != "undefined" && deleteInfo.DisProfileId != "" && deleteInfo.DisProfileId != _const.NeedUpdate) || pushCertInfo != nil {
 		divideText := "--------------------------------------------------\n"
 		divideForm := form.GenerateTextTag(&divideText, false, nil)
 		cardFormArray = append(cardFormArray, []form.CardElementForm{*divideForm})
 		messageText := utils.ProfileDeleteWithBundelMessage
 		messageForm := form.GenerateTextTag(&messageText, false, nil)
 		cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
-		if deleteInfo.DisProfileId != "" {
-			url := utils.APPLE_DELETE_PROFILE_URL + deleteInfo.DisProfileId
-			cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DistProfileTitle, deleteInfo.DisProfileName))
-			cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.AppleUrlHeader, utils.AppleUrlText, url))
-		}
-		if deleteInfo.DevProfileId != "" {
+		if deleteInfo.DevProfileId != _const.UNDEFINED && deleteInfo.DevProfileId != "" && deleteInfo.DevProfileId != _const.NeedUpdate {
 			url := utils.APPLE_DELETE_PROFILE_URL + deleteInfo.DevProfileId
 			cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DevProfileTitle, deleteInfo.DevProfileName))
 			cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.AppleUrlHeader, utils.AppleUrlText, url))
 		}
+		if deleteInfo.DisProfileId != _const.UNDEFINED && deleteInfo.DisProfileId != "" && deleteInfo.DisProfileId != _const.NeedUpdate {
+			url := utils.APPLE_DELETE_PROFILE_URL + deleteInfo.DisProfileId
+			cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DistProfileTitle, deleteInfo.DisProfileName))
+			cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.AppleUrlHeader, utils.AppleUrlText, url))
+		}
 		if pushCertInfo != nil {
 			url := utils.APPLE_DELETE_CERT_URL + pushCertInfo.CertId
-			cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.PushCertTitle, deleteInfo.DevProfileName))
+			cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.PushCertTitle, pushCertInfo.CertName))
 			cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.AppleUrlHeader, utils.AppleUrlText, url))
 		}
 	}
@@ -2452,7 +2454,7 @@ func paramCheckOfBundleDelete(c *gin.Context, delRequest *devconnmanager.BundleD
 		return false
 	}
 	//校验非工单类型bundleId信息删除
-	if delRequest.BundleidId == "" && delRequest.AccountType != _const.Enterprise {
+	if (delRequest.BundleidId == "" || delRequest.BundleidId == _const.UNDEFINED) && delRequest.AccountType != _const.Enterprise {
 		return false
 	}
 	return true
@@ -2460,10 +2462,10 @@ func paramCheckOfBundleDelete(c *gin.Context, delRequest *devconnmanager.BundleD
 
 func getProfileIdList(devId, distId string) *[]interface{} {
 	var profileIdList = make([]interface{}, 0)
-	if devId != "" {
+	if devId != _const.UNDEFINED && devId != "" && devId != _const.NeedUpdate{
 		profileIdList = append(profileIdList, devId)
 	}
-	if distId != "" {
+	if devId != _const.UNDEFINED && distId != "" && devId != _const.NeedUpdate {
 		profileIdList = append(profileIdList, distId)
 	}
 	return &profileIdList
