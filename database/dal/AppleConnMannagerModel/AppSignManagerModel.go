@@ -62,7 +62,8 @@ type BundleDeleteRequest struct {
 	UserName       string `form:"user_name"      binding:"required"`
 	IsDel          string `form:"is_del"         binding:"required"`
 	TeamId         string `form:"team_id"        binding:"required"`
-	BundleidId     string `form:"bundleid_id"    binding:"required"`
+	BundleId       string `form:"bundle_id"      binding:"required"`
+	BundleidId     string `form:"bundleid_id"`
 	AccountName    string `form:"account_name"`
 	AccountType    string `form:"account_type"`
 	Operator       string `form:"bundle_principal"`
@@ -401,7 +402,7 @@ type BundleProfileGroup struct {
 }
 
 type BundleProfileInfo struct {
-	UserCertId         string     `json:"user_cert_id"`
+	UserCertId         string     `json:"use_cert_id"`
 	ProfileId          string     `json:"profile_id"`
 	ProfileName        string     `json:"profile_name"`
 	ProfileType        string     `json:"profile_type"`

@@ -1577,6 +1577,11 @@ func DeleteBundleid(c *gin.Context) {
 	if paramOk := paramCheckOfBundleDelete(c, &delRequest); !paramOk {
 		return
 	}
+	//此if条件兼容，bundleid_id未录入时该bundle_id的删除操作
+	if delRequest.BundleidId == ""{
+		bundleDelete(c,&delRequest)
+		return
+	}
 	//获取bundle信息
 	bundleid := devconnmanager.QueryAppBundleProfiles(map[string]interface{}{
 		"bundleid_id": delRequest.BundleidId,
@@ -1649,29 +1654,33 @@ func DeleteBundleid(c *gin.Context) {
 			}
 		}
 		//bundleid删除
-		queryData := map[string]interface{}{
-			"bundleid_id": delRequest.BundleidId,
-		}
-		if delRequest.IsDel == "1" {
-			updateData := map[string]interface{}{
-				"bundleid_isdel": "1",
-				"push_cert_id":   nil,
-			}
-			updateErr := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
-			if updateErr != nil {
-				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId软删除失败", "")
-				return
-			}
-			utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId软删除成功", "")
-		} else {
-			delErr1 := devconnmanager.DeleteAppBundleProfiles(queryData)
-			delErr2 := devconnmanager.DeleteAppleBundleId(queryData)
-			if delErr1 != nil || delErr2 != nil {
-				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId完全删除失败", "")
-				return
-			}
-			utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId完全删除成功", "")
-		}
+		bundleDelete(c,&delRequest)
+		//queryData := map[string]interface{}{
+		//	"bundleid_id": delRequest.BundleidId,
+		//}
+		//if delRequest.IsDel == "1" {
+		//	updateData := map[string]interface{}{
+		//		"bundleid_isdel": "1",
+		//		"push_cert_id":   nil,
+		//	}
+		//	updateErr := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
+		//	if updateErr != nil {
+		//		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId软删除失败", "")
+		//		return
+		//	}
+		//	utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId软删除成功", "")
+		//} else {
+		//	updateData := map[string]interface{}{
+		//		"deleted_at": time.Now(),
+		//	}
+		//	delErr1 := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
+		//	delErr2 := devconnmanager.UpdateAppleBundleId(queryData, updateData)
+		//	if delErr1 != nil || delErr2 != nil {
+		//		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId完全删除失败", "")
+		//		return
+		//	}
+		//	utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId完全删除成功", "")
+		//}
 		return
 	}
 
@@ -1710,35 +1719,36 @@ func DeleteBundleid(c *gin.Context) {
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleid_id苹果后台删除失败", "")
 		return
 	}
-	queryData := map[string]interface{}{
-		"bundleid_id": delRequest.BundleidId,
-	}
-	if delRequest.IsDel == "1" {
-		updateData := map[string]interface{}{
-			"bundleid_isdel": "1",
-			"push_cert_id":   nil,
-			"user_name":      delRequest.UserName,
-		}
-		updateErr := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
-		if updateErr != nil {
-			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId软删除失败", "")
-			return
-		}
-		utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId软删除成功", "")
-	} else {
-		//删除并更新操作人
-		updateData := map[string]interface{}{
-			"deleted_at": time.Now(),
-			"user_name":  delRequest.UserName,
-		}
-		delErr1 := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
-		delErr2 := devconnmanager.UpdateAppleBundleId(queryData, updateData)
-		if delErr1 != nil || delErr2 != nil {
-			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId完全删除失败", "")
-			return
-		}
-		utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId完全删除成功", "")
-	}
+	bundleDelete(c,&delRequest)
+	//queryData := map[string]interface{}{
+	//	"bundleid_id": delRequest.BundleidId,
+	//}
+	//if delRequest.IsDel == "1" {
+	//	updateData := map[string]interface{}{
+	//		"bundleid_isdel": "1",
+	//		"push_cert_id":   nil,
+	//		"user_name":      delRequest.UserName,
+	//	}
+	//	updateErr := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
+	//	if updateErr != nil {
+	//		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId软删除失败", "")
+	//		return
+	//	}
+	//	utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId软删除成功", "")
+	//} else {
+	//	//删除并更新操作人
+	//	updateData := map[string]interface{}{
+	//		"deleted_at": time.Now(),
+	//		"user_name":  delRequest.UserName,
+	//	}
+	//	delErr1 := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
+	//	delErr2 := devconnmanager.UpdateAppleBundleId(queryData, updateData)
+	//	if delErr1 != nil || delErr2 != nil {
+	//		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId完全删除失败", "")
+	//		return
+	//	}
+	//	utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId完全删除成功", "")
+	//}
 }
 
 //bundle删除异步确认
@@ -2124,8 +2134,12 @@ func packeBundleProfileCert(c *gin.Context, bqr *devconnmanager.APPandBundle, sh
 func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle, bundleInfo *devconnmanager.BundleProfileCert) {
 	//config_capacibilitie_obj
 	bundleInfo.ConfigCapObj = make(map[string]string)
-	bundleInfo.ConfigCapObj["ICLOUD"] = bundleStruct.ICLOUD
-	bundleInfo.ConfigCapObj["DATA_PROTECTION"] = bundleStruct.DATA_PROTECTION
+	if(bundleStruct.ICLOUD != ""){
+		bundleInfo.ConfigCapObj["ICLOUD"] = bundleStruct.ICLOUD
+	}
+	if bundleStruct.DATA_PROTECTION !="" {
+		bundleInfo.ConfigCapObj["DATA_PROTECTION"] = bundleStruct.DATA_PROTECTION
+	}
 
 	//enableList
 	param, _ := json.Marshal(bundleStruct)
@@ -2348,6 +2362,10 @@ func paramCheckOfBundleDelete(c *gin.Context, delRequest *devconnmanager.BundleD
 	if isDelOk := checkIsDel(c, delRequest.IsDel); !isDelOk {
 		return false
 	}
+	//校验非工单类型bundleId信息删除
+	if delRequest.BundleidId == "" && delRequest.AccountType != _const.Enterprise {
+		return false
+	}
 	return true
 }
 
@@ -2378,4 +2396,37 @@ func generateCenterText(text string) []form.CardElementForm {
 	textForm := form.GenerateTextTag(&text, false, nil)
 	textForm.Style = &utils.SectionTextStyle
 	return []form.CardElementForm{*textForm}
+}
+
+func bundleDelete(c *gin.Context,delRequest *devconnmanager.BundleDeleteRequest){
+	queryData := map[string]interface{}{
+		"bundle_id": delRequest.BundleId,
+	}
+	updateData := make(map[string]interface{})
+	if delRequest.AccountType != _const.Enterprise {
+		updateData["user_name"]= delRequest.UserName
+	}
+	if delRequest.IsDel == "1" {
+		updateData = map[string]interface{}{
+			"bundleid_isdel": "1",
+			"push_cert_id":   nil,
+		}
+		updateErr := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
+		if updateErr != nil {
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId软删除失败", "")
+			return
+		}
+		utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId软删除成功", "")
+	} else {
+		updateData = map[string]interface{}{
+			"deleted_at": time.Now(),
+		}
+		delErr1 := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
+		delErr2 := devconnmanager.UpdateAppleBundleId(queryData, updateData)
+		if delErr1 != nil || delErr2 != nil {
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId完全删除失败", "")
+			return
+		}
+		utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId完全删除成功", "")
+	}
 }
