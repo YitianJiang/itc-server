@@ -214,9 +214,9 @@ func GetAppSignListDetailInfo(c *gin.Context) {
 	//根据app_id和team_id获取appName基本信息以及证书信息
 	var cQueryResult []devconnmanager.APPandCert
 	sql := "select aac.app_name,aac.app_type,aac.id as app_acount_id,aac.team_id,aac.account_verify_status,aac.account_verify_user," +
-		"ac.cert_id,ac.cert_type,ac.cert_name,ac.cert_expire_date,ac.cert_download_url,ac.priv_key_url from tt_app_account_cert aac, tt_apple_certificate ac" +
-		" where aac.app_id = '" + requestInfo.AppId + "' and aac.team_id = '" + requestInfo.TeamId + "' and aac.deleted_at IS NULL and (aac.dev_cert_id = ac.cert_id or aac.dist_cert_id = ac.cert_id)" +
-		" and ac.deleted_at IS NULL "
+		"ac.cert_id,ac.cert_type,ac.cert_name,ac.cert_expire_date,ac.cert_download_url,ac.priv_key_url from tt_app_account_cert aac left join tt_apple_certificate ac " +
+		"on (aac.dev_cert_id = ac.cert_id or aac.dist_cert_id = ac.cert_id) " +
+		"where aac.app_id = '" + requestInfo.AppId + "' and aac.team_id = '" + requestInfo.TeamId + "' and aac.deleted_at IS NULL and ac.deleted_at IS NULL "
 	query_c := devconnmanager.QueryWithSql(sql, &cQueryResult)
 	if query_c != nil {
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "查询失败", "")
@@ -244,8 +244,8 @@ func GetAppSignListDetailInfo(c *gin.Context) {
 	//根据app_id和app_name获取bundleid信息+profile信息
 	var bQueryResult []devconnmanager.APPandBundle
 	sql_c := "select abp.app_name,abp.bundle_id as bundle_id_index,abp.bundleid_isdel as bundle_id_is_del,abp.push_cert_id,ap.profile_id,ap.profile_name,ap.profile_expire_date,ap.profile_type,ap.profile_download_url,ab.*" +
-		" from tt_app_bundleId_profiles abp, tt_apple_bundleId ab, tt_apple_profile ap " +
-		"where abp.app_id = '" + requestInfo.AppId + "' and abp.app_name in " + appNameList + " and abp.bundle_id = ab.bundle_id and (abp.dev_profile_id = ap.profile_id or abp.dist_profile_id = ap.profile_id) " +
+		" from tt_apple_bundleId ab,tt_app_bundleId_profiles abp left join tt_apple_profile ap " +
+		"on (abp.dev_profile_id = ap.profile_id or abp.dist_profile_id = ap.profile_id) where abp.app_id = '" + requestInfo.AppId + "' and abp.app_name in " + appNameList + " and abp.bundle_id = ab.bundle_id " +
 		"and abp.deleted_at IS NULL and ab.deleted_at IS NULL and ap.deleted_at IS NULL"
 	query_b := devconnmanager.QueryWithSql(sql_c, &bQueryResult)
 	if query_b != nil {
@@ -289,7 +289,7 @@ func GetAppSignListDetailInfo(c *gin.Context) {
 	for _, info := range appNameMap {
 		result = append(result, info)
 	}
-	utils.AssembleJsonResponse(c, http.StatusOK, "success", result)
+	utils.AssembleJsonResponse(c, _const.SUCCESS, "success", result)
 }
 
 func DeleteAppAllInfoFromDB(c *gin.Context) {
@@ -381,7 +381,7 @@ func CreateAppBindAccount(c *gin.Context) {
 	//调用根据资源获取admin人员信息的接口，根据该接口获取需要发送审批消息的用户list
 	//todo 暂时写死admin list
 	//var userList = utils.GetAccountAdminList(requestData.TeamId)
-	var userList = &[]string{"zhangmengqi.muki"} //,"fanjuan.xqp"
+	var userList = &[]string{"fanjuan.xqp"} //,"fanjuan.xqp"
 	//lark消息生成并批量发送 使用go协程
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
@@ -795,7 +795,7 @@ func deleteProfile(c *gin.Context, profile *devconnmanager.ProfileInfo, bundleId
 		"op_user":    userName,
 	}
 	deleteUrl := _const.APPLE_PROFILE_MANAGER_URL + "/" + profile.ProfileId
-	if ok := deleteInfoFromAppleApi(tokenString, teamId, deleteUrl); !ok {
+	if ok := deleteInfoFromAppleApi(tokenString, deleteUrl, teamId, profile.ProfileName); !ok {
 		return false
 	}
 	if ok := deleteProfileDBandTos(c, profile.ProfileId, profile.ProfileName, profile.ProfileType, teamId, bundleId, updateData, userName); !ok {
@@ -1310,7 +1310,7 @@ func DeleteProfile(c *gin.Context) {
 	//普通账号处理
 	tokenString := GetTokenStringByTeamId(deleteRequest.TeamId)
 	deleteUrl := _const.APPLE_PROFILE_MANAGER_URL + "/" + deleteRequest.ProfileId
-	go deleteInfoFromAppleApi(tokenString, deleteUrl, deleteRequest.TeamId)
+	go deleteInfoFromAppleApi(tokenString, deleteUrl, deleteRequest.TeamId, profileInfo.ProfileName)
 	updateData := map[string]interface{}{
 		"deleted_at": time.Now(),
 		"op_user":    deleteRequest.UserName,
@@ -1401,18 +1401,11 @@ func UpdateBundleProfilesRelation(bundleId, profileType string, profileId *strin
 func DeleteBundleid(c *gin.Context) {
 	logs.Info("bundleId删除")
 	var delRequest devconnmanager.BundleDeleteRequest
-	err := c.ShouldBindQuery(&delRequest)
-	if err != nil {
-		utils.RecordError("请求参数绑定失败，err:", err)
-		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "")
-		return
-	}
-	//校验is_del参数是否正确
-	if isDelOk := checkIsDel(c, delRequest.IsDel); !isDelOk {
+	if paramOk := paramCheckOfBundleDelete(c, &delRequest); !paramOk {
 		return
 	}
 	//获取bundle信息
-	bundleid := devconnmanager.QueryAppleBundleId(map[string]interface{}{
+	bundleid := devconnmanager.QueryAppBundleProfiles(map[string]interface{}{
 		"bundleid_id": delRequest.BundleidId,
 	})
 	if bundleid == nil || len(*bundleid) == 0 {
@@ -1420,18 +1413,10 @@ func DeleteBundleid(c *gin.Context) {
 		return
 	}
 	//获取bundleID下profile信息
-	profileIdList := make([]interface{}, 0)
 	var profiles *[]devconnmanager.AppleProfile
-	if delRequest.DevProfileId != "" || delRequest.DisProfileId != "" {
-		if delRequest.DevProfileId != "" {
-			profileIdList = append(profileIdList, delRequest.DevProfileId)
-		}
-		if delRequest.DisProfileId != "" {
-			profileIdList = append(profileIdList, delRequest.DisProfileId)
-		}
-	}
-	if len(profileIdList) > 0 {
-		profiles = devconnmanager.QueryAppleProfileWithList("profile_id", &profileIdList)
+	profileIdList := getProfileIdList(delRequest.DevProfileId, delRequest.DisProfileId)
+	if len(*profileIdList) > 0 {
+		profiles = devconnmanager.QueryAppleProfileWithList("profile_id", profileIdList)
 		if profiles != nil && len(*profiles) > 0 {
 			for _, profileInfo := range *profiles {
 				if profileInfo.ProfileType == _const.IOS_APP_DEVELOPMENT || profileInfo.ProfileType == _const.MAC_APP_DEVELOPMENT {
@@ -1441,6 +1426,11 @@ func DeleteBundleid(c *gin.Context) {
 				}
 			}
 		}
+	}
+	//获取pushCert信息
+	var pushCertInfo *devconnmanager.CertInfo
+	if (*bundleid)[0].PushCertId != "" {
+		pushCertInfo = devconnmanager.QueryCertInfoByCertId((*bundleid)[0].PushCertId)
 	}
 	//发起工单删除，待apple openAPI ready，此if下可删除
 	if delRequest.AccountType == _const.Enterprise {
@@ -1452,9 +1442,10 @@ func DeleteBundleid(c *gin.Context) {
 			"username":        delRequest.UserName,
 			"dist_profile_id": delRequest.DisProfileId,
 			"dev_profile_id":  delRequest.DevProfileId,
+			"push_cert_id":    (*bundleid)[0].PushCertId,
 			"is_del":          delRequest.IsDel,
 		}
-		cardContent := generateCardOfBundleDelete(&delRequest, url, (*bundleid)[0].BundleId, (*bundleid)[0].BundleidName)
+		cardContent := generateCardOfBundleDelete(&delRequest, url, (*bundleid)[0].BundleId, (*bundleid)[0].BundleId, pushCertInfo)
 		cardAction := generateActionOfBundleDelete(&param)
 		if delRequest.Operator == "" {
 			delRequest.Operator = utils.CreateCertPrincipal
@@ -1474,6 +1465,16 @@ func DeleteBundleid(c *gin.Context) {
 				deleteProfileDBandTos(c, profile.ProfileId, profile.ProfileName, profile.ProfileType, delRequest.TeamId, (*bundleid)[0].BundleId, updateData, delRequest.UserName)
 			}
 		}
+		//删除push_cert信息
+		if (*bundleid)[0].PushCertId != "" {
+			condition := map[string]interface{}{"cert_id": (*bundleid)[0].PushCertId}
+			updateInfo := map[string]interface{}{
+				"deleted_at": time.Now(),
+			}
+			if ok := devconnmanager.UpdateCertInfoByMap(condition, updateInfo); !ok {
+				utils.RecordError("bundleid删除时，push_cert删除失败", nil)
+			}
+		}
 		//bundleid删除
 		queryData := map[string]interface{}{
 			"bundleid_id": delRequest.BundleidId,
@@ -1481,13 +1482,14 @@ func DeleteBundleid(c *gin.Context) {
 		if delRequest.IsDel == "1" {
 			updateData := map[string]interface{}{
 				"bundleid_isdel": "1",
+				"push_cert_id":   nil,
 			}
 			updateErr := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
 			if updateErr != nil {
 				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId软删除失败", "")
 				return
 			}
-			utils.AssembleJsonResponse(c, http.StatusOK, "bundleId软删除成功", "")
+			utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId软删除成功", "")
 		} else {
 			delErr1 := devconnmanager.DeleteAppBundleProfiles(queryData)
 			delErr2 := devconnmanager.DeleteAppleBundleId(queryData)
@@ -1495,7 +1497,7 @@ func DeleteBundleid(c *gin.Context) {
 				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId完全删除失败", "")
 				return
 			}
-			utils.AssembleJsonResponse(c, http.StatusOK, "bundleId完全删除成功", "")
+			utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId完全删除成功", "")
 		}
 		return
 	}
@@ -1510,10 +1512,21 @@ func DeleteBundleid(c *gin.Context) {
 				"op_user":    delRequest.UserName,
 			}
 			deleteUrl := _const.APPLE_PROFILE_MANAGER_URL + "/" + profile.ProfileId
-			go deleteInfoFromAppleApi(tokenString, deleteUrl, delRequest.TeamId)
+			go deleteInfoFromAppleApi(tokenString, deleteUrl, delRequest.TeamId, profile.ProfileName)
 			if ok := deleteProfileDBandTos(c, profile.ProfileId, profile.ProfileName, profile.ProfileType, delRequest.TeamId, (*bundleid)[0].BundleId, updateData, delRequest.UserName); !ok {
 				return
 			}
+		}
+	}
+	//push_cert删除
+	if (*bundleid)[0].PushCertId != "" {
+		condition := map[string]interface{}{"cert_id": (*bundleid)[0].PushCertId}
+		updateInfo := map[string]interface{}{
+			"deleted_at": time.Now(),
+			"op_user":    delRequest.UserName,
+		}
+		if ok := devconnmanager.UpdateCertInfoByMap(condition, updateInfo); !ok {
+			utils.RecordError("bundleid删除时，push_cert删除失败", nil)
 		}
 	}
 	//bundleid删除
@@ -1530,6 +1543,7 @@ func DeleteBundleid(c *gin.Context) {
 	if delRequest.IsDel == "1" {
 		updateData := map[string]interface{}{
 			"bundleid_isdel": "1",
+			"push_cert_id":   nil,
 			"user_name":      delRequest.UserName,
 		}
 		updateErr := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
@@ -1537,7 +1551,7 @@ func DeleteBundleid(c *gin.Context) {
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId软删除失败", "")
 			return
 		}
-		utils.AssembleJsonResponse(c, http.StatusOK, "bundleId软删除成功", "")
+		utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId软删除成功", "")
 	} else {
 		//删除并更新操作人
 		updateData := map[string]interface{}{
@@ -1550,7 +1564,7 @@ func DeleteBundleid(c *gin.Context) {
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId完全删除失败", "")
 			return
 		}
-		utils.AssembleJsonResponse(c, http.StatusOK, "bundleId完全删除成功", "")
+		utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId完全删除成功", "")
 	}
 }
 
@@ -1564,31 +1578,34 @@ func AsynBundleDeleteFeedback(c *gin.Context) {
 		return
 	}
 	//更新对应profile_id的op_user信息
-	profileIdList := make([]interface{}, 0)
-	if feedbackInfo.CustomerJson.DevProfileId != "" {
-		profileIdList = append(profileIdList, feedbackInfo.CustomerJson.DevProfileId)
-	}
-	if feedbackInfo.CustomerJson.DistProfileId != "" {
-		profileIdList = append(profileIdList, feedbackInfo.CustomerJson.DistProfileId)
-	}
+	profileIdList := getProfileIdList(feedbackInfo.CustomerJson.DevProfileId, feedbackInfo.CustomerJson.DistProfileId)
 	var errInfo, errInfo3 error
-	if len(profileIdList) > 0 {
-		updateInfo := map[string]interface{}{
-			"op_user": feedbackInfo.CustomerJson.UserName,
-		}
-		errInfo = devconnmanager.UpdateAppleProfileBatch("profile_id", &profileIdList, updateInfo)
+	var errInfo1 bool
+	updateInfo := map[string]interface{}{
+		"op_user": feedbackInfo.CustomerJson.UserName,
 	}
+	if len(*profileIdList) > 0 {
+		errInfo = devconnmanager.UpdateAppleProfileBatch("profile_id", profileIdList, updateInfo)
+	}
+	//更新push_cert的op_user信息
+	if feedbackInfo.CustomerJson.PushCertId != "" {
+		queryData := map[string]interface{}{
+			"cert_id": feedbackInfo.CustomerJson.PushCertId,
+		}
+		errInfo1 = devconnmanager.UpdateCertInfoByMap(queryData, updateInfo)
+	}
+	//更新bundle的user_name信息，保配删除只更新app_bundleid_profile表，完全删除还需要更新apple_bundleid表
 	condition := map[string]interface{}{
 		"bundleid_id": feedbackInfo.CustomerJson.BundleIdId,
 	}
-	updateInfo := map[string]interface{}{
+	updateInfo1 := map[string]interface{}{
 		"user_name": feedbackInfo.CustomerJson.UserName,
 	}
-	errInfo2 := devconnmanager.UpdateAppBundleProfiles(condition, updateInfo)
+	errInfo2 := devconnmanager.UpdateAppBundleProfiles(condition, updateInfo1)
 	if feedbackInfo.CustomerJson.IsDel == "2" {
-		errInfo3 = devconnmanager.UpdateAppleBundleId(condition, updateInfo)
+		errInfo3 = devconnmanager.UpdateAppleBundleId(condition, updateInfo1)
 	}
-	if errInfo != nil || errInfo2 != nil || errInfo3 != nil {
+	if errInfo != nil || errInfo2 != nil || errInfo3 != nil || !errInfo1 {
 		utils.RecordError("异步更新bundleid删除信息操作人失败,bundleID："+feedbackInfo.CustomerJson.BundleIdId, errInfo)
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库异步更新删除信息操作人失败", "")
 		return
@@ -2059,7 +2076,7 @@ func checkIsDel(c *gin.Context, isDel string) bool {
 	}
 }
 
-func deleteInfoFromAppleApi(tokenString, url, teamId string) bool {
+func deleteInfoFromAppleApi(tokenString, url, teamId, profileName string) bool {
 	//tokenString := GetTokenStringByTeamId(teamId)
 	delRes := ReqToAppleNoObjMethod("DELETE", url, tokenString)
 	if !delRes {
@@ -2069,7 +2086,7 @@ func deleteInfoFromAppleApi(tokenString, url, teamId string) bool {
 			urlInfos := strings.Split(url, "/")
 			manualUrl := utils.APPLE_DELETE_PROFILE_URL + urlInfos[len(urlInfos)-1]
 			message := "通过苹果openAPI删除profile失败，请登陆提示账号手动删除！\n"
-			message += "profileId:" + urlInfos[len(urlInfos)-1] + "\n"
+			message += "profile名称:" + profileName + "\n"
 			message += "账号名：" + (*accounts)[0].AccountName + "\n"
 			message += "删除地址:" + manualUrl
 			deleteErrorTextAlarm(utils.CreateCertPrincipal, message)
@@ -2079,7 +2096,7 @@ func deleteInfoFromAppleApi(tokenString, url, teamId string) bool {
 	return true
 }
 
-func generateCardOfBundleDelete(deleteInfo *devconnmanager.BundleDeleteRequest, appleUrl, bundleId, bundleIdName string) *[][]form.CardElementForm {
+func generateCardOfBundleDelete(deleteInfo *devconnmanager.BundleDeleteRequest, appleUrl, bundleId, bundleIdName string, pushCertInfo *devconnmanager.CertInfo) *[][]form.CardElementForm {
 	var cardFormArray [][]form.CardElementForm
 	//插入提示信息
 	messageText := utils.DeleteBundleMessage
@@ -2093,7 +2110,7 @@ func generateCardOfBundleDelete(deleteInfo *devconnmanager.BundleDeleteRequest, 
 	//插入删除跳转链接
 	cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.AppleUrlHeader, utils.AppleUrlText, appleUrl))
 	//插入profile删除提示
-	if deleteInfo.DevProfileId != "" || deleteInfo.DisProfileId != "" {
+	if deleteInfo.DevProfileId != "" || deleteInfo.DisProfileId != "" || pushCertInfo != nil {
 		divideText := "--------------------------------------------------\n"
 		divideForm := form.GenerateTextTag(&divideText, false, nil)
 		cardFormArray = append(cardFormArray, []form.CardElementForm{*divideForm})
@@ -2108,6 +2125,11 @@ func generateCardOfBundleDelete(deleteInfo *devconnmanager.BundleDeleteRequest, 
 		if deleteInfo.DevProfileId != "" {
 			url := utils.APPLE_DELETE_PROFILE_URL + deleteInfo.DevProfileId
 			cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DevProfileTitle, deleteInfo.DevProfileName))
+			cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.AppleUrlHeader, utils.AppleUrlText, url))
+		}
+		if pushCertInfo != nil {
+			url := utils.APPLE_DELETE_CERT_URL + pushCertInfo.CertId
+			cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.PushCertTitle, deleteInfo.DevProfileName))
 			cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.AppleUrlHeader, utils.AppleUrlText, url))
 		}
 	}
@@ -2142,7 +2164,30 @@ func deleteErrorTextAlarm(email, message string) {
 		utils.RecordError("deleteErrorTextAlarm error:", err)
 	}
 }
+func paramCheckOfBundleDelete(c *gin.Context, delRequest *devconnmanager.BundleDeleteRequest) bool {
+	err := c.ShouldBindQuery(delRequest)
+	if err != nil {
+		utils.RecordError("请求参数绑定失败，err:", err)
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "")
+		return false
+	}
+	//校验is_del参数是否正确
+	if isDelOk := checkIsDel(c, delRequest.IsDel); !isDelOk {
+		return false
+	}
+	return true
+}
 
+func getProfileIdList(devId, distId string) *[]interface{} {
+	var profileIdList = make([]interface{}, 0)
+	if devId != "" {
+		profileIdList = append(profileIdList, devId)
+	}
+	if distId != "" {
+		profileIdList = append(profileIdList, distId)
+	}
+	return &profileIdList
+}
 func getDividerOfCard() []form.CardElementForm {
 	dividerForm := new(form.CardElementForm)
 	dividerForm.Tag = _const.Divider
