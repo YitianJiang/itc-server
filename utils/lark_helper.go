@@ -283,6 +283,13 @@ var BundleIdDisableCapabilityListHeader = "关闭BundleId能力: "
 //push证书工单基本信息
 var CreatePushCertMessage = "请根据账号信息登陆Apple后台，按照信息创建push证书并上传至rocket证书管理系统"
 
+//profile工单基本信息
+var CreateOrUpdateProfileCertMessage = "请根据账号信息登陆Apple后台，按照信息创建profile文件并上传至rocket证书管理系统"
+var AccountTypeHeader = "账号类型: "
+var CertUrlHeader = "证书: "
+var ProfileNameHeader = "描述文件名称: "
+var ProfileTypeHeader = "描述文件类型: "
+
 var Horizontal = "horizontal"
 var Gray = "gray"
 var DividerSize = "0.5"

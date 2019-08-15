@@ -6,6 +6,11 @@ import (
 )
 
 //http request model
+type UpdateBundleIdIdRequest struct {
+	BundleId   string `json:"bundle_id" binding:"required"`
+	BundleIdId string `json:"bundleid_id" binding:"required"`
+}
+
 type CreateAppBindAccountRequest struct {
 	AppId    string `json:"app_id"    binding:"required"`
 	AppName  string `json:"app_name"  binding:"required"`
@@ -27,16 +32,17 @@ type AppChangeBindCertRequest struct {
 }
 
 type ProfileCreateOrUpdateRequest struct {
-	AccountName string `json:"account_name"   binding:"required"`
-	AccountType string `json:"account_type"   binding:"required"`
-	TeamId      string `json:"team_id"        binding:"required"`
-	BundleId    string `json:"bundle_id"      binding:"required"`
-	BundleidId  string `json:"bundleid_id"    binding:"exists"`
-	UseCertId   string `json:"use_cert_id"    binding:"required"`
-	ProfileId   string `json:"profile_id"     binding:"exists"`
-	ProfileName string `json:"profile_name"   binding:"required"`
-	ProfileType string `json:"profile_type"   binding:"required"`
-	UserName    string `json:"user_name"      binding:"required"`
+	AccountName     string `json:"account_name"   binding:"required"`
+	AccountType     string `json:"account_type"   binding:"required"`
+	TeamId          string `json:"team_id"        binding:"required"`
+	BundleId        string `json:"bundle_id"      binding:"required"`
+	BundleidId      string `json:"bundleid_id"    binding:"exists"`
+	UseCertId       string `json:"use_cert_id"    binding:"required"`
+	ProfileId       string `json:"profile_id"     binding:"exists"`
+	ProfileName     string `json:"profile_name"   binding:"required"`
+	ProfileType     string `json:"profile_type"   binding:"required"`
+	UserName        string `json:"user_name"      binding:"required"`
+	BundlePrincipal string `json:"bundle_principal"`
 }
 
 type ProfileUploadRequest struct {
