@@ -433,6 +433,9 @@ func CreateAppBindAccount(c *gin.Context) {
 func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 	logs.Info("创建/更新/恢复bundle id")
 	var requestData devconnmanager.CreateBundleProfileRequest
+	if requestData.BundlePrincipal == "" {
+		requestData.BundlePrincipal = utils.CreateCertPrincipal
+	}
 	//获取请求参数
 	bindJsonError := c.ShouldBindJSON(&requestData)
 	utils.RecordError("绑定post请求body出错：%v", bindJsonError)
@@ -603,9 +606,6 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.CreateBundleProfileRequest, c *gin.Context) {
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
-	if requestData.BundlePrincipal == "" {
-		requestData.BundlePrincipal = utils.CreateCertPrincipal
-	}
 	switch requestData.BundleIdIsDel {
 	case "0":
 		if requestData.BundleIdId == "" {
