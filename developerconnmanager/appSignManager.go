@@ -276,7 +276,7 @@ func GetAppSignListDetailInfo(c *gin.Context) {
 	//根据app_id和app_name获取bundleid信息+profile信息
 	var bQueryResult []devconnmanager.APPandBundle
 	sql_c := "select abp.app_name,abp.bundle_id as bundle_id_index,abp.bundleid_isdel as bundle_id_is_del,abp.push_cert_id,abp.dev_profile_id,abp.dist_profile_id,ap.profile_id,ap.profile_name,ap.profile_expire_date,ap.profile_type,ap.profile_download_url,ab.*" +
-		" from tt_apple_bundleId ab,tt_app_bundleId_profiles abp left join tt_apple_profile ap " +
+		" from tt_apple_bundleid ab,tt_app_bundleId_profiles abp left join tt_apple_profile ap " +
 		"on (abp.dev_profile_id = ap.profile_id or abp.dist_profile_id = ap.profile_id) where abp.app_id = '" + requestInfo.AppId + "' and abp.app_name in " + appNameList + " and abp.bundle_id = ab.bundle_id " +
 		"and abp.deleted_at IS NULL and ab.deleted_at IS NULL and ap.deleted_at IS NULL"
 	query_b := devconnmanager.QueryWithSql(sql_c, &bQueryResult)
