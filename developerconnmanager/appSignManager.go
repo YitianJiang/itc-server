@@ -1396,6 +1396,10 @@ func insertDatabaseAfterCreateBundleIdForEnterprise(needUpdateDevProfile, needUp
 	appleBundleIdElem := reflect.ValueOf(&appleBundleId).Elem()
 
 	for _, capability := range requestData.EnableCapabilitiesChange {
+		if capability == _const.MAC_PUSH || capability == _const.IOS_PUSH {
+			//更新push_cert_id
+			_ = devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundle_id": requestData.BundleId}, map[string]interface{}{"push_cert_id": _const.NeedUpdate})
+		}
 		//写入数据库
 		field := appleBundleIdElem.FieldByName(capability)
 		field.SetString(capability)
