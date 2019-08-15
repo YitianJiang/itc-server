@@ -280,6 +280,10 @@ var UpdateBundleIdMessage = "请根据账号信息登陆Apple后台，按照信�
 var BundleIdEnableCapabilityListHeader = "打开BundleId能力: "
 var BundleIdDisableCapabilityListHeader = "关闭BundleId能力: "
 
+var Horizontal = "horizontal"
+var Gray = "gray"
+var DividerSize = "0.5"
+
 func CallLarkAPI(url string, token string, paramsIn interface{}, paramsOut interface{}) {
 	bodyByte, _ := json.Marshal(paramsIn)
 	rbodyByte := bytes.NewReader(bodyByte)

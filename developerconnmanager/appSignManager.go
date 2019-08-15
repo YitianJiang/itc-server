@@ -2,7 +2,6 @@ package developerconnmanager
 
 import (
 	"bytes"
-	"code.byted.org/clientQA/ClusterManager/model"
 	_const "code.byted.org/clientQA/itc-server/const"
 	devconnmanager "code.byted.org/clientQA/itc-server/database/dal/AppleConnMannagerModel"
 	"code.byted.org/clientQA/itc-server/utils"
@@ -2188,14 +2187,15 @@ func getProfileIdList(devId, distId string) *[]interface{} {
 	}
 	return &profileIdList
 }
+
 func getDividerOfCard() []form.CardElementForm {
 	dividerForm := new(form.CardElementForm)
 	dividerForm.Tag = _const.Divider
-	horizontal := model.Horizontal
+	horizontal := utils.Horizontal
 	dividerForm.Orientation = &horizontal
-	gray := model.Gray
+	gray := utils.Gray
 	dividerForm.Color = &gray
-	dividerSize := model.DividerSize
+	dividerSize := utils.DividerSize
 	dividerForm.Size = &dividerSize
 	return []form.CardElementForm{*dividerForm}
 }
