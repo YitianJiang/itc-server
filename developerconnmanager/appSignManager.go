@@ -83,6 +83,7 @@ func ReqToAppleNoObjMethod(method, url, tokenString string) bool {
 			logs.Info("读取respose的body内容失败")
 			return false
 		}
+		logs.Notice(fmt.Sprint(response.StatusCode))
 		logs.Info(string(responseByte))
 		//json.Unmarshal(responseByte, &obj)
 		return true
@@ -433,15 +434,15 @@ func CreateAppBindAccount(c *gin.Context) {
 func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 	logs.Info("创建/更新/恢复bundle id")
 	var requestData devconnmanager.CreateBundleProfileRequest
-	if requestData.BundlePrincipal == "" {
-		requestData.BundlePrincipal = utils.CreateCertPrincipal
-	}
 	//获取请求参数
 	bindJsonError := c.ShouldBindJSON(&requestData)
 	utils.RecordError("绑定post请求body出错：%v", bindJsonError)
 	if bindJsonError != nil {
 		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
 		return
+	}
+	if requestData.BundlePrincipal == ""{
+		requestData.BundlePrincipal = utils.CreateCertPrincipal
 	}
 
 	logs.Info("request:%v", requestData)
@@ -948,7 +949,7 @@ func checkUpdateBundleIdParams(c *gin.Context, requestData *devconnmanager.Creat
 func checkRestoreBundleIdParams(c *gin.Context, requestData *devconnmanager.CreateBundleProfileRequest) (bool, bool, bool) {
 	needUpdateDevProfile := false
 	needUpdateDistProfile := false
-	if requestData.BundleIdId == "" {
+	if requestData.AccountType==_const.Organization && requestData.BundleIdId == "" {
 		utils.AssembleJsonResponse(c, http.StatusBadRequest, "恢复bundleId时需要传入bundleIdId", nil)
 		return false, false, false
 	}
@@ -1036,7 +1037,7 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 			bundleIdProfile := devconnmanager.QueryAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId})
 			if len(*bundleIdProfile) == 0 {
 				logs.Error("数据库中不存在bundleid_id=%s 的记录", requestData.BundleIdId)
-			} else if (*bundleIdProfile)[0].PushCertId == "" {
+			} else if (*bundleIdProfile)[0].PushCertId == ""||(*bundleIdProfile)[0].PushCertId == _const.NeedUpdate {
 				//发送创建push证书的工单
 				if sendPushCertLark(requestData) {
 					_ = devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId}, map[string]interface{}{"push_cert_id": _const.NeedUpdate})
@@ -1679,6 +1680,7 @@ func UpdateBundleProfilesRelation(bundleId, profileType string, profileId *strin
 func DeleteBundleid(c *gin.Context) {
 	logs.Info("bundleId删除")
 	var delRequest devconnmanager.BundleDeleteRequest
+	logs.Info("%v",delRequest)
 	if paramOk := paramCheckOfBundleDelete(c, &delRequest); !paramOk {
 		return
 	}
@@ -1693,6 +1695,10 @@ func DeleteBundleid(c *gin.Context) {
 	})
 	if bundleid == nil || len(*bundleid) == 0 {
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "查询bundleid_id失败", "")
+		return
+	}
+	if(*bundleid)[0].BundleidIsdel == "1" {
+		utils.AssembleJsonResponse(c, _const.SUCCESS, "已经保配删除", "")
 		return
 	}
 	//获取bundleID下profile信息
@@ -1712,7 +1718,7 @@ func DeleteBundleid(c *gin.Context) {
 	}
 	//获取pushCert信息
 	var pushCertInfo *devconnmanager.CertInfo
-	if (*bundleid)[0].PushCertId != "" {
+	if (*bundleid)[0].PushCertId != ""  && (*bundleid)[0].PushCertId != _const.NeedUpdate {
 		pushCertInfo = devconnmanager.QueryCertInfoByCertId((*bundleid)[0].PushCertId)
 	}
 	//发起工单删除，待apple openAPI ready，此if下可删除
@@ -1749,7 +1755,7 @@ func DeleteBundleid(c *gin.Context) {
 			}
 		}
 		//删除push_cert信息
-		if (*bundleid)[0].PushCertId != "" {
+		if (*bundleid)[0].PushCertId != "" && (*bundleid)[0].PushCertId != _const.NeedUpdate {
 			condition := map[string]interface{}{"cert_id": (*bundleid)[0].PushCertId}
 			updateInfo := map[string]interface{}{
 				"deleted_at": time.Now(),
@@ -1780,7 +1786,7 @@ func DeleteBundleid(c *gin.Context) {
 		}
 	}
 	//push_cert删除
-	if (*bundleid)[0].PushCertId != "" {
+	if (*bundleid)[0].PushCertId != ""  && (*bundleid)[0].PushCertId != _const.NeedUpdate {
 		condition := map[string]interface{}{"cert_id": (*bundleid)[0].PushCertId}
 		updateInfo := map[string]interface{}{
 			"deleted_at": time.Now(),
@@ -2049,6 +2055,10 @@ func ProfileUploadFunc(c *gin.Context) {
 		return
 	}
 	profileFileByteInfo, profileFileFullName := getFileFromRequest(c, "profile_file")
+	//将文件名中的空格替换为下划线
+	profileFileFullName = strings.Replace(profileFileFullName, " ", "_", -1)
+	profileFileFullName = strings.Replace(profileFileFullName, "(", "", -1)
+	profileFileFullName = strings.Replace(profileFileFullName, ")", "", -1)
 	pathTos := "appleConnectFile/" + requestData.TeamId + "/Profile/" + requestData.ProfileType + "/" + profileFileFullName
 	deleteTosObj(pathTos)
 	uploadResult := uploadProfileToTos(profileFileByteInfo, pathTos)
@@ -2280,6 +2290,7 @@ func packCertSection(fqr *devconnmanager.APPandCert, showType int, certSection *
 			certSection.DistCert.CertName = fqr.CertName
 			certSection.DistCert.CertType = fqr.CertType
 			certSection.DistCert.CertId = fqr.CertId
+			certSection.DistCert.PrivKeyUrl = fqr.PrivKeyUrl
 			certSection.DistCert.CertDownloadUrl = fqr.CertDownloadUrl
 			certSection.DistCert.CertExpireDate = fqr.CertExpireDate
 		} else if strings.Contains(fqr.CertType, "DEVELOPMENT") {
@@ -2287,6 +2298,7 @@ func packCertSection(fqr *devconnmanager.APPandCert, showType int, certSection *
 			certSection.DevCert.CertName = fqr.CertName
 			certSection.DevCert.CertType = fqr.CertType
 			certSection.DevCert.CertId = fqr.CertId
+			certSection.DevCert.PrivKeyUrl = fqr.PrivKeyUrl
 			certSection.DevCert.CertDownloadUrl = fqr.CertDownloadUrl
 			certSection.DevCert.CertExpireDate = fqr.CertExpireDate
 		}
@@ -2513,6 +2525,8 @@ func bundleDelete(c *gin.Context, delRequest *devconnmanager.BundleDeleteRequest
 	}
 	if delRequest.IsDel == "1" {
 		updateData = map[string]interface{}{
+			"dist_profile_id":nil,
+			"dev_profile_id":nil,
 			"bundleid_isdel": "1",
 			"push_cert_id":   nil,
 		}

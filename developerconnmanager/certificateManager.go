@@ -132,6 +132,33 @@ func InsertCertificate(c *gin.Context) {
 	strs := strings.Split(body.CertType, "_")
 	certTypeSufix := strs[len(strs)-1]
 
+	if certTypeSufix == "PUSH" {
+		//组装lark消息 发送给负责人（用户指定or系统默认）
+		botService := service.BotService{}
+		botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
+		if body.CertPrincipal == "" {
+			body.CertPrincipal = utils.CreateCertPrincipal
+		}
+		csrFileUrl := _const.TOS_CSR_FILE_URL_PUSH
+		err := sendCreateCertAlertToLark(body.AccountName, body.CertType, csrFileUrl, body.CertPrincipal, body.UserName, &botService, body.BundleId)
+		utils.RecordError("发送新建证书提醒lark失败：", err)
+		if err != nil {
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送新建证书提醒lark失败", nil)
+			return
+		}
+		err = devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundle_id": body.BundleId}, map[string]interface{}{"push_cert_id": _const.NeedUpdate})
+		if err != nil {
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "更新app_bundle_id_profile表失败", nil)
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"data":      nil,
+			"errorCode": 0,
+			"errorInfo": "",
+		})
+		return
+	}
+
 	if body.AccountType == "Enterprise" {
 		//在数据库插入证书记录
 		var certInfo devconnmanager.CertInfo
@@ -168,32 +195,6 @@ func InsertCertificate(c *gin.Context) {
 		filterCert(&certInfo)
 		c.JSON(http.StatusOK, gin.H{
 			"data":      certInfo,
-			"errorCode": 0,
-			"errorInfo": "",
-		})
-		return
-	}
-	if certTypeSufix == "PUSH" {
-		//组装lark消息 发送给负责人（用户指定or系统默认）
-		botService := service.BotService{}
-		botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
-		if body.CertPrincipal == "" {
-			body.CertPrincipal = utils.CreateCertPrincipal
-		}
-		csrFileUrl := _const.TOS_CSR_FILE_URL_PUSH
-		err := sendCreateCertAlertToLark(body.AccountName, body.CertType, csrFileUrl, body.CertPrincipal, body.UserName, &botService, body.BundleId)
-		utils.RecordError("发送新建证书提醒lark失败：", err)
-		if err != nil {
-			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送新建证书提醒lark失败", nil)
-			return
-		}
-		err = devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundle_id": body.BundleId}, map[string]interface{}{"push_cert_id": _const.NeedUpdate})
-		if err != nil {
-			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "更新app_bundle_id_profile表失败", nil)
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"data":      nil,
 			"errorCode": 0,
 			"errorInfo": "",
 		})
