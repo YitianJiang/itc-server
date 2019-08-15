@@ -204,15 +204,17 @@ const (
 	APPLE_DELETE_PROFILE_URL = "https://developer.apple.com/account/resources/profiles/review/"
 	APPLE_DELETE_BUNDLE_URL  = "https://developer.apple.com/account/resources/identifiers/bundleId/edit/V4K75THKFW"
 	//test---actionURL
-	DELCERT_FEEDBACK_URL    = "http://10.224.13.149:6789/v1/appleCertManage/asynDeleteFeedback"
-	DELPROFILE_FEEDBACK_URL = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteProfileFeedback"
-	DELBUNDLE_FEEDBACK_URL  = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteBundleFeedback"
+
+	//DELCERT_FEEDBACK_URL    = "http://10.224.13.149:6789/v1/appleCertManage/asynDeleteFeedback"
+	//DELPROFILE_FEEDBACK_URL = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteProfileFeedback"
+	//DELBUNDLE_FEEDBACK_URL  = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteBundleFeedback"
+	//ApproveAppBindAccountUrl = "http://10.224.13.149:6789/v1/appleConnManage/approveAppBindAccountFeedback"
+
 	//online----actionURL
-	//DELPROFILE_FEEDBACK_URL      = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteProfileFeedback"
-	//DELBUNDLE_FEEDBACK_URL       = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteBundleFeedback"
-	//DELCERT_FEEDBACK_URL         = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
-	ApproveAppBindAccountUrl = "http://10.224.13.149:6789/v1/appleConnManage/approveAppBindAccountFeedback"
-	//ApproveAppBindAccountUrl = "https://itc.bytedance.net/v1/appleConnManage/approveAppBindAccountFeedback"
+	DELCERT_FEEDBACK_URL         = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
+	DELPROFILE_FEEDBACK_URL      = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteProfileFeedback"
+	DELBUNDLE_FEEDBACK_URL       = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteBundleFeedback"
+	ApproveAppBindAccountUrl     = "https://itc.bytedance.net/v1/appleConnManage/approveAppBindAccountFeedback"
 )
 
 //新建证书工单卡片基本信息

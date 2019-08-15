@@ -412,9 +412,9 @@ func CreateAppBindAccount(c *gin.Context) {
 	}
 	//调用根据资源获取admin人员信息的接口，根据该接口获取需要发送审批消息的用户list
 	//todo 暂时写死admin list
-	//var userList = utils.GetAccountAdminList(requestData.TeamId)
-	var userList = &[]string{"fanjuan.xqp"} //,"fanjuan.xqp"
-	//lark消息生成并批量发送 使用go协程
+	var userList = utils.GetAccountAdminList(requestData.TeamId)
+	//var userList = &[]string{"fanjuan.xqp"} //,"fanjuan.xqp"
+	////lark消息生成并批量发送 使用go协程
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 	cardInfos := generateCardOfApproveBindAccount(&appAccountCert)
