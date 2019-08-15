@@ -162,7 +162,7 @@ func InsertCertificate(c *gin.Context) {
 		if body.CertPrincipal == "" {
 			body.CertPrincipal = utils.CreateCertPrincipal
 		}
-		err := sendNodeAlertToLark(certInfo.AccountName, certInfo.CertType, certInfo.CsrFileUrl, body.CertPrincipal, body.UserName, &botService)
+		err := sendCreateCertAlertToLark(certInfo.AccountName, certInfo.CertType, certInfo.CsrFileUrl, body.CertPrincipal, body.UserName, &botService)
 		utils.RecordError("发送新建证书提醒lark失败：", err)
 
 		filterCert(&certInfo)
@@ -181,7 +181,7 @@ func InsertCertificate(c *gin.Context) {
 			body.CertPrincipal = utils.CreateCertPrincipal
 		}
 		csrFileUrl := _const.TOS_CSR_FILE_URL_PUSH
-		err := sendNodeAlertToLark(body.AccountName, body.CertType, csrFileUrl, body.CertPrincipal, body.UserName, &botService, body.BundleId)
+		err := sendCreateCertAlertToLark(body.AccountName, body.CertType, csrFileUrl, body.CertPrincipal, body.UserName, &botService, body.BundleId)
 		utils.RecordError("发送新建证书提醒lark失败：", err)
 		if err != nil {
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送新建证书提醒lark失败", nil)
@@ -690,7 +690,7 @@ func dealCertName(certName string) string {
 	return ret
 }
 
-func sendNodeAlertToLark(accountName, certType, csrUrl, principal, userName string, botService *service.BotService, bundleId ...string) error {
+func sendCreateCertAlertToLark(accountName, certType, csrUrl, principal, userName string, botService *service.BotService, bundleId ...string) error {
 	cardMessage := generateSendMessageForm(accountName, certType, csrUrl, userName, bundleId...)
 	//发送消息
 	email := principal
@@ -705,7 +705,7 @@ func sendNodeAlertToLark(accountName, certType, csrUrl, principal, userName stri
 
 func generateSendMessageForm(accountName, certType, csrUrl, userName string, bundleId ...string) *form.SendMessageForm {
 	cardInfoFormArray := generateCardInfoOfCreateCert(accountName, certType, csrUrl, userName, bundleId...)
-	cardHeaderTitle := "iOS证书管理通知"
+	cardHeaderTitle := "iOS证书管理通知--创建证书"
 	cardForm := form.GenerateCardForm(nil, getCardHeader(cardHeaderTitle), *cardInfoFormArray, nil)
 	cardMessageContent := form.GenerateCardMessageContent(cardForm)
 	cardMessage, err := form.GenerateMessage("interactive", cardMessageContent)
