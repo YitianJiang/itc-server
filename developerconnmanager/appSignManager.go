@@ -871,6 +871,12 @@ func deleteProfile(c *gin.Context, profile *devconnmanager.ProfileInfo, bundleId
 
 func checkCreateBundleProfileParams(c *gin.Context, requestData *devconnmanager.CreateBundleProfileRequest) (bool, bool, bool) {
 	//todo 一个teamId下的profile不能重名
+	//bundleId不能重名
+	bundleProfile := devconnmanager.QueryAppBundleProfiles(map[string]interface{}{"bundle_id": requestData.BundleId})
+	if len(*bundleProfile) > 0 {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "BundleId已重复", nil)
+		return false, false, false
+	}
 	needUpdateDevProfile := false
 	needUpdateDistProfile := false
 	if requestData.DevProfileInfo != (devconnmanager.ProfileInfo{}) {
