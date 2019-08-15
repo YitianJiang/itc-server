@@ -412,7 +412,7 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 	logs.Info("request:%v", requestData)
 
 	if requestData.AccountType == _const.Enterprise {
-		//todo 走工单逻辑
+		//走工单逻辑
 		createOrUpdateOrRestoreBundleIdForEnterprise(&requestData, c)
 		return
 	}
@@ -965,7 +965,7 @@ func openCapabilitiesInApple(enableCapabilitiesChange *[]string, bundleIdId, tok
 
 func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanager.CreateBundleProfileRequest) (chan []string, chan string) {
 	enableChange := &requestData.EnableCapabilitiesChange
-	disableChange := &requestData.EnableCapabilitiesChange
+	disableChange := &requestData.DisableCapabilitiesChange
 	configChange := &requestData.ConfigCapabilitiesChange
 	//处理传参，将nil更改为对应的空数组或空字符串，方便之后for循环遍历
 	emptyListPointer := &[]string{}
