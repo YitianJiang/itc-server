@@ -6,6 +6,11 @@ import (
 )
 
 //http request model
+type UpdateBundleIdIdRequest struct {
+	BundleId   string `json:"bundle_id" binding:"required"`
+	BundleIdId string `json:"bundleid_id" binding:"required"`
+}
+
 type CreateAppBindAccountRequest struct {
 	AppId    string `json:"app_id"    binding:"required"`
 	AppName  string `json:"app_name"  binding:"required"`

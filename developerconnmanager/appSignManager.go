@@ -167,6 +167,25 @@ type ProfileInfo struct {
 	BundleId    string `json:"bundle_id"`
 }
 
+func UpdateBundleIdIdOfBundleId(c *gin.Context) {
+	var requestData devconnmanager.UpdateBundleIdIdRequest
+	//获取请求参数
+	bindJsonError := c.ShouldBindJSON(&requestData)
+	utils.RecordError("绑定post请求body出错：%v", bindJsonError)
+	if bindJsonError != nil {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
+		return
+	}
+	logs.Info("request:%v", requestData)
+	err := devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundle_id": requestData.BundleId}, map[string]interface{}{"bundleid_id": requestData.BundleIdId})
+	if err != nil {
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库更新失败", nil)
+		return
+	}
+	utils.AssembleJsonResponse(c, _const.SUCCESS, "数据库更新成功", nil)
+	return
+}
+
 func GetBundleIdCapabilitiesInfo(c *gin.Context) {
 	logs.Info("返回BundleID的能力给前端做展示")
 	var requestData GetCapabilitiesInfoReq
