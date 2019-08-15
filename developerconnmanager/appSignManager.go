@@ -489,9 +489,11 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 
 			//删除原先的profile&新建profile
 			if needUpdateDevProfile {
-				if ok := deleteProfile(c, &requestData.DevProfileInfo, bundleId, requestData.TeamId, requestData.UserName, tokenString); !ok {
-					utils.AssembleJsonResponse(c, http.StatusInternalServerError, "删除dev profile失败", nil)
-					return
+				if requestData.DevProfileInfo.ProfileId != "" {
+					if ok := deleteProfile(c, &requestData.DevProfileInfo, bundleId, requestData.TeamId, requestData.UserName, tokenString); !ok {
+						utils.AssembleJsonResponse(c, http.StatusInternalServerError, "删除dev profile失败", nil)
+						return
+					}
 				}
 				err = createProfile(&requestData.DevProfileInfo, &requestData.BundleIdInfo, tokenString, requestData.TeamId, requestData.UserName)
 				if err != nil {
@@ -500,9 +502,11 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 				}
 			}
 			if needUpdateDistProfile {
-				if ok := deleteProfile(c, &requestData.DistProfileInfo, bundleId, requestData.TeamId, requestData.UserName, tokenString); !ok {
-					utils.AssembleJsonResponse(c, http.StatusInternalServerError, "删除dist profile失败", nil)
-					return
+				if requestData.DevProfileInfo.ProfileId != "" {
+					if ok := deleteProfile(c, &requestData.DistProfileInfo, bundleId, requestData.TeamId, requestData.UserName, tokenString); !ok {
+						utils.AssembleJsonResponse(c, http.StatusInternalServerError, "删除dist profile失败", nil)
+						return
+					}
 				}
 				err = createProfile(&requestData.DistProfileInfo, &requestData.BundleIdInfo, tokenString, requestData.TeamId, requestData.UserName)
 				if err != nil {
@@ -638,8 +642,95 @@ func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.Cr
 	}
 }
 
-//生成绑定账号审核消息卡片内容
+//生成创建bundleId工单消息卡片内容
 func generateCardOfCreateBundleId(requestData *devconnmanager.CreateBundleProfileRequest) *[][]form.CardElementForm {
+	var cardFormArray [][]form.CardElementForm
+
+	//插入提示信息
+	messageText := utils.CreateBundleIdMessage
+	messageForm := form.GenerateTextTag(&messageText, false, nil)
+	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
+	//cardFormArray = append(cardFormArray, getDividerOfCard())
+
+	//插入用户名，账户名，bundleId，bundleId名称，能力列表，配置能力，dev相关，dist相关
+
+	//插入基本信息
+	cardFormArray = append(cardFormArray, generateCenterText("基本信息部分"))
+	accountInfos := devconnmanager.QueryAccountInfo(map[string]interface{}{"team_id": requestData.TeamId})
+	if len(*accountInfos) != 1 {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TeamIdHeader, requestData.TeamId))
+		logs.Error("获取teamId对应的account失败：%s 错误原因：teamId对应的account记录数不等于1", requestData.TeamId)
+	} else {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountHeader, (*accountInfos)[0].AccountName))
+	}
+
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, requestData.UserName))
+	cardFormArray = append(cardFormArray, getDividerOfCard())
+
+	//插入创建bundle id部分
+	cardFormArray = append(cardFormArray, generateCenterText("创建BundleId部分"))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdNameHeader, requestData.BundleIdName))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdHeader, requestData.BundleId))
+	cardFormArray = append(cardFormArray, getDividerOfCard())
+
+	//插入bundle id能力配置部分
+	cardFormArray = append(cardFormArray, generateCenterText("配置BundleId能力部分"))
+	capabilitiesString := ""
+	needPushCert := false
+	for _, capability := range requestData.EnableCapabilitiesChange {
+		if !needPushCert && capability == "PUSH_NOTIFICATIONS" {
+			needPushCert = true
+		}
+		capabilitiesString = capabilitiesString + capability + ", "
+	}
+	if len(capabilitiesString) > 2 {
+		capabilitiesString = capabilitiesString[0 : len(capabilitiesString)-2]
+	}
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdCapabilityListHeader, capabilitiesString))
+	//push证书信息需要在打开push能力时提供
+	if needPushCert {
+		cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.PushCertHeader, utils.CsrText, _const.TOS_CSR_FILE_URL_PUSH))
+	}
+
+	iCloudVersion, ok := requestData.ConfigCapabilitiesChange[_const.ICLOUD]
+	if ok {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.ICloudVersionHeader, iCloudVersion))
+	}
+
+	dataProtection, ok := requestData.ConfigCapabilitiesChange[_const.DATA_PROTECTION]
+	if ok {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DataProtectHeader, dataProtection))
+	}
+	cardFormArray = append(cardFormArray, getDividerOfCard())
+
+	//插入devProfile部分
+	if requestData.DevProfileInfo != (devconnmanager.ProfileInfo{}) {
+		cardFormArray = append(cardFormArray, generateCenterText("创建Dev类型profile部分"))
+		certName := devconnmanager.QueryCertInfoByCertId(requestData.DevProfileInfo.CertId).CertName
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeleteCertNameHeader, certName))
+		certAppleUrl := utils.APPLE_DELETE_CERT_URL + requestData.DevProfileInfo.CertId
+		cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.DevCertUrlHeader, utils.AppleUrlText, certAppleUrl))
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DevProfileNameHeader, requestData.DevProfileInfo.ProfileName))
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DevProfileTypeHeader, requestData.DevProfileInfo.ProfileType))
+		cardFormArray = append(cardFormArray, getDividerOfCard())
+	}
+
+	//插入distProfile部分
+	if requestData.DistProfileInfo != (devconnmanager.ProfileInfo{}) {
+		cardFormArray = append(cardFormArray, generateCenterText("创建Dist类型profile部分"))
+		certName := devconnmanager.QueryCertInfoByCertId(requestData.DistProfileInfo.CertId).CertName
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeleteCertNameHeader, certName))
+		certAppleUrl := utils.APPLE_DELETE_CERT_URL + requestData.DistProfileInfo.CertId
+		cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.DistCertUrlHeader, utils.AppleUrlText, certAppleUrl))
+
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DistProfileNameHeader, requestData.DistProfileInfo.ProfileName))
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DistProfileTypeHeader, requestData.DistProfileInfo.ProfileType))
+	}
+	return &cardFormArray
+}
+
+//生成创建push证书消息卡片内容
+func generateCardOfPushCert(requestData *devconnmanager.CreateBundleProfileRequest) *[][]form.CardElementForm {
 	var cardFormArray [][]form.CardElementForm
 
 	//插入提示信息
@@ -983,7 +1074,13 @@ func updateAllCapabilitiesInApple(enableChange *[]string, disableChange *[]strin
 	for _, capability := range *enableChange {
 		if capability == "PUSH_NOTIFICATIONS" {
 			//push证书创建工单
-
+			bundleIdProfile := devconnmanager.QueryAppBundleProfiles(map[string]interface{}{"bundleid_id": bundleIdId})
+			if len(*bundleIdProfile) == 0 {
+				logs.Error("数据库中不存在bundleid_id=%s 的记录", bundleIdId)
+			}
+			if (*bundleIdProfile)[0].PushCertId == "" {
+				//发送创建push证书的工单
+			}
 		}
 		go func(capability string) {
 			var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
