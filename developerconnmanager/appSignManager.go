@@ -866,8 +866,7 @@ func checkUpdateBundleIdParams(c *gin.Context, requestData *devconnmanager.Creat
 	}
 
 	if requestData.DevProfileInfo != (devconnmanager.ProfileInfo{}) {
-		if requestData.DevProfileInfo.ProfileId == "" ||
-			requestData.DevProfileInfo.CertId == "" ||
+		if requestData.DevProfileInfo.CertId == "" ||
 			requestData.DevProfileInfo.ProfileName == "" ||
 			requestData.DevProfileInfo.ProfileType == "" {
 			utils.AssembleJsonResponse(c, http.StatusBadRequest, "devProfileInfo不全", nil)
@@ -876,8 +875,7 @@ func checkUpdateBundleIdParams(c *gin.Context, requestData *devconnmanager.Creat
 		needUpdateDevProfile = true
 	}
 	if requestData.DistProfileInfo != (devconnmanager.ProfileInfo{}) {
-		if requestData.DistProfileInfo.ProfileId == "" ||
-			requestData.DistProfileInfo.CertId == "" ||
+		if requestData.DistProfileInfo.CertId == "" ||
 			requestData.DistProfileInfo.ProfileName == "" ||
 			requestData.DistProfileInfo.ProfileType == "" {
 			utils.AssembleJsonResponse(c, http.StatusBadRequest, "distProfileInfo不全", nil)
