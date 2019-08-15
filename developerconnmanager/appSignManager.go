@@ -415,7 +415,7 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 
 	if requestData.AccountType == _const.Enterprise {
 		//todo 走工单逻辑
-		createOrUpdateOrRestoreBundleIdForEnterprise(&requestData)
+		createOrUpdateOrRestoreBundleIdForEnterprise(&requestData, c)
 		return
 	}
 	switch requestData.BundleIdIsDel {
@@ -529,7 +529,8 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 		}
 	case "1":
 		//恢复bundle id
-		if ok := checkRestoreBundleIdParams(c, &requestData); !ok {
+		ok, needUpdateDevProfile, needUpdateDistProfile := checkRestoreBundleIdParams(c, &requestData)
+		if !ok {
 			return
 		}
 		//在苹果后台生成bundle id
@@ -539,12 +540,8 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "在苹果后台创建bundle id失败", nil)
 			return
 		}
-		//删除旧的bundleId对应的记录
-		deleteDatabaseAfterCreateBundleId(requestData.BundleIdId)
-
-		//bundleIdId更新数据库
-		requestData.BundleIdId = createBundleIdResponseFromApple.Data.Id
-		if !insertDatabaseAfterCreateBundleId(&requestData, &createBundleIdResponseFromApple, c) {
+		//更新旧的bundleId对应的记录
+		if !updateDatabaseAfterRestoreBundleId(requestData.BundleIdId, createBundleIdResponseFromApple.Data.Id, requestData.UserName, needUpdateDevProfile, needUpdateDistProfile, c) {
 			return
 		}
 
@@ -580,7 +577,7 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 	}
 }
 
-func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.CreateBundleProfileRequest) {
+func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.CreateBundleProfileRequest, c *gin.Context) {
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 	if requestData.BundlePrincipal == "" {
@@ -606,6 +603,13 @@ func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.Cr
 	case "1":
 		//恢复
 		logs.Info("工单恢复bundleId")
+		ok, needUpdateDevProfile, needUpdateDistProfile := checkRestoreBundleIdParams(c, requestData)
+		if !ok {
+			return
+		}
+		if !updateDatabaseAfterRestoreBundleId(requestData.BundleIdId, "", requestData.UserName, needUpdateDevProfile, needUpdateDistProfile, c) {
+			return
+		}
 		cardInfos := generateCardOfCreateBundleId(requestData)
 		//logs.Info("%v",*cardInfos)
 		err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--恢复BundleId")
@@ -854,32 +858,36 @@ func checkUpdateBundleIdParams(c *gin.Context, requestData *devconnmanager.Creat
 	return res, (*bundleId)[0].BundleId
 }
 
-func checkRestoreBundleIdParams(c *gin.Context, requestData *devconnmanager.CreateBundleProfileRequest) bool {
+func checkRestoreBundleIdParams(c *gin.Context, requestData *devconnmanager.CreateBundleProfileRequest) (bool, bool, bool) {
+	needUpdateDevProfile := false
+	needUpdateDistProfile := false
 	if requestData.BundleIdId == "" {
 		utils.AssembleJsonResponse(c, http.StatusBadRequest, "恢复bundleId时需要传入bundleIdId", nil)
-		return false
+		return false, false, false
 	}
 	if requestData.DevProfileInfo != (devconnmanager.ProfileInfo{}) {
 		if requestData.DevProfileInfo.CertId == "" ||
 			requestData.DevProfileInfo.ProfileName == "" ||
 			requestData.DevProfileInfo.ProfileType == "" {
 			utils.AssembleJsonResponse(c, http.StatusBadRequest, "devProfileInfo不全", nil)
-			return false
+			return false, false, false
 		}
+		needUpdateDevProfile = true
 	}
 	if requestData.DistProfileInfo != (devconnmanager.ProfileInfo{}) {
-		if requestData.DistProfileInfo.ProfileId == "" ||
+		if requestData.DistProfileInfo.CertId == "" ||
 			requestData.DistProfileInfo.ProfileName == "" ||
 			requestData.DistProfileInfo.ProfileType == "" {
 			utils.AssembleJsonResponse(c, http.StatusBadRequest, "distProfileInfo不全", nil)
-			return false
+			return false, false, false
 		}
+		needUpdateDistProfile = true
 	}
-	if requestData.DevProfileInfo == (devconnmanager.ProfileInfo{}) && requestData.DistProfileInfo == (devconnmanager.ProfileInfo{}) {
+	if !needUpdateDevProfile && !needUpdateDistProfile {
 		utils.AssembleJsonResponse(c, http.StatusBadRequest, "至少需要一个profile info", nil)
-		return false
+		return false, false, false
 	}
-	return true
+	return true, needUpdateDevProfile, needUpdateDistProfile
 }
 
 //在苹果后台为bundle id打开能力
@@ -1133,8 +1141,35 @@ func insertDatabaseAfterCreateBundleId(requestData *devconnmanager.CreateBundleP
 }
 
 //恢复bundleId的流程中，在创建bundleId之后的数据库更新操作
-func updateDatabaseAfterRestoreBundleId() {
+func updateDatabaseAfterRestoreBundleId(oldBundleIdId, newBundleIdId, userName string, needUpdateDevProfile, needUpdateDistProfile bool, c *gin.Context) bool {
+	devProfileId := ""
+	distProfileId := ""
+	if needUpdateDevProfile {
+		devProfileId = _const.NeedUpdate
+	}
+	if needUpdateDistProfile {
+		distProfileId = _const.NeedUpdate
+	}
+	newBundleIdInfo := map[string]interface{}{
+		"bundleid_id":     newBundleIdId,
+		"bundleid_isdel":  "0",
+		"dev_profile_id":  devProfileId,
+		"dist_profile_id": distProfileId,
+		"user_name":       userName,
+	}
+	err := devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundleid_id": oldBundleIdId}, newBundleIdInfo)
 
+	if err != nil {
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundle id数据更新数据库失败", nil)
+		return false
+	}
+
+	err = devconnmanager.UpdateAppleBundleId(map[string]interface{}{"bundleid_id": oldBundleIdId}, map[string]interface{}{"bundleid_id": newBundleIdId})
+	if err != nil {
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundle id能力数据更新数据库失败", nil)
+		return false
+	}
+	return true
 }
 
 //在苹果后台为bundle id打开能力后更新数据库的操作
