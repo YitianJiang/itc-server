@@ -607,6 +607,10 @@ func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.Cr
 	case "1":
 		//恢复
 		logs.Info("工单恢复bundleId")
+		cardInfos := generateCardOfCreateBundleId(requestData)
+		//logs.Info("%v",*cardInfos)
+		err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--恢复BundleId")
+		utils.RecordError("发送创建bundleId工单失败：", err)
 	}
 }
 
@@ -923,7 +927,7 @@ func updateAllCapabilitiesInApple(enableChange *[]string, disableChange *[]strin
 	}
 
 	//协程相关参数、channel、waitGroup初始化
-	capabilityNum := len(*enableChange) + len(*configChange) + len(*disableChange)
+	capabilityNum := len(*enableChange) + len(*disableChange) // + len(*configChange)
 	logs.Info("%d", capabilityNum)
 	var wg sync.WaitGroup
 	wg.Add(capabilityNum)
@@ -960,6 +964,7 @@ func updateAllCapabilitiesInApple(enableChange *[]string, disableChange *[]strin
 			if bundleIdCapabilityId == "" || bundleIdCapabilityId == "0" {
 				successChannel <- []string{capability, ""}
 				wg.Done()
+				continue
 			}
 			switch bundleIdCapabilityId.(type) {
 			case string:
@@ -984,23 +989,23 @@ func updateAllCapabilitiesInApple(enableChange *[]string, disableChange *[]strin
 
 	//更改能力config配置
 	for configName, configValue := range *configChange {
-		/*//go func(configName,configValue string) {
+		//go func(configName,configValue string) {
 		var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
 		var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
 		openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
 		openBundleIdCapabilityRequest.Data.Attributes.CapabilityType = configName
 		var setting devconnmanager.Setting
-		setting.Key=_const.ConfigCapabilityMap[configName]
-		setting.Options=append(setting.Options,devconnmanager.ConfigKey{Key: configValue})
-		openBundleIdCapabilityRequest.Data.Attributes.Settings=append(openBundleIdCapabilityRequest.Data.Attributes.Settings,setting)
+		setting.Key = _const.ConfigCapabilityMap[configName]
+		setting.Options = append(setting.Options, devconnmanager.ConfigKey{Key: configValue})
+		openBundleIdCapabilityRequest.Data.Attributes.Settings = append(openBundleIdCapabilityRequest.Data.Attributes.Settings, setting)
 		openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type = "bundleIds"
 		openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = bundleIdId
 
 		ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, &openBundleIdCapabilityResponse)
-		logs.Info("打开配置能力response：%v",openBundleIdCapabilityResponse)
-		//}(configName,configValue)*/
+		logs.Info("打开配置能力response：%v", openBundleIdCapabilityResponse)
+		//}(configName,configValue)
 
-		go func(configName, configValue string) {
+		/*go func(configName, configValue string) {
 			var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
 			var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
 			openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
@@ -1017,7 +1022,7 @@ func updateAllCapabilitiesInApple(enableChange *[]string, disableChange *[]strin
 				successChannel <- []string{configName, configValue}
 			}
 			wg.Done()
-		}(configName, configValue)
+		}(configName, configValue)*/
 	}
 
 	//todo wait增加超时设置
@@ -1126,6 +1131,11 @@ func insertDatabaseAfterCreateBundleId(requestData *devconnmanager.CreateBundleP
 		return false
 	}
 	return true
+}
+
+//恢复bundleId的流程中，在创建bundleId之后的数据库更新操作
+func updateDatabaseAfterRestoreBundleId() {
+
 }
 
 //在苹果后台为bundle id打开能力后更新数据库的操作
