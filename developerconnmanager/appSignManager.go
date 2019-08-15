@@ -1039,6 +1039,7 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 			} else if (*bundleIdProfile)[0].PushCertId == "" {
 				//发送创建push证书的工单
 				sendPushCertLark(requestData)
+				_ = devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId}, map[string]interface{}{"push_cert_id": _const.NeedUpdate})
 			}
 		}
 		go func(capability string) {
