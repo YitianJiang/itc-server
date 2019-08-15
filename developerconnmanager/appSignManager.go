@@ -698,12 +698,7 @@ func generateCardOfCreateBundleId(requestData *devconnmanager.CreateBundleProfil
 	needPushCert := false
 	for _, capability := range requestData.EnableCapabilitiesChange {
 		if !needPushCert && capability == "PUSH_NOTIFICATIONS" {
-			bundleIdProfile := devconnmanager.QueryAppBundleProfiles(map[string]interface{}{"bundle_id": requestData.BundleId})
-			if len(*bundleIdProfile) == 0 {
-				logs.Error("数据库中不存在bundleid_id=%s 的记录", requestData.BundleIdId)
-			} else if (*bundleIdProfile)[0].PushCertId == "" {
-				needPushCert = true
-			}
+			needPushCert = true
 		}
 		capabilitiesString = capabilitiesString + capability + ", "
 	}
@@ -793,7 +788,7 @@ func generateCardOfUpdateBundleId(requestData *devconnmanager.CreateBundleProfil
 		if !needPushCert && capability == "PUSH_NOTIFICATIONS" {
 			bundleIdProfile := devconnmanager.QueryAppBundleProfiles(map[string]interface{}{"bundle_id": requestData.BundleId})
 			if len(*bundleIdProfile) == 0 {
-				logs.Error("数据库中不存在bundleid_id=%s 的记录", requestData.BundleIdId)
+				logs.Error("数据库中不存在bundle_id=%s 的记录", requestData.BundleId)
 			} else if (*bundleIdProfile)[0].PushCertId == "" {
 				needPushCert = true
 			}
