@@ -1318,7 +1318,6 @@ func updateDatabaseAfterUpdateBundleId(needUpdateDevProfile, needUpdateDistProfi
 	newBundleIdInfo := map[string]interface{}{
 		"dev_profile_id":  devProfileId,
 		"dist_profile_id": distProfileId,
-		"push_cert_id":    "",
 	}
 	err := devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId}, newBundleIdInfo)
 
@@ -1330,7 +1329,7 @@ func updateDatabaseAfterUpdateBundleId(needUpdateDevProfile, needUpdateDistProfi
 	newBundleIdCapabilityInfo := make(map[string]interface{})
 
 	for _, capability := range requestData.EnableCapabilitiesChange {
-		newBundleIdCapabilityInfo[capability] = newBundleIdCapabilityInfo
+		newBundleIdCapabilityInfo[capability] = capability
 	}
 
 	for _, capability := range requestData.DisableCapabilitiesChange {
