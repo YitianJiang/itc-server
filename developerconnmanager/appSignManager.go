@@ -412,7 +412,7 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 	logs.Info("request:%v", requestData)
 
 	if requestData.AccountType == _const.Enterprise {
-		//todo 走工单逻辑
+		//走工单逻辑
 		createOrUpdateOrRestoreBundleIdForEnterprise(&requestData, c)
 		return
 	}
@@ -439,7 +439,7 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 			}
 
 			//在苹果后台打开能力
-			successChannel, failChannel := updateAllCapabilitiesInApple(&requestData.EnableCapabilitiesChange, nil, &requestData.ConfigCapabilitiesChange, requestData.BundleIdId, tokenString)
+			successChannel, failChannel := updateAllCapabilitiesInApple(tokenString, &requestData)
 			//更新能力表
 			err, failedList := updateDBAfterChangeCapabilities(failChannel, successChannel, requestData.BundleIdId)
 			if err != nil {
@@ -475,7 +475,7 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 			}
 			tokenString := GetTokenStringByTeamId(requestData.TeamId)
 			//在苹果后台打开能力
-			successChannel, failChannel := updateAllCapabilitiesInApple(&requestData.EnableCapabilitiesChange, &requestData.DisableCapabilitiesChange, &requestData.ConfigCapabilitiesChange, requestData.BundleIdId, tokenString)
+			successChannel, failChannel := updateAllCapabilitiesInApple(tokenString, &requestData)
 			//更新能力表
 			err, failedList := updateDBAfterChangeCapabilities(failChannel, successChannel, requestData.BundleIdId)
 			if err != nil {
@@ -489,9 +489,11 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 
 			//删除原先的profile&新建profile
 			if needUpdateDevProfile {
-				if ok := deleteProfile(c, &requestData.DevProfileInfo, bundleId, requestData.TeamId, requestData.UserName, tokenString); !ok {
-					utils.AssembleJsonResponse(c, http.StatusInternalServerError, "删除dev profile失败", nil)
-					return
+				if requestData.DevProfileInfo.ProfileId != "" {
+					if ok := deleteProfile(c, &requestData.DevProfileInfo, bundleId, requestData.TeamId, requestData.UserName, tokenString); !ok {
+						utils.AssembleJsonResponse(c, http.StatusInternalServerError, "删除dev profile失败", nil)
+						return
+					}
 				}
 				err = createProfile(&requestData.DevProfileInfo, &requestData.BundleIdInfo, tokenString, requestData.TeamId, requestData.UserName)
 				if err != nil {
@@ -500,9 +502,11 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 				}
 			}
 			if needUpdateDistProfile {
-				if ok := deleteProfile(c, &requestData.DistProfileInfo, bundleId, requestData.TeamId, requestData.UserName, tokenString); !ok {
-					utils.AssembleJsonResponse(c, http.StatusInternalServerError, "删除dist profile失败", nil)
-					return
+				if requestData.DevProfileInfo.ProfileId != "" {
+					if ok := deleteProfile(c, &requestData.DistProfileInfo, bundleId, requestData.TeamId, requestData.UserName, tokenString); !ok {
+						utils.AssembleJsonResponse(c, http.StatusInternalServerError, "删除dist profile失败", nil)
+						return
+					}
 				}
 				err = createProfile(&requestData.DistProfileInfo, &requestData.BundleIdInfo, tokenString, requestData.TeamId, requestData.UserName)
 				if err != nil {
@@ -533,7 +537,7 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 
 		requestData.BundleIdId = createBundleIdResponseFromApple.Data.Id
 		//在苹果后台打开能力
-		successChannel, failChannel := updateAllCapabilitiesInApple(&requestData.EnableCapabilitiesChange, &requestData.DisableCapabilitiesChange, &requestData.ConfigCapabilitiesChange, requestData.BundleIdId, tokenString)
+		successChannel, failChannel := updateAllCapabilitiesInApple(tokenString, &requestData)
 		//更新能力表
 		err, failedList := updateDBAfterChangeCapabilities(failChannel, successChannel, requestData.BundleIdId)
 		if err != nil {
@@ -638,7 +642,7 @@ func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.Cr
 	}
 }
 
-//生成绑定账号审核消息卡片内容
+//生成创建bundleId工单消息卡片内容
 func generateCardOfCreateBundleId(requestData *devconnmanager.CreateBundleProfileRequest) *[][]form.CardElementForm {
 	var cardFormArray [][]form.CardElementForm
 
@@ -959,7 +963,10 @@ func openCapabilitiesInApple(enableCapabilitiesChange *[]string, bundleIdId, tok
 	return successChannel, failChannel
 }
 
-func updateAllCapabilitiesInApple(enableChange *[]string, disableChange *[]string, configChange *map[string]string, bundleIdId, tokenString string) (chan []string, chan string) {
+func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanager.CreateBundleProfileRequest) (chan []string, chan string) {
+	enableChange := &(requestData.EnableCapabilitiesChange)
+	disableChange := &(requestData.DisableCapabilitiesChange)
+	configChange := &(requestData.ConfigCapabilitiesChange)
 	//处理传参，将nil更改为对应的空数组或空字符串，方便之后for循环遍历
 	emptyListPointer := &[]string{}
 	emptyMapPointer := &map[string]string{}
@@ -974,16 +981,22 @@ func updateAllCapabilitiesInApple(enableChange *[]string, disableChange *[]strin
 	}
 
 	//协程相关参数、channel、waitGroup初始化
-	capabilityNum := len(*enableChange) + len(*disableChange) + 1 // + len(*configChange)
+	capabilityNum := len(*enableChange) + len(*disableChange) // + len(*configChange)
 	logs.Info("%d", capabilityNum)
 	var wg sync.WaitGroup
 	wg.Add(capabilityNum)
-	successChannel := make(chan []string, capabilityNum)
-	failChannel := make(chan string, capabilityNum)
+	successChannel := make(chan []string, capabilityNum+len(*configChange))
+	failChannel := make(chan string, capabilityNum+len(*configChange))
 	for _, capability := range *enableChange {
 		if capability == "PUSH_NOTIFICATIONS" {
 			//push证书创建工单
-
+			bundleIdProfile := devconnmanager.QueryAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId})
+			if len(*bundleIdProfile) == 0 {
+				logs.Error("数据库中不存在bundleid_id=%s 的记录", requestData.BundleIdId)
+			} else if (*bundleIdProfile)[0].PushCertId == "" {
+				//发送创建push证书的工单
+				sendPushCertLark(requestData)
+			}
 		}
 		go func(capability string) {
 			var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
@@ -991,7 +1004,7 @@ func updateAllCapabilitiesInApple(enableChange *[]string, disableChange *[]strin
 			openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
 			openBundleIdCapabilityRequest.Data.Attributes.CapabilityType = capability
 			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type = "bundleIds"
-			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = bundleIdId
+			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = requestData.BundleIdId
 			if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, &openBundleIdCapabilityResponse) {
 				failChannel <- capability
 			} else {
@@ -1001,9 +1014,9 @@ func updateAllCapabilitiesInApple(enableChange *[]string, disableChange *[]strin
 		}(capability)
 	}
 	//关闭disableChange
-	bundleIdCapabilities := devconnmanager.QueryAppleBundleId(map[string]interface{}{"bundleid_id": bundleIdId})
+	bundleIdCapabilities := devconnmanager.QueryAppleBundleId(map[string]interface{}{"bundleid_id": requestData.BundleIdId})
 	if len(*bundleIdCapabilities) != 1 {
-		logs.Error("tt_apple_bundleId表存在%d条bundleIdId=%s的记录", len(*bundleIdCapabilities), bundleIdId)
+		logs.Error("tt_apple_bundleId表存在%d条bundleIdId=%s的记录", len(*bundleIdCapabilities), requestData.BundleIdId)
 	}
 	if len(*bundleIdCapabilities) > 0 {
 		param, _ := json.Marshal((*bundleIdCapabilities)[0])
@@ -1040,7 +1053,27 @@ func updateAllCapabilitiesInApple(enableChange *[]string, disableChange *[]strin
 
 	//更改能力config配置
 	for configName, configValue := range *configChange {
-		//go func(configName,configValue string) {
+		logs.Info("%s", configName+configValue)
+		var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
+		var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
+		openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
+		openBundleIdCapabilityRequest.Data.Attributes.CapabilityType = configName
+		var setting devconnmanager.Setting
+		setting.Key = _const.ConfigCapabilityMap[configName]
+		setting.Options = append(setting.Options, devconnmanager.ConfigKey{Key: configValue})
+		openBundleIdCapabilityRequest.Data.Attributes.Settings = append(openBundleIdCapabilityRequest.Data.Attributes.Settings, setting)
+		openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type = "bundleIds"
+		openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = requestData.BundleIdId
+
+		if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, &openBundleIdCapabilityResponse) {
+			failChannel <- configName
+		} else {
+			successChannel <- []string{configName, configValue}
+		}
+		logs.Info("打开配置能力response：%v", openBundleIdCapabilityResponse)
+	}
+
+	/*go func(configName, configValue string) {
 		var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
 		var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
 		openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
@@ -1051,40 +1084,63 @@ func updateAllCapabilitiesInApple(enableChange *[]string, disableChange *[]strin
 		openBundleIdCapabilityRequest.Data.Attributes.Settings = append(openBundleIdCapabilityRequest.Data.Attributes.Settings, setting)
 		openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type = "bundleIds"
 		openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = bundleIdId
-
 		if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, &openBundleIdCapabilityResponse) {
 			failChannel <- configName
 		} else {
 			successChannel <- []string{configName, configValue}
 		}
-		logs.Info("打开配置能力response：%v", openBundleIdCapabilityResponse)
-		//}(configName,configValue)
+		wg.Done()
+	}(configName, configValue)*/
 
-		/*go func(configName, configValue string) {
-			var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
-			var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
-			openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
-			openBundleIdCapabilityRequest.Data.Attributes.CapabilityType = configName
-			var setting devconnmanager.Setting
-			setting.Key = _const.ConfigCapabilityMap[configName]
-			setting.Options = append(setting.Options, devconnmanager.ConfigKey{Key: configValue})
-			openBundleIdCapabilityRequest.Data.Attributes.Settings = append(openBundleIdCapabilityRequest.Data.Attributes.Settings, setting)
-			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type = "bundleIds"
-			openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = bundleIdId
-			if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, &openBundleIdCapabilityResponse) {
-				failChannel <- configName
-			} else {
-				successChannel <- []string{configName, configValue}
-			}
-			wg.Done()
-		}(configName, configValue)*/
-	}
-	wg.Done()
+	//wg.Done()
 	//todo wait增加超时设置
+	logs.Info("wait")
 	wg.Wait()
+	logs.Info("wait over")
 	close(successChannel)
 	close(failChannel)
 	return successChannel, failChannel
+}
+
+func sendPushCertLark(requestData *devconnmanager.CreateBundleProfileRequest) {
+	botService := service.BotService{}
+	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
+	cardInfos := generateCardOfPushCert(requestData)
+	//logs.Info("%v",*cardInfos)
+	err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--创建push证书")
+	utils.RecordError("发送创建push证书工单失败：", err)
+	return
+}
+
+//生成创建push证书消息卡片内容
+func generateCardOfPushCert(requestData *devconnmanager.CreateBundleProfileRequest) *[][]form.CardElementForm {
+	var cardFormArray [][]form.CardElementForm
+
+	//插入提示信息
+	messageText := utils.CreatePushCertMessage
+	messageForm := form.GenerateTextTag(&messageText, false, nil)
+	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
+
+	//插入用户名，账户名，bundleId，push相关
+
+	//插入基本信息
+	cardFormArray = append(cardFormArray, generateCenterText("基本信息部分"))
+	accountInfos := devconnmanager.QueryAccountInfo(map[string]interface{}{"team_id": requestData.TeamId})
+	if len(*accountInfos) != 1 {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TeamIdHeader, requestData.TeamId))
+		logs.Error("获取teamId对应的account失败：%s 错误原因：teamId对应的account记录数不等于1", requestData.TeamId)
+	} else {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountHeader, (*accountInfos)[0].AccountName))
+	}
+
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, requestData.UserName))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdNameHeader, requestData.BundleIdName))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdHeader, requestData.BundleId))
+	cardFormArray = append(cardFormArray, getDividerOfCard())
+
+	cardFormArray = append(cardFormArray, generateCenterText("Push证书信息部分"))
+	cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.PushCertHeader, utils.CsrText, _const.TOS_CSR_FILE_URL_PUSH))
+	return &cardFormArray
 }
 
 //todo  根据id修改

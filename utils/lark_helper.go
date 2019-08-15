@@ -280,6 +280,9 @@ var UpdateBundleIdMessage = "请根据账号信息登陆Apple后台，按照信�
 var BundleIdEnableCapabilityListHeader = "打开BundleId能力: "
 var BundleIdDisableCapabilityListHeader = "关闭BundleId能力: "
 
+//push证书工单基本信息
+var CreatePushCertMessage = "请根据账号信息登陆Apple后台，按照信息创建push证书并上传至rocket证书管理系统"
+
 var Horizontal = "horizontal"
 var Gray = "gray"
 var DividerSize = "0.5"
