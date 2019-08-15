@@ -2,6 +2,7 @@ package developerconnmanager
 
 import (
 	"bytes"
+	"code.byted.org/clientQA/ClusterManager/model"
 	_const "code.byted.org/clientQA/itc-server/const"
 	devconnmanager "code.byted.org/clientQA/itc-server/database/dal/AppleConnMannagerModel"
 	"code.byted.org/clientQA/itc-server/utils"
@@ -397,7 +398,8 @@ func CreateAppBindAccount(c *gin.Context) {
 
 //Bundle id（连带Profile）创建\更新\恢复接口
 //todo profile不能和已有的重名
-func CreateBundleProfile(c *gin.Context) {
+//todo 只传bundleId？
+func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 	logs.Info("创建/更新/恢复bundle id")
 	var requestData devconnmanager.CreateBundleProfileRequest
 	//获取请求参数
@@ -414,6 +416,7 @@ func CreateBundleProfile(c *gin.Context) {
 
 	if requestData.AccountType == _const.Enterprise {
 		//todo 走工单逻辑
+		createOrUpdateOrRestoreBundleIdForEnterprise(&requestData)
 		return
 	}
 	switch requestData.BundleIdIsDel {
@@ -576,6 +579,113 @@ func CreateBundleProfile(c *gin.Context) {
 		utils.AssembleJsonResponse(c, _const.SUCCESS, "bundle id创建成功", nil)
 		return
 	}
+}
+
+func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.CreateBundleProfileRequest) {
+	botService := service.BotService{}
+	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
+	switch requestData.BundleIdIsDel {
+	case "0":
+		if requestData.BundleIdId == "" {
+			//创建
+			logs.Info("工单创建bundleId")
+			cardInfos := generateCardOfCreateBundleId(requestData)
+			//logs.Info("%v",*cardInfos)
+			if requestData.BundlePrincipal == "" {
+				requestData.BundlePrincipal = utils.CreateCertPrincipal
+			}
+			err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService)
+			utils.RecordError("发送创建bundleId工单失败：", err)
+		} else {
+			//更新
+			logs.Info("工单更新bundleId")
+		}
+	case "1":
+		//恢复
+		logs.Info("工单恢复bundleId")
+	}
+}
+
+//生成绑定账号审核消息卡片内容
+func generateCardOfCreateBundleId(requestData *devconnmanager.CreateBundleProfileRequest) *[][]form.CardElementForm {
+	var cardFormArray [][]form.CardElementForm
+
+	//插入提示信息
+	messageText := utils.CreateBundleIdMessage
+	messageForm := form.GenerateTextTag(&messageText, false, nil)
+	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
+	//cardFormArray = append(cardFormArray, getDividerOfCard())
+
+	//插入用户名，账户名，bundleId，bundleId名称，能力列表，配置能力，dev相关，dist相关
+
+	//插入基本信息
+	cardFormArray = append(cardFormArray, generateCenterText("基本信息部分"))
+	accountInfos := devconnmanager.QueryAccountInfo(map[string]interface{}{"team_id": requestData.TeamId})
+	if len(*accountInfos) != 1 {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TeamIdHeader, requestData.TeamId))
+		logs.Error("获取teamId对应的account失败：%s 错误原因：teamId对应的account记录数不等于1", requestData.TeamId)
+	} else {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountHeader, (*accountInfos)[0].AccountName))
+	}
+
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, requestData.UserName))
+	cardFormArray = append(cardFormArray, getDividerOfCard())
+
+	//插入创建bundle id部分
+	cardFormArray = append(cardFormArray, generateCenterText("创建BundleId部分"))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdNameHeader, requestData.BundleIdName))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdHeader, requestData.BundleId))
+	cardFormArray = append(cardFormArray, getDividerOfCard())
+
+	//插入bundle id能力配置部分
+	cardFormArray = append(cardFormArray, generateCenterText("配置BundleId能力部分"))
+	capabilitiesString := ""
+	needPushCert := false
+	for _, capability := range requestData.EnableCapabilitiesChange {
+		if !needPushCert && capability == "PUSH_NOTIFICATIONS" {
+			needPushCert = true
+		}
+		capabilitiesString = capabilitiesString + capability + ", "
+	}
+	if len(capabilitiesString) > 2 {
+		capabilitiesString = capabilitiesString[0 : len(capabilitiesString)-2]
+	}
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdCapabilityListHeader, capabilitiesString))
+	//push证书信息需要在打开push能力时提供
+	if needPushCert {
+		cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.PushCertHeader, utils.CsrText, _const.TOS_CSR_FILE_URL_PUSH))
+	}
+
+	iCloudVersion, ok := requestData.ConfigCapabilitiesChange[_const.ICLOUD]
+	if ok {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.ICloudVersionHeader, iCloudVersion))
+	}
+
+	dataProtection, ok := requestData.ConfigCapabilitiesChange[_const.DATA_PROTECTION]
+	if ok {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DataProtectHeader, dataProtection))
+	}
+	cardFormArray = append(cardFormArray, getDividerOfCard())
+
+	//插入devProfile部分
+	cardFormArray = append(cardFormArray, generateCenterText("创建Dev类型profile部分"))
+	if requestData.DevProfileInfo != (devconnmanager.ProfileInfo{}) {
+		certUrl := devconnmanager.QueryCertInfoByCertId(requestData.DevProfileInfo.CertId).CertDownloadUrl
+		cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.DevCertUrlHeader, utils.CsrText, certUrl))
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DevProfileNameHeader, requestData.DevProfileInfo.ProfileName))
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DevProfileTypeHeader, requestData.DevProfileInfo.ProfileType))
+		cardFormArray = append(cardFormArray, getDividerOfCard())
+	}
+
+	//插入distProfile部分
+	cardFormArray = append(cardFormArray, generateCenterText("创建Dist类型profile部分"))
+	if requestData.DistProfileInfo != (devconnmanager.ProfileInfo{}) {
+		certUrl := devconnmanager.QueryCertInfoByCertId(requestData.DistProfileInfo.CertId).CertDownloadUrl
+		cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.DistCertUrlHeader, utils.CsrText, certUrl))
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DistProfileNameHeader, requestData.DistProfileInfo.ProfileName))
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DistProfileTypeHeader, requestData.DistProfileInfo.ProfileType))
+	}
+	return &cardFormArray
 }
 
 func deleteProfile(c *gin.Context, profile *devconnmanager.ProfileInfo, bundleId, teamId, userName, tokenString string) bool {
@@ -820,6 +930,7 @@ func updateAllCapabilitiesInApple(enableChange *[]string, disableChange *[]strin
 	return successChannel, failChannel
 }
 
+//todo  根据id修改
 //为bundleId创建profile并建立绑定关系。苹果后台创建profile->上传tos->数据库创建profile记录->数据库更新bundleId对应的profileId
 func createProfile(profileInfo *devconnmanager.ProfileInfo, bundleIdInfo *devconnmanager.BundleIdInfo, tokenString, teamId, userName string) error {
 	appleResult := CreateOrUpdateProfileFromApple(profileInfo.ProfileName, profileInfo.ProfileType, bundleIdInfo.BundleIdId, profileInfo.CertId, tokenString)
@@ -1609,13 +1720,13 @@ func generateCardOfApproveBindAccount(appAccountCert *devconnmanager.AppAccountC
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AppIdHeader, appAccountCert.AppId))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AppNameHeader, appAccountCert.AppName))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AppTypeHeader, appAccountCert.AppType))
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TeamIdHeader, appAccountCert.TeamId))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TargetTeamIdHeader, appAccountCert.TeamId))
 
 	accountInfos := devconnmanager.QueryAccountInfo(map[string]interface{}{"team_id": appAccountCert.TeamId})
 	if len(*accountInfos) != 1 {
 		logs.Error("获取teamId对应的account失败：%s 错误原因：teamId对应的account记录数不等于1", appAccountCert.TeamId)
 	} else {
-		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountNameHeader, (*accountInfos)[0].AccountName))
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TargetAccountNameHeader, (*accountInfos)[0].AccountName))
 	}
 	return &cardFormArray
 }
@@ -1923,4 +2034,22 @@ func deleteErrorTextAlarm(email, message string) {
 	if err != nil {
 		utils.RecordError("deleteErrorTextAlarm error:", err)
 	}
+}
+
+func getDividerOfCard() []form.CardElementForm {
+	dividerForm := new(form.CardElementForm)
+	dividerForm.Tag = _const.Divider
+	horizontal := model.Horizontal
+	dividerForm.Orientation = &horizontal
+	gray := model.Gray
+	dividerForm.Color = &gray
+	dividerSize := model.DividerSize
+	dividerForm.Size = &dividerSize
+	return []form.CardElementForm{*dividerForm}
+}
+
+func generateCenterText(text string) []form.CardElementForm {
+	textForm := form.GenerateTextTag(&text, false, nil)
+	textForm.Style = &utils.SectionTextStyle
+	return []form.CardElementForm{*textForm}
 }
