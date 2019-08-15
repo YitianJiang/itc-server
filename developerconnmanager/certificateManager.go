@@ -132,7 +132,7 @@ func InsertCertificate(c *gin.Context) {
 	strs := strings.Split(body.CertType, "_")
 	certTypeSufix := strs[len(strs)-1]
 
-	if body.AccountType == "Enterprise" {
+	if body.AccountType == "Enterprise" || certTypeSufix == "PUSH" {
 		//在数据库插入证书记录
 		var certInfo devconnmanager.CertInfo
 		certInfo.TeamId = body.TeamId
@@ -146,6 +146,10 @@ func InsertCertificate(c *gin.Context) {
 		if certTypeSufix == "DISTRIBUTION" {
 			certInfo.PrivKeyUrl = _const.TOS_PRIVATE_KEY_URL_DIST
 			certInfo.CsrFileUrl = _const.TOS_CSR_FILE_URL_DIST
+		}
+		if certTypeSufix == "PUSH" {
+			certInfo.PrivKeyUrl = _const.TOS_PRIVATE_KEY_URL_PUSH
+			certInfo.CsrFileUrl = _const.TOS_CSR_FILE_URL_PUSH
 		}
 		dbResult := devconnmanager.InsertCertInfo(&certInfo)
 		if !dbResult {
@@ -317,7 +321,7 @@ func DeleteCertificate(c *gin.Context) {
 	if len(appList) == 0 {
 
 		//企业分发账号和push证书工单处理逻辑---此if下操作待apple open API ready后可删除或不执行
-		if delCertRequest.AccType == _const.Enterprise || delCertRequest.CertType == _const.IOS_PUSH {
+		if delCertRequest.AccType == _const.Enterprise || delCertRequest.CertType == _const.IOS_PUSH || delCertRequest.CertType == _const.MAC_PUSH {
 			//向负责人发送lark消息
 			abot := service.BotService{}
 			abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
