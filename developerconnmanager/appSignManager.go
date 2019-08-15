@@ -2220,6 +2220,7 @@ func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle, bundleInfo 
 	}
 
 	//enableList
+	bundleInfo.EnableCapList = make([]string,0)
 	param, _ := json.Marshal(bundleStruct)
 	bundleMap := make(map[string]interface{})
 	json.Unmarshal(param, &bundleMap)

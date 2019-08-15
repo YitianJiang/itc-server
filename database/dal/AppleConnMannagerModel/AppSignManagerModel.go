@@ -58,8 +58,8 @@ type ProfileDeleteRequest struct {
 	UserName    string `form:"user_name"      binding:"required"`
 	ProfileType string `form:"profile_type"   binding:"required"`
 	TeamId      string `form:"team_id"        binding:"required"`
-	AccountName string `form:"account_name"`
-	AccountType string `form:"account_type"`
+	AccountName string `form:"account_name"   binding:"required"`
+	AccountType string `form:"account_type"   binding:"required"`
 	Operator    string `form:"principal"`
 }
 type BundleDeleteRequest struct {
@@ -70,8 +70,8 @@ type BundleDeleteRequest struct {
 	TeamId         string `form:"team_id"        binding:"required"`
 	BundleId       string `form:"bundle_id"      binding:"required"`
 	BundleidId     string `form:"bundleid_id"`
-	AccountName    string `form:"account_name"`
-	AccountType    string `form:"account_type"`
+	AccountName    string `form:"account_name"   binding:"required"`
+	AccountType    string `form:"account_type"   binding:"required"`
 	Operator       string `form:"principal"`
 	DevProfileName string `form:"dev_profile_name"`
 	DisProfileName string `form:"dist_profile_name"`
