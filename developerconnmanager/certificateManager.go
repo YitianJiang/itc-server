@@ -132,7 +132,7 @@ func InsertCertificate(c *gin.Context) {
 	strs := strings.Split(body.CertType, "_")
 	certTypeSufix := strs[len(strs)-1]
 
-	if body.AccountType == "Enterprise" || certTypeSufix == "PUSH" {
+	if body.AccountType == "Enterprise" {
 		//在数据库插入证书记录
 		var certInfo devconnmanager.CertInfo
 		certInfo.TeamId = body.TeamId
@@ -146,10 +146,6 @@ func InsertCertificate(c *gin.Context) {
 		if certTypeSufix == "DISTRIBUTION" {
 			certInfo.PrivKeyUrl = _const.TOS_PRIVATE_KEY_URL_DIST
 			certInfo.CsrFileUrl = _const.TOS_CSR_FILE_URL_DIST
-		}
-		if certTypeSufix == "PUSH" {
-			certInfo.PrivKeyUrl = _const.TOS_PRIVATE_KEY_URL_PUSH
-			certInfo.CsrFileUrl = _const.TOS_CSR_FILE_URL_PUSH
 		}
 		dbResult := devconnmanager.InsertCertInfo(&certInfo)
 		if !dbResult {
@@ -166,12 +162,30 @@ func InsertCertificate(c *gin.Context) {
 		if body.CertPrincipal == "" {
 			body.CertPrincipal = utils.CreateCertPrincipal
 		}
-		err := sendNodeAlertToLark(certInfo.AccountName, certInfo.CertType, certInfo.CsrFileUrl, body.CertPrincipal, &botService)
+		err := sendNodeAlertToLark(certInfo.AccountName, certInfo.CertType, certInfo.CsrFileUrl, body.CertPrincipal, body.UserName, &botService)
 		utils.RecordError("发送新建证书提醒lark失败：", err)
 
 		filterCert(&certInfo)
 		c.JSON(http.StatusOK, gin.H{
 			"data":      certInfo,
+			"errorCode": 0,
+			"errorInfo": "",
+		})
+		return
+	}
+	if certTypeSufix == "PUSH" {
+		//组装lark消息 发送给负责人（用户指定or系统默认）
+		botService := service.BotService{}
+		botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
+		if body.CertPrincipal == "" {
+			body.CertPrincipal = utils.CreateCertPrincipal
+		}
+		csrFileUrl := _const.TOS_CSR_FILE_URL_PUSH
+		err := sendNodeAlertToLark(body.AccountName, body.CertType, csrFileUrl, body.CertPrincipal, body.UserName, &botService, body.BundleId)
+		utils.RecordError("发送新建证书提醒lark失败：", err)
+
+		c.JSON(http.StatusOK, gin.H{
+			"data":      nil,
 			"errorCode": 0,
 			"errorInfo": "",
 		})
@@ -281,7 +295,36 @@ func UploadCertificate(c *gin.Context) {
 
 	//logs.Info("%v",condition)
 	//logs.Info("%v",certInfoInputs)
-	certInfo := devconnmanager.UpdateCertInfoAfterUpload(condition, certInfoInputs)
+	var certInfo *devconnmanager.CertInfo
+
+	if requestData.CertType != _const.IOS_PUSH && requestData.CertType != _const.MAC_PUSH {
+		var certInfo devconnmanager.CertInfo
+		certInfo.PrivKeyUrl = _const.TOS_PRIVATE_KEY_URL_PUSH
+		certInfo.CsrFileUrl = _const.TOS_CSR_FILE_URL_PUSH
+		certInfo.CertType = requestData.CertType
+		certInfo.TeamId = requestData.TeamId
+		certInfo.AccountName = requestData.AccountName
+		if requestData.CertName != "" {
+			certInfo.CertName = requestData.CertName
+		} else {
+			certInfo.CertName = certFileName
+		}
+		certInfo.CertId = requestData.CertId
+		certInfo.CertDownloadUrl = certUrl
+		certInfo.CertExpireDate = expireTime.Format("2006-01-02 15:04:05")
+		err1 := devconnmanager.InsertRecord(&certInfo)
+		err2 := devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundle_id": requestData.BundleId}, map[string]interface{}{"push_cert_id": requestData.CertId})
+		if err1 != nil {
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "证书数据库插入失败", certInfo)
+			return
+		}
+		if err2 != nil {
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleIdProfile数据库更新失败", certInfo)
+			return
+		}
+	} else {
+		certInfo = devconnmanager.UpdateCertInfoAfterUpload(condition, certInfoInputs)
+	}
 
 	utils.AssembleJsonResponse(c, _const.SUCCESS, "success", certInfo)
 }
@@ -639,8 +682,8 @@ func dealCertName(certName string) string {
 	return ret
 }
 
-func sendNodeAlertToLark(accountName string, certType string, csrUrl string, principal string, botService *service.BotService) error {
-	cardMessage := generateSendMessageForm(accountName, certType, csrUrl)
+func sendNodeAlertToLark(accountName, certType, csrUrl, principal, userName string, botService *service.BotService, bundleId ...string) error {
+	cardMessage := generateSendMessageForm(accountName, certType, csrUrl, userName, bundleId...)
 	//发送消息
 	email := principal
 	if !strings.Contains(principal, "@bytedance.com") {
@@ -652,8 +695,8 @@ func sendNodeAlertToLark(accountName string, certType string, csrUrl string, pri
 	return err
 }
 
-func generateSendMessageForm(accountName string, certType string, csrUrl string) *form.SendMessageForm {
-	cardInfoFormArray := generateCardInfoOfCreateCert(accountName, certType, csrUrl)
+func generateSendMessageForm(accountName, certType, csrUrl, userName string, bundleId ...string) *form.SendMessageForm {
+	cardInfoFormArray := generateCardInfoOfCreateCert(accountName, certType, csrUrl, userName, bundleId...)
 	cardHeaderTitle := "iOS证书管理通知"
 	cardForm := form.GenerateCardForm(nil, getCardHeader(cardHeaderTitle), *cardInfoFormArray, nil)
 	cardMessageContent := form.GenerateCardMessageContent(cardForm)
@@ -671,7 +714,7 @@ func getCardHeader(headerTitle string) *form.CardElementForm {
 	return cardHeader
 }
 
-func generateCardInfoOfCreateCert(accountName string, certType string, csrUrl string) *[][]form.CardElementForm {
+func generateCardInfoOfCreateCert(accountName, certType, csrUrl, userName string, bundleId ...string) *[][]form.CardElementForm {
 	var cardFormArray [][]form.CardElementForm
 
 	//插入提示信息
@@ -692,6 +735,8 @@ func generateCardInfoOfCreateCert(accountName string, certType string, csrUrl st
 
 	cardFormArray = append(cardFormArray, accountFormList)
 
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, userName))
+
 	//插入证书类型信息
 	var certTypeFormList []form.CardElementForm
 
@@ -704,6 +749,11 @@ func generateCardInfoOfCreateCert(accountName string, certType string, csrUrl st
 	certTypeFormList = append(certTypeFormList, *certTypeTextForm)
 
 	cardFormArray = append(cardFormArray, certTypeFormList)
+
+	//push证书需要bundleId
+	if len(bundleId) > 0 {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdHeader, bundleId[0]))
+	}
 
 	//插入csr文件url信息
 	var csrInfoFormList []form.CardElementForm

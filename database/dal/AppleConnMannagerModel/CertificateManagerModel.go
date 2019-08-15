@@ -18,12 +18,14 @@ type CertInfo struct {
 }
 
 type UploadCertRequest struct {
-	TeamId   string `form:"team_id"       binding:"required"`
-	CertName string `form:"cert_name"`
-	CertId   string `form:"cert_id"       binding:"required"`
-	CertType string `form:"cert_type"     binding:"required"`
-	Id       string `form:"ID"            binding:"required"`
-	UserName string `form:"user_name"     binding:"required"`
+	TeamId      string `form:"team_id"       binding:"required"`
+	CertName    string `form:"cert_name"`
+	CertId      string `form:"cert_id"       binding:"required"`
+	CertType    string `form:"cert_type"     binding:"required"`
+	Id          string `form:"ID"            binding:"required"`
+	UserName    string `form:"user_name"     binding:"required"`
+	AccountName string `form:"account_name"     binding:"required"`
+	BundleId    string `form:"bundle_id"`
 }
 
 type CreCertResponse struct {
@@ -60,6 +62,8 @@ type InsertCertRequest struct {
 	CertType      string `json:"cert_type"    binding:"required"`
 	CertPrincipal string `json:"cert_principal"`
 	AccountType   string `json:"account_type" binding:"required"`
+	BundleId      string `json:"bundle_id"`
+	UserName      string `json:"user_name"`
 }
 
 type CreAppleCertReq struct {
