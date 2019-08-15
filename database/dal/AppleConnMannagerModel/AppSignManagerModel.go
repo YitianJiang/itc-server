@@ -42,7 +42,7 @@ type ProfileCreateOrUpdateRequest struct {
 	ProfileName     string `json:"profile_name"   binding:"required"`
 	ProfileType     string `json:"profile_type"   binding:"required"`
 	UserName        string `json:"user_name"      binding:"required"`
-	BundlePrincipal string `json:"bundle_principal"`
+	BundlePrincipal string `json:"principal"`
 }
 
 type ProfileUploadRequest struct {
@@ -60,7 +60,7 @@ type ProfileDeleteRequest struct {
 	TeamId      string `form:"team_id"        binding:"required"`
 	AccountName string `form:"account_name"`
 	AccountType string `form:"account_type"`
-	Operator    string `form:"profile_principal"`
+	Operator    string `form:"principal"`
 }
 type BundleDeleteRequest struct {
 	DevProfileId   string `form:"dev_profile_id"`
@@ -72,7 +72,7 @@ type BundleDeleteRequest struct {
 	BundleidId     string `form:"bundleid_id"`
 	AccountName    string `form:"account_name"`
 	AccountType    string `form:"account_type"`
-	Operator       string `form:"bundle_principal"`
+	Operator       string `form:"principal"`
 	DevProfileName string `form:"dev_profile_name"`
 	DisProfileName string `form:"dist_profile_name"`
 }
@@ -106,7 +106,7 @@ type CreateBundleProfileRequest struct {
 	TeamId          string `json:"team_id"        binding:"required"`
 	AppId           string `json:"app_id"         binding:"required"`
 	AppName         string `json:"app_name"       binding:"required"`
-	BundlePrincipal string `json:"bundle_principal"`
+	BundlePrincipal string `json:"principal"`
 	BundleIdInfo
 	UserName                  string            `json:"user_name"      binding:"required"`
 	DevProfileInfo            ProfileInfo       `json:"dev_info_data"`

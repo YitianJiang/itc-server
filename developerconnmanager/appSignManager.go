@@ -23,6 +23,7 @@ import (
 	"time"
 )
 
+//todo actionURL修改
 //tos通用处理逻辑
 func uploadProfileToTos(profileContent []byte, tosFilePath string) bool {
 	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME_JYT, _const.TOS_BUCKET_TOKEN_JYT)
@@ -2397,7 +2398,7 @@ func deleteInfoFromAppleApi(tokenString, url, teamId, profileName string) bool {
 		if accounts != nil && len(*accounts) > 0 {
 			urlInfos := strings.Split(url, "/")
 			manualUrl := utils.APPLE_DELETE_PROFILE_URL + urlInfos[len(urlInfos)-1]
-			message := "通过苹果openAPI删除profile失败，请登陆提示账号手动删除！\n"
+			message := "通过苹果OpenAPI删除profile失败，请登陆提示账号手动删除！\n"
 			message += "profile名称:" + profileName + "\n"
 			message += "账号名：" + (*accounts)[0].AccountName + "\n"
 			message += "删除地址:" + manualUrl
