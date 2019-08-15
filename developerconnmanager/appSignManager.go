@@ -679,7 +679,12 @@ func generateCardOfCreateBundleId(requestData *devconnmanager.CreateBundleProfil
 	needPushCert := false
 	for _, capability := range requestData.EnableCapabilitiesChange {
 		if !needPushCert && capability == "PUSH_NOTIFICATIONS" {
-			needPushCert = true
+			bundleIdProfile := devconnmanager.QueryAppBundleProfiles(map[string]interface{}{"bundle_id": requestData.BundleId})
+			if len(*bundleIdProfile) == 0 {
+				logs.Error("数据库中不存在bundleid_id=%s 的记录", requestData.BundleIdId)
+			} else if (*bundleIdProfile)[0].PushCertId == "" {
+				needPushCert = true
+			}
 		}
 		capabilitiesString = capabilitiesString + capability + ", "
 	}
@@ -767,7 +772,12 @@ func generateCardOfUpdateBundleId(requestData *devconnmanager.CreateBundleProfil
 	needPushCert := false
 	for _, capability := range requestData.EnableCapabilitiesChange {
 		if !needPushCert && capability == "PUSH_NOTIFICATIONS" {
-			needPushCert = true
+			bundleIdProfile := devconnmanager.QueryAppBundleProfiles(map[string]interface{}{"bundle_id": requestData.BundleId})
+			if len(*bundleIdProfile) == 0 {
+				logs.Error("数据库中不存在bundleid_id=%s 的记录", requestData.BundleIdId)
+			} else if (*bundleIdProfile)[0].PushCertId == "" {
+				needPushCert = true
+			}
 		}
 		capabilitiesString = capabilitiesString + capability + ", "
 	}
@@ -1907,7 +1917,7 @@ func CreateOrUpdateProfile(c *gin.Context) {
 		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
 		return
 	}
-	//todo 企业分发类型账号，通知工单处理人进行处理
+	//企业分发类型账号，通知工单处理人进行处理
 	if requestData.AccountType == _const.Enterprise {
 		logs.Info("企业分发类型账号，通知工单处理人进行处理")
 		logs.Info(requestData.AccountName, requestData.AccountType, requestData.BundleId, requestData.UseCertId,
