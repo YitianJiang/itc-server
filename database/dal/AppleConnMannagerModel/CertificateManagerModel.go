@@ -22,7 +22,7 @@ type UploadCertRequest struct {
 	CertName    string `form:"cert_name"`
 	CertId      string `form:"cert_id"       binding:"required"`
 	CertType    string `form:"cert_type"     binding:"required"`
-	Id          string `form:"ID"            binding:"required"`
+	Id          string `form:"ID"`
 	UserName    string `form:"user_name"     binding:"required"`
 	AccountName string `form:"account_name"     binding:"required"`
 	BundleId    string `form:"bundle_id"`
@@ -87,7 +87,7 @@ type GetPermsResponse struct {
 }
 
 type DelCertRequest struct {
-	ID           string `form:"ID"             binding:"required"`
+	ID           string `form:"ID"`
 	CertId       string `form:"cert_id"`
 	CertName     string `form:"cert_name"`
 	TeamId       string `form:"team_id"        binding:"required"`
@@ -95,6 +95,7 @@ type DelCertRequest struct {
 	AccountName  string `form:"account_name"   binding:"required"`
 	UserName     string `form:"username"       binding:"required"`
 	AccType      string `form:"account_type"`
+	BundleId     string `form:"bundle_id"`
 	CertOperator string `form:"cert_principal"`
 }
 type DelCertFeedback struct {

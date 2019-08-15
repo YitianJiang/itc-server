@@ -2215,10 +2215,12 @@ func packeBundleProfileCert(c *gin.Context, bqr *devconnmanager.APPandBundle, sh
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库查询push证书信息失败", "")
 			return nil
 		}
+		//logs.Notice("cert_id"+(*pushCert).CertType)
+		bundleInfo.PushCert.CertName = (*pushCert).CertName
+		bundleInfo.PushCert.CertIDID = fmt.Sprint((*pushCert).ID)
 		bundleInfo.PushCert.CertId = (*pushCert).CertId
 		bundleInfo.PushCert.CertType = (*pushCert).CertType
-		expiretime, _ := time.Parse((*pushCert).CertExpireDate, "2006-01-02 15:04:05")
-		bundleInfo.PushCert.CertExpireDate = &expiretime
+		bundleInfo.PushCert.CertExpireDate = (*pushCert).CertExpireDate
 		bundleInfo.PushCert.CertDownloadUrl = (*pushCert).CertDownloadUrl
 		bundleInfo.PushCert.PrivKeyUrl = (*pushCert).PrivKeyUrl
 	}
@@ -2260,13 +2262,13 @@ func packProfileSection(bqr *devconnmanager.APPandBundle, showType int, profile 
 		profile.DevProfile.ProfileId = bqr.ProfileId
 		profile.DevProfile.ProfileName = bqr.ProfileName
 		profile.DevProfile.ProfileDownloadUrl = bqr.ProfileDownloadUrl
-		profile.DevProfile.ProfileExpireDate = &bqr.ProfileExpireDate
+		profile.DevProfile.ProfileExpireDate = bqr.ProfileExpireDate
 	} else if showType == 1 {
 		profile.DistProfile.ProfileType = bqr.ProfileType
 		profile.DistProfile.ProfileName = bqr.ProfileName
 		profile.DistProfile.ProfileId = bqr.ProfileId
 		profile.DistProfile.ProfileDownloadUrl = bqr.ProfileDownloadUrl
-		profile.DistProfile.ProfileExpireDate = &bqr.ProfileExpireDate
+		profile.DistProfile.ProfileExpireDate = bqr.ProfileExpireDate
 	}
 }
 
@@ -2279,14 +2281,14 @@ func packCertSection(fqr *devconnmanager.APPandCert, showType int, certSection *
 			certSection.DistCert.CertType = fqr.CertType
 			certSection.DistCert.CertId = fqr.CertId
 			certSection.DistCert.CertDownloadUrl = fqr.CertDownloadUrl
-			certSection.DistCert.CertExpireDate = &fqr.CertExpireDate
+			certSection.DistCert.CertExpireDate = fqr.CertExpireDate
 		} else if strings.Contains(fqr.CertType, "DEVELOPMENT") {
 			certSection.DevCert.CertIDID = fqr.CertIdId
 			certSection.DevCert.CertName = fqr.CertName
 			certSection.DevCert.CertType = fqr.CertType
 			certSection.DevCert.CertId = fqr.CertId
 			certSection.DevCert.CertDownloadUrl = fqr.CertDownloadUrl
-			certSection.DevCert.CertExpireDate = &fqr.CertExpireDate
+			certSection.DevCert.CertExpireDate = fqr.CertExpireDate
 		}
 	}
 }

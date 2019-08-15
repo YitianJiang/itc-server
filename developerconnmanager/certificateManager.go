@@ -305,7 +305,7 @@ func UploadCertificate(c *gin.Context) {
 	//logs.Info("%v",certInfoInputs)
 	var certInfo *devconnmanager.CertInfo
 
-	if requestData.CertType != _const.IOS_PUSH && requestData.CertType != _const.MAC_PUSH {
+	if requestData.CertType == _const.IOS_PUSH || requestData.CertType == _const.MAC_PUSH {
 		var certInfo devconnmanager.CertInfo
 		certInfo.PrivKeyUrl = _const.TOS_PRIVATE_KEY_URL_PUSH
 		certInfo.CsrFileUrl = _const.TOS_CSR_FILE_URL_PUSH
@@ -330,11 +330,14 @@ func UploadCertificate(c *gin.Context) {
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleIdProfile数据库更新失败", certInfo)
 			return
 		}
+		utils.AssembleJsonResponse(c, _const.SUCCESS, "success", certInfo)
+		return
 	} else {
 		certInfo = devconnmanager.UpdateCertInfoAfterUpload(condition, certInfoInputs)
+		utils.AssembleJsonResponse(c, _const.SUCCESS, "success", certInfo)
+		return
 	}
 
-	utils.AssembleJsonResponse(c, _const.SUCCESS, "success", certInfo)
 }
 
 func DeleteCertificate(c *gin.Context) {
@@ -350,10 +353,26 @@ func DeleteCertificate(c *gin.Context) {
 		})
 		return
 	}
-	checkResult := checkDelCertRequest(c, &delCertRequest)
-	if !checkResult {
-		return
+	//push_cert未在苹果后台生成删除操作
+	if delCertRequest.ID == "" {
+		if delCertRequest.CertType == _const.IOS_PUSH || delCertRequest.CertType == _const.MAC_PUSH {
+			if delCertRequest.BundleId == "" || delCertRequest.BundleId == _const.UNDEFINED{
+				utils.AssembleJsonResponse(c,1,"bundle_id为空","bundle_id不可为空")
+				return
+			}
+			if err := devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundle_id":delCertRequest.BundleId},
+				map[string]interface{}{"push_cert_id":nil});err != nil {
+				utils.AssembleJsonResponse(c,1,"更新app_bundle_profile信息失败","更新app_bundle_profile信息失败")
+				return
+			}
+				utils.AssembleJsonResponse(c,0,"success","删除成功")
+			return
+		}else{
+			utils.AssembleJsonResponse(c,1,"ID为空","ID不可为空")
+			return
+		}
 	}
+
 	//删除未在苹果后台生成的证书---此if下操作待apple open API ready后可删除或不执行
 	if delCertRequest.CertId == "" {
 		condition := map[string]interface{}{
@@ -814,37 +833,6 @@ func deleteCertInApple(tokenString string, certId string) int {
 	return -1
 }
 
-func checkDelCertRequest(c *gin.Context, delCertRequest *devconnmanager.DelCertRequest) bool {
-	if delCertRequest.TeamId == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 2,
-			"errorInfo": "team_id为空！",
-		})
-		return false
-	}
-	if delCertRequest.ID == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 3,
-			"errorInfo": "id为空！",
-		})
-		return false
-	}
-	if delCertRequest.CertType == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 4,
-			"errorInfo": "cert_type为空！",
-		})
-		return false
-	}
-	if delCertRequest.UserName == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 5,
-			"errorInfo": "username为空！",
-		})
-		return false
-	}
-	return true
-}
 
 //证书数据库删除操作--前端交互版
 func certDBDelete(c *gin.Context, condition *map[string]interface{}, updateInfo *map[string]interface{}) {

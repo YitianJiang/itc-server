@@ -412,7 +412,7 @@ type BundleProfileInfo struct {
 	ProfileId          string     `json:"profile_id"`
 	ProfileName        string     `json:"profile_name"`
 	ProfileType        string     `json:"profile_type"`
-	ProfileExpireDate  *time.Time `json:"profile_expire_date"`
+	ProfileExpireDate  string     `json:"profile_expire_date"`
 	ProfileDownloadUrl string     `json:"profile_download_url"`
 }
 
@@ -426,7 +426,7 @@ type AppCertInfo struct {
 	CertId          string     `json:"cert_id"`
 	CertName        string     `json:"cert_name"`
 	CertType        string     `json:"cert_type"`
-	CertExpireDate  *time.Time `json:"cert_expire_date"`
+	CertExpireDate  string     `json:"cert_expire_date"`
 	CertDownloadUrl string     `json:"cert_download_url"`
 	PrivKeyUrl      string     `json:"priv_key_url"`
 }
@@ -447,7 +447,7 @@ type APPandCert struct {
 	CertId              string    `json:"cert_id"`
 	CertName            string    `json:"cert_name"`
 	CertType            string    `json:"cert_type"`
-	CertExpireDate      time.Time `json:"cert_expire_date"`
+	CertExpireDate      string    `json:"cert_expire_date"`
 	CertDownloadUrl     string    `json:"cert_download_url"`
 	PrivKeyUrl          string    `json:"priv_key_url"`
 }
@@ -464,6 +464,6 @@ type APPandBundle struct {
 	ProfileId          string    `json:"profile_id"`
 	ProfileName        string    `json:"profile_name"`
 	ProfileType        string    `json:"profile_type"`
-	ProfileExpireDate  time.Time `json:"profile_expire_date"`
+	ProfileExpireDate  string    `json:"profile_expire_date"`
 	ProfileDownloadUrl string    `json:"profile_download_url"`
 }

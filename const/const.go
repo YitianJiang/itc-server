@@ -60,7 +60,7 @@ const (
 	TOS_BUCKET_TOKEN_JYT      = "C5V4TROQGXMCTPXLIJFT"
 	TOS_PRIVATE_KEY_URL_DEV   = "http://tosv.byted.org/obj/staticanalysisresult/appleConnectFile/fullFileDevAccept/bytedancett_ies_dev.p12"
 	TOS_PRIVATE_KEY_URL_DIST  = "http://tosv.byted.org/obj/staticanalysisresult/appleConnectFile/fullFileAccept/bytedancett_ies_priv.p12"
-	TOS_PRIVATE_KEY_URL_PUSH  = "http://tosv.byted.org/obj/staticanalysisresult/appleConnectFile/fullFilePushAccept/bytedance_push.p122"
+	TOS_PRIVATE_KEY_URL_PUSH  = "http://tosv.byted.org/obj/staticanalysisresult/appleConnectFile/fullFilePushAccept/bytedance_push.p12"
 	TOS_CSR_FILE_FOR_DEV_KEY  = "appleConnectFile/fullFileDevAccept/CertificateSigningRequest.certSigningRequest"
 	TOS_CSR_FILE_FOR_DIST_KEY = "appleConnectFile/fullFileAccept/CertificateSigningRequest.certSigningRequest"
 	TOS_CSR_FILE_URL_DEV      = "http://tosv.byted.org/obj/staticanalysisresult/appleConnectFile/fullFileDevAccept/CertificateSigningRequest.certSigningRequest"
