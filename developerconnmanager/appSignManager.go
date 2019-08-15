@@ -2233,7 +2233,6 @@ func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle, bundleInfo 
 
 //API3-1，重组profile信息
 func packProfileSection(bqr *devconnmanager.APPandBundle, showType int, profile *devconnmanager.BundleProfileGroup) {
-	logs.Notice("abp的profileId:"+bqr.DistProfileId+"  "+bqr.DevProfileId)
 	profile.DevProfile.ProfileId = bqr.DevProfileId
 	profile.DistProfile.ProfileId = bqr.DistProfileId
 	if strings.Contains(bqr.ProfileType, "APP_DEVELOPMENT") {
