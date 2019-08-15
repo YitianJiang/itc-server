@@ -23,6 +23,7 @@ import (
 	"time"
 )
 
+//todo actionURL修改
 //tos通用处理逻辑
 func uploadProfileToTos(profileContent []byte, tosFilePath string) bool {
 	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME_JYT, _const.TOS_BUCKET_TOKEN_JYT)
@@ -266,7 +267,7 @@ func GetAppSignListDetailInfo(c *gin.Context) {
 	appNameList += ")"
 	//根据app_id和app_name获取bundleid信息+profile信息
 	var bQueryResult []devconnmanager.APPandBundle
-	sql_c := "select abp.app_name,abp.bundle_id as bundle_id_index,abp.bundleid_isdel as bundle_id_is_del,abp.push_cert_id,ap.profile_id,ap.profile_name,ap.profile_expire_date,ap.profile_type,ap.profile_download_url,ab.*" +
+	sql_c := "select abp.app_name,abp.bundle_id as bundle_id_index,abp.bundleid_isdel as bundle_id_is_del,abp.push_cert_id,abp.dev_profile_id,abp.dist_profile_id,ap.profile_id,ap.profile_name,ap.profile_expire_date,ap.profile_type,ap.profile_download_url,ab.*" +
 		" from tt_apple_bundleId ab,tt_app_bundleId_profiles abp left join tt_apple_profile ap " +
 		"on (abp.dev_profile_id = ap.profile_id or abp.dist_profile_id = ap.profile_id) where abp.app_id = '" + requestInfo.AppId + "' and abp.app_name in " + appNameList + " and abp.bundle_id = ab.bundle_id " +
 		"and abp.deleted_at IS NULL and ab.deleted_at IS NULL and ap.deleted_at IS NULL"
@@ -1663,6 +1664,11 @@ func DeleteBundleid(c *gin.Context) {
 	if paramOk := paramCheckOfBundleDelete(c, &delRequest); !paramOk {
 		return
 	}
+	//此if条件兼容，bundleid_id未录入时该bundle_id的删除操作
+	if delRequest.BundleidId == ""{
+		bundleDelete(c,&delRequest)
+		return
+	}
 	//获取bundle信息
 	bundleid := devconnmanager.QueryAppBundleProfiles(map[string]interface{}{
 		"bundleid_id": delRequest.BundleidId,
@@ -1735,29 +1741,7 @@ func DeleteBundleid(c *gin.Context) {
 			}
 		}
 		//bundleid删除
-		queryData := map[string]interface{}{
-			"bundleid_id": delRequest.BundleidId,
-		}
-		if delRequest.IsDel == "1" {
-			updateData := map[string]interface{}{
-				"bundleid_isdel": "1",
-				"push_cert_id":   nil,
-			}
-			updateErr := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
-			if updateErr != nil {
-				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId软删除失败", "")
-				return
-			}
-			utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId软删除成功", "")
-		} else {
-			delErr1 := devconnmanager.DeleteAppBundleProfiles(queryData)
-			delErr2 := devconnmanager.DeleteAppleBundleId(queryData)
-			if delErr1 != nil || delErr2 != nil {
-				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId完全删除失败", "")
-				return
-			}
-			utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId完全删除成功", "")
-		}
+		bundleDelete(c,&delRequest)
 		return
 	}
 
@@ -1796,35 +1780,7 @@ func DeleteBundleid(c *gin.Context) {
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleid_id苹果后台删除失败", "")
 		return
 	}
-	queryData := map[string]interface{}{
-		"bundleid_id": delRequest.BundleidId,
-	}
-	if delRequest.IsDel == "1" {
-		updateData := map[string]interface{}{
-			"bundleid_isdel": "1",
-			"push_cert_id":   nil,
-			"user_name":      delRequest.UserName,
-		}
-		updateErr := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
-		if updateErr != nil {
-			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId软删除失败", "")
-			return
-		}
-		utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId软删除成功", "")
-	} else {
-		//删除并更新操作人
-		updateData := map[string]interface{}{
-			"deleted_at": time.Now(),
-			"user_name":  delRequest.UserName,
-		}
-		delErr1 := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
-		delErr2 := devconnmanager.UpdateAppleBundleId(queryData, updateData)
-		if delErr1 != nil || delErr2 != nil {
-			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId完全删除失败", "")
-			return
-		}
-		utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId完全删除成功", "")
-	}
+	bundleDelete(c,&delRequest)
 }
 
 //bundle删除异步确认
@@ -1953,6 +1909,12 @@ func CreateOrUpdateProfile(c *gin.Context) {
 		utils.RecordError("发送更新bundleId工单失败：", err)
 		if err != nil {
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送创建profile工单失败", nil)
+			return
+		}
+		profileId:= _const.NeedUpdate
+		updateRelationError := UpdateBundleProfilesRelation(requestData.BundleId,requestData.ProfileType,&profileId,requestData.UserName)
+		if updateRelationError != nil {
+			utils.AssembleJsonResponse(c,http.StatusInternalServerError,"更新app_bundle_profiles失败","")
 			return
 		}
 		utils.AssembleJsonResponse(c, _const.SUCCESS, "发送创建profile工单成功", nil)
@@ -2250,8 +2212,12 @@ func packeBundleProfileCert(c *gin.Context, bqr *devconnmanager.APPandBundle, sh
 func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle, bundleInfo *devconnmanager.BundleProfileCert) {
 	//config_capacibilitie_obj
 	bundleInfo.ConfigCapObj = make(map[string]string)
-	bundleInfo.ConfigCapObj["ICLOUD"] = bundleStruct.ICLOUD
-	bundleInfo.ConfigCapObj["DATA_PROTECTION"] = bundleStruct.DATA_PROTECTION
+	if(bundleStruct.ICLOUD != ""){
+		bundleInfo.ConfigCapObj["ICLOUD"] = bundleStruct.ICLOUD
+	}
+	if bundleStruct.DATA_PROTECTION !="" {
+		bundleInfo.ConfigCapObj["DATA_PROTECTION"] = bundleStruct.DATA_PROTECTION
+	}
 
 	//enableList
 	param, _ := json.Marshal(bundleStruct)
@@ -2266,8 +2232,11 @@ func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle, bundleInfo 
 
 //API3-1，重组profile信息
 func packProfileSection(bqr *devconnmanager.APPandBundle, showType int, profile *devconnmanager.BundleProfileGroup) {
+	profile.DevProfile.ProfileId = bqr.DevProfileId
+	profile.DistProfile.ProfileId = bqr.DistProfileId
 	if strings.Contains(bqr.ProfileType, "APP_DEVELOPMENT") {
 		profile.DevProfile.ProfileType = bqr.ProfileType
+		profile.DevProfile.ProfileId = bqr.DevProfileId
 		profile.DevProfile.ProfileId = bqr.ProfileId
 		profile.DevProfile.ProfileName = bqr.ProfileName
 		profile.DevProfile.ProfileDownloadUrl = bqr.ProfileDownloadUrl
@@ -2384,7 +2353,7 @@ func deleteInfoFromAppleApi(tokenString, url, teamId, profileName string) bool {
 		if accounts != nil && len(*accounts) > 0 {
 			urlInfos := strings.Split(url, "/")
 			manualUrl := utils.APPLE_DELETE_PROFILE_URL + urlInfos[len(urlInfos)-1]
-			message := "通过苹果openAPI删除profile失败，请登陆提示账号手动删除！\n"
+			message := "通过苹果OpenAPI删除profile失败，请登陆提示账号手动删除！\n"
 			message += "profile名称:" + profileName + "\n"
 			message += "账号名：" + (*accounts)[0].AccountName + "\n"
 			message += "删除地址:" + manualUrl
@@ -2474,6 +2443,10 @@ func paramCheckOfBundleDelete(c *gin.Context, delRequest *devconnmanager.BundleD
 	if isDelOk := checkIsDel(c, delRequest.IsDel); !isDelOk {
 		return false
 	}
+	//校验非工单类型bundleId信息删除
+	if delRequest.BundleidId == "" && delRequest.AccountType != _const.Enterprise {
+		return false
+	}
 	return true
 }
 
@@ -2504,4 +2477,37 @@ func generateCenterText(text string) []form.CardElementForm {
 	textForm := form.GenerateTextTag(&text, false, nil)
 	textForm.Style = &utils.SectionTextStyle
 	return []form.CardElementForm{*textForm}
+}
+
+func bundleDelete(c *gin.Context,delRequest *devconnmanager.BundleDeleteRequest){
+	queryData := map[string]interface{}{
+		"bundle_id": delRequest.BundleId,
+	}
+	updateData := make(map[string]interface{})
+	if delRequest.AccountType != _const.Enterprise {
+		updateData["user_name"]= delRequest.UserName
+	}
+	if delRequest.IsDel == "1" {
+		updateData = map[string]interface{}{
+			"bundleid_isdel": "1",
+			"push_cert_id":   nil,
+		}
+		updateErr := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
+		if updateErr != nil {
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId软删除失败", "")
+			return
+		}
+		utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId软删除成功", "")
+	} else {
+		updateData = map[string]interface{}{
+			"deleted_at": time.Now(),
+		}
+		delErr1 := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
+		delErr2 := devconnmanager.UpdateAppleBundleId(queryData, updateData)
+		if delErr1 != nil || delErr2 != nil {
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "bundleId完全删除失败", "")
+			return
+		}
+		utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId完全删除成功", "")
+	}
 }

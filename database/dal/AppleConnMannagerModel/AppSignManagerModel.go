@@ -42,7 +42,7 @@ type ProfileCreateOrUpdateRequest struct {
 	ProfileName     string `json:"profile_name"   binding:"required"`
 	ProfileType     string `json:"profile_type"   binding:"required"`
 	UserName        string `json:"user_name"      binding:"required"`
-	BundlePrincipal string `json:"bundle_principal"`
+	BundlePrincipal string `json:"principal"`
 }
 
 type ProfileUploadRequest struct {
@@ -60,7 +60,7 @@ type ProfileDeleteRequest struct {
 	TeamId      string `form:"team_id"        binding:"required"`
 	AccountName string `form:"account_name"`
 	AccountType string `form:"account_type"`
-	Operator    string `form:"profile_principal"`
+	Operator    string `form:"principal"`
 }
 type BundleDeleteRequest struct {
 	DevProfileId   string `form:"dev_profile_id"`
@@ -68,10 +68,11 @@ type BundleDeleteRequest struct {
 	UserName       string `form:"user_name"      binding:"required"`
 	IsDel          string `form:"is_del"         binding:"required"`
 	TeamId         string `form:"team_id"        binding:"required"`
-	BundleidId     string `form:"bundleid_id"    binding:"required"`
+	BundleId       string `form:"bundle_id"      binding:"required"`
+	BundleidId     string `form:"bundleid_id"`
 	AccountName    string `form:"account_name"`
 	AccountType    string `form:"account_type"`
-	Operator       string `form:"bundle_principal"`
+	Operator       string `form:"principal"`
 	DevProfileName string `form:"dev_profile_name"`
 	DisProfileName string `form:"dist_profile_name"`
 }
@@ -105,7 +106,7 @@ type CreateBundleProfileRequest struct {
 	TeamId          string `json:"team_id"        binding:"required"`
 	AppId           string `json:"app_id"         binding:"required"`
 	AppName         string `json:"app_name"       binding:"required"`
-	BundlePrincipal string `json:"bundle_principal"`
+	BundlePrincipal string `json:"principal"`
 	BundleIdInfo
 	UserName                  string            `json:"user_name"      binding:"required"`
 	DevProfileInfo            ProfileInfo       `json:"dev_info_data"`
@@ -407,7 +408,7 @@ type BundleProfileGroup struct {
 }
 
 type BundleProfileInfo struct {
-	UserCertId         string     `json:"user_cert_id"`
+	UserCertId         string     `json:"use_cert_id"`
 	ProfileId          string     `json:"profile_id"`
 	ProfileName        string     `json:"profile_name"`
 	ProfileType        string     `json:"profile_type"`
@@ -454,6 +455,8 @@ type APPandBundle struct {
 	AppName       string `json:"app_name"`
 	BundleIdIndex string `json:"bundle_id_index"`
 	BundleIdIsDel string `json:"bundleid_isdel"`
+	DistProfileId string `json:"dist_profile_id"`
+	DevProfileId  string `json:"dev_profile_id"`
 	AppleBundleId
 	PushCertId         string    `json:"push_cert_id"`
 	ProfileId          string    `json:"profile_id"`
