@@ -189,4 +189,14 @@ func InitRouter(r *ginex.Engine) {
 		appSignManager.POST("/createBundleProfile", developerconnmanager.CreateOrUpdateOrRestoreBundleId)
 		appSignManager.POST("/updateBundleIdId", developerconnmanager.UpdateBundleIdIdOfBundleId)
 	}
+
+	deviceapi := r.Group("/v1/deviceManage")
+	{
+		deviceapi.POST("/deviceInfoAdd", developerconnmanager.AddDeviceInfo)
+		deviceapi.GET("/deviceInfoGet", developerconnmanager.QueryDeviceInfo)
+		deviceapi.POST("/deviceInfoUpdate", developerconnmanager.UpdateDeviceInfo)
+		deviceapi.POST("/asynAddDeviceFeedback", developerconnmanager.AsynAddDeviceFeedback)
+		deviceapi.POST("/asynUpdateDeviceFeedback", developerconnmanager.AsynUpdateDeviceFeedback)
+	}
+
 }

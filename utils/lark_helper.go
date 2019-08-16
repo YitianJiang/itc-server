@@ -217,6 +217,18 @@ const (
 	ApproveAppBindAccountUrl     = "https://itc.bytedance.net/v1/appleConnManage/approveAppBindAccountFeedback"
 )
 
+//更新设备工单卡片基本信息
+var UpdateDeviceMessage="请根据设备信息登录Apple后台更新设备信息"
+var DeviceIdHeader="device id: "
+var DeviceStatusHeader="设备状态: "
+var UpdateDeviceButtonText="已更新"
+
+//新增设备工单卡片基本信息
+var AddDeviceMessage="请根据设备信息登录Apple后台添加设备并将设备信息上传至itc证书管理后台"
+var DeviceNameHeader="设备名称: "
+var UDIDHeader="UDID: "
+var PlatformHeader="平台: "
+
 //新建证书工单卡片基本信息
 var CreateCertMessage = "请根据配置信息登录Apple后台手动生成证书并上传至itc证书管理后台"
 var CreateCertAccountHeader = "账号名: "
