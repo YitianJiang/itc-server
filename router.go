@@ -189,4 +189,10 @@ func InitRouter(r *ginex.Engine) {
 		appSignManager.POST("/createBundleProfile", developerconnmanager.CreateOrUpdateOrRestoreBundleId)
 		appSignManager.POST("/updateBundleIdId", developerconnmanager.UpdateBundleIdIdOfBundleId)
 	}
+
+	authorizationManager := r.Group("/v1/authorization")
+	{
+		authorizationManager.POST("/applyForAuthorization", developerconnmanager.ApplyForAuthorization)
+		authorizationManager.POST("/approveAuthorizationApplication", developerconnmanager.ApproveAuthorizationApplication)
+	}
 }

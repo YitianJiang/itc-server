@@ -211,10 +211,12 @@ const (
 	//ApproveAppBindAccountUrl = "http://10.224.13.149:6789/v1/appleConnManage/approveAppBindAccountFeedback"
 
 	//online----actionURL
-	DELCERT_FEEDBACK_URL         = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
-	DELPROFILE_FEEDBACK_URL      = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteProfileFeedback"
-	DELBUNDLE_FEEDBACK_URL       = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteBundleFeedback"
-	ApproveAppBindAccountUrl     = "https://itc.bytedance.net/v1/appleConnManage/approveAppBindAccountFeedback"
+	DELCERT_FEEDBACK_URL     = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
+	DELPROFILE_FEEDBACK_URL  = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteProfileFeedback"
+	DELBUNDLE_FEEDBACK_URL   = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteBundleFeedback"
+	ApproveAppBindAccountUrl = "https://itc.bytedance.net/v1/appleConnManage/approveAppBindAccountFeedback"
+	//ApproveApplyForAuthorizationUrl     = "https://itc.bytedance.net/v1/authorization/approveAuthorizationApplication"
+	ApproveApplyForAuthorizationUrl = "http://10.224.15.119:6789/v1/authorization/approveAuthorizationApplication"
 )
 
 //新建证书工单卡片基本信息
@@ -295,6 +297,10 @@ var ProfileTypeHeader = "描述文件类型: "
 var Horizontal = "horizontal"
 var Gray = "gray"
 var DividerSize = "0.5"
+
+//权限申请工单基本信息
+var AuthorizationHeader = "申请权限: "
+var ApproveAuthorizationMessage = "用户正在申请apple签名体系权限，请处理"
 
 func CallLarkAPI(url string, token string, paramsIn interface{}, paramsOut interface{}) {
 	bodyByte, _ := json.Marshal(paramsIn)

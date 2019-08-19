@@ -169,6 +169,125 @@ type ProfileInfo struct {
 	BundleId    string `json:"bundle_id"`
 }
 
+func ApplyForAuthorization(c *gin.Context) {
+	var requestData devconnmanager.AuthorizationApplicationRequest
+	bindJsonError := c.ShouldBindJSON(&requestData)
+	utils.RecordError("绑定post请求body出错：%v", bindJsonError)
+	if bindJsonError != nil {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
+		return
+	}
+	logs.Info("request:%v", requestData)
+
+	botService := service.BotService{}
+	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
+	cardInfos := generateCardInfoOfApplyForAuthorization(&requestData)
+	cardActions := generateActionsOfApplyForAuthorization(requestData.TeamId, requestData.UserName, requestData.Authorization)
+
+	//var userList = utils.GetAccountAdminList(requestData.TeamId)
+	var userList = &[]string{"zhangmengqi.muki"}
+	//lark消息生成并批量发送 使用go协程
+
+	for _, adminEmailPrefix := range *userList {
+		go func() {
+			err := sendIOSCertLarkMessage(cardInfos, cardActions, adminEmailPrefix, &botService, "--权限申请审核")
+			utils.RecordError("发送lark消息错误", err)
+		}()
+	}
+
+	utils.AssembleJsonResponse(c, _const.SUCCESS, "权限申请发送成功", nil)
+	return
+}
+
+//生成绑定账号审核消息卡片内容
+func generateCardInfoOfApplyForAuthorization(requestData *devconnmanager.AuthorizationApplicationRequest) *[][]form.CardElementForm {
+	var cardFormArray [][]form.CardElementForm
+
+	//插入提示信息
+	messageText := utils.ApproveAuthorizationMessage
+	messageForm := form.GenerateTextTag(&messageText, false, nil)
+	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
+
+	//插入userName, teamId, accountName, 权限
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, requestData.UserName))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TargetTeamIdHeader, requestData.TeamId))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountHeader, requestData.AccountName))
+
+	/*accountInfos := devconnmanager.QueryAccountInfo(map[string]interface{}{"team_id": requestData.TeamId})
+	if len(*accountInfos) != 1 {
+		logs.Error("获取teamId对应的account失败：%s 错误原因：teamId对应的account记录数不等于1", requestData.TeamId)
+	} else {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountHeader, (*accountInfos)[0].AccountName))
+	}*/
+
+	var authorizationString string
+	switch requestData.Authorization {
+	case "all_cert_manager":
+		authorizationString = "全部证书管理"
+	case "dev_cert_manager":
+		authorizationString = "开发证书管理"
+	}
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AuthorizationHeader, authorizationString))
+
+	return &cardFormArray
+}
+
+//生成绑定账号审核消息卡片action
+func generateActionsOfApplyForAuthorization(teamId string, userName string, authorization string) *[]form.CardActionForm {
+	var cardActions []form.CardActionForm
+	var cardAction form.CardActionForm
+	var buttons []form.CardButtonForm
+	var approveButtonText = utils.ApproveButtonText
+	var rejectButtonText = utils.RejectButtonText
+	var hideOther = false
+	//todo
+	var url = utils.ApproveApplyForAuthorizationUrl
+
+	approveButtonParams := map[string]interface{}{"result": authorization, "teamId": teamId, "userName": userName}
+	rejectButtonParams := map[string]interface{}{"result": "-1", "teamId": teamId, "userName": userName}
+
+	approveButton, err := form.GenerateButtonForm(&approveButtonText, nil, nil, nil, "post", url, false, false, &approveButtonParams, nil, &hideOther)
+	if err != nil {
+		utils.RecordError("生成审核卡片同意button失败，", err)
+	}
+	rejectButton, err := form.GenerateButtonForm(&rejectButtonText, nil, nil, nil, "post", url, false, false, &rejectButtonParams, nil, &hideOther)
+	if err != nil {
+		utils.RecordError("生成审核卡片拒绝button失败，", err)
+	}
+	buttons = append(buttons, *approveButton)
+	buttons = append(buttons, *rejectButton)
+	cardAction.Buttons = buttons
+	cardActions = append(cardActions, cardAction)
+	return &cardActions
+}
+
+func ApproveAuthorizationApplication(c *gin.Context) {
+	var requestData devconnmanager.ApproveAuthorizationApplicationParamFromLark
+	bindJsonError := c.ShouldBindJSON(&requestData)
+	utils.RecordError("绑定post请求body出错：%v", bindJsonError)
+	if bindJsonError != nil {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
+		return
+	}
+	logs.Info("request:%v", requestData)
+	if requestData.Result == "-1" {
+		utils.AssembleJsonResponse(c, _const.SUCCESS, "权限审核成功", nil)
+		return
+	}
+	if requestData.Result != "all_cert_manager" && requestData.Result != "dev_cert_manager" {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数有误", nil)
+		return
+	}
+
+	teamId := strings.ToLower(requestData.TeamId) + "_space_account"
+	if !utils.GiveUsersPermission(&[]string{requestData.UserName}, teamId, &[]string{requestData.Result}) {
+		utils.AssembleJsonResponseWithStatusCode(c, http.StatusInternalServerError, "审核失败:权限赋予失败", nil)
+	}
+
+	utils.AssembleJsonResponse(c, _const.SUCCESS, "权限审核成功", nil)
+	return
+}
+
 func UpdateBundleIdIdOfBundleId(c *gin.Context) {
 	var requestData devconnmanager.UpdateBundleIdIdRequest
 	//获取请求参数
@@ -411,7 +530,6 @@ func CreateAppBindAccount(c *gin.Context) {
 		return
 	}
 	//调用根据资源获取admin人员信息的接口，根据该接口获取需要发送审批消息的用户list
-	//todo 暂时写死admin list
 	var userList = utils.GetAccountAdminList(requestData.TeamId)
 	//var userList = &[]string{"fanjuan.xqp"} //,"fanjuan.xqp"
 	////lark消息生成并批量发送 使用go协程
@@ -441,12 +559,15 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
 		return
 	}
-	if requestData.BundlePrincipal == ""{
+	if requestData.BundlePrincipal == "" {
 		requestData.BundlePrincipal = utils.CreateCertPrincipal
 	}
 
 	logs.Info("request:%v", requestData)
 
+	if !checkProfileValidation(&requestData, c) {
+		return
+	}
 	if requestData.AccountType == _const.Enterprise {
 		//走工单逻辑
 		createOrUpdateOrRestoreBundleIdForEnterprise(&requestData, c)
@@ -602,6 +723,24 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 		utils.AssembleJsonResponse(c, _const.SUCCESS, "bundle id创建成功", nil)
 		return
 	}
+}
+
+func checkProfileValidation(requestData *devconnmanager.CreateBundleProfileRequest, c *gin.Context) bool {
+	if requestData.DevProfileInfo.ProfileName != "" {
+		recordNum := devconnmanager.QueryAppleProfile(map[string]interface{}{"profile_name": requestData.DevProfileInfo.ProfileName, "team_id": requestData.TeamId})
+		if len(*recordNum) != 0 {
+			utils.AssembleJsonResponse(c, http.StatusBadRequest, "profileName冲突", nil)
+			return false
+		}
+	}
+	if requestData.DistProfileInfo.ProfileName != "" {
+		recordNum := devconnmanager.QueryAppleProfile(map[string]interface{}{"profile_name": requestData.DistProfileInfo.ProfileName, "team_id": requestData.TeamId})
+		if len(*recordNum) != 0 {
+			utils.AssembleJsonResponse(c, http.StatusBadRequest, "profileName冲突", nil)
+			return false
+		}
+	}
+	return true
 }
 
 func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.CreateBundleProfileRequest, c *gin.Context) {
@@ -949,7 +1088,8 @@ func checkUpdateBundleIdParams(c *gin.Context, requestData *devconnmanager.Creat
 func checkRestoreBundleIdParams(c *gin.Context, requestData *devconnmanager.CreateBundleProfileRequest) (bool, bool, bool) {
 	needUpdateDevProfile := false
 	needUpdateDistProfile := false
-	if requestData.AccountType==_const.Organization && requestData.BundleIdId == "" {
+	//enterprise账号下下存在bundleId还没在apple后台创建成功就被换绑导致bundleId被保配删除，之后在恢复时是没有bundleIdId的
+	if requestData.AccountType == _const.Organization && requestData.BundleIdId == "" {
 		utils.AssembleJsonResponse(c, http.StatusBadRequest, "恢复bundleId时需要传入bundleIdId", nil)
 		return false, false, false
 	}
@@ -1037,7 +1177,7 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 			bundleIdProfile := devconnmanager.QueryAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId})
 			if len(*bundleIdProfile) == 0 {
 				logs.Error("数据库中不存在bundleid_id=%s 的记录", requestData.BundleIdId)
-			} else if (*bundleIdProfile)[0].PushCertId == ""||(*bundleIdProfile)[0].PushCertId == _const.NeedUpdate {
+			} else if (*bundleIdProfile)[0].PushCertId == "" || (*bundleIdProfile)[0].PushCertId == _const.NeedUpdate {
 				//发送创建push证书的工单
 				if sendPushCertLark(requestData) {
 					_ = devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId}, map[string]interface{}{"push_cert_id": _const.NeedUpdate})
@@ -1448,25 +1588,13 @@ func updateDBAfterChangeCapabilities(failChannel chan string, successChannel cha
 	return nil, &failedList
 }
 
-/*func openCapabilityInApple(capability string,bundleIdId string,tokenString string,failChannel chan string,successChannel chan string,) {
-	var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
-	openBundleIdCapabilityRequest.Data.Type="bundleIdCapabilities"
-	openBundleIdCapabilityRequest.Data.Attributes.CapabilityType=capability
-	openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type="bundleIds"
-	openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id=bundleIdId
-	if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, nil){
-		failChannel<-capability
-		return
-	}
-	successChannel<-capability
-}*/
-
 func alertApproveToUser(adminEmailPrefix string, id uint, cardInfos *[][]form.CardElementForm, botService *service.BotService) {
 	cardActions := generateActionsOfApproveBindAccount(id, adminEmailPrefix)
-	err := sendIOSCertLarkMessage(cardInfos, cardActions, adminEmailPrefix, botService)
+	err := sendIOSCertLarkMessage(cardInfos, cardActions, adminEmailPrefix, botService, "--APP绑定账号审核")
 	utils.RecordError("发送lark消息错误", err)
 }
 
+//app绑定/换绑账号申请审核
 func ApproveAppBindAccountFeedback(c *gin.Context) {
 	var requestData devconnmanager.ApproveAppBindAccountParamFromLark
 	err := c.ShouldBindJSON(&requestData)
@@ -1532,6 +1660,20 @@ func ApproveAppBindAccountFeedback(c *gin.Context) {
 	}
 }
 
+/*func sendApproveResultToApplicant(requestData *devconnmanager.ApproveAppBindAccountParamFromLark, accountCertInfo *devconnmanager.AppAccountCert) {
+	botService := service.BotService{}
+	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
+	response, err := botService.GetUserInfoByOpenId(requestData.OpenId)
+	utils.RecordError("获取用户信息错误", err)
+	name := "null"
+	logs.Info("%v", response)
+	switch response["name"].(type) {
+	case string:
+		name = response["name"].(string)
+	}
+	message := fmt.Sprintf("你提交的应用[%s]绑定账号[%s]申请 已于%s 被%s 拒绝", accountCertInfo.AppName, accountName,time.Now().Format("2006-01-02 15:04:05"),name)
+}*/
+
 //profile删除接口
 func DeleteProfile(c *gin.Context) {
 	logs.Info("删除单个Profile")
@@ -1574,7 +1716,7 @@ func DeleteProfile(c *gin.Context) {
 		}
 		cardElementForms := generateCardOfProfileDelete(&deleteRequest, appleUrl, profileInfo.ProfileName)
 		cardActions := generateActionOfProfileDelete(&param)
-		err := sendIOSCertLarkMessage(cardElementForms, cardActions, deleteRequest.Operator, &abot,"--删除Profile")
+		err := sendIOSCertLarkMessage(cardElementForms, cardActions, deleteRequest.Operator, &abot, "--删除Profile")
 		if err != nil {
 			utils.RecordError("发送lark消息通知负责人删除Profile失败，", err)
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送lark消息通知负责人删除Profile失败", "")
@@ -1684,12 +1826,12 @@ func UpdateBundleProfilesRelation(bundleId, profileType string, profileId *strin
 func DeleteBundleid(c *gin.Context) {
 	logs.Info("bundleId删除")
 	var delRequest devconnmanager.BundleDeleteRequest
-	logs.Info("%v",delRequest)
+	logs.Info("%v", delRequest)
 	if paramOk := paramCheckOfBundleDelete(c, &delRequest); !paramOk {
 		return
 	}
 	//此if条件兼容，bundleid_id未录入时该bundle_id的删除操作
-	if delRequest.BundleidId == "" || delRequest.BundleidId == _const.UNDEFINED{
+	if delRequest.BundleidId == "" || delRequest.BundleidId == _const.UNDEFINED {
 		bundleDelete(c, &delRequest)
 		return
 	}
@@ -1701,7 +1843,7 @@ func DeleteBundleid(c *gin.Context) {
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "查询bundleid_id失败", "")
 		return
 	}
-	if(*bundleid)[0].BundleidIsdel == "1" {
+	if (*bundleid)[0].BundleidIsdel == "1" {
 		utils.AssembleJsonResponse(c, _const.SUCCESS, "已经保配删除", "")
 		return
 	}
@@ -1722,7 +1864,7 @@ func DeleteBundleid(c *gin.Context) {
 	}
 	//获取pushCert信息
 	var pushCertInfo *devconnmanager.CertInfo
-	if (*bundleid)[0].PushCertId != ""  && (*bundleid)[0].PushCertId != _const.NeedUpdate {
+	if (*bundleid)[0].PushCertId != "" && (*bundleid)[0].PushCertId != _const.NeedUpdate {
 		pushCertInfo = devconnmanager.QueryCertInfoByCertId((*bundleid)[0].PushCertId)
 	}
 	//发起工单删除，待apple openAPI ready，此if下可删除
@@ -1743,7 +1885,7 @@ func DeleteBundleid(c *gin.Context) {
 		if delRequest.Operator == "" {
 			delRequest.Operator = utils.CreateCertPrincipal
 		}
-		sendErr := sendIOSCertLarkMessage(cardContent, cardAction, delRequest.Operator, &abot,"--删除BundleId")
+		sendErr := sendIOSCertLarkMessage(cardContent, cardAction, delRequest.Operator, &abot, "--删除BundleId")
 		if sendErr != nil {
 			utils.RecordError("工单发送lark消息失败，", sendErr)
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送工单lark消息失败", "")
@@ -1790,7 +1932,7 @@ func DeleteBundleid(c *gin.Context) {
 		}
 	}
 	//push_cert删除
-	if (*bundleid)[0].PushCertId != ""  && (*bundleid)[0].PushCertId != _const.NeedUpdate {
+	if (*bundleid)[0].PushCertId != "" && (*bundleid)[0].PushCertId != _const.NeedUpdate {
 		condition := map[string]interface{}{"cert_id": (*bundleid)[0].PushCertId}
 		updateInfo := map[string]interface{}{
 			"deleted_at": time.Now(),
@@ -2111,6 +2253,7 @@ func generateInfoLineOfCard(header string, content string) *[]form.CardElementFo
 
 	return &infoLineFormList
 }
+
 func generateAtLineOfCard(header, atTest, url string) *[]form.CardElementForm {
 	var csrInfoFormList []form.CardElementForm
 	csrHeader := header
@@ -2255,7 +2398,7 @@ func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle, bundleInfo 
 	}
 
 	//enableList
-	bundleInfo.EnableCapList = make([]string,0)
+	bundleInfo.EnableCapList = make([]string, 0)
 	param, _ := json.Marshal(bundleStruct)
 	bundleMap := make(map[string]interface{})
 	json.Unmarshal(param, &bundleMap)
@@ -2492,7 +2635,7 @@ func paramCheckOfBundleDelete(c *gin.Context, delRequest *devconnmanager.BundleD
 
 func getProfileIdList(devId, distId string) *[]interface{} {
 	var profileIdList = make([]interface{}, 0)
-	if devId != _const.UNDEFINED && devId != "" && devId != _const.NeedUpdate{
+	if devId != _const.UNDEFINED && devId != "" && devId != _const.NeedUpdate {
 		profileIdList = append(profileIdList, devId)
 	}
 	if devId != _const.UNDEFINED && distId != "" && devId != _const.NeedUpdate {
@@ -2529,10 +2672,10 @@ func bundleDelete(c *gin.Context, delRequest *devconnmanager.BundleDeleteRequest
 	}
 	if delRequest.IsDel == "1" {
 		updateData = map[string]interface{}{
-			"dist_profile_id":nil,
-			"dev_profile_id":nil,
-			"bundleid_isdel": "1",
-			"push_cert_id":   nil,
+			"dist_profile_id": nil,
+			"dev_profile_id":  nil,
+			"bundleid_isdel":  "1",
+			"push_cert_id":    nil,
 		}
 		updateErr := devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
 		if updateErr != nil {
@@ -2552,4 +2695,22 @@ func bundleDelete(c *gin.Context, delRequest *devconnmanager.BundleDeleteRequest
 		}
 		utils.AssembleJsonResponse(c, _const.SUCCESS, "bundleId完全删除成功", "")
 	}
+}
+
+func alertTextWithTitleToPeople(title *string, text *string, userOpenId string, botService *service.BotService) {
+	textTag := form.GenerateTextTag(text, false, nil)
+	cardFormArray := [][]form.CardElementForm{{*(textTag)}}
+	richTextForm := form.GenerateRichTextForm(title, cardFormArray)
+
+	i18nRichTextForm := make(map[string]*form.PostForm)
+	// 支持zh_cn、en_us和ja_jp
+	i18nRichTextForm["zh_cn"] = richTextForm
+	richTextMessageContent := form.GenerateRichTextMessageContent(i18nRichTextForm)
+	richTextMessage, err := form.GenerateMessage("post", richTextMessageContent)
+	utils.RecordError("TestSendRichTextMessage GenerateMessage fail", err)
+
+	richTextMessage.OpenID = &userOpenId
+	// 发送消息
+	_, err = botService.SendMessage(*richTextMessage)
+	utils.RecordError("bot发送消息错误", err)
 }
