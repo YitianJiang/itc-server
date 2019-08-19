@@ -2296,6 +2296,7 @@ func generateCardOfApproveBindAccount(appAccountCert *devconnmanager.AppAccountC
 		logs.Error("获取teamId对应的account失败：%s 错误原因：teamId对应的account记录数不等于1", appAccountCert.TeamId)
 	} else {
 		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TargetAccountNameHeader, (*accountInfos)[0].AccountName))
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountTypeHeader, (*accountInfos)[0].AccountType))
 	}
 	return &cardFormArray
 }
