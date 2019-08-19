@@ -1180,7 +1180,7 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 	successChannel := make(chan []string, capabilityNum+len(*configChange))
 	failChannel := make(chan string, capabilityNum+len(*configChange))
 	for _, capability := range *enableChange {
-		if capability == "PUSH_NOTIFICATIONS" {
+		if capability == _const.PUSH_NOTIFICATIONS {
 			//push证书创建工单
 			bundleIdProfile := devconnmanager.QueryAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId})
 			if len(*bundleIdProfile) == 0 {
