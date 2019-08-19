@@ -23,6 +23,7 @@ import (
 	"time"
 )
 
+//todo actionURL修改
 //tos通用处理逻辑
 func uploadProfileToTos(profileContent []byte, tosFilePath string) bool {
 	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME_JYT, _const.TOS_BUCKET_TOKEN_JYT)
@@ -537,14 +538,16 @@ func CreateAppBindAccount(c *gin.Context) {
 	}
 	//调用根据资源获取admin人员信息的接口，根据该接口获取需要发送审批消息的用户list
 	var userList = utils.GetAccountAdminList(requestData.TeamId)
-	//var userList = &[]string{"fanjuan.xqp"} //,"fanjuan.xqp"
+	//var userList = &[]string{"zhangmengqi.muki"} //,"fanjuan.xqp"
 	////lark消息生成并批量发送 使用go协程
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 	cardInfos := generateCardOfApproveBindAccount(&appAccountCert)
+	cardActions := generateActionsOfApproveBindAccount(appAccountCert.ID, requestData.UserName)
 
 	for _, adminEmailPrefix := range *userList {
-		go alertApproveToUser(adminEmailPrefix, appAccountCert.ID, cardInfos, &botService)
+		logs.Notice("adminEmailPrefix：%s", adminEmailPrefix)
+		go alertApproveToUser(adminEmailPrefix, cardActions, cardInfos, &botService)
 	}
 
 	logs.Info("%v", userList)
@@ -565,7 +568,7 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
 		return
 	}
-	if requestData.BundlePrincipal == ""{
+	if requestData.BundlePrincipal == "" {
 		requestData.BundlePrincipal = utils.CreateCertPrincipal
 	}
 
@@ -1178,12 +1181,12 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 	successChannel := make(chan []string, capabilityNum+len(*configChange))
 	failChannel := make(chan string, capabilityNum+len(*configChange))
 	for _, capability := range *enableChange {
-		if capability == "PUSH_NOTIFICATIONS" {
+		if capability == _const.PUSH_NOTIFICATIONS {
 			//push证书创建工单
 			bundleIdProfile := devconnmanager.QueryAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId})
 			if len(*bundleIdProfile) == 0 {
 				logs.Error("数据库中不存在bundleid_id=%s 的记录", requestData.BundleIdId)
-			} else if (*bundleIdProfile)[0].PushCertId == ""||(*bundleIdProfile)[0].PushCertId == _const.NeedUpdate {
+			} else if (*bundleIdProfile)[0].PushCertId == "" || (*bundleIdProfile)[0].PushCertId == _const.NeedUpdate {
 				//发送创建push证书的工单
 				if sendPushCertLark(requestData) {
 					_ = devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId}, map[string]interface{}{"push_cert_id": _const.NeedUpdate})
@@ -1542,7 +1545,7 @@ func insertDatabaseAfterCreateBundleIdForEnterprise(needUpdateDevProfile, needUp
 	appleBundleIdElem := reflect.ValueOf(&appleBundleId).Elem()
 
 	for _, capability := range requestData.EnableCapabilitiesChange {
-		if capability == _const.MAC_PUSH || capability == _const.IOS_PUSH {
+		if capability == _const.PUSH_NOTIFICATIONS {
 			//更新push_cert_id
 			_ = devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundle_id": requestData.BundleId}, map[string]interface{}{"push_cert_id": _const.NeedUpdate})
 		}
@@ -1594,8 +1597,7 @@ func updateDBAfterChangeCapabilities(failChannel chan string, successChannel cha
 	return nil, &failedList
 }
 
-func alertApproveToUser(adminEmailPrefix string, id uint, cardInfos *[][]form.CardElementForm, botService *service.BotService) {
-	cardActions := generateActionsOfApproveBindAccount(id, adminEmailPrefix)
+func alertApproveToUser(adminEmailPrefix string, cardActions *[]form.CardActionForm, cardInfos *[][]form.CardElementForm, botService *service.BotService) {
 	err := sendIOSCertLarkMessage(cardInfos, cardActions, adminEmailPrefix, botService, "--APP绑定账号审核")
 	utils.RecordError("发送lark消息错误", err)
 }
@@ -1637,6 +1639,7 @@ func ApproveAppBindAccountFeedback(c *gin.Context) {
 			}
 			//给user赋予权限
 			teamId := strings.ToLower(appAccountCert.TeamId) + "_space_account"
+			logs.Notice("teamId:%s, userName:%s", teamId, requestData.UserName)
 			if !utils.GiveUsersPermission(&[]string{requestData.UserName}, teamId, &[]string{"all_cert_manager"}) {
 				utils.AssembleJsonResponseWithStatusCode(c, http.StatusInternalServerError, "审核失败:权限赋予失败", nil)
 			}
@@ -1832,12 +1835,12 @@ func UpdateBundleProfilesRelation(bundleId, profileType string, profileId *strin
 func DeleteBundleid(c *gin.Context) {
 	logs.Info("bundleId删除")
 	var delRequest devconnmanager.BundleDeleteRequest
-	logs.Info("%v",delRequest)
+	logs.Info("%v", delRequest)
 	if paramOk := paramCheckOfBundleDelete(c, &delRequest); !paramOk {
 		return
 	}
 	//此if条件兼容，bundleid_id未录入时该bundle_id的删除操作
-	if delRequest.BundleidId == "" || delRequest.BundleidId == _const.UNDEFINED{
+	if delRequest.BundleidId == "" || delRequest.BundleidId == _const.UNDEFINED {
 		bundleDelete(c, &delRequest)
 		return
 	}
@@ -1849,7 +1852,7 @@ func DeleteBundleid(c *gin.Context) {
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "查询bundleid_id失败", "")
 		return
 	}
-	if(*bundleid)[0].BundleidIsdel == "1" {
+	if (*bundleid)[0].BundleidIsdel == "1" {
 		utils.AssembleJsonResponse(c, _const.SUCCESS, "已经保配删除", "")
 		return
 	}
@@ -1870,7 +1873,7 @@ func DeleteBundleid(c *gin.Context) {
 	}
 	//获取pushCert信息
 	var pushCertInfo *devconnmanager.CertInfo
-	if (*bundleid)[0].PushCertId != ""  && (*bundleid)[0].PushCertId != _const.NeedUpdate {
+	if (*bundleid)[0].PushCertId != "" && (*bundleid)[0].PushCertId != _const.NeedUpdate {
 		pushCertInfo = devconnmanager.QueryCertInfoByCertId((*bundleid)[0].PushCertId)
 	}
 	//发起工单删除，待apple openAPI ready，此if下可删除
@@ -2283,6 +2286,7 @@ func generateCardOfApproveBindAccount(appAccountCert *devconnmanager.AppAccountC
 		logs.Error("获取teamId对应的account失败：%s 错误原因：teamId对应的account记录数不等于1", appAccountCert.TeamId)
 	} else {
 		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TargetAccountNameHeader, (*accountInfos)[0].AccountName))
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountTypeHeader, (*accountInfos)[0].AccountType))
 	}
 	return &cardFormArray
 }
@@ -2618,7 +2622,7 @@ func paramCheckOfBundleDelete(c *gin.Context, delRequest *devconnmanager.BundleD
 
 func getProfileIdList(devId, distId string) *[]interface{} {
 	var profileIdList = make([]interface{}, 0)
-	if devId != _const.UNDEFINED && devId != "" && devId != _const.NeedUpdate{
+	if devId != _const.UNDEFINED && devId != "" && devId != _const.NeedUpdate {
 		profileIdList = append(profileIdList, devId)
 	}
 	if devId != _const.UNDEFINED && distId != "" && devId != _const.NeedUpdate {
@@ -2733,28 +2737,29 @@ func permLevelTrans(permActions []string) string {
 		for _,perm := range permActions {
 			if perm == _const.PermAdmin {
 				level = 3
-			}else if perm == _const.PermAllCert && level<2 {
+			} else if perm == _const.PermAllCert && level < 2 {
 				level = 2
-			}else if perm == _const.PermDevCert && level<1 {
+			} else if perm == _const.PermDevCert && level < 1 {
 				level = 1
 			}
 		}
 		return fmt.Sprint(level)
 	}
 }
+
 //API 3-1 获取权限信息map
-func getTeamIdInfoPermMap(c *gin.Context,userName string) *map[string]devconnmanager.AccInfoWithoutAuth{
+func getTeamIdInfoPermMap(c *gin.Context, userName string) *map[string]devconnmanager.AccInfoWithoutAuth {
 	var resPerms devconnmanager.GetPermsResponse
 	url := _const.USER_ALL_RESOURCES_PERMS_URL + "userName=" + userName
 	result := queryPerms(url, &resPerms)
 	if !result {
-		utils.AssembleJsonResponse(c,http.StatusInternalServerError,"查询权限失败，请刷新重试！","")
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "查询权限失败，请刷新重试！", "")
 		return nil
 	}
 	var accountsInfo *map[string]devconnmanager.AccInfoWithoutAuth
 	accountsInfo = devconnmanager.QueryAccInfoMapWithoutAuth(&resPerms)
 	if accountsInfo == nil {
-		utils.AssembleJsonResponse(c,http.StatusInternalServerError,"从数据库中查询权限数据失败！","")
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "从数据库中查询权限数据失败！", "")
 		return nil
 	}
 	return accountsInfo

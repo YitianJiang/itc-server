@@ -203,18 +203,26 @@ const (
 	APPLE_DELETE_CERT_URL    = "https://developer.apple.com/account/resources/certificates/download/"
 	APPLE_DELETE_PROFILE_URL = "https://developer.apple.com/account/resources/profiles/review/"
 	APPLE_DELETE_BUNDLE_URL  = "https://developer.apple.com/account/resources/identifiers/bundleId/edit/V4K75THKFW"
-	//todo actionURL修改
 	//test---actionURL
-	DELCERT_FEEDBACK_URL    = "http://10.224.13.149:6789/v1/appleCertManage/asynDeleteFeedback"
-	DELPROFILE_FEEDBACK_URL = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteProfileFeedback"
-	DELBUNDLE_FEEDBACK_URL  = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteBundleFeedback"
-	ApproveAppBindAccountUrl = "http://10.224.13.149:6789/v1/appleConnManage/approveAppBindAccountFeedback"
 
-	//online----actionURL
-	//DELCERT_FEEDBACK_URL         = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
-	//DELPROFILE_FEEDBACK_URL      = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteProfileFeedback"
-	//DELBUNDLE_FEEDBACK_URL       = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteBundleFeedback"
-	//ApproveAppBindAccountUrl     = "https://itc.bytedance.net/v1/appleConnManage/approveAppBindAccountFeedback"
+	//DELCERT_FEEDBACK_URL    = "http://10.224.13.149:6789/v1/appleCertManage/asynDeleteFeedback"
+	//DELPROFILE_FEEDBACK_URL = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteProfileFeedback"
+	//DELBUNDLE_FEEDBACK_URL  = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteBundleFeedback"
+	//ApproveAppBindAccountUrl = "http://10.224.13.149:6789/v1/appleConnManage/approveAppBindAccountFeedback"
+	//ApproveApplyForAuthorizationUrl = "http://10.224.15.119:6789/v1/authorization/approveAuthorizationApplication"
+
+	//DELCERT_FEEDBACK_URL    = "http://10.224.15.119:6789/v1/appleCertManage/asynDeleteFeedback"
+	//DELPROFILE_FEEDBACK_URL = "http://10.224.15.119:6789/v1/appleConnManage/asynDeleteProfileFeedback"
+	//DELBUNDLE_FEEDBACK_URL  = "http://10.224.15.119:6789/v1/appleConnManage/asynDeleteBundleFeedback"
+	//ApproveAppBindAccountUrl = "http://10.224.15.119:6789/v1/appleConnManage/approveAppBindAccountFeedback"
+	//ApproveApplyForAuthorizationUrl = "http://10.224.15.119:6789/v1/authorization/approveAuthorizationApplication"
+
+	//todo online----actionURL
+	DELCERT_FEEDBACK_URL            = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
+	DELPROFILE_FEEDBACK_URL         = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteProfileFeedback"
+	DELBUNDLE_FEEDBACK_URL          = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteBundleFeedback"
+	ApproveAppBindAccountUrl        = "https://itc.bytedance.net/v1/appleConnManage/approveAppBindAccountFeedback"
+	ApproveApplyForAuthorizationUrl = "https://itc.bytedance.net/v1/authorization/approveAuthorizationApplication"
 )
 
 //新建证书工单卡片基本信息
@@ -248,7 +256,7 @@ var DistProfileTitle = "dist_profile名称："
 var PushCertTitle = "push_cert名称："
 
 //审核绑定账号请求基本信息
-var ApproveBindAccountMessage = "用户正在申请将app绑定至指定账号，批准后app将被绑定至新账号下"
+var ApproveBindAccountMessage = "用户正在申请将app绑定至指定账号，批准后app将被绑定至新账号下，同时申请者拥有新账号的all_cert_manager权限"
 var AppIdHeader = "APP ID: "
 var AppNameHeader = "APP名称: "
 var AppTypeHeader = "APP类型: "
@@ -295,6 +303,10 @@ var ProfileTypeHeader = "描述文件类型: "
 var Horizontal = "horizontal"
 var Gray = "gray"
 var DividerSize = "0.5"
+
+//权限申请工单基本信息
+var AuthorizationHeader = "申请权限: "
+var ApproveAuthorizationMessage = "用户正在申请apple签名体系权限，请处理"
 
 func CallLarkAPI(url string, token string, paramsIn interface{}, paramsOut interface{}) {
 	bodyByte, _ := json.Marshal(paramsIn)
