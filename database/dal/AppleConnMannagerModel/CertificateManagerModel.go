@@ -105,6 +105,7 @@ type DelCertFeedback struct {
 type DelCertFeedbackCustomer struct {
 	CertId   string `json:"cert_id"        binding:"required"`
 	UserName string `json:"username"       binding:"required"`
+	Bundleid string `json:"bundle_id"`
 }
 
 type QueryCertRequest struct {
