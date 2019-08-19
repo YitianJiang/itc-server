@@ -122,6 +122,7 @@ func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]interface{} {
 		return nil
 	}
 	defer conn.Close()
+	//todo null问题
 	var accountsInfo []interface{}
 	var allAccountInfo []AccountInfo
 	if err = conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).Find(&allAccountInfo).Error; err != nil {
@@ -141,6 +142,7 @@ func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]interface{} {
 	}
 	return &accountsInfo
 }
+
 //获取权限信息MAP
 func QueryAccInfoMapWithoutAuth(resPerms *GetPermsResponse) *map[string]AccInfoWithoutAuth {
 	conn, err := database.GetConneection()

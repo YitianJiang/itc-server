@@ -77,6 +77,13 @@ type BundleDeleteRequest struct {
 	DisProfileName string `form:"dist_profile_name"`
 }
 
+type AuthorizationApplicationRequest struct {
+	Authorization string `json:"authorization"`
+	TeamId        string `json:"team_id"`
+	AccountName   string `json:"account_name"`
+	UserName      string `json:"user_name"`
+}
+
 //Profile删除反馈参数struct
 type DelProfileFeedback struct {
 	CustomerJson DelProfileFeedbackCustomer `json:"customer_parameter"`
@@ -277,13 +284,30 @@ type DevicesDataRes struct {
 //Devices的苹果res的Model ******End******
 
 type ApproveAppBindAccountParamFromLark struct {
+	AdditionalParameter                `json:"additional_parameter"`
 	ApproveAppBindAccountCustomerParam `json:"customer_parameter"`
+}
+
+type AdditionalParameter struct {
+	EmployeeId string `json:"employee_id"`
+	OpenId     string `json:"open_id"`
+	UserId     string `json:"user_id"`
 }
 
 type ApproveAppBindAccountCustomerParam struct {
 	AppAccountCertId uint   `json:"appAccountCertId" binding:"required"`
 	IsApproved       int    `json:"isApproved"       binding:"required"`
 	UserName         string `json:"userName"       binding:"required"`
+}
+
+type ApproveAuthorizationApplicationParamFromLark struct {
+	ApproveAuthorizationApplicationCustomerParam `json:"customer_parameter"`
+}
+
+type ApproveAuthorizationApplicationCustomerParam struct {
+	Result   string `json:"result"       binding:"required"`
+	UserName string `json:"userName"       binding:"required"`
+	TeamId   string `json:"teamId"       binding:"required"`
 }
 
 type AppSignListRequest struct {
@@ -385,8 +409,8 @@ type APPSignManagerInfo struct {
 	AppAcountId              string              `json:"app_account_id"`
 	TeamId                   string              `json:"team_id"`
 	AccountType              string              `json:"account_type"`
-	AccountName 			 string 			 `json:"account_name"`
-	PermissionLevel 		 string				 `json:"permission_level"`
+	AccountName              string              `json:"account_name"`
+	PermissionLevel          string              `json:"permission_level"`
 	AccountVerifyStatus      string              `json:"account_verify_status"`
 	AccountVerifyUser        string              `json:"account_verify_user"`
 	BundleProfileCertSection []BundleProfileCert `json:"bundle_profile_cert_section"`
@@ -410,12 +434,12 @@ type BundleProfileGroup struct {
 }
 
 type BundleProfileInfo struct {
-	UserCertId         string     `json:"use_cert_id"`
-	ProfileId          string     `json:"profile_id"`
-	ProfileName        string     `json:"profile_name"`
-	ProfileType        string     `json:"profile_type"`
-	ProfileExpireDate  string     `json:"profile_expire_date"`
-	ProfileDownloadUrl string     `json:"profile_download_url"`
+	UserCertId         string `json:"use_cert_id"`
+	ProfileId          string `json:"profile_id"`
+	ProfileName        string `json:"profile_name"`
+	ProfileType        string `json:"profile_type"`
+	ProfileExpireDate  string `json:"profile_expire_date"`
+	ProfileDownloadUrl string `json:"profile_download_url"`
 }
 
 type AppCertGroupInfo struct {
@@ -424,13 +448,13 @@ type AppCertGroupInfo struct {
 }
 
 type AppCertInfo struct {
-	CertIDID        string     `json:"ID"`
-	CertId          string     `json:"cert_id"`
-	CertName        string     `json:"cert_name"`
-	CertType        string     `json:"cert_type"`
-	CertExpireDate  string     `json:"cert_expire_date"`
-	CertDownloadUrl string     `json:"cert_download_url"`
-	PrivKeyUrl      string     `json:"priv_key_url"`
+	CertIDID        string `json:"ID"`
+	CertId          string `json:"cert_id"`
+	CertName        string `json:"cert_name"`
+	CertType        string `json:"cert_type"`
+	CertExpireDate  string `json:"cert_expire_date"`
+	CertDownloadUrl string `json:"cert_download_url"`
+	PrivKeyUrl      string `json:"priv_key_url"`
 }
 
 /**
@@ -438,20 +462,20 @@ type AppCertInfo struct {
 */
 //app信息，账号信息和证书信息
 type APPandCert struct {
-	AppName             string    `json:"app_name"`
-	AppType             string    `json:"app_type"`
-	AppAcountId         string    `json:"app_account_id"`
-	TeamId              string    `json:"team_id"`
-	AccountType         string    `json:"account_type"`
-	AccountVerifyStatus string    `json:"account_verify_status"`
-	AccountVerifyUser   string    `json:"account_verify_user"`
-	CertIdId            string    `json:"ID"`
-	CertId              string    `json:"cert_id"`
-	CertName            string    `json:"cert_name"`
-	CertType            string    `json:"cert_type"`
-	CertExpireDate      string    `json:"cert_expire_date"`
-	CertDownloadUrl     string    `json:"cert_download_url"`
-	PrivKeyUrl          string    `json:"priv_key_url"`
+	AppName             string `json:"app_name"`
+	AppType             string `json:"app_type"`
+	AppAcountId         string `json:"app_account_id"`
+	TeamId              string `json:"team_id"`
+	AccountType         string `json:"account_type"`
+	AccountVerifyStatus string `json:"account_verify_status"`
+	AccountVerifyUser   string `json:"account_verify_user"`
+	CertIdId            string `json:"ID"`
+	CertId              string `json:"cert_id"`
+	CertName            string `json:"cert_name"`
+	CertType            string `json:"cert_type"`
+	CertExpireDate      string `json:"cert_expire_date"`
+	CertDownloadUrl     string `json:"cert_download_url"`
+	PrivKeyUrl          string `json:"priv_key_url"`
 }
 
 //appname、bundle信息和profile信息
@@ -462,10 +486,10 @@ type APPandBundle struct {
 	DistProfileId string `json:"dist_profile_id"`
 	DevProfileId  string `json:"dev_profile_id"`
 	AppleBundleId
-	PushCertId         string    `json:"push_cert_id"`
-	ProfileId          string    `json:"profile_id"`
-	ProfileName        string    `json:"profile_name"`
-	ProfileType        string    `json:"profile_type"`
-	ProfileExpireDate  string    `json:"profile_expire_date"`
-	ProfileDownloadUrl string    `json:"profile_download_url"`
+	PushCertId         string `json:"push_cert_id"`
+	ProfileId          string `json:"profile_id"`
+	ProfileName        string `json:"profile_name"`
+	ProfileType        string `json:"profile_type"`
+	ProfileExpireDate  string `json:"profile_expire_date"`
+	ProfileDownloadUrl string `json:"profile_download_url"`
 }
