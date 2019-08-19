@@ -242,7 +242,6 @@ func generateActionsOfApplyForAuthorization(teamId string, userName string, auth
 	var approveButtonText = utils.ApproveButtonText
 	var rejectButtonText = utils.RejectButtonText
 	var hideOther = false
-	//todo
 	var url = utils.ApproveApplyForAuthorizationUrl
 
 	approveButtonParams := map[string]interface{}{"result": authorization, "teamId": teamId, "userName": userName}
@@ -543,7 +542,7 @@ func CreateAppBindAccount(c *gin.Context) {
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 	cardInfos := generateCardOfApproveBindAccount(&appAccountCert)
-	cardActions := generateActionsOfApproveBindAccount(appAccountCert.ID, requestData.UserName)
+	cardActions := generateActionsOfApproveBindAccount(appAccountCert.ID, requestData.UserName, requestData.TeamId)
 
 	for _, adminEmailPrefix := range *userList {
 		logs.Notice("adminEmailPrefix：%s", adminEmailPrefix)
@@ -1629,6 +1628,7 @@ func ApproveAppBindAccountFeedback(c *gin.Context) {
 				utils.AssembleJsonResponseWithStatusCode(c, http.StatusInternalServerError, "审核失败:内部服务器错误", nil)
 				return
 			}
+			sendApproveResultToApplicant(&requestData, &(*accountCertInfos)[0], "拒绝")
 			utils.AssembleJsonResponse(c, _const.SUCCESS, "success", "审核成功：绑定请求已被拒绝")
 			return
 		case 1:
@@ -1643,6 +1643,7 @@ func ApproveAppBindAccountFeedback(c *gin.Context) {
 			if !utils.GiveUsersPermission(&[]string{requestData.UserName}, teamId, &[]string{"all_cert_manager"}) {
 				utils.AssembleJsonResponseWithStatusCode(c, http.StatusInternalServerError, "审核失败:权限赋予失败", nil)
 			}
+			sendApproveResultToApplicant(&requestData, &(*accountCertInfos)[0], "通过")
 			utils.AssembleJsonResponse(c, _const.SUCCESS, "success", "审核成功：绑定请求已被通过")
 			return
 		}
@@ -1669,7 +1670,7 @@ func ApproveAppBindAccountFeedback(c *gin.Context) {
 	}
 }
 
-/*func sendApproveResultToApplicant(requestData *devconnmanager.ApproveAppBindAccountParamFromLark, accountCertInfo *devconnmanager.AppAccountCert) {
+func sendApproveResultToApplicant(requestData *devconnmanager.ApproveAppBindAccountParamFromLark, accountCertInfo *devconnmanager.AppAccountCert, action string) {
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 	response, err := botService.GetUserInfoByOpenId(requestData.OpenId)
@@ -1680,8 +1681,22 @@ func ApproveAppBindAccountFeedback(c *gin.Context) {
 	case string:
 		name = response["name"].(string)
 	}
-	message := fmt.Sprintf("你提交的应用[%s]绑定账号[%s]申请 已于%s 被%s 拒绝", accountCertInfo.AppName, accountName,time.Now().Format("2006-01-02 15:04:05"),name)
-}*/
+	accountInfo := getAccountInfoByTeamId(requestData.TeamId)
+	title := "应用绑定账号审核结果通知"
+	message := fmt.Sprintf("你提交的应用[%s]绑定账号[%s]申请 已于%s 被%s %s", accountCertInfo.AppName, accountInfo.AccountName, time.Now().Format("2006-01-02 15:04:05"), name, action)
+	alertTextWithTitleToPeople(title, message, requestData.UserName+"@bytedance.com", &botService)
+}
+
+func getAccountInfoByTeamId(teamId string) *devconnmanager.AccountInfo {
+	accountsInfo := devconnmanager.QueryAccountInfo(map[string]interface{}{"team_id": teamId})
+	recordsNum := len(*accountsInfo)
+	if recordsNum == 0 {
+		return &devconnmanager.AccountInfo{}
+	} else if recordsNum > 1 {
+		logs.Error("存在%d条teamId为%s的记录", recordsNum, teamId)
+	}
+	return &((*accountsInfo)[0])
+}
 
 //profile删除接口
 func DeleteProfile(c *gin.Context) {
@@ -2302,7 +2317,7 @@ func generateCardOfApproveBindAccount(appAccountCert *devconnmanager.AppAccountC
 }
 
 //生成绑定账号审核消息卡片action
-func generateActionsOfApproveBindAccount(appAccountCertId uint, userName string) *[]form.CardActionForm {
+func generateActionsOfApproveBindAccount(appAccountCertId uint, userName, teamId string) *[]form.CardActionForm {
 	var cardActions []form.CardActionForm
 	var cardAction form.CardActionForm
 	var buttons []form.CardButtonForm
@@ -2311,14 +2326,14 @@ func generateActionsOfApproveBindAccount(appAccountCertId uint, userName string)
 	var hideOther = false
 	var url = utils.ApproveAppBindAccountUrl
 
-	approveButtonParams := map[string]interface{}{"isApproved": 1, "appAccountCertId": appAccountCertId, "userName": userName}
-	rejectButtonParams := map[string]interface{}{"isApproved": -1, "appAccountCertId": appAccountCertId, "userName": userName}
+	approveButtonParams := map[string]interface{}{"isApproved": 1, "appAccountCertId": appAccountCertId, "userName": userName, "teamId": teamId}
+	rejectButtonParams := map[string]interface{}{"isApproved": -1, "appAccountCertId": appAccountCertId, "userName": userName, "teamId": teamId}
 
-	approveButton, err := form.GenerateButtonForm(&approveButtonText, nil, nil, nil, "post", url, false, false, &approveButtonParams, nil, &hideOther)
+	approveButton, err := form.GenerateButtonForm(&approveButtonText, nil, nil, nil, "post", url, true, false, &approveButtonParams, nil, &hideOther)
 	if err != nil {
 		utils.RecordError("生成审核卡片同意button失败，", err)
 	}
-	rejectButton, err := form.GenerateButtonForm(&rejectButtonText, nil, nil, nil, "post", url, false, false, &rejectButtonParams, nil, &hideOther)
+	rejectButton, err := form.GenerateButtonForm(&rejectButtonText, nil, nil, nil, "post", url, true, false, &rejectButtonParams, nil, &hideOther)
 	if err != nil {
 		utils.RecordError("生成审核卡片拒绝button失败，", err)
 	}
@@ -2774,10 +2789,10 @@ func getTeamIdInfoPermMap(c *gin.Context, userName string) *map[string]devconnma
 	return accountsInfo
 }
 
-func alertTextWithTitleToPeople(title *string, text *string, userOpenId string, botService *service.BotService) {
-	textTag := form.GenerateTextTag(text, false, nil)
+func alertTextWithTitleToPeople(title string, text string, userEmail string, botService *service.BotService) {
+	textTag := form.GenerateTextTag(&text, false, nil)
 	cardFormArray := [][]form.CardElementForm{{*(textTag)}}
-	richTextForm := form.GenerateRichTextForm(title, cardFormArray)
+	richTextForm := form.GenerateRichTextForm(&title, cardFormArray)
 
 	i18nRichTextForm := make(map[string]*form.PostForm)
 	// 支持zh_cn、en_us和ja_jp
@@ -2786,7 +2801,7 @@ func alertTextWithTitleToPeople(title *string, text *string, userOpenId string, 
 	richTextMessage, err := form.GenerateMessage("post", richTextMessageContent)
 	utils.RecordError("TestSendRichTextMessage GenerateMessage fail", err)
 
-	richTextMessage.OpenID = &userOpenId
+	richTextMessage.Email = &userEmail
 	// 发送消息
 	_, err = botService.SendMessage(*richTextMessage)
 	utils.RecordError("bot发送消息错误", err)
