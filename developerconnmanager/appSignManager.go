@@ -538,15 +538,16 @@ func CreateAppBindAccount(c *gin.Context) {
 	}
 	//调用根据资源获取admin人员信息的接口，根据该接口获取需要发送审批消息的用户list
 	var userList = utils.GetAccountAdminList(requestData.TeamId)
-	//var userList = &[]string{"fanjuan.xqp"} //,"fanjuan.xqp"
+	//var userList = &[]string{"zhangmengqi.muki"} //,"fanjuan.xqp"
 	////lark消息生成并批量发送 使用go协程
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 	cardInfos := generateCardOfApproveBindAccount(&appAccountCert)
+	cardActions := generateActionsOfApproveBindAccount(appAccountCert.ID, requestData.UserName)
 
 	for _, adminEmailPrefix := range *userList {
 		logs.Notice("adminEmailPrefix：%s", adminEmailPrefix)
-		go alertApproveToUser(adminEmailPrefix, appAccountCert.ID, cardInfos, &botService)
+		go alertApproveToUser(adminEmailPrefix, cardActions, cardInfos, &botService)
 	}
 
 	logs.Info("%v", userList)
@@ -1180,7 +1181,7 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 	successChannel := make(chan []string, capabilityNum+len(*configChange))
 	failChannel := make(chan string, capabilityNum+len(*configChange))
 	for _, capability := range *enableChange {
-		if capability == "PUSH_NOTIFICATIONS" {
+		if capability == _const.PUSH_NOTIFICATIONS {
 			//push证书创建工单
 			bundleIdProfile := devconnmanager.QueryAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId})
 			if len(*bundleIdProfile) == 0 {
@@ -1544,7 +1545,7 @@ func insertDatabaseAfterCreateBundleIdForEnterprise(needUpdateDevProfile, needUp
 	appleBundleIdElem := reflect.ValueOf(&appleBundleId).Elem()
 
 	for _, capability := range requestData.EnableCapabilitiesChange {
-		if capability == _const.MAC_PUSH || capability == _const.IOS_PUSH {
+		if capability == _const.PUSH_NOTIFICATIONS {
 			//更新push_cert_id
 			_ = devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundle_id": requestData.BundleId}, map[string]interface{}{"push_cert_id": _const.NeedUpdate})
 		}
@@ -1596,8 +1597,7 @@ func updateDBAfterChangeCapabilities(failChannel chan string, successChannel cha
 	return nil, &failedList
 }
 
-func alertApproveToUser(adminEmailPrefix string, id uint, cardInfos *[][]form.CardElementForm, botService *service.BotService) {
-	cardActions := generateActionsOfApproveBindAccount(id, adminEmailPrefix)
+func alertApproveToUser(adminEmailPrefix string, cardActions *[]form.CardActionForm, cardInfos *[][]form.CardElementForm, botService *service.BotService) {
 	err := sendIOSCertLarkMessage(cardInfos, cardActions, adminEmailPrefix, botService, "--APP绑定账号审核")
 	utils.RecordError("发送lark消息错误", err)
 }
@@ -1639,6 +1639,7 @@ func ApproveAppBindAccountFeedback(c *gin.Context) {
 			}
 			//给user赋予权限
 			teamId := strings.ToLower(appAccountCert.TeamId) + "_space_account"
+			logs.Notice("teamId:%s, userName:%s", teamId, requestData.UserName)
 			if !utils.GiveUsersPermission(&[]string{requestData.UserName}, teamId, &[]string{"all_cert_manager"}) {
 				utils.AssembleJsonResponseWithStatusCode(c, http.StatusInternalServerError, "审核失败:权限赋予失败", nil)
 			}
@@ -2295,6 +2296,7 @@ func generateCardOfApproveBindAccount(appAccountCert *devconnmanager.AppAccountC
 		logs.Error("获取teamId对应的account失败：%s 错误原因：teamId对应的account记录数不等于1", appAccountCert.TeamId)
 	} else {
 		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TargetAccountNameHeader, (*accountInfos)[0].AccountName))
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountTypeHeader, (*accountInfos)[0].AccountType))
 	}
 	return &cardFormArray
 }
