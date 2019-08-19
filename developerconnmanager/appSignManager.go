@@ -2344,7 +2344,7 @@ func packeBundleProfileCert(c *gin.Context, bqr *devconnmanager.APPandBundle) *d
 	packProfileSection(bqr, &bundleInfo.ProfileCertSection)
 	bundleInfo.PushCert.CertId = bqr.PushCertId
 	//push_cert信息整合--
-	if bqr.PushCertId != "" && bqr.PushCertId != _const.NeedUpdate {
+	if bqr.PushCertId != "" && bqr.PushCertId != _const.NeedUpdate && bqr.PushCertId != _const.Deleting{
 		pushCert := devconnmanager.QueryCertInfoByCertId(bqr.PushCertId)
 		if pushCert == nil {
 			utils.RecordError("数据库查询push证书信息失败", nil)

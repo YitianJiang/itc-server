@@ -448,7 +448,7 @@ func DeleteCertificate(c *gin.Context) {
 				var updateInfo map[string]interface{}
 				if delCertRequest.AccType != _const.Enterprise{//organization账号下处理逻辑新增deleting状态
 					updateInfo = map[string]interface{}{
-						"push_cert_id": "deleting",
+						"push_cert_id": _const.Deleting,
 						"user_name":    delCertRequest.UserName,
 					}
 				}else {
