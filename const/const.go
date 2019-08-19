@@ -153,3 +153,7 @@ const (
 
 const NeedUpdate = "needUpdate"
 const UNDEFINED = "undefined"
+const NOPERMISSION = "noPermission"
+const PermAdmin = "admin"
+const PermAllCert = "all_cert_manager"
+const PermDevCert = "dev_cert_manager"

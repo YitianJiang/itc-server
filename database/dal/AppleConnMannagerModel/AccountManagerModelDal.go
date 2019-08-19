@@ -141,6 +141,27 @@ func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]interface{} {
 	}
 	return &accountsInfo
 }
+//获取权限信息MAP
+func QueryAccInfoMapWithoutAuth(resPerms *GetPermsResponse) *map[string]AccInfoWithoutAuth {
+	conn, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Get DB Connection Failed: ", err)
+		return nil
+	}
+	defer conn.Close()
+	var accountsInfo = make(map[string]AccInfoWithoutAuth)
+	var allAccountInfo []AccountInfo
+	if err = conn.LogMode(_const.DB_LOG_MODE).Table(AccountInfo{}.TableName()).Find(&allAccountInfo).Error; err != nil {
+		logs.Error("Query DB Failed:", err)
+		return nil
+	}
+	for _, accountInfo := range allAccountInfo {
+		perms := resPerms.Data[strings.ToLower(accountInfo.TeamId)+"_space_account"]
+		accInfoWithoutAuth := TransferValues2AccInfoWithoutAuth(&accountInfo, perms)
+		accountsInfo[accInfoWithoutAuth.TeamId] = *accInfoWithoutAuth
+	}
+	return &accountsInfo
+}
 
 func UpdateAccountInfo(accountInfo AccountInfo) int {
 	conn, err := database.GetConneection()

@@ -289,7 +289,7 @@ type ApproveAppBindAccountCustomerParam struct {
 type AppSignListRequest struct {
 	AppId    string `form:"app_id"   binding:"required"`
 	Username string `form:"user_name" binding:"required"`
-	TeamId   string `form:"team_id"  binding:"required"`
+	TeamId   string `form:"team_id"`
 }
 
 //db model
@@ -370,7 +370,7 @@ func (AppBundleProfiles) TableName() string {
 
 //todo 线上该dbname为"tt_apple_bundleid"
 func (AppleBundleId) TableName() string {
-	return "tt_apple_bundleid"
+	return "tt_apple_bundleId"
 }
 func (AppleProfile) TableName() string {
 	return "tt_apple_profile"
@@ -385,6 +385,8 @@ type APPSignManagerInfo struct {
 	AppAcountId              string              `json:"app_account_id"`
 	TeamId                   string              `json:"team_id"`
 	AccountType              string              `json:"account_type"`
+	AccountName 			 string 			 `json:"account_name"`
+	PermissionLevel 		 string				 `json:"permission_level"`
 	AccountVerifyStatus      string              `json:"account_verify_status"`
 	AccountVerifyUser        string              `json:"account_verify_user"`
 	BundleProfileCertSection []BundleProfileCert `json:"bundle_profile_cert_section"`
