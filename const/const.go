@@ -28,12 +28,13 @@ var PermToModify = map[string]int{
 	"kanghuaisong":  1,
 	"zhangshuai.02": 1,
 	"lirensheng":    1,
-	"yangzhiqian":1,
-	"zhaoxuan.li":1,
+	"yangzhiqian":   1,
+	"zhaoxuan.li":   1,
 	//测试加入
 	//"fanjuan.xqp":1,
 	//"liyixian.lym":1,
 }
+
 const (
 	APPLE_CERT_DELETE_ADDR   = "https://api.appstoreconnect.apple.com/v1/certificates/"
 	APPLE_CREATE_CERT_URL    = "https://api.appstoreconnect.apple.com/v1/certificates"
@@ -153,3 +154,7 @@ const (
 
 const NeedUpdate = "needUpdate"
 const UNDEFINED = "undefined"
+const NOPERMISSION = "noPermission"
+const PermAdmin = "admin"
+const PermAllCert = "all_cert_manager"
+const PermDevCert = "dev_cert_manager"
