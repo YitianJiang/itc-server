@@ -2250,8 +2250,6 @@ func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle, bundleInfo 
 func packProfileSection(bqr *devconnmanager.APPandBundle,profile *devconnmanager.BundleProfileGroup) {
 	profile.DevProfile.ProfileId = bqr.DevProfileId
 	profile.DistProfile.ProfileId = bqr.DistProfileId
-	logs.Notice(bqr.DevProfileId)
-	logs.Notice("dist"+bqr.DistProfileId)
 	if bqr.ProfileType != ""{
 		if strings.Contains(bqr.ProfileType, "APP_DEVELOPMENT") {
 			profile.DevProfile.ProfileType = bqr.ProfileType
@@ -2584,7 +2582,6 @@ func permLevelTrans(permActions []string)string{
 	}else {
 		var level = 0
 		for _,perm := range permActions {
-			logs.Notice("权限等级："+perm)
 			if perm == _const.PermAdmin {
 				level = 3
 			}else if perm == _const.PermAllCert && level<2 {
