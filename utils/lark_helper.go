@@ -203,8 +203,8 @@ const (
 	APPLE_DELETE_CERT_URL    = "https://developer.apple.com/account/resources/certificates/download/"
 	APPLE_DELETE_PROFILE_URL = "https://developer.apple.com/account/resources/profiles/review/"
 	APPLE_DELETE_BUNDLE_URL  = "https://developer.apple.com/account/resources/identifiers/bundleId/edit/V4K75THKFW"
+	//todo actionURL修改
 	//test---actionURL
-
 	DELCERT_FEEDBACK_URL    = "http://10.224.13.149:6789/v1/appleCertManage/asynDeleteFeedback"
 	DELPROFILE_FEEDBACK_URL = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteProfileFeedback"
 	DELBUNDLE_FEEDBACK_URL  = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteBundleFeedback"

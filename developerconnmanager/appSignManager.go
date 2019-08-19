@@ -23,7 +23,6 @@ import (
 	"time"
 )
 
-//todo actionURL修改
 //tos通用处理逻辑
 func uploadProfileToTos(profileContent []byte, tosFilePath string) bool {
 	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME_JYT, _const.TOS_BUCKET_TOKEN_JYT)
@@ -276,7 +275,7 @@ func GetAppSignListDetailInfo(c *gin.Context) {
 	//todo 更改bundleid表名
 	var bQueryResult []devconnmanager.APPandBundle
 	sql_c := "select abp.app_name,abp.bundle_id as bundle_id_index,abp.bundleid_isdel as bundle_id_is_del,abp.push_cert_id,abp.dev_profile_id,abp.dist_profile_id,ap.profile_id,ap.profile_name,ap.profile_expire_date,ap.profile_type,ap.profile_download_url,ab.*" +
-		" from tt_apple_bundleId ab,tt_app_bundleId_profiles abp left join tt_apple_profile ap " +
+		" from tt_apple_bundleId ab,tt_app_bundleid_profiles abp left join tt_apple_profile ap " +
 		"on (abp.dev_profile_id = ap.profile_id or abp.dist_profile_id = ap.profile_id) where abp.app_id = '" + requestInfo.AppId + "' and abp.app_name in " + appNameList + " and abp.bundle_id = ab.bundle_id " +
 		"and abp.deleted_at IS NULL and ab.deleted_at IS NULL and ap.deleted_at IS NULL"
 	query_b := devconnmanager.QueryWithSql(sql_c, &bQueryResult)
@@ -1569,7 +1568,7 @@ func DeleteProfile(c *gin.Context) {
 		abot := service.BotService{}
 		abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 		appleUrl := utils.APPLE_DELETE_PROFILE_URL + deleteRequest.ProfileId
-		if deleteRequest.Operator == "" {
+		if deleteRequest.Operator == "" || deleteRequest.Operator == _const.UNDEFINED{
 			deleteRequest.Operator = utils.CreateCertPrincipal
 		}
 		param := map[string]interface{}{
@@ -1734,6 +1733,9 @@ func DeleteBundleid(c *gin.Context) {
 		abot := service.BotService{}
 		abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 		url := utils.APPLE_DELETE_BUNDLE_URL + delRequest.BundleidId
+		if delRequest.Operator == "" || delRequest.Operator == _const.UNDEFINED{
+			delRequest.Operator = utils.CreateCertPrincipal
+		}
 		param := map[string]interface{}{
 			"bundleid_id":     delRequest.BundleidId,
 			"username":        delRequest.Operator,
@@ -1744,9 +1746,7 @@ func DeleteBundleid(c *gin.Context) {
 		}
 		cardContent := generateCardOfBundleDelete(&delRequest, url, (*bundleid)[0].BundleId, (*bundleid)[0].BundleId, pushCertInfo)
 		cardAction := generateActionOfBundleDelete(&param)
-		if delRequest.Operator == "" {
-			delRequest.Operator = utils.CreateCertPrincipal
-		}
+
 		sendErr := sendIOSCertLarkMessage(cardContent, cardAction, delRequest.Operator, &abot,"--删除BundleId")
 		if sendErr != nil {
 			utils.RecordError("工单发送lark消息失败，", sendErr)
@@ -1791,17 +1791,6 @@ func DeleteBundleid(c *gin.Context) {
 			if ok := deleteProfileDBandTos(c, profile.ProfileId, profile.ProfileName, profile.ProfileType, delRequest.TeamId, (*bundleid)[0].BundleId, updateData, delRequest.UserName); !ok {
 				return
 			}
-		}
-	}
-	//push_cert删除
-	if (*bundleid)[0].PushCertId != ""  && (*bundleid)[0].PushCertId != _const.NeedUpdate {
-		condition := map[string]interface{}{"cert_id": (*bundleid)[0].PushCertId}
-		updateInfo := map[string]interface{}{
-			"deleted_at": time.Now(),
-			"op_user":    delRequest.UserName,
-		}
-		if ok := devconnmanager.UpdateCertInfoByMap(condition, updateInfo); !ok {
-			utils.RecordError("bundleid删除时，push_cert删除失败", nil)
 		}
 	}
 	//bundleid删除
@@ -2261,18 +2250,22 @@ func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle, bundleInfo 
 func packProfileSection(bqr *devconnmanager.APPandBundle,profile *devconnmanager.BundleProfileGroup) {
 	profile.DevProfile.ProfileId = bqr.DevProfileId
 	profile.DistProfile.ProfileId = bqr.DistProfileId
-	if strings.Contains(bqr.ProfileType, "APP_DEVELOPMENT") {
-		profile.DevProfile.ProfileType = bqr.ProfileType
-		profile.DevProfile.ProfileId = bqr.ProfileId
-		profile.DevProfile.ProfileName = bqr.ProfileName
-		profile.DevProfile.ProfileDownloadUrl = bqr.ProfileDownloadUrl
-		profile.DevProfile.ProfileExpireDate = bqr.ProfileExpireDate
-	} else{
-		profile.DistProfile.ProfileType = bqr.ProfileType
-		profile.DistProfile.ProfileName = bqr.ProfileName
-		profile.DistProfile.ProfileId = bqr.ProfileId
-		profile.DistProfile.ProfileDownloadUrl = bqr.ProfileDownloadUrl
-		profile.DistProfile.ProfileExpireDate = bqr.ProfileExpireDate
+	logs.Notice(bqr.DevProfileId)
+	logs.Notice("dist"+bqr.DistProfileId)
+	if bqr.ProfileType != ""{
+		if strings.Contains(bqr.ProfileType, "APP_DEVELOPMENT") {
+			profile.DevProfile.ProfileType = bqr.ProfileType
+			profile.DevProfile.ProfileId = bqr.ProfileId
+			profile.DevProfile.ProfileName = bqr.ProfileName
+			profile.DevProfile.ProfileDownloadUrl = bqr.ProfileDownloadUrl
+			profile.DevProfile.ProfileExpireDate = bqr.ProfileExpireDate
+		} else{
+			profile.DistProfile.ProfileType = bqr.ProfileType
+			profile.DistProfile.ProfileName = bqr.ProfileName
+			profile.DistProfile.ProfileId = bqr.ProfileId
+			profile.DistProfile.ProfileDownloadUrl = bqr.ProfileDownloadUrl
+			profile.DistProfile.ProfileExpireDate = bqr.ProfileExpireDate
+		}
 	}
 }
 
