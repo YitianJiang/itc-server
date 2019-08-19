@@ -219,7 +219,7 @@ func InsertAccount(c *gin.Context) {
 	creResult := SendPost2Kani(creResRequest, _const.Create_RESOURCE_URL)
 	if creResult == -1 {
 		c.JSON(http.StatusOK, gin.H{
-			"errorCode": 4,
+			"errorCode": 0,
 			"errorInfo": "往数据库中插入账号信息成功，但由于资源已经存在，创建资源失败！",
 		})
 		return
