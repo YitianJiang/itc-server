@@ -211,11 +211,11 @@ const (
 	//ApproveAppBindAccountUrl = "http://10.224.13.149:6789/v1/appleConnManage/approveAppBindAccountFeedback"
 	//ApproveApplyForAuthorizationUrl = "http://10.224.15.119:6789/v1/authorization/approveAuthorizationApplication"
 
-	/*DELCERT_FEEDBACK_URL    = "http://10.224.15.119:6789/v1/appleCertManage/asynDeleteFeedback"
-	DELPROFILE_FEEDBACK_URL = "http://10.224.15.119:6789/v1/appleConnManage/asynDeleteProfileFeedback"
-	DELBUNDLE_FEEDBACK_URL  = "http://10.224.15.119:6789/v1/appleConnManage/asynDeleteBundleFeedback"
-	ApproveAppBindAccountUrl = "http://10.224.15.119:6789/v1/appleConnManage/approveAppBindAccountFeedback"
-	ApproveApplyForAuthorizationUrl = "http://10.224.15.119:6789/v1/authorization/approveAuthorizationApplication"*/
+	//DELCERT_FEEDBACK_URL    = "http://10.224.15.119:6789/v1/appleCertManage/asynDeleteFeedback"
+	//DELPROFILE_FEEDBACK_URL = "http://10.224.15.119:6789/v1/appleConnManage/asynDeleteProfileFeedback"
+	//DELBUNDLE_FEEDBACK_URL  = "http://10.224.15.119:6789/v1/appleConnManage/asynDeleteBundleFeedback"
+	//ApproveAppBindAccountUrl = "http://10.224.15.119:6789/v1/appleConnManage/approveAppBindAccountFeedback"
+	//ApproveApplyForAuthorizationUrl = "http://10.224.15.119:6789/v1/authorization/approveAuthorizationApplication"
 
 	//todo online----actionURL
 	DELCERT_FEEDBACK_URL            = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
@@ -256,7 +256,7 @@ var DistProfileTitle = "dist_profile名称："
 var PushCertTitle = "push_cert名称："
 
 //审核绑定账号请求基本信息
-var ApproveBindAccountMessage = "用户正在申请将app绑定至指定账号，批准后app将被绑定至新账号下"
+var ApproveBindAccountMessage = "用户正在申请将app绑定至指定账号，批准后app将被绑定至新账号下，同时申请者拥有新账号的all_cert_manager权限"
 var AppIdHeader = "APP ID: "
 var AppNameHeader = "APP名称: "
 var AppTypeHeader = "APP类型: "
