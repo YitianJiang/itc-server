@@ -64,6 +64,7 @@ type InsertCertRequest struct {
 	AccountType   string `json:"account_type" binding:"required"`
 	BundleId      string `json:"bundle_id"`
 	UserName      string `json:"user_name"`
+	IsUpdate      string `json:"is_update"`
 }
 
 type CreAppleCertReq struct {

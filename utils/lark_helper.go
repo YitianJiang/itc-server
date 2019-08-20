@@ -226,12 +226,15 @@ const (
 )
 
 //新建证书工单卡片基本信息
-var CreateCertMessage = "请根据配置信息登录Apple后台手动生成证书并上传至itc证书管理后台"
+var CreateCertMessage = "请根据配置信息登录Apple后台手动生成证书并上传至rocket证书管理后台"
 var CreateCertAccountHeader = "账号名: "
 var CreateCertTypeHeader = "证书类型: "
 var CsrHeader = "CSR文件: "
 var CsrText = "点击链接下载"
 var GrayHeaderStyle = "color: gray"
+
+//更新证书工单卡片基本信息
+var UpdateCertMessage = "请根据配置信息登录Apple后台手动生成证书并上传至rocket证书管理后台进行证书更新"
 
 //删除证书工单卡片基本信息
 var DeleteCertMessage = "请根据账号信息登陆Apple后台，删除指定证书，点击删除链接可以直接跳转；删除完成后，请点击卡片\"已删除\"按钮。"
