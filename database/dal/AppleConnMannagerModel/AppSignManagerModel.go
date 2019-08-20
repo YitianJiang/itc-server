@@ -205,6 +205,15 @@ type OpenBundleIdCapabilityResponse struct {
 	Data IdAndTypeItem `json:"data"`
 }
 
+type QueryBundleIdCapabilityResponse struct {
+	Data []BundleIdCapabilitiesData `json:"data"`
+}
+
+type BundleIdCapabilitiesData struct {
+	IdAndTypeItem
+	Attributes BundleCapabilityAttributes `json:"attributes"`
+}
+
 //Bundle id的苹果req的Model ******End******
 
 //Profile的苹果req的Model ******Start******
@@ -297,7 +306,8 @@ type AdditionalParameter struct {
 type ApproveAppBindAccountCustomerParam struct {
 	AppAccountCertId uint   `json:"appAccountCertId" binding:"required"`
 	IsApproved       int    `json:"isApproved"       binding:"required"`
-	UserName         string `json:"userName"       binding:"required"`
+	UserName         string `json:"userName"         binding:"required"`
+	TeamId           string `json:"teamId"           binding:"required"`
 }
 
 type ApproveAuthorizationApplicationParamFromLark struct {

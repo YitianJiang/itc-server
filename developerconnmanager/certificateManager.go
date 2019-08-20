@@ -140,7 +140,13 @@ func InsertCertificate(c *gin.Context) {
 			body.CertPrincipal = utils.CreateCertPrincipal
 		}
 		csrFileUrl := _const.TOS_CSR_FILE_URL_PUSH
-		err := sendCreateCertAlertToLark(body.AccountName, body.CertType, csrFileUrl, body.CertPrincipal, body.UserName, &botService, body.BundleId)
+		var err error
+		if body.IsUpdate == "1" {
+			err = sendUpdateCertAlertToLark(body.AccountName, body.CertType, csrFileUrl, body.CertPrincipal, body.UserName, &botService, body.BundleId)
+		} else {
+			err = sendCreateCertAlertToLark(body.AccountName, body.CertType, csrFileUrl, body.CertPrincipal, body.UserName, &botService, body.BundleId)
+		}
+
 		utils.RecordError("发送新建证书提醒lark失败：", err)
 		if err != nil {
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送新建证书提醒lark失败", nil)
@@ -357,19 +363,19 @@ func DeleteCertificate(c *gin.Context) {
 	//push_cert未在苹果后台生成删除操作
 	if delCertRequest.ID == "" {
 		if delCertRequest.CertType == _const.IOS_PUSH || delCertRequest.CertType == _const.MAC_PUSH {
-			if delCertRequest.BundleId == "" || delCertRequest.BundleId == _const.UNDEFINED{
-				utils.AssembleJsonResponse(c,1,"bundle_id为空","bundle_id不可为空")
+			if delCertRequest.BundleId == "" || delCertRequest.BundleId == _const.UNDEFINED {
+				utils.AssembleJsonResponse(c, 1, "bundle_id为空", "bundle_id不可为空")
 				return
 			}
-			if err := devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundle_id":delCertRequest.BundleId},
-				map[string]interface{}{"push_cert_id":nil});err != nil {
-				utils.AssembleJsonResponse(c,1,"更新app_bundle_profile信息失败","更新app_bundle_profile信息失败")
+			if err := devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundle_id": delCertRequest.BundleId},
+				map[string]interface{}{"push_cert_id": nil}); err != nil {
+				utils.AssembleJsonResponse(c, 1, "更新app_bundle_profile信息失败", "更新app_bundle_profile信息失败")
 				return
 			}
-				utils.AssembleJsonResponse(c,0,"success","删除成功")
+			utils.AssembleJsonResponse(c, 0, "success", "删除成功")
 			return
-		}else{
-			utils.AssembleJsonResponse(c,1,"ID为空","ID不可为空")
+		} else {
+			utils.AssembleJsonResponse(c, 1, "ID为空", "ID不可为空")
 			return
 		}
 	}
@@ -393,33 +399,39 @@ func DeleteCertificate(c *gin.Context) {
 
 		//企业分发账号和push证书工单处理逻辑---此if下操作待apple open API ready后可删除或不执行
 		if delCertRequest.AccType == _const.Enterprise || delCertRequest.CertType == _const.IOS_PUSH || delCertRequest.CertType == _const.MAC_PUSH {
-			var bundleid = ""//判断是否为push证书
+			var bundleid = ""   //判断是否为push证书
+			var bundleIdId = "" //用于点击按钮后去苹果后台查询能力
 			if delCertRequest.CertType == _const.IOS_PUSH || delCertRequest.CertType == _const.MAC_PUSH {
 				condition := map[string]interface{}{
 					"push_cert_id": delCertRequest.CertId,
 				}
 				abpInfo := devconnmanager.QueryAppBundleProfiles(condition)
-				if abpInfo == nil || len(*abpInfo)==0{
+				if abpInfo == nil || len(*abpInfo) == 0 {
 					utils.AssembleJsonResponse(c, http.StatusInternalServerError, "查询Push证书对应的bundleID信息失败", "")
 					return
 				}
 				bundleid = (*abpInfo)[0].BundleId
+				bundleIdId = (*abpInfo)[0].BundleidId
 			}
 			//向负责人发送lark消息
 			abot := service.BotService{}
 			abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 			appleUrl := utils.APPLE_DELETE_CERT_URL + delCertRequest.CertId
 			cardElementForms := generateCardOfCertDelete(delCertRequest.AccountName, delCertRequest.CertId, delCertRequest.CertName, appleUrl, delCertRequest.UserName)
-			if delCertRequest.CertOperator == "" || delCertRequest.CertOperator == _const.UNDEFINED{
+			if delCertRequest.CertOperator == "" || delCertRequest.CertOperator == _const.UNDEFINED {
 				delCertRequest.CertOperator = utils.CreateCertPrincipal
 			}
+			//卡片参数增加bundleIdId、teamId、accountType，用于在点击已删除时在苹果后台查询能力
 			param := map[string]interface{}{
-				"cert_id":  delCertRequest.CertId,
-				"username": delCertRequest.CertOperator,
-				"bundle_id":bundleid,
+				"cert_id":      delCertRequest.CertId,
+				"username":     delCertRequest.CertOperator,
+				"bundle_id":    bundleid,
+				"bundleid_id":  bundleIdId,
+				"team_id":      delCertRequest.TeamId,
+				"account_type": delCertRequest.AccType,
 			}
 			cardActions := generateActionsOfCertDelete(&param)
-			err := sendIOSCertLarkMessage(cardElementForms, cardActions, delCertRequest.CertOperator, &abot,"--删除证书")
+			err := sendIOSCertLarkMessage(cardElementForms, cardActions, delCertRequest.CertOperator, &abot, "--删除证书")
 			if err != nil {
 				utils.RecordError("发送lark消息通知负责人删除证书失败，", err)
 				c.JSON(http.StatusOK, gin.H{
@@ -434,7 +446,7 @@ func DeleteCertificate(c *gin.Context) {
 			delResultBool := deleteTosCert(tosFilePath)
 			if !delResultBool {
 				//此处不阻塞，只打log
-				logs.Error("删除tos文件失败，路径："+tosFilePath)
+				logs.Error("删除tos文件失败，路径：" + tosFilePath)
 			}
 			//db删除，只更新deleted_at
 			updateInfo := map[string]interface{}{
@@ -446,12 +458,12 @@ func DeleteCertificate(c *gin.Context) {
 					"push_cert_id": delCertRequest.CertId,
 				}
 				var updateInfo map[string]interface{}
-				if delCertRequest.AccType != _const.Enterprise{//organization账号下处理逻辑新增deleting状态
+				if delCertRequest.AccType != _const.Enterprise { //organization账号下处理逻辑新增deleting状态
 					updateInfo = map[string]interface{}{
 						"push_cert_id": _const.Deleting,
 						"user_name":    delCertRequest.UserName,
 					}
-				}else {
+				} else {
 					updateInfo = map[string]interface{}{
 						"push_cert_id": nil,
 						"user_name":    delCertRequest.UserName,
@@ -517,6 +529,7 @@ func DeleteCertificate(c *gin.Context) {
 
 //lark卡片点击已删除后异步更新db操作人信息
 func AsynDeleteCertFeedback(c *gin.Context) {
+	logs.Notice("点击已删除")
 	var feedbackInfo devconnmanager.DelCertFeedback
 	err := c.ShouldBindJSON(&feedbackInfo)
 	if err != nil {
@@ -539,13 +552,13 @@ func AsynDeleteCertFeedback(c *gin.Context) {
 	var okU2 error
 	if feedbackInfo.CustomerJson.Bundleid != "" {
 		queryData := map[string]interface{}{
-			"bundle_id":feedbackInfo.CustomerJson.Bundleid,
+			"bundle_id": feedbackInfo.CustomerJson.Bundleid,
 		}
 		updateData := map[string]interface{}{
-			"user_name":feedbackInfo.CustomerJson.UserName,
-			"push_cert_id":nil,
+			"user_name":    feedbackInfo.CustomerJson.UserName,
+			"push_cert_id": nil,
 		}
-		okU2 = devconnmanager.UpdateAppBundleProfiles(queryData,updateData)
+		okU2 = devconnmanager.UpdateAppBundleProfiles(queryData, updateData)
 	}
 	if !okU || okU2 != nil {
 		utils.RecordError("异步更新删除证书信息操作人失败，证书ID："+feedbackInfo.CustomerJson.CertId, nil)
@@ -555,11 +568,43 @@ func AsynDeleteCertFeedback(c *gin.Context) {
 		})
 		return
 	}
+	if feedbackInfo.CustomerJson.AccountType == _const.Organization {
+		logs.Notice("查询bundleId能力")
+		//去苹果后台查询能力并更新数据库
+		go updateBundleIdCapabilities(feedbackInfo.CustomerJson.BundleIdId, feedbackInfo.CustomerJson.TeamId)
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"errorCode": 0,
 		"errorInfo": "",
 	})
 	return
+}
+
+func updateBundleIdCapabilities(bundleIdId string, teamId string) {
+	capabilitiesMap := *queryBundleIdCapabilities(bundleIdId, teamId)
+	_ = devconnmanager.UpdateAppleBundleId(map[string]interface{}{"bundleid_id": bundleIdId}, capabilitiesMap)
+}
+
+func queryBundleIdCapabilities(bundleIdId string, teamId string) *map[string]interface{} {
+	queryUrl := fmt.Sprintf(_const.APPLE_BUNDLE_ID_CAPABILITIES_QUERY_URL, bundleIdId)
+	tokenString := GetTokenStringByTeamId(teamId)
+	capabilitiesMap := make(map[string]interface{})
+	var responseBody devconnmanager.QueryBundleIdCapabilityResponse
+	if !ReqToAppleHasObjMethod("GET", queryUrl, tokenString, nil, &responseBody) {
+		logs.Error("查询bundleId能力失败。bundleIdId: %s, teamId: %s", bundleIdId, teamId)
+		return &capabilitiesMap
+	}
+	logs.Notice("%v", responseBody)
+	for _, capability := range responseBody.Data {
+		//非配置能力
+		if len(capability.Attributes.Settings) == 0 || len(capability.Attributes.Settings[0].Options) == 0 {
+			capabilitiesMap[capability.Attributes.CapabilityType] = capability.Id
+		} else {
+			//配置能力
+			capabilitiesMap[capability.Attributes.CapabilityType] = capability.Attributes.Settings[0].Options[0].Key
+		}
+	}
+	return &capabilitiesMap
 }
 
 func queryPerms(url string, resPerms *devconnmanager.GetPermsResponse) bool {
@@ -762,6 +807,66 @@ func generateSendMessageForm(accountName, certType, csrUrl, userName string, bun
 	return cardMessage
 }
 
+func sendUpdateCertAlertToLark(accountName, certType, csrUrl, principal, userName string, botService *service.BotService, bundleId ...string) error {
+	cardMessage := generateUpdateCertMessageForm(accountName, certType, csrUrl, userName, bundleId...)
+	//发送消息
+	email := principal
+	if !strings.Contains(principal, "@bytedance.com") {
+		email += "@bytedance.com"
+	}
+	cardMessage.Email = &email
+	sendMsgResp, err := botService.SendMessage(*cardMessage)
+	logs.Info("SendCardMessage response= %v", sendMsgResp)
+	return err
+}
+
+func generateUpdateCertMessageForm(accountName, certType, csrUrl, userName string, bundleId ...string) *form.SendMessageForm {
+	cardInfoFormArray := generateCardInfoOfUpdateCert(accountName, certType, csrUrl, userName, bundleId...)
+	cardHeaderTitle := "iOS证书管理通知--更新证书"
+	cardForm := form.GenerateCardForm(nil, getCardHeader(cardHeaderTitle), *cardInfoFormArray, nil)
+	cardMessageContent := form.GenerateCardMessageContent(cardForm)
+	cardMessage, err := form.GenerateMessage("interactive", cardMessageContent)
+	utils.RecordError("card信息生成出错: ", err)
+	return cardMessage
+}
+
+func generateCardInfoOfUpdateCert(accountName, certType, csrUrl, userName string, bundleId ...string) *[][]form.CardElementForm {
+	var cardFormArray [][]form.CardElementForm
+
+	//插入提示信息
+	messageText := utils.UpdateCertMessage
+	messageForm := form.GenerateTextTag(&messageText, false, nil)
+	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
+
+	//插入账号信息
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.CreateCertAccountHeader, accountName))
+
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, userName))
+
+	//插入证书类型信息
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.CreateCertTypeHeader, certType))
+
+	//push证书需要bundleId
+	if len(bundleId) > 0 {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdHeader, bundleId[0]))
+	}
+
+	//插入csr文件url信息
+	var csrInfoFormList []form.CardElementForm
+
+	csrHeader := utils.CsrHeader
+	csrHeaderForm := form.GenerateTextTag(&csrHeader, false, nil)
+	csrHeaderForm.Style = &utils.GrayHeaderStyle
+	csrInfoFormList = append(csrInfoFormList, *csrHeaderForm)
+
+	csrText := utils.CsrText
+	csrUrlForm := form.GenerateATag(&csrText, false, csrUrl)
+	csrInfoFormList = append(csrInfoFormList, *csrUrlForm)
+
+	cardFormArray = append(cardFormArray, csrInfoFormList)
+	return &cardFormArray
+}
+
 func getCardHeader(headerTitle string) *form.CardElementForm {
 	// 生成cardHeader
 	imageColor := "orange"
@@ -862,7 +967,6 @@ func deleteCertInApple(tokenString string, certId string) int {
 	}
 	return -1
 }
-
 
 //证书数据库删除操作--前端交互版
 func certDBDelete(c *gin.Context, condition *map[string]interface{}, updateInfo *map[string]interface{}) {
