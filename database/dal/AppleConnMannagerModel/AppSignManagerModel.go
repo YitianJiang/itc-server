@@ -205,6 +205,15 @@ type OpenBundleIdCapabilityResponse struct {
 	Data IdAndTypeItem `json:"data"`
 }
 
+type QueryBundleIdCapabilityResponse struct {
+	Data []BundleIdCapabilitiesData `json:"data"`
+}
+
+type BundleIdCapabilitiesData struct {
+	IdAndTypeItem
+	Attributes BundleCapabilityAttributes `json:"attributes"`
+}
+
 //Bundle id的苹果req的Model ******End******
 
 //Profile的苹果req的Model ******Start******

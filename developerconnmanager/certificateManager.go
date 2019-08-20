@@ -417,12 +417,12 @@ func DeleteCertificate(c *gin.Context) {
 			}
 			//卡片参数增加bundleIdId、teamId、accountType，用于在点击已删除时在苹果后台查询能力
 			param := map[string]interface{}{
-				"cert_id":     delCertRequest.CertId,
-				"username":    delCertRequest.CertOperator,
-				"bundle_id":   bundleid,
-				"bundleid_id": bundleIdId,
-				"team_id":     delCertRequest.TeamId,
-				"accountType": delCertRequest.AccType,
+				"cert_id":      delCertRequest.CertId,
+				"username":     delCertRequest.CertOperator,
+				"bundle_id":    bundleid,
+				"bundleid_id":  bundleIdId,
+				"team_id":      delCertRequest.TeamId,
+				"account_type": delCertRequest.AccType,
 			}
 			cardActions := generateActionsOfCertDelete(&param)
 			err := sendIOSCertLarkMessage(cardElementForms, cardActions, delCertRequest.CertOperator, &abot, "--删除证书")
@@ -523,6 +523,7 @@ func DeleteCertificate(c *gin.Context) {
 
 //lark卡片点击已删除后异步更新db操作人信息
 func AsynDeleteCertFeedback(c *gin.Context) {
+	logs.Notice("点击已删除")
 	var feedbackInfo devconnmanager.DelCertFeedback
 	err := c.ShouldBindJSON(&feedbackInfo)
 	if err != nil {
@@ -561,11 +562,43 @@ func AsynDeleteCertFeedback(c *gin.Context) {
 		})
 		return
 	}
+	if feedbackInfo.CustomerJson.AccountType == _const.Organization {
+		logs.Notice("查询bundleId能力")
+		//去苹果后台查询能力并更新数据库
+		go updateBundleIdCapabilities(feedbackInfo.CustomerJson.BundleIdId, feedbackInfo.CustomerJson.TeamId)
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"errorCode": 0,
 		"errorInfo": "",
 	})
 	return
+}
+
+func updateBundleIdCapabilities(bundleIdId string, teamId string) {
+	capabilitiesMap := *queryBundleIdCapabilities(bundleIdId, teamId)
+	_ = devconnmanager.UpdateAppleBundleId(map[string]interface{}{"bundleid_id": bundleIdId}, capabilitiesMap)
+}
+
+func queryBundleIdCapabilities(bundleIdId string, teamId string) *map[string]interface{} {
+	queryUrl := fmt.Sprintf(_const.APPLE_BUNDLE_ID_CAPABILITIES_QUERY_URL, bundleIdId)
+	tokenString := GetTokenStringByTeamId(teamId)
+	capabilitiesMap := make(map[string]interface{})
+	var responseBody devconnmanager.QueryBundleIdCapabilityResponse
+	if !ReqToAppleHasObjMethod("GET", queryUrl, tokenString, nil, &responseBody) {
+		logs.Error("查询bundleId能力失败。bundleIdId: %s, teamId: %s", bundleIdId, teamId)
+		return &capabilitiesMap
+	}
+	logs.Notice("%v", responseBody)
+	for _, capability := range responseBody.Data {
+		//非配置能力
+		if len(capability.Attributes.Settings) == 0 || len(capability.Attributes.Settings[0].Options) == 0 {
+			capabilitiesMap[capability.Attributes.CapabilityType] = capability.Id
+		} else {
+			//配置能力
+			capabilitiesMap[capability.Attributes.CapabilityType] = capability.Attributes.Settings[0].Options[0].Key
+		}
+	}
+	return &capabilitiesMap
 }
 
 func queryPerms(url string, resPerms *devconnmanager.GetPermsResponse) bool {

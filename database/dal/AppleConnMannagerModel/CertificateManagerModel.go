@@ -103,9 +103,12 @@ type DelCertFeedback struct {
 }
 
 type DelCertFeedbackCustomer struct {
-	CertId   string `json:"cert_id"        binding:"required"`
-	UserName string `json:"username"       binding:"required"`
-	Bundleid string `json:"bundle_id"`
+	CertId      string `json:"cert_id"        binding:"required"`
+	UserName    string `json:"username"       binding:"required"`
+	Bundleid    string `json:"bundle_id"`
+	BundleIdId  string `json:"bundleid_id"`
+	AccountType string `json:"account_type"`
+	TeamId      string `json:"team_id"`
 }
 
 type QueryCertRequest struct {
