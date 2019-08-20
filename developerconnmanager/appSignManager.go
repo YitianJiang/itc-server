@@ -1731,7 +1731,7 @@ func DeleteProfile(c *gin.Context) {
 		abot := service.BotService{}
 		abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 		appleUrl := utils.APPLE_DELETE_PROFILE_URL + deleteRequest.ProfileId
-		if deleteRequest.Operator == "" {
+		if deleteRequest.Operator == "" || deleteRequest.Operator == _const.UNDEFINED{
 			deleteRequest.Operator = utils.CreateCertPrincipal
 		}
 		param := map[string]interface{}{
@@ -1896,6 +1896,9 @@ func DeleteBundleid(c *gin.Context) {
 		abot := service.BotService{}
 		abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 		url := utils.APPLE_DELETE_BUNDLE_URL + delRequest.BundleidId
+		if delRequest.Operator == "" || delRequest.Operator == _const.UNDEFINED{
+			delRequest.Operator = utils.CreateCertPrincipal
+		}
 		param := map[string]interface{}{
 			"bundleid_id":     delRequest.BundleidId,
 			"username":        delRequest.Operator,
@@ -1906,10 +1909,8 @@ func DeleteBundleid(c *gin.Context) {
 		}
 		cardContent := generateCardOfBundleDelete(&delRequest, url, (*bundleid)[0].BundleId, (*bundleid)[0].BundleId, pushCertInfo)
 		cardAction := generateActionOfBundleDelete(&param)
-		if delRequest.Operator == "" {
-			delRequest.Operator = utils.CreateCertPrincipal
-		}
-		sendErr := sendIOSCertLarkMessage(cardContent, cardAction, delRequest.Operator, &abot, "--删除BundleId")
+
+		sendErr := sendIOSCertLarkMessage(cardContent, cardAction, delRequest.Operator, &abot,"--删除BundleId")
 		if sendErr != nil {
 			utils.RecordError("工单发送lark消息失败，", sendErr)
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送工单lark消息失败", "")
@@ -1953,17 +1954,6 @@ func DeleteBundleid(c *gin.Context) {
 			if ok := deleteProfileDBandTos(c, profile.ProfileId, profile.ProfileName, profile.ProfileType, delRequest.TeamId, (*bundleid)[0].BundleId, updateData, delRequest.UserName); !ok {
 				return
 			}
-		}
-	}
-	//push_cert删除
-	if (*bundleid)[0].PushCertId != "" && (*bundleid)[0].PushCertId != _const.NeedUpdate {
-		condition := map[string]interface{}{"cert_id": (*bundleid)[0].PushCertId}
-		updateInfo := map[string]interface{}{
-			"deleted_at": time.Now(),
-			"op_user":    delRequest.UserName,
-		}
-		if ok := devconnmanager.UpdateCertInfoByMap(condition, updateInfo); !ok {
-			utils.RecordError("bundleid删除时，push_cert删除失败", nil)
 		}
 	}
 	//bundleid删除
@@ -2369,7 +2359,7 @@ func packeBundleProfileCert(c *gin.Context, bqr *devconnmanager.APPandBundle) *d
 	packProfileSection(bqr, &bundleInfo.ProfileCertSection)
 	bundleInfo.PushCert.CertId = bqr.PushCertId
 	//push_cert信息整合--
-	if bqr.PushCertId != "" && bqr.PushCertId != _const.NeedUpdate {
+	if bqr.PushCertId != "" && bqr.PushCertId != _const.NeedUpdate && bqr.PushCertId != _const.Deleting{
 		pushCert := devconnmanager.QueryCertInfoByCertId(bqr.PushCertId)
 		if pushCert == nil {
 			utils.RecordError("数据库查询push证书信息失败", nil)
@@ -2421,21 +2411,23 @@ func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle, bundleInfo 
 }
 
 //API3-1，重组profile信息
-func packProfileSection(bqr *devconnmanager.APPandBundle, profile *devconnmanager.BundleProfileGroup) {
+func packProfileSection(bqr *devconnmanager.APPandBundle,profile *devconnmanager.BundleProfileGroup) {
 	profile.DevProfile.ProfileId = bqr.DevProfileId
 	profile.DistProfile.ProfileId = bqr.DistProfileId
-	if strings.Contains(bqr.ProfileType, "APP_DEVELOPMENT") {
-		profile.DevProfile.ProfileType = bqr.ProfileType
-		profile.DevProfile.ProfileId = bqr.ProfileId
-		profile.DevProfile.ProfileName = bqr.ProfileName
-		profile.DevProfile.ProfileDownloadUrl = bqr.ProfileDownloadUrl
-		profile.DevProfile.ProfileExpireDate = bqr.ProfileExpireDate
-	} else {
-		profile.DistProfile.ProfileType = bqr.ProfileType
-		profile.DistProfile.ProfileName = bqr.ProfileName
-		profile.DistProfile.ProfileId = bqr.ProfileId
-		profile.DistProfile.ProfileDownloadUrl = bqr.ProfileDownloadUrl
-		profile.DistProfile.ProfileExpireDate = bqr.ProfileExpireDate
+	if bqr.ProfileType != ""{
+		if strings.Contains(bqr.ProfileType, "APP_DEVELOPMENT") {
+			profile.DevProfile.ProfileType = bqr.ProfileType
+			profile.DevProfile.ProfileId = bqr.ProfileId
+			profile.DevProfile.ProfileName = bqr.ProfileName
+			profile.DevProfile.ProfileDownloadUrl = bqr.ProfileDownloadUrl
+			profile.DevProfile.ProfileExpireDate = bqr.ProfileExpireDate
+		} else{
+			profile.DistProfile.ProfileType = bqr.ProfileType
+			profile.DistProfile.ProfileName = bqr.ProfileName
+			profile.DistProfile.ProfileId = bqr.ProfileId
+			profile.DistProfile.ProfileDownloadUrl = bqr.ProfileDownloadUrl
+			profile.DistProfile.ProfileExpireDate = bqr.ProfileExpireDate
+		}
 	}
 }
 
@@ -2755,10 +2747,9 @@ func filterProfileInfo(profileInfo *devconnmanager.BundleProfileInfo) {
 func permLevelTrans(permActions []string) string {
 	if permActions == nil {
 		return "0"
-	} else {
+	}else {
 		var level = 0
-		for _, perm := range permActions {
-			logs.Notice("权限等级：" + perm)
+		for _,perm := range permActions {
 			if perm == _const.PermAdmin {
 				level = 3
 			} else if perm == _const.PermAllCert && level < 2 {

@@ -393,17 +393,30 @@ func DeleteCertificate(c *gin.Context) {
 
 		//企业分发账号和push证书工单处理逻辑---此if下操作待apple open API ready后可删除或不执行
 		if delCertRequest.AccType == _const.Enterprise || delCertRequest.CertType == _const.IOS_PUSH || delCertRequest.CertType == _const.MAC_PUSH {
+			var bundleid = ""//判断是否为push证书
+			if delCertRequest.CertType == _const.IOS_PUSH || delCertRequest.CertType == _const.MAC_PUSH {
+				condition := map[string]interface{}{
+					"push_cert_id": delCertRequest.CertId,
+				}
+				abpInfo := devconnmanager.QueryAppBundleProfiles(condition)
+				if abpInfo == nil || len(*abpInfo)==0{
+					utils.AssembleJsonResponse(c, http.StatusInternalServerError, "查询Push证书对应的bundleID信息失败", "")
+					return
+				}
+				bundleid = (*abpInfo)[0].BundleId
+			}
 			//向负责人发送lark消息
 			abot := service.BotService{}
 			abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 			appleUrl := utils.APPLE_DELETE_CERT_URL + delCertRequest.CertId
 			cardElementForms := generateCardOfCertDelete(delCertRequest.AccountName, delCertRequest.CertId, delCertRequest.CertName, appleUrl, delCertRequest.UserName)
-			if delCertRequest.CertOperator == "" {
+			if delCertRequest.CertOperator == "" || delCertRequest.CertOperator == _const.UNDEFINED{
 				delCertRequest.CertOperator = utils.CreateCertPrincipal
 			}
 			param := map[string]interface{}{
 				"cert_id":  delCertRequest.CertId,
 				"username": delCertRequest.CertOperator,
+				"bundle_id":bundleid,
 			}
 			cardActions := generateActionsOfCertDelete(&param)
 			err := sendIOSCertLarkMessage(cardElementForms, cardActions, delCertRequest.CertOperator, &abot,"--删除证书")
@@ -420,24 +433,29 @@ func DeleteCertificate(c *gin.Context) {
 			tosFilePath := "appleConnectFile/" + string(delCertRequest.TeamId) + "/" + delCertRequest.CertType + "/" + delCertRequest.CertId + "/" + dealCertName(delCertRequest.CertName) + ".cer"
 			delResultBool := deleteTosCert(tosFilePath)
 			if !delResultBool {
-				c.JSON(http.StatusOK, gin.H{
-					"message":   "delete fail",
-					"errorCode": 8,
-					"errorInfo": "删除tos上的证书失败",
-				})
-				return
+				//此处不阻塞，只打log
+				logs.Error("删除tos文件失败，路径："+tosFilePath)
 			}
 			//db删除，只更新deleted_at
 			updateInfo := map[string]interface{}{
 				"deleted_at": time.Now(),
 			}
-			if delCertRequest.CertType == _const.IOS_PUSH || delCertRequest.CertType == _const.MAC_PUSH { //push证书删除时，更新和bundle之间关系
+			//push证书删除时，更新和bundle之间关系
+			if delCertRequest.CertType == _const.IOS_PUSH || delCertRequest.CertType == _const.MAC_PUSH {
 				condition := map[string]interface{}{
 					"push_cert_id": delCertRequest.CertId,
 				}
-				updateInfo := map[string]interface{}{
-					"push_cert_id": nil,
-					"user_name":    delCertRequest.UserName,
+				var updateInfo map[string]interface{}
+				if delCertRequest.AccType != _const.Enterprise{//organization账号下处理逻辑新增deleting状态
+					updateInfo = map[string]interface{}{
+						"push_cert_id": _const.Deleting,
+						"user_name":    delCertRequest.UserName,
+					}
+				}else {
+					updateInfo = map[string]interface{}{
+						"push_cert_id": nil,
+						"user_name":    delCertRequest.UserName,
+					}
 				}
 				if updateErr := devconnmanager.UpdateAppBundleProfiles(condition, updateInfo); updateErr != nil {
 					utils.AssembleJsonResponse(c, http.StatusInternalServerError, "删除Push证书时更新bundle-profile信息失败", "")
@@ -518,8 +536,19 @@ func AsynDeleteCertFeedback(c *gin.Context) {
 		"op_user":    feedbackInfo.CustomerJson.UserName,
 	}
 	okU := devconnmanager.UpdateCertInfoByMap(condition, updateInfo)
-	if !okU {
-		utils.RecordError("异步更新删除信息操作人失败，证书ID："+feedbackInfo.CustomerJson.CertId, nil)
+	var okU2 error
+	if feedbackInfo.CustomerJson.Bundleid != "" {
+		queryData := map[string]interface{}{
+			"bundle_id":feedbackInfo.CustomerJson.Bundleid,
+		}
+		updateData := map[string]interface{}{
+			"user_name":feedbackInfo.CustomerJson.UserName,
+			"push_cert_id":nil,
+		}
+		okU2 = devconnmanager.UpdateAppBundleProfiles(queryData,updateData)
+	}
+	if !okU || okU2 != nil {
+		utils.RecordError("异步更新删除证书信息操作人失败，证书ID："+feedbackInfo.CustomerJson.CertId, nil)
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": 4,
 			"errorInfo": "数据库异步更新删除信息操作人失败",
