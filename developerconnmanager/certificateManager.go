@@ -141,10 +141,10 @@ func InsertCertificate(c *gin.Context) {
 		}
 		csrFileUrl := _const.TOS_CSR_FILE_URL_PUSH
 		var err error
-		if body.IsUpdate == "0" {
-			err = sendCreateCertAlertToLark(body.AccountName, body.CertType, csrFileUrl, body.CertPrincipal, body.UserName, &botService, body.BundleId)
-		} else if body.IsUpdate == "1" {
+		if body.IsUpdate == "1" {
 			err = sendUpdateCertAlertToLark(body.AccountName, body.CertType, csrFileUrl, body.CertPrincipal, body.UserName, &botService, body.BundleId)
+		} else {
+			err = sendCreateCertAlertToLark(body.AccountName, body.CertType, csrFileUrl, body.CertPrincipal, body.UserName, &botService, body.BundleId)
 		}
 
 		utils.RecordError("发送新建证书提醒lark失败：", err)
