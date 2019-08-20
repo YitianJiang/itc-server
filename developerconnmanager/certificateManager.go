@@ -595,6 +595,9 @@ func queryBundleIdCapabilities(bundleIdId string, teamId string) *map[string]int
 		return &capabilitiesMap
 	}
 	logs.Notice("%v", responseBody)
+	for capabilityName := range _const.IOSSelectCapabilitiesMap {
+		capabilitiesMap[capabilityName] = ""
+	}
 	for _, capability := range responseBody.Data {
 		//非配置能力
 		if len(capability.Attributes.Settings) == 0 || len(capability.Attributes.Settings[0].Options) == 0 {
