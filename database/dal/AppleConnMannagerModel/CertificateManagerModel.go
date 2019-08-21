@@ -123,9 +123,20 @@ type UserName struct {
 }
 
 type RecAppName struct {
+	gorm.Model
 	AppName string `gorm:"app_name"`
 }
 
 func (CertInfo) TableName() string {
 	return "tt_apple_certificate"
+}
+
+type CreateOrUpdateCertInfoForLark struct {
+	//CertName     string
+	CertType    string
+	TeamId      string
+	AccountType string
+	CsrUrl      string
+	BundleId    string
+	UserName    string
 }

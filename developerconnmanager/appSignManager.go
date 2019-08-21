@@ -1188,6 +1188,7 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 			} else if (*bundleIdProfile)[0].PushCertId == "" || (*bundleIdProfile)[0].PushCertId == _const.NeedUpdate {
 				//发送创建push证书的工单
 				if sendPushCertLark(requestData) {
+					//发送成功后更新数据库
 					_ = devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId}, map[string]interface{}{"push_cert_id": _const.NeedUpdate})
 				}
 			}
@@ -1299,7 +1300,16 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 func sendPushCertLark(requestData *devconnmanager.CreateBundleProfileRequest) bool {
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
-	cardInfos := generateCardOfPushCert(requestData)
+
+	certInfo := devconnmanager.CreateOrUpdateCertInfoForLark{
+		UserName:    requestData.UserName,
+		BundleId:    requestData.BundleId,
+		AccountType: requestData.AccountType,
+		TeamId:      requestData.TeamId,
+		CertType:    requestData.BundleType + "_PUSH",
+		CsrUrl:      _const.TOS_CSR_FILE_URL_PUSH,
+	}
+	cardInfos := generateCardOfCreateOrUpdateCert(utils.CreateCertMessage, &certInfo)
 	//logs.Info("%v",*cardInfos)
 	err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--创建push证书")
 	utils.RecordError("发送创建push证书工单失败：", err)
@@ -1307,37 +1317,6 @@ func sendPushCertLark(requestData *devconnmanager.CreateBundleProfileRequest) bo
 		return false
 	}
 	return true
-}
-
-//生成创建push证书消息卡片内容
-func generateCardOfPushCert(requestData *devconnmanager.CreateBundleProfileRequest) *[][]form.CardElementForm {
-	var cardFormArray [][]form.CardElementForm
-
-	//插入提示信息
-	messageText := utils.CreatePushCertMessage
-	messageForm := form.GenerateTextTag(&messageText, false, nil)
-	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
-
-	//插入用户名，账户名，bundleId，push相关
-
-	//插入基本信息
-	cardFormArray = append(cardFormArray, generateCenterText("基本信息部分"))
-	accountInfos := devconnmanager.QueryAccountInfo(map[string]interface{}{"team_id": requestData.TeamId})
-	if len(*accountInfos) != 1 {
-		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TeamIdHeader, requestData.TeamId))
-		logs.Error("获取teamId对应的account失败：%s 错误原因：teamId对应的account记录数不等于1", requestData.TeamId)
-	} else {
-		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountHeader, (*accountInfos)[0].AccountName))
-	}
-
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, requestData.UserName))
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdNameHeader, requestData.BundleIdName))
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdHeader, requestData.BundleId))
-	cardFormArray = append(cardFormArray, getDividerOfCard())
-
-	cardFormArray = append(cardFormArray, generateCenterText("Push证书信息部分"))
-	cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.PushCertHeader, utils.CsrText, _const.TOS_CSR_FILE_URL_PUSH))
-	return &cardFormArray
 }
 
 //todo  根据id修改
@@ -1355,6 +1334,7 @@ func createProfile(profileInfo *devconnmanager.ProfileInfo, bundleIdInfo *devcon
 		if !uploadResult {
 			return errors.New("upload profile tos error")
 		}
+		//2020-08-20T06:31:20.101+0000
 		timeString := strings.Split(appleResult.Data.Attributes.ExpirationDate, "+")[0]
 		exp, _ := time.Parse("2006-01-02T15:04:05", timeString)
 		//插入profile记录
@@ -1731,7 +1711,7 @@ func DeleteProfile(c *gin.Context) {
 		abot := service.BotService{}
 		abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 		appleUrl := utils.APPLE_DELETE_PROFILE_URL + deleteRequest.ProfileId
-		if deleteRequest.Operator == "" || deleteRequest.Operator == _const.UNDEFINED{
+		if deleteRequest.Operator == "" || deleteRequest.Operator == _const.UNDEFINED {
 			deleteRequest.Operator = utils.CreateCertPrincipal
 		}
 		param := map[string]interface{}{
@@ -1896,7 +1876,7 @@ func DeleteBundleid(c *gin.Context) {
 		abot := service.BotService{}
 		abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 		url := utils.APPLE_DELETE_BUNDLE_URL + delRequest.BundleidId
-		if delRequest.Operator == "" || delRequest.Operator == _const.UNDEFINED{
+		if delRequest.Operator == "" || delRequest.Operator == _const.UNDEFINED {
 			delRequest.Operator = utils.CreateCertPrincipal
 		}
 		param := map[string]interface{}{
@@ -1910,7 +1890,7 @@ func DeleteBundleid(c *gin.Context) {
 		cardContent := generateCardOfBundleDelete(&delRequest, url, (*bundleid)[0].BundleId, (*bundleid)[0].BundleId, pushCertInfo)
 		cardAction := generateActionOfBundleDelete(&param)
 
-		sendErr := sendIOSCertLarkMessage(cardContent, cardAction, delRequest.Operator, &abot,"--删除BundleId")
+		sendErr := sendIOSCertLarkMessage(cardContent, cardAction, delRequest.Operator, &abot, "--删除BundleId")
 		if sendErr != nil {
 			utils.RecordError("工单发送lark消息失败，", sendErr)
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送工单lark消息失败", "")
@@ -2359,7 +2339,7 @@ func packeBundleProfileCert(c *gin.Context, bqr *devconnmanager.APPandBundle) *d
 	packProfileSection(bqr, &bundleInfo.ProfileCertSection)
 	bundleInfo.PushCert.CertId = bqr.PushCertId
 	//push_cert信息整合--
-	if bqr.PushCertId != "" && bqr.PushCertId != _const.NeedUpdate && bqr.PushCertId != _const.Deleting{
+	if bqr.PushCertId != "" && bqr.PushCertId != _const.NeedUpdate && bqr.PushCertId != _const.Deleting {
 		pushCert := devconnmanager.QueryCertInfoByCertId(bqr.PushCertId)
 		if pushCert == nil {
 			utils.RecordError("数据库查询push证书信息失败", nil)
@@ -2411,17 +2391,17 @@ func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle, bundleInfo 
 }
 
 //API3-1，重组profile信息
-func packProfileSection(bqr *devconnmanager.APPandBundle,profile *devconnmanager.BundleProfileGroup) {
+func packProfileSection(bqr *devconnmanager.APPandBundle, profile *devconnmanager.BundleProfileGroup) {
 	profile.DevProfile.ProfileId = bqr.DevProfileId
 	profile.DistProfile.ProfileId = bqr.DistProfileId
-	if bqr.ProfileType != ""{
+	if bqr.ProfileType != "" {
 		if strings.Contains(bqr.ProfileType, "APP_DEVELOPMENT") {
 			profile.DevProfile.ProfileType = bqr.ProfileType
 			profile.DevProfile.ProfileId = bqr.ProfileId
 			profile.DevProfile.ProfileName = bqr.ProfileName
 			profile.DevProfile.ProfileDownloadUrl = bqr.ProfileDownloadUrl
 			profile.DevProfile.ProfileExpireDate = bqr.ProfileExpireDate
-		} else{
+		} else {
 			profile.DistProfile.ProfileType = bqr.ProfileType
 			profile.DistProfile.ProfileName = bqr.ProfileName
 			profile.DistProfile.ProfileId = bqr.ProfileId
@@ -2747,9 +2727,9 @@ func filterProfileInfo(profileInfo *devconnmanager.BundleProfileInfo) {
 func permLevelTrans(permActions []string) string {
 	if permActions == nil {
 		return "0"
-	}else {
+	} else {
 		var level = 0
-		for _,perm := range permActions {
+		for _, perm := range permActions {
 			if perm == _const.PermAdmin {
 				level = 3
 			} else if perm == _const.PermAllCert && level < 2 {
