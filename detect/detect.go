@@ -109,8 +109,10 @@ func UploadFile(c *gin.Context) {
 
 	//增加回调地址
 	callBackAddr := c.DefaultPostForm("callBackAddr", "")
+	skip := c.DefaultPostForm("skipSelfFlag", "")
 	var extraInfo dal.ExtraStruct
 	extraInfo.CallBackAddr = callBackAddr
+	extraInfo.SkipSelfFlag = skip != ""
 
 	//检验文件格式是否是apk或者ipa
 	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".ipa") ||
@@ -193,7 +195,7 @@ func UploadFile(c *gin.Context) {
 	dbDetectModel.AppId = appId
 	//增加状态字段，0---未完全确认；1---已完全确认
 	dbDetectModel.Status = 0
-	if callBackAddr != "" {
+	if callBackAddr != "" || skip != "" {
 		byteExtraInfo, _ := json.Marshal(extraInfo)
 		dbDetectModel.ExtraInfo = string(byteExtraInfo)
 	}
@@ -398,10 +400,16 @@ func UpdateDetectInfos(c *gin.Context) {
 				utils.LarkDingOneInnerWithUrl(lark_people, tips, "点击跳转检测详情", larkUrl)
 			}
 		}
+
 		//获取未确认自查项数目
-		isRight, selfNum := GetIOSSelfNum(appId, taskId)
-		if isRight {
-			unSelfCheck = selfNum
+		var extra dal.ExtraStruct
+		json.Unmarshal([]byte((*detect)[0].ExtraInfo), &extra)
+		skip := extra.SkipSelfFlag
+		if !skip {
+			isRight, selfNum := GetIOSSelfNum(appId, taskId)
+			if isRight {
+				unSelfCheck = selfNum
+			}
 		}
 	}
 	//进行lark消息提醒
