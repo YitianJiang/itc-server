@@ -161,3 +161,8 @@ const PermAdmin = "admin"
 const PermAllCert = "all_cert_manager"
 const PermDevCert = "dev_cert_manager"
 const Deleting = "deleting"
+
+var CertManagerAuthorization = map[string]string{
+	"all_cert_manager": "全部证书管理",
+	"dev_cert_manager": "开发证书管理",
+}

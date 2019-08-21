@@ -201,7 +201,7 @@ func ApplyForAuthorization(c *gin.Context) {
 	return
 }
 
-//生成绑定账号审核消息卡片内容
+//生成权限申请审核消息卡片内容
 func generateCardInfoOfApplyForAuthorization(requestData *devconnmanager.AuthorizationApplicationRequest) *[][]form.CardElementForm {
 	var cardFormArray [][]form.CardElementForm
 
@@ -222,19 +222,13 @@ func generateCardInfoOfApplyForAuthorization(requestData *devconnmanager.Authori
 		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountHeader, (*accountInfos)[0].AccountName))
 	}*/
 
-	var authorizationString string
-	switch requestData.Authorization {
-	case "all_cert_manager":
-		authorizationString = "全部证书管理"
-	case "dev_cert_manager":
-		authorizationString = "开发证书管理"
-	}
+	authorizationString := _const.CertManagerAuthorization[requestData.Authorization]
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AuthorizationHeader, authorizationString))
 
 	return &cardFormArray
 }
 
-//生成绑定账号审核消息卡片action
+//生成权限申请审核消息卡片action
 func generateActionsOfApplyForAuthorization(teamId string, userName string, authorization string) *[]form.CardActionForm {
 	var cardActions []form.CardActionForm
 	var cardAction form.CardActionForm
@@ -244,14 +238,14 @@ func generateActionsOfApplyForAuthorization(teamId string, userName string, auth
 	var hideOther = false
 	var url = utils.ApproveApplyForAuthorizationUrl
 
-	approveButtonParams := map[string]interface{}{"result": authorization, "teamId": teamId, "userName": userName}
-	rejectButtonParams := map[string]interface{}{"result": "-1", "teamId": teamId, "userName": userName}
+	approveButtonParams := map[string]interface{}{"authorization": authorization, "isApproved": 1, "teamId": teamId, "userName": userName}
+	rejectButtonParams := map[string]interface{}{"authorization": authorization, "isApproved": -1, "teamId": teamId, "userName": userName}
 
-	approveButton, err := form.GenerateButtonForm(&approveButtonText, nil, nil, nil, "post", url, false, false, &approveButtonParams, nil, &hideOther)
+	approveButton, err := form.GenerateButtonForm(&approveButtonText, nil, nil, nil, "post", url, true, false, &approveButtonParams, nil, &hideOther)
 	if err != nil {
 		utils.RecordError("生成审核卡片同意button失败，", err)
 	}
-	rejectButton, err := form.GenerateButtonForm(&rejectButtonText, nil, nil, nil, "post", url, false, false, &rejectButtonParams, nil, &hideOther)
+	rejectButton, err := form.GenerateButtonForm(&rejectButtonText, nil, nil, nil, "post", url, true, false, &rejectButtonParams, nil, &hideOther)
 	if err != nil {
 		utils.RecordError("生成审核卡片拒绝button失败，", err)
 	}
@@ -263,7 +257,8 @@ func generateActionsOfApplyForAuthorization(teamId string, userName string, auth
 }
 
 func ApproveAuthorizationApplication(c *gin.Context) {
-	//todo  需要给回执
+	//审核完成后需要给申请人回执
+	logs.Info("权限申请审核")
 	var requestData devconnmanager.ApproveAuthorizationApplicationParamFromLark
 	bindJsonError := c.ShouldBindJSON(&requestData)
 	utils.RecordError("绑定post请求body出错：%v", bindJsonError)
@@ -272,20 +267,26 @@ func ApproveAuthorizationApplication(c *gin.Context) {
 		return
 	}
 	logs.Info("request:%v", requestData)
-	if requestData.Result == "-1" {
+
+	authorizationString := _const.CertManagerAuthorization[requestData.Authorization]
+	if requestData.IsApproved == -1 {
+		//已拒绝
+		sendApplyForAuthorResultToApplicant(requestData.OpenId, requestData.UserName, authorizationString, "拒绝")
 		utils.AssembleJsonResponse(c, _const.SUCCESS, "权限审核成功", nil)
 		return
-	}
-	if requestData.Result != "all_cert_manager" && requestData.Result != "dev_cert_manager" {
+	} else if requestData.Authorization != "all_cert_manager" && requestData.Authorization != "dev_cert_manager" {
+		logs.Error("审批权限申请错误：请求参数有误")
 		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数有误", nil)
 		return
 	}
 
 	teamId := strings.ToLower(requestData.TeamId) + "_space_account"
-	if !utils.GiveUsersPermission(&[]string{requestData.UserName}, teamId, &[]string{requestData.Result}) {
+	if !utils.GiveUsersPermission(&[]string{requestData.UserName}, teamId, &[]string{requestData.Authorization}) {
+		logs.Error("审批权限申请错误：权限赋予失败")
 		utils.AssembleJsonResponseWithStatusCode(c, http.StatusInternalServerError, "审核失败:权限赋予失败", nil)
 	}
-
+	//已通过
+	sendApplyForAuthorResultToApplicant(requestData.OpenId, requestData.UserName, authorizationString, "通过")
 	utils.AssembleJsonResponse(c, _const.SUCCESS, "权限审核成功", nil)
 	return
 }
@@ -1653,7 +1654,16 @@ func ApproveAppBindAccountFeedback(c *gin.Context) {
 func sendApproveResultToApplicant(requestData *devconnmanager.ApproveAppBindAccountParamFromLark, accountCertInfo *devconnmanager.AppAccountCert, action string) {
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
-	response, err := botService.GetUserInfoByOpenId(requestData.OpenId)
+	name := getUserNameByOpenId(requestData.OpenId, &botService)
+	accountInfo := getAccountInfoByTeamId(requestData.TeamId)
+	title := "应用绑定账号审核结果通知"
+	message := fmt.Sprintf("你提交的应用[%s]绑定账号[%s]申请 已于%s 被%s %s", accountCertInfo.AppName, accountInfo.AccountName, time.Now().Format("2006-01-02 15:04:05"), name, action)
+	alertTextWithTitleToPeople(title, message, requestData.UserName+"@bytedance.com", &botService)
+}
+
+func getUserNameByOpenId(openId string, botService *service.BotService) string {
+	response, err := botService.GetUserInfoByOpenId(openId)
+	logs.Info("%v", response)
 	utils.RecordError("获取用户信息错误", err)
 	name := "null"
 	logs.Info("%v", response)
@@ -1661,10 +1671,7 @@ func sendApproveResultToApplicant(requestData *devconnmanager.ApproveAppBindAcco
 	case string:
 		name = response["name"].(string)
 	}
-	accountInfo := getAccountInfoByTeamId(requestData.TeamId)
-	title := "应用绑定账号审核结果通知"
-	message := fmt.Sprintf("你提交的应用[%s]绑定账号[%s]申请 已于%s 被%s %s", accountCertInfo.AppName, accountInfo.AccountName, time.Now().Format("2006-01-02 15:04:05"), name, action)
-	alertTextWithTitleToPeople(title, message, requestData.UserName+"@bytedance.com", &botService)
+	return name
 }
 
 func getAccountInfoByTeamId(teamId string) *devconnmanager.AccountInfo {
@@ -2776,4 +2783,13 @@ func alertTextWithTitleToPeople(title string, text string, userEmail string, bot
 	// 发送消息
 	_, err = botService.SendMessage(*richTextMessage)
 	utils.RecordError("bot发送消息错误", err)
+}
+
+func sendApplyForAuthorResultToApplicant(openId, userName, authorization, action string) {
+	botService := service.BotService{}
+	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
+	name := getUserNameByOpenId(openId, &botService)
+	title := "证书权限申请审核结果通知"
+	message := fmt.Sprintf("你提交的证书权限[%s]申请 已于%s 被%s %s", authorization, time.Now().Format("2006-01-02 15:04:05"), name, action)
+	alertTextWithTitleToPeople(title, message, userName+"@bytedance.com", &botService)
 }
