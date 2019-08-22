@@ -84,13 +84,13 @@ func ReqToAppleNoObjMethod(method, url, tokenString string) bool {
 			return false
 		}
 		logs.Notice(fmt.Sprint(response.StatusCode))
-		logs.Info(string(responseByte))
+		logs.Info("苹果成功返回response\n：%s", string(responseByte))
 		//json.Unmarshal(responseByte, &obj)
 		return true
 	} else {
 		logs.Info("查看返回状态码", response.StatusCode)
 		responseByte, _ := ioutil.ReadAll(response.Body)
-		logs.Info(string(responseByte))
+		logs.Info("苹果失败返回response\n：%s", string(responseByte))
 		return false
 	}
 }
@@ -130,8 +130,7 @@ func ReqToAppleHasObjMethod(method, url, tokenString string, objReq, objRes inte
 		logs.Info("查看返回状态码")
 		logs.Info(string(response.StatusCode))
 		responseByte, _ := ioutil.ReadAll(response.Body)
-		logs.Info("查看苹果的返回值")
-		logs.Info(string(responseByte))
+		logs.Info("苹果失败返回response\n：%s", string(responseByte))
 		return false
 	} else {
 		responseByte, err := ioutil.ReadAll(response.Body)
@@ -141,7 +140,7 @@ func ReqToAppleHasObjMethod(method, url, tokenString string, objReq, objRes inte
 			logs.Info("读取respose的body内容失败")
 			return false
 		}
-		//logs.Info(string(responseByte))
+		logs.Info("苹果成功返回response\n：%s", string(responseByte))
 		json.Unmarshal(responseByte, objRes)
 		return true
 	}
