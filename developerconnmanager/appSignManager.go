@@ -1537,6 +1537,9 @@ func insertDatabaseAfterCreateBundleIdForEnterprise(needUpdateDevProfile, needUp
 		field := appleBundleIdElem.FieldByName(capabilityKey)
 		field.SetString(capabilityValue)
 	}
+	//以下两个能力是创建bundleId就默认打开的，前端也不会传这两个字段，目前由于enterprise账号无法与苹果后台交互，因此写死
+	appleBundleId.GAME_CENTER = "GAME_CENTER"
+	appleBundleId.IN_APP_PURCHASE = "IN_APP_PURCHASE"
 	appleBundleId.BundleidName = requestData.BundleIdName
 	appleBundleId.BundleId = requestData.BundleId
 	appleBundleId.BundleidType = requestData.BundleType
