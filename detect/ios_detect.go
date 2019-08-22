@@ -752,6 +752,7 @@ func changeTotalStatus(taskId, toolId, confirmLark int) (error, int) {
 			return err, unConfirmNum
 		}
 		StatusDeal((*detect)[0], confirmLark) //ci回调和不通过block处理
+		sameConfirm((*detect)[0])             //相同包检测结果确认
 	}
 	return nil, unConfirmNum
 }
@@ -800,8 +801,8 @@ func middleDataDeal(taskId, toolId, aId int) (bool, bool) {
 }
 
 func GetIOSSelfNum(appid, taskId int) (bool, int) {
-	url := "https://itc.bytedance.net/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
-	//url := "http://10.224.14.220:6789/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
+	//url := "https://itc.bytedance.net/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
+	url := "http://10.224.14.220:6789/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
 	client := &http.Client{}
 	reqest, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -876,4 +877,23 @@ func StatusDeal(detect dal.DetectStruct, confirmLark int) error {
 		}()
 	}
 	return nil
+}
+
+func sameConfirm(detect dal.DetectStruct) {
+	//相同appname和appversion任务结果一致确认
+	sameDetect := dal.QueryDetectModelsByMap(map[string]interface{}{
+		"app_name":    detect.AppName,
+		"app_version": detect.AppVersion,
+		"platform":    detect.Platform,
+	})
+	if len(*sameDetect) != 1 {
+		for _, same := range *sameDetect {
+			same.SelftNoPass = detect.SelftNoPass
+			same.DetectNoPass = detect.DetectNoPass
+			same.Status = detect.Status
+			same.SelfCheckStatus = detect.SelfCheckStatus
+			dal.UpdateDetectModelNew(same)
+			StatusDeal(same, 0)
+		}
+	}
 }
