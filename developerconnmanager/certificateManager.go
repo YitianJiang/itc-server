@@ -781,7 +781,7 @@ func dealCertName(certName string) string {
 	for i := 0; i < len(certName); i++ {
 		if certName[i] == ':' {
 			continue
-		} else if certName[i] == ' ' || certName[i] == '.' {
+		} else if certName[i] == ' ' || certName[i] == '.' || certName[i] == '(' || certName[i] == ')'{
 			ret += "_"
 		} else {
 			ret += string(certName[i])
