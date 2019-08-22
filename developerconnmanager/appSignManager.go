@@ -18,6 +18,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -507,7 +508,7 @@ func CreateAppBindAccount(c *gin.Context) {
 	accountCertInfos := devconnmanager.QueryAppAccountCert(conditions)
 	var appAccountCert devconnmanager.AppAccountCert
 
-	if len(*accountCertInfos) == 0 {
+	if accountCertInfos != nil && len(*accountCertInfos) == 0 {
 		//插入数据
 		appAccountCert.TeamId = requestData.TeamId
 		appAccountCert.DevCertId = ""
@@ -2278,6 +2279,7 @@ func generateCardOfApproveBindAccount(appAccountCert *devconnmanager.AppAccountC
 	//插入userName, appId, appName, appType, teamId, accountName
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, appAccountCert.UserName))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AppIdHeader, appAccountCert.AppId))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BusinessHeader, getAppNameByAppId(appAccountCert.AppId)))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AppNameHeader, appAccountCert.AppName))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AppTypeHeader, appAccountCert.AppType))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TargetTeamIdHeader, appAccountCert.TeamId))
@@ -2290,6 +2292,15 @@ func generateCardOfApproveBindAccount(appAccountCert *devconnmanager.AppAccountC
 		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountTypeHeader, (*accountInfos)[0].AccountType))
 	}
 	return &cardFormArray
+}
+
+func getAppNameByAppId(appIdString string) string {
+	appId, err := strconv.Atoi(appIdString)
+	if err != nil {
+		logs.Error("appId（%s）转int失败：%v", appIdString, err)
+	}
+	appIdMap := utils.NewGetAppMap()
+	return appIdMap[appId]
 }
 
 //生成绑定账号审核消息卡片action
