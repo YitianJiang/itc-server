@@ -17,16 +17,22 @@ var (
 
 func InitDB() {
 
-	//online
-	//线上采用mysql gdpr
-	var err error
-	dboptional, err = dbconf.GetDBOptionalByConsulName("toutiao.mysql.itcserver_write")
-	if err != nil {
-		logs.Error("mysql gdpr failed,%v", err)
-		for _, lark_people := range _const.LowLarkPeople {
-			utils.LarkDingOneInner(lark_people, "mysql gdpr failed！")
+	//if env.IsBoe() {
+	//	//boedb
+	//	ssConf, _ := ssconf.LoadSsConfFile(conf.Configuration.MysqlConfigPath)
+	//	dboptional = dbconf.GetDbConf(ssConf, "itcserver", dbconf.Write)
+	//} else {
+		//online
+		//线上采用mysql gdpr
+		var err error
+		dboptional, err = dbconf.GetDBOptionalByConsulName("toutiao.mysql.itcserver_write")
+		if err != nil {
+			logs.Error("mysql gdpr failed,%v", err)
+			for _, lark_people := range _const.LowLarkPeople {
+				utils.LarkDingOneInner(lark_people, "mysql gdpr failed！")
+			}
 		}
-	}
+	//}
 
 	//test
 	//ssConf, _ := ssconf.LoadSsConfFile(conf.Configuration.MysqlConfigPath)
