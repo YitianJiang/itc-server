@@ -396,6 +396,7 @@ func ConfirmCheck(c *gin.Context) {
 	}
 	if detect != nil && detect.Status != 0 && detect.SelfCheckStatus != 0 {
 		StatusDeal(*detect, 2)
+		sameConfirm(*detect) //相同包检测结果确认
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
