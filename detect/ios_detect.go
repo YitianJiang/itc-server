@@ -801,8 +801,8 @@ func middleDataDeal(taskId, toolId, aId int) (bool, bool) {
 }
 
 func GetIOSSelfNum(appid, taskId int) (bool, int) {
-	//url := "https://itc.bytedance.net/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
-	url := "http://10.224.14.220:6789/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
+	url := "https://itc.bytedance.net/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
+	//url := "http://10.224.14.220:6789/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
 	client := &http.Client{}
 	reqest, err := http.NewRequest("GET", url, nil)
 	if err != nil {
