@@ -718,8 +718,10 @@ func createCertInApple(tokenString string, certType string, certTypeSufix string
 	}
 	defer response.Body.Close()
 	var certInfo devconnmanager.CreCertResponse
+	logs.Info("苹果返回状态码：%d", response.StatusCode)
 	if response.StatusCode != 201 {
-		logs.Info(string(response.StatusCode))
+		body, _ := ioutil.ReadAll(response.Body)
+		logs.Info("苹果返回response\n：%s", string(body))
 		if response.StatusCode == 409 {
 			logs.Info("已经存在类型为IOS_DEVELOPMENT且是通过api创建的证书，创建失败")
 		}
@@ -728,6 +730,7 @@ func createCertInApple(tokenString string, certType string, certTypeSufix string
 		if err != nil {
 			logs.Info("读取respose的body内容失败")
 		}
+		logs.Info("苹果返回response\n：%s", string(body))
 		json.Unmarshal(body, &certInfo)
 	}
 	return &certInfo
@@ -778,7 +781,7 @@ func dealCertName(certName string) string {
 	for i := 0; i < len(certName); i++ {
 		if certName[i] == ':' {
 			continue
-		} else if certName[i] == ' ' || certName[i] == '.' {
+		} else if certName[i] == ' ' || certName[i] == '.' || certName[i] == '(' || certName[i] == ')'{
 			ret += "_"
 		} else {
 			ret += string(certName[i])
