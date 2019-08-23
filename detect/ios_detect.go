@@ -880,7 +880,7 @@ func StatusDeal(detect dal.DetectStruct, confirmLark int) error {
 }
 
 func sameConfirm(detect dal.DetectStruct) {
-	//相同appname和appversion任务结果一致确认
+	//相同appname、appversion和appid任务结果一致确认
 	sameDetect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"app_name":    detect.AppName,
 		"app_version": detect.AppVersion,

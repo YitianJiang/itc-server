@@ -324,7 +324,7 @@ func UpdateDetectInfos(c *gin.Context) {
 	toolIdInt, _ := strconv.Atoi(toolId)
 
 	//判断是否有name和version都一模一样的检测任务
-	flag, sameErr := taskConsistent(appName, appVersion, toolId, (*detect)[0])
+	flag, sameErr := taskConsistent(appName, appVersion, (*detect)[0])
 	if flag {
 		if sameErr == nil {
 			c.JSON(http.StatusOK, gin.H{
@@ -1175,14 +1175,8 @@ func CICallBackTest(c *gin.Context) {
 	logs.Notice("CI回调返回信息，%v", t)
 }
 
-func taskConsistent(appName, appVersion, toolId string, detect dal.DetectStruct) (bool, error) {
-	var platform int
-	switch toolId {
-	case "5":
-		platform = 1
-	case "6":
-		platform = 0
-	}
+func taskConsistent(appName, appVersion string, detect dal.DetectStruct) (bool, error) {
+	platform := detect.Platform
 	if platform == 0 { //android没有区分小版本暂时不做一致处理
 		return false, nil
 	}
@@ -1190,6 +1184,7 @@ func taskConsistent(appName, appVersion, toolId string, detect dal.DetectStruct)
 		"app_name":    appName,
 		"app_version": appVersion,
 		"platform":    platform,
+		"app_id":      detect.AppId,
 	})
 	if len(*sameDetect) == 0 {
 		return false, nil
