@@ -100,7 +100,8 @@ type DelCertRequest struct {
 	CertOperator string `form:"cert_principal"`
 }
 type DelCertFeedback struct {
-	CustomerJson DelCertFeedbackCustomer `json:"customer_parameter"`
+	CustomerJson        DelCertFeedbackCustomer `json:"customer_parameter"`
+	AdditionalParameter `json:"additional_parameter"`
 }
 
 type DelCertFeedbackCustomer struct {

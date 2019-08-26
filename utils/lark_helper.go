@@ -261,6 +261,7 @@ var PushCertTitle = "push_cert名称："
 //审核绑定账号请求基本信息
 var ApproveBindAccountMessage = "用户正在申请将app绑定至指定账号，批准后app将被绑定至新账号下，同时申请者拥有新账号的all_cert_manager权限"
 var AppIdHeader = "APP ID: "
+var BusinessHeader = "业务线名称: "
 var AppNameHeader = "APP名称: "
 var AppTypeHeader = "APP类型: "
 var TargetTeamIdHeader = "目标Team ID: "

@@ -517,7 +517,7 @@ func DeleteCertificate(c *gin.Context) {
 	}
 }
 
-//lark卡片点击已删除后异步更新db操作人信息
+//lark卡片点击已删除后异步更新db操作人信息，查询苹果后台并更新bundleId能力，给申请者回执
 func AsynDeleteCertFeedback(c *gin.Context) {
 	logs.Notice("点击已删除")
 	var feedbackInfo devconnmanager.DelCertFeedback
@@ -530,6 +530,12 @@ func AsynDeleteCertFeedback(c *gin.Context) {
 		})
 		return
 	}
+	certInfo := devconnmanager.QueryDeletedCertInfoByCertId(feedbackInfo.CustomerJson.CertId)
+	if certInfo == nil {
+		utils.AssembleJsonResponseWithStatusCode(c, http.StatusInternalServerError, "无匹配的证书信息", nil)
+		return
+	}
+	go sendDeleteCertResultToApplicant(feedbackInfo.OpenId, feedbackInfo.CustomerJson.UserName, certInfo.CertName, certInfo.CertType, certInfo.AccountName)
 	//更新对应cert_id的op_user信息
 	condition := map[string]interface{}{
 		"cert_id": feedbackInfo.CustomerJson.CertId,
@@ -563,10 +569,7 @@ func AsynDeleteCertFeedback(c *gin.Context) {
 		//去苹果后台查询能力并更新数据库
 		go updateBundleIdCapabilities(feedbackInfo.CustomerJson.BundleIdId, feedbackInfo.CustomerJson.TeamId)
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"errorCode": 0,
-		"errorInfo": "",
-	})
+	utils.AssembleJsonResponse(c, _const.SUCCESS, "", nil)
 	return
 }
 
@@ -771,7 +774,7 @@ func dealCertName(certName string) string {
 	for i := 0; i < len(certName); i++ {
 		if certName[i] == ':' {
 			continue
-		} else if certName[i] == ' ' || certName[i] == '.' || certName[i] == '(' || certName[i] == ')'{
+		} else if certName[i] == ' ' || certName[i] == '.' || certName[i] == '(' || certName[i] == ')' {
 			ret += "_"
 		} else {
 			ret += string(certName[i])
@@ -985,7 +988,7 @@ func generateActionsOfCertDelete(param *map[string]interface{}) *[]form.CardActi
 	var text = utils.DeleteButtonText
 	var hideOther = false
 	var url = utils.DELCERT_FEEDBACK_URL
-	button, err := form.GenerateButtonForm(&text, nil, nil, nil, "post", url, false, false, param, nil, &hideOther)
+	button, err := form.GenerateButtonForm(&text, nil, nil, nil, "post", url, true, false, param, nil, &hideOther)
 	if err != nil {
 		utils.RecordError("生成卡片button失败，", err)
 	}
@@ -1114,4 +1117,13 @@ func larkNotifyUsers(groupName string, userNames []string, message string) bool 
 		return false
 	}
 	return true
+}
+
+func sendDeleteCertResultToApplicant(openId, userName, certName, certType, accountName string) {
+	botService := service.BotService{}
+	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
+	name := getUserNameByOpenId(openId, &botService)
+	title := "证书删除结果通知"
+	message := fmt.Sprintf("你提交的证书删除申请\n[账号：%s，证书名：%s，类型：%s]\n已于%s 被%s 完成", accountName, certName, certType, time.Now().Format("2006-01-02 15:04:05"), name)
+	alertTextWithTitleToPeople(title, message, userName+"@bytedance.com", &botService)
 }
