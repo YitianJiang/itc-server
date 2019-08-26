@@ -33,6 +33,7 @@ type DetectStruct struct {
 }
 type ExtraStruct struct {
 	CallBackAddr string `json:"callBackAddr"`
+	SkipSelfFlag bool   `json:"skipSelfFlag"`
 }
 type RecordTotal struct {
 	Total   uint

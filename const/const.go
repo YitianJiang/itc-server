@@ -28,19 +28,13 @@ var PermToModify = map[string]int{
 	"kanghuaisong":  1,
 	"zhangshuai.02": 1,
 	"lirensheng":    1,
-	"yangzhiqian":1,
-	"zhaoxuan.li":1,
+	"yangzhiqian":   1,
+	"zhaoxuan.li":   1,
 	//测试加入
 	//"fanjuan.xqp":1,
 	//"liyixian.lym":1,
 }
 
-const (
-	UPDATE_DEVICE_FEEDBACK_URL ="https://itc.bytedance.net/v1/deviceManage/asynUpdateDeviceFeedback"
-	APPLE_UPDATE_DEVICE_INFO_URL="https://api.appstoreconnect.apple.com/v1/devices/"
-	APPLE_ADD_DEVICE_INFO_URL="https://api.appstoreconnect.apple.com/v1/devices"
-	APPLE_DEVICE_TYPE="devices"
-)
 const (
 	APPLE_CERT_DELETE_ADDR   = "https://api.appstoreconnect.apple.com/v1/certificates/"
 	APPLE_CREATE_CERT_URL    = "https://api.appstoreconnect.apple.com/v1/certificates"
@@ -67,6 +61,7 @@ const (
 const (
 	APPLE_BUNDLE_ID_MANAGER_URL              = "https://api.appstoreconnect.apple.com/v1/bundleIds"
 	APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL = "https://api.appstoreconnect.apple.com/v1/bundleIdCapabilities"
+	APPLE_BUNDLE_ID_CAPABILITIES_QUERY_URL   = "https://api.appstoreconnect.apple.com/v1/bundleIds/%s/bundleIdCapabilities"
 )
 
 const (
@@ -115,6 +110,7 @@ const (
 	MAC_APP_DEVELOPMENT = "MAC_APP_DEVELOPMENT"
 	IOS_PUSH            = "IOS_PUSH"
 	MAC_PUSH            = "MAC_PUSH"
+	PUSH_NOTIFICATIONS  = "PUSH_NOTIFICATIONS"
 )
 
 var IOSSelectCapabilities = []string{"ACCESS_WIFI_INFORMATION", "APP_GROUPS", "ASSOCIATED_DOMAINS", "AUTOFILL_CREDENTIAL_PROVIDER", "CLASSKIT", "GAME_CENTER",
@@ -160,3 +156,8 @@ const (
 
 const NeedUpdate = "needUpdate"
 const UNDEFINED = "undefined"
+const NOPERMISSION = "noPermission"
+const PermAdmin = "admin"
+const PermAllCert = "all_cert_manager"
+const PermDevCert = "dev_cert_manager"
+const Deleting = "deleting"

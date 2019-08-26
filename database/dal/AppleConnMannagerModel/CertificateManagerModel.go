@@ -64,6 +64,7 @@ type InsertCertRequest struct {
 	AccountType   string `json:"account_type" binding:"required"`
 	BundleId      string `json:"bundle_id"`
 	UserName      string `json:"user_name"`
+	IsUpdate      string `json:"is_update"`
 }
 
 type CreAppleCertReq struct {
@@ -103,8 +104,12 @@ type DelCertFeedback struct {
 }
 
 type DelCertFeedbackCustomer struct {
-	CertId   string `json:"cert_id"        binding:"required"`
-	UserName string `json:"username"       binding:"required"`
+	CertId      string `json:"cert_id"        binding:"required"`
+	UserName    string `json:"username"       binding:"required"`
+	Bundleid    string `json:"bundle_id"`
+	BundleIdId  string `json:"bundleid_id"`
+	AccountType string `json:"account_type"`
+	TeamId      string `json:"team_id"`
 }
 
 type QueryCertRequest struct {

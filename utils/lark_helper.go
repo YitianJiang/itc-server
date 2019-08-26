@@ -209,12 +209,20 @@ const (
 	//DELPROFILE_FEEDBACK_URL = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteProfileFeedback"
 	//DELBUNDLE_FEEDBACK_URL  = "http://10.224.13.149:6789/v1/appleConnManage/asynDeleteBundleFeedback"
 	//ApproveAppBindAccountUrl = "http://10.224.13.149:6789/v1/appleConnManage/approveAppBindAccountFeedback"
+	//ApproveApplyForAuthorizationUrl = "http://10.224.15.119:6789/v1/authorization/approveAuthorizationApplication"
 
-	//online----actionURL
-	DELCERT_FEEDBACK_URL         = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
-	DELPROFILE_FEEDBACK_URL      = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteProfileFeedback"
-	DELBUNDLE_FEEDBACK_URL       = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteBundleFeedback"
-	ApproveAppBindAccountUrl     = "https://itc.bytedance.net/v1/appleConnManage/approveAppBindAccountFeedback"
+	//DELCERT_FEEDBACK_URL    = "http://10.224.15.119:6789/v1/appleCertManage/asynDeleteFeedback"
+	//DELPROFILE_FEEDBACK_URL = "http://10.224.15.119:6789/v1/appleConnManage/asynDeleteProfileFeedback"
+	//DELBUNDLE_FEEDBACK_URL  = "http://10.224.15.119:6789/v1/appleConnManage/asynDeleteBundleFeedback"
+	//ApproveAppBindAccountUrl = "http://10.224.15.119:6789/v1/appleConnManage/approveAppBindAccountFeedback"
+	//ApproveApplyForAuthorizationUrl = "http://10.224.15.119:6789/v1/authorization/approveAuthorizationApplication"
+
+	//todo online----actionURL
+	DELCERT_FEEDBACK_URL            = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
+	DELPROFILE_FEEDBACK_URL         = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteProfileFeedback"
+	DELBUNDLE_FEEDBACK_URL          = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteBundleFeedback"
+	ApproveAppBindAccountUrl        = "https://itc.bytedance.net/v1/appleConnManage/approveAppBindAccountFeedback"
+	ApproveApplyForAuthorizationUrl = "https://itc.bytedance.net/v1/authorization/approveAuthorizationApplication"
 )
 
 //更新设备工单卡片基本信息
@@ -230,12 +238,15 @@ var UDIDHeader="UDID: "
 var PlatformHeader="平台: "
 
 //新建证书工单卡片基本信息
-var CreateCertMessage = "请根据配置信息登录Apple后台手动生成证书并上传至itc证书管理后台"
+var CreateCertMessage = "请根据配置信息登录Apple后台手动生成证书并上传至rocket证书管理后台"
 var CreateCertAccountHeader = "账号名: "
 var CreateCertTypeHeader = "证书类型: "
 var CsrHeader = "CSR文件: "
 var CsrText = "点击链接下载"
 var GrayHeaderStyle = "color: gray"
+
+//更新证书工单卡片基本信息
+var UpdateCertMessage = "请根据配置信息登录Apple后台手动生成证书并上传至rocket证书管理后台进行证书更新"
 
 //删除证书工单卡片基本信息
 var DeleteCertMessage = "请根据账号信息登陆Apple后台，删除指定证书，点击删除链接可以直接跳转；删除完成后，请点击卡片\"已删除\"按钮。"
@@ -260,7 +271,7 @@ var DistProfileTitle = "dist_profile名称："
 var PushCertTitle = "push_cert名称："
 
 //审核绑定账号请求基本信息
-var ApproveBindAccountMessage = "用户正在申请将app绑定至指定账号，批准后app将被绑定至新账号下"
+var ApproveBindAccountMessage = "用户正在申请将app绑定至指定账号，批准后app将被绑定至新账号下，同时申请者拥有新账号的all_cert_manager权限"
 var AppIdHeader = "APP ID: "
 var AppNameHeader = "APP名称: "
 var AppTypeHeader = "APP类型: "
@@ -307,6 +318,10 @@ var ProfileTypeHeader = "描述文件类型: "
 var Horizontal = "horizontal"
 var Gray = "gray"
 var DividerSize = "0.5"
+
+//权限申请工单基本信息
+var AuthorizationHeader = "申请权限: "
+var ApproveAuthorizationMessage = "用户正在申请apple签名体系权限，请处理"
 
 func CallLarkAPI(url string, token string, paramsIn interface{}, paramsOut interface{}) {
 	bodyByte, _ := json.Marshal(paramsIn)

@@ -109,8 +109,10 @@ func UploadFile(c *gin.Context) {
 
 	//增加回调地址
 	callBackAddr := c.DefaultPostForm("callBackAddr", "")
+	skip := c.DefaultPostForm("skipSelfFlag", "")
 	var extraInfo dal.ExtraStruct
 	extraInfo.CallBackAddr = callBackAddr
+	extraInfo.SkipSelfFlag = skip != ""
 
 	//检验文件格式是否是apk或者ipa
 	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".ipa") ||
@@ -193,7 +195,7 @@ func UploadFile(c *gin.Context) {
 	dbDetectModel.AppId = appId
 	//增加状态字段，0---未完全确认；1---已完全确认
 	dbDetectModel.Status = 0
-	if callBackAddr != "" {
+	if callBackAddr != "" || skip != "" {
 		byteExtraInfo, _ := json.Marshal(extraInfo)
 		dbDetectModel.ExtraInfo = string(byteExtraInfo)
 	}
@@ -321,6 +323,26 @@ func UpdateDetectInfos(c *gin.Context) {
 	}
 	toolIdInt, _ := strconv.Atoi(toolId)
 
+	//判断是否有name和version都一模一样的检测任务
+	flag, sameErr := taskConsistent(appName, appVersion, (*detect)[0])
+	if flag {
+		if sameErr == nil {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "success",
+				"errorCode": 0,
+				"data":      "success",
+			})
+			return
+		} else {
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "error",
+				"errorCode": -1,
+				"data":      sameErr,
+			})
+			return
+		}
+	}
+
 	//消息通知条数--检测项+自查项
 	var unConfirms int
 	var unSelfCheck = 0
@@ -398,10 +420,16 @@ func UpdateDetectInfos(c *gin.Context) {
 				utils.LarkDingOneInnerWithUrl(lark_people, tips, "点击跳转检测详情", larkUrl)
 			}
 		}
+
 		//获取未确认自查项数目
-		isRight, selfNum := GetIOSSelfNum(appId, taskId)
-		if isRight {
-			unSelfCheck = selfNum
+		var extra dal.ExtraStruct
+		json.Unmarshal([]byte((*detect)[0].ExtraInfo), &extra)
+		skip := extra.SkipSelfFlag
+		if !skip {
+			isRight, selfNum := GetIOSSelfNum(appId, taskId)
+			if isRight {
+				unSelfCheck = selfNum
+			}
 		}
 	}
 	//进行lark消息提醒
@@ -1145,4 +1173,47 @@ func CICallBackTest(c *gin.Context) {
 	var t map[string]interface{}
 	json.Unmarshal(param, &t)
 	logs.Notice("CI回调返回信息，%v", t)
+}
+
+func taskConsistent(appName, appVersion string, detect dal.DetectStruct) (bool, error) {
+	platform := detect.Platform
+	if platform == 0 { //android没有区分小版本暂时不做一致处理
+		return false, nil
+	}
+	sameDetect := dal.QueryDetectModelsByMap(map[string]interface{}{
+		"app_name":    appName,
+		"app_version": appVersion,
+		"platform":    platform,
+		"app_id":      detect.AppId,
+	})
+	if len(*sameDetect) == 0 {
+		return false, nil
+	}
+	var status, self_check_status, detect_no_pass, self_no_pass int
+	for _, detect := range *sameDetect {
+		if detect.SelfCheckStatus > self_check_status {
+			self_check_status = detect.SelfCheckStatus
+		}
+		if detect.Status > status {
+			status = detect.Status
+		}
+		if detect.DetectNoPass > detect_no_pass {
+			detect_no_pass = detect.DetectNoPass
+		}
+		if detect.SelftNoPass > self_no_pass {
+			self_no_pass = detect.SelftNoPass
+		}
+	}
+
+	detect.Status = status
+	detect.SelfCheckStatus = self_check_status
+	detect.DetectNoPass = detect_no_pass
+	detect.SelftNoPass = self_no_pass
+	detect.AppName = appName
+	detect.AppVersion = appVersion
+	if err := dal.UpdateDetectModelNew(detect); err != nil {
+		return true, err
+	}
+	StatusDeal(detect, 0)
+	return true, nil
 }

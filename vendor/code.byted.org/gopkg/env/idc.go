@@ -117,3 +117,7 @@ func GetIDCList() []string {
 	}
 	return idcList
 }
+
+func SetIDC(v string) {
+	idc.Store(v)
+}

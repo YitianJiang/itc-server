@@ -13,7 +13,7 @@ var hostIP string
 func init() {
 	if os.Getenv("IS_TCE_DOCKER_ENV") == "1" {
 		inTCE = true
-		tceAddr = os.Getenv("HOST_IP_ADDR")
+		tceAddr = os.Getenv("MY_HOST_IP")
 		if tceAddr == "" {
 			tceAddr = net2.GetLocalIp()
 		}
