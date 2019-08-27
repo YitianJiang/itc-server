@@ -91,6 +91,20 @@ func CheckAdmin(perms []string) bool {
 	return checkResult
 }
 
+func CheckAllCertManagerAndAdmin(perms []string) bool {
+	if len(perms) == 0 {
+		return false
+	}
+	checkResult := false
+	for _, perm := range perms {
+		if perm == "admin"||perm=="all_cert_manager" {
+			checkResult = true
+			break
+		}
+	}
+	return checkResult
+}
+
 func TransferValues2AccInfoWithoutAuth(accountInfo *AccountInfo, perms []string) *AccInfoWithoutAuth {
 	accInfoWithoutAuth := AccInfoWithoutAuth{}
 	accInfoWithoutAuth.AccountType = accountInfo.AccountType

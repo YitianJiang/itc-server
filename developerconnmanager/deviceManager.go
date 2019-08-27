@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
+	"sync"
 )
 
 func QueryDeviceInfo(c *gin.Context) {
@@ -19,21 +20,6 @@ func QueryDeviceInfo(c *gin.Context) {
 	if bindJsonError != nil {
 		logs.Error("绑定post请求body出错：%v", bindJsonError)
 		AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
-		return
-	}
-	var resPerms devconnmanager.GetPermsResponse
-	url := _const.USER_ALL_RESOURCES_PERMS_URL + "userName=" + requestData.UserName
-	queryPermsResult := queryPerms(url, &resPerms)
-	if !queryPermsResult{
-		logs.Error("查询权限失败")
-		AssembleJsonResponse(c, http.StatusInternalServerError, "查询权限失败", "failed")
-		return
-	}
-	perms := resPerms.Data[strings.ToLower(requestData.TeamId)+"_space_account"]
-	checkResult := devconnmanager.CheckAdmin(perms)
-	if !checkResult{
-		logs.Error("没有权限")
-		AssembleJsonResponse(c, http.StatusForbidden, "没有权限", "failed")
 		return
 	}
 	condition := map[string]interface{}{
@@ -91,6 +77,21 @@ func UpdateDeviceInfo(c *gin.Context) {
 		AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
 		return
 	}
+	var resPerms devconnmanager.GetPermsResponse
+	url := _const.USER_ALL_RESOURCES_PERMS_URL + "userName=" + requestData.UserName
+	queryPermsResult := queryPerms(url, &resPerms)
+	if !queryPermsResult{
+		logs.Error("查询权限失败")
+		AssembleJsonResponse(c, http.StatusInternalServerError, "查询权限失败", "failed")
+		return
+	}
+	perms := resPerms.Data[strings.ToLower(requestData.TeamId)+"_space_account"]
+	checkResult := devconnmanager.CheckAllCertManagerAndAdmin(perms)
+	if !checkResult{
+		logs.Error("没有all_cert_manager及以上权限")
+		AssembleJsonResponse(c, http.StatusForbidden, "没有all_cert_manager及以上权限", "failed")
+		return
+	}
 	condition:=map[string]interface{}{
 		"device_id":requestData.DeviceId,
 	}
@@ -139,6 +140,48 @@ func UpdateDeviceInfo(c *gin.Context) {
 	}
 	AssembleJsonResponse(c, 0, "success","更新设备信息成功")
 	return
+}
+
+func TransferDevicesResObj2DeviceInfo(teamId string,deviceResObj *devconnmanager.DevicesDataObjRes,deviceInfo *devconnmanager.DeviceInfo){
+	deviceInfo.TeamId=teamId
+	deviceInfo.DeviceId=deviceResObj.Id
+	deviceInfo.UdId=deviceResObj.Attributes.Udid
+	deviceInfo.DeviceStatus=deviceResObj.Attributes.Status
+	deviceInfo.DeviceName=deviceResObj.Attributes.Name
+	deviceInfo.DevicePlatform=deviceResObj.Attributes.Platform
+	deviceInfo.DeviceModel=deviceResObj.Attributes.Model
+	deviceInfo.DeviceClass=deviceResObj.Attributes.DeviceClass
+	deviceInfo.DeviceAddedDate=deviceResObj.Attributes.AddedDate
+}
+
+func SynchronizeDeviceInfo(c *gin.Context){
+	var devicesResObj devconnmanager.DevicesDataRes
+	allAccountsInfo:=devconnmanager.QueryAccountInfo(map[string]interface{}{})
+	var wg sync.WaitGroup
+	wg.Add(len(*allAccountsInfo))
+	for _,accountInfo:=range *allAccountsInfo{
+		go func(accountInfo devconnmanager.AccountInfo) {
+			tokenString := GetTokenStringByAccInfo(accountInfo)
+			deviceResult := GetAllEnableDevicesObj("ALL", "ALL", tokenString, &devicesResObj)
+			if deviceResult {
+				for _, deviceResObj := range devicesResObj.Data {
+					var deviceInfo devconnmanager.DeviceInfo
+					TransferDevicesResObj2DeviceInfo(accountInfo.TeamId,&deviceResObj, &deviceInfo)
+					condition := map[string]interface{}{
+						"team_id": deviceInfo.TeamId,
+						"ud_id":   deviceInfo.UdId,
+					}
+					result := devconnmanager.AddOrUpdateDeviceInfo(condition, &deviceInfo)
+					if !result {
+						logs.Error("添加或更新设备信息失败")
+					}
+				}
+			}
+			wg.Done()
+		}(accountInfo)
+	}
+	wg.Wait()
+	AssembleJsonResponse(c, 0, "success","同步设备信息成功")
 }
 
 func AsynUpdateDeviceFeedback(c *gin.Context){
@@ -200,6 +243,21 @@ func AddDeviceInfo(c *gin.Context) {
 	if bindJsonError != nil {
 		logs.Error("绑定post请求body出错：%v", bindJsonError)
 		AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
+		return
+	}
+	var resPerms devconnmanager.GetPermsResponse
+	url := _const.USER_ALL_RESOURCES_PERMS_URL + "userName=" + requestData.UserName
+	queryPermsResult := queryPerms(url, &resPerms)
+	if !queryPermsResult{
+		logs.Error("查询权限失败")
+		AssembleJsonResponse(c, http.StatusInternalServerError, "查询权限失败", "failed")
+		return
+	}
+	perms := resPerms.Data[strings.ToLower(requestData.TeamId)+"_space_account"]
+	checkResult := devconnmanager.CheckAllCertManagerAndAdmin(perms)
+	if !checkResult{
+		logs.Error("没有all_cert_manager及以上权限")
+		AssembleJsonResponse(c, http.StatusForbidden, "没有all_cert_manager及以上权限", "failed")
 		return
 	}
 	if requestData.AccountType == "Enterprise" {

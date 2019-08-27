@@ -18,10 +18,10 @@ type DeviceInfo struct {
 
 type GetDevicesInfoRequest struct {
 	TeamId            string       `form:"team_id"      binding:"required"`
-	UserName          string       `form:"user_name"    binding:"required"`
 }
 
 type AddDeviceInfoRequest struct {
+	UserName          string       `json:"user_name"            binding:"required"`
 	TeamId            string       `json:"team_id"              binding:"required"`
 	DeviceName        string       `json:"device_name"          binding:"required"`
 	Udid              string       `json:"udid"                 binding:"required"`
@@ -53,6 +53,7 @@ type AddDevInfoAppRet struct {
 }
 
 type UpdateDeviceInfoRequest struct {
+	UserName          string       `json:"user_name"            binding:"required"`
 	TeamId            string       `json:"team_id"              binding:"required"`
 	DeviceId          string       `json:"device_id"            binding:"required"`
 	DeviceName        string       `json:"device_name"                                  gorm:"device_name"                       `

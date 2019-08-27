@@ -36,6 +36,13 @@ var PermToModify = map[string]int{
 }
 
 const (
+	UPDATE_DEVICE_FEEDBACK_URL ="https://itc.bytedance.net/v1/deviceManage/asynUpdateDeviceFeedback"
+	APPLE_UPDATE_DEVICE_INFO_URL="https://api.appstoreconnect.apple.com/v1/devices/"
+	APPLE_ADD_DEVICE_INFO_URL="https://api.appstoreconnect.apple.com/v1/devices"
+	APPLE_DEVICE_TYPE="devices"
+)
+
+const (
 	APPLE_CERT_DELETE_ADDR   = "https://api.appstoreconnect.apple.com/v1/certificates/"
 	APPLE_CREATE_CERT_URL    = "https://api.appstoreconnect.apple.com/v1/certificates"
 	APPLE_RECEIVED_DATA_TYPE = "certificates"
