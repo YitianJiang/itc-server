@@ -1,19 +1,20 @@
 package detect
 
 import (
-	_const "code.byted.org/clientQA/itc-server/const"
-	"code.byted.org/clientQA/itc-server/database/dal"
-	"code.byted.org/clientQA/itc-server/utils"
-	"code.byted.org/gopkg/logs"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	_const "code.byted.org/clientQA/itc-server/const"
+	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/logs"
+	"github.com/gin-gonic/gin"
 )
 
 /**
@@ -65,6 +66,7 @@ func AddDetectConfig(c *gin.Context) {
 	data.GpFlag = int(t.GpFlag.(float64))
 	data.SensiFlag = int(t.SensiFlag.(float64))
 	data.Creator = username.(string)
+	data.Permissions = t.Permissions
 
 	queryResult := dal.QueryDetectConfig(map[string]interface{}{
 		"key_info":   data.KeyInfo,
@@ -93,10 +95,10 @@ func AddDetectConfig(c *gin.Context) {
 	})
 	go func() {
 		if data.Creator != "lirensheng" && data.Creator != "kanghuaisong" {
-			message := data.Creator+"同学新增了检测项，请关注！检测项名称："+data.KeyInfo
+			message := data.Creator + "同学新增了检测项，请关注！检测项名称：" + data.KeyInfo
 			message += "\n 地址链接：http://cloud.bytedance.net/rocket/itc/permission"
-			for _,larkpeople := range _const.PermLarkPeople {
-				utils.LarkDingOneInner(larkpeople,message)
+			for _, larkpeople := range _const.PermLarkPeople {
+				utils.LarkDingOneInner(larkpeople, message)
 			}
 		}
 	}()
@@ -161,7 +163,7 @@ func QueryDectecConfig(c *gin.Context) {
 		condition += " and check_type = '" + fmt.Sprint(t.Type) + "'"
 	}
 	if t.Priority != nil {
-		condition += " and priority = '"+fmt.Sprint(t.Priority) +"'"
+		condition += " and priority = '" + fmt.Sprint(t.Priority) + "'"
 	}
 
 	result, count, errQ := dal.QueryDetectConfigList(condition, pageInfo)
@@ -299,6 +301,10 @@ func EditDectecConfig(c *gin.Context) {
 	if t.Type != nil {
 		flag = true
 		data["check_type"] = int(t.Type.(float64))
+	}
+	if t.Permissions != "" {
+		flag = true
+		data["permissions"] = t.Permissions
 	}
 	if !flag {
 		logs.Error("无修改参数！")

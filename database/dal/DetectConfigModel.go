@@ -28,6 +28,7 @@ type DetectConfigStruct struct {
 	Platform     int    `json:"platform"`  //0--安卓，1--iOS
 	GpFlag       int    `json:"gpFlag"`    //0--非GP，1--GP
 	SensiFlag    int    `json:"sensiFlag"` //0--非隐私，1--隐私
+	Permissions  string `json:"permissions"`
 }
 
 /**
@@ -64,6 +65,7 @@ type DetectConfigInfo struct {
 	Platform     interface{} `json:"platform"` //0--安卓，1--iOS
 	GpFlag       interface{} `json:"gpFlag"`
 	SensiFlag    interface{} `json:"sensiFlag"`
+	Permissions  string      `json:"permissions"`
 }
 
 /**
