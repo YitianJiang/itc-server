@@ -188,6 +188,7 @@ func InitRouter(r *ginex.Engine) {
 		appSignManager.POST("/asynDeleteBundleFeedback", developerconnmanager.AsynBundleDeleteFeedback)
 		appSignManager.POST("/createBundleProfile", developerconnmanager.CreateOrUpdateOrRestoreBundleId)
 		appSignManager.POST("/updateBundleIdId", developerconnmanager.UpdateBundleIdIdOfBundleId)
+		appSignManager.POST("/finishTicket", developerconnmanager.FinishTicketFeedback)
 	}
 
 	authorizationManager := r.Group("/v1/authorization")

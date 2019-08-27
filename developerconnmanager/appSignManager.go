@@ -557,7 +557,7 @@ func CreateAppBindAccount(c *gin.Context) {
 
 //Bundle id（连带Profile）创建\更新\恢复接口
 //todo profile不能和已有的重名
-//todo 只传bundleId？
+//是否可以只传bundleId？
 func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 	logs.Info("创建/更新/恢复bundle id")
 	var requestData devconnmanager.CreateBundleProfileRequest
@@ -765,8 +765,9 @@ func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.Cr
 				return
 			}
 			cardInfos := generateCardOfCreateBundleId(requestData)
+			cardAction := generateActionsOfFinish(requestData.UserName, "createBundleId", requestData.BundleId)
 			//logs.Info("%v",*cardInfos)
-			err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--创建BundleId")
+			err := sendIOSCertLarkMessage(cardInfos, cardAction, requestData.BundlePrincipal, &botService, "--创建BundleId")
 			utils.RecordError("发送创建bundleId工单失败：", err)
 			if err != nil {
 				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送创建bundleId工单失败", nil)
@@ -786,8 +787,9 @@ func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.Cr
 				return
 			}
 			cardInfos := generateCardOfUpdateBundleId(requestData)
+			cardAction := generateActionsOfFinish(requestData.UserName, "updateBundleId", requestData.BundleId)
 			//logs.Info("%v",*cardInfos)
-			err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--更新BundleId")
+			err := sendIOSCertLarkMessage(cardInfos, cardAction, requestData.BundlePrincipal, &botService, "--更新BundleId")
 			utils.RecordError("发送更新bundleId工单失败：", err)
 			if err != nil {
 				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送更新bundleId工单失败", nil)
@@ -808,8 +810,9 @@ func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.Cr
 			return
 		}
 		cardInfos := generateCardOfCreateBundleId(requestData)
+		cardAction := generateActionsOfFinish(requestData.UserName, "restoreBundleId", requestData.BundleId)
 		//logs.Info("%v",*cardInfos)
-		err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--恢复BundleId")
+		err := sendIOSCertLarkMessage(cardInfos, cardAction, requestData.BundlePrincipal, &botService, "--恢复BundleId")
 		utils.RecordError("发送恢复bundleId工单失败：", err)
 		if err != nil {
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送恢复bundleId工单失败", nil)
@@ -908,6 +911,27 @@ func generateCardOfCreateBundleId(requestData *devconnmanager.CreateBundleProfil
 		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DistProfileTypeHeader, requestData.DistProfileInfo.ProfileType))
 	}
 	return &cardFormArray
+}
+
+//生成工单消息卡片完成action
+func generateActionsOfFinish(userName, ticketType, bundleId string) *[]form.CardActionForm {
+	var cardActions []form.CardActionForm
+	var cardAction form.CardActionForm
+	var buttons []form.CardButtonForm
+	var finishButtonText = utils.FinishButtonText
+	var hideOther = false
+	var url = utils.FinishTicketUrl
+
+	finishButtonParams := map[string]interface{}{"ticketType": ticketType, "bundleId": bundleId, "userName": userName}
+
+	finishButton, err := form.GenerateButtonForm(&finishButtonText, nil, nil, nil, "post", url, true, false, &finishButtonParams, nil, &hideOther)
+	if err != nil {
+		utils.RecordError("生成完成工单卡片同意button失败，", err)
+	}
+	buttons = append(buttons, *finishButton)
+	cardAction.Buttons = buttons
+	cardActions = append(cardActions, cardAction)
+	return &cardActions
 }
 
 func generateCardOfUpdateBundleId(requestData *devconnmanager.CreateBundleProfileRequest) *[][]form.CardElementForm {
@@ -1662,6 +1686,39 @@ func sendApproveResultToApplicant(requestData *devconnmanager.ApproveAppBindAcco
 	title := "应用绑定账号审核结果通知"
 	message := fmt.Sprintf("你提交的应用[%s]绑定账号[%s]申请 已于%s 被%s %s", accountCertInfo.AppName, accountInfo.AccountName, time.Now().Format("2006-01-02 15:04:05"), name, action)
 	alertTextWithTitleToPeople(title, message, requestData.UserName+"@bytedance.com", &botService)
+}
+
+//完成工单按钮
+func FinishTicketFeedback(c *gin.Context) {
+	var requestData devconnmanager.FinishTicketParamFromLark
+	err := c.ShouldBindJSON(&requestData)
+	utils.RecordError("绑定post请求body出错：%v", err)
+	if err != nil {
+		utils.AssembleJsonResponseWithStatusCode(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
+		return
+	}
+	logs.Info("请求参数：%v", requestData)
+	var ticketType string
+	switch requestData.TicketType {
+	case "createBundleId":
+		ticketType = "创建bundle id"
+	case "updateBundleId":
+		ticketType = "更新bundle id"
+	case "restoreBundleId":
+		ticketType = "恢复bundle id"
+	}
+	sendFinishTicketToApplicant(requestData.UserName, ticketType, requestData.BundleId, requestData.OpenId)
+	utils.AssembleJsonResponse(c, _const.SUCCESS, "success", "工单已完成: "+ticketType)
+	return
+}
+
+func sendFinishTicketToApplicant(userName, ticketType, bundleId, openId string) {
+	botService := service.BotService{}
+	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
+	name := getUserNameByOpenId(openId, &botService)
+	title := "BundleId操作工单结果通知"
+	message := fmt.Sprintf("你提交的%s工单[bundleId:%s]已于%s 被%s 完成", ticketType, bundleId, time.Now().Format("2006-01-02 15:04:05"), name)
+	alertTextWithTitleToPeople(title, message, userName+"@bytedance.com", &botService)
 }
 
 func getUserNameByOpenId(openId string, botService *service.BotService) string {

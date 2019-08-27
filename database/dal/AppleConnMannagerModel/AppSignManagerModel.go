@@ -322,6 +322,17 @@ type ApproveAuthorizationApplicationCustomerParam struct {
 	TeamId        string `json:"teamId"              binding:"required"`
 }
 
+type FinishTicketParamFromLark struct {
+	AdditionalParameter       `json:"additional_parameter"`
+	FinishTicketCustomerParam `json:"customer_parameter"`
+}
+
+type FinishTicketCustomerParam struct {
+	TicketType string `json:"ticketType"          binding:"required"`
+	BundleId   string `json:"bundleId"            binding:"required"`
+	UserName   string `json:"userName"            binding:"required"`
+}
+
 type AppSignListRequest struct {
 	AppId    string `form:"app_id"   binding:"required"`
 	Username string `form:"user_name" binding:"required"`

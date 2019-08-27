@@ -216,6 +216,7 @@ const (
 	//DELBUNDLE_FEEDBACK_URL  = "http://10.224.15.119:6789/v1/appleConnManage/asynDeleteBundleFeedback"
 	//ApproveAppBindAccountUrl = "http://10.224.15.119:6789/v1/appleConnManage/approveAppBindAccountFeedback"
 	//ApproveApplyForAuthorizationUrl = "http://10.224.15.119:6789/v1/authorization/approveAuthorizationApplication"
+	//FinishTicketUrl = "http://10.224.15.119:6789/v1/appleConnManage/finishTicket"
 
 	//todo online----actionURL
 	DELCERT_FEEDBACK_URL            = "https://itc.bytedance.net/v1/appleCertManage/asynDeleteFeedback"
@@ -223,6 +224,7 @@ const (
 	DELBUNDLE_FEEDBACK_URL          = "https://itc.bytedance.net/v1/appleConnManage/asynDeleteBundleFeedback"
 	ApproveAppBindAccountUrl        = "https://itc.bytedance.net/v1/appleConnManage/approveAppBindAccountFeedback"
 	ApproveApplyForAuthorizationUrl = "https://itc.bytedance.net/v1/authorization/approveAuthorizationApplication"
+	FinishTicketUrl                 = "https://itc.bytedance.net/v1/appleConnManage/finishTicket"
 )
 
 //新建证书工单卡片基本信息
@@ -288,14 +290,12 @@ var DistCertUrlHeader = "Dist证书: "
 var DistProfileNameHeader = "Dist描述文件名称: "
 var DistProfileTypeHeader = "Dist描述文件类型: "
 var SectionTextStyle = "textDecoration: underLine; fontWeight: bold"
+var FinishButtonText = "已完成"
 
 //更新bundleId工单基本信息
 var UpdateBundleIdMessage = "请根据账号信息登陆Apple后台，按照信息更新BundleId能力，创建Profile文件并上传至rocket证书管理系统"
 var BundleIdEnableCapabilityListHeader = "打开BundleId能力: "
 var BundleIdDisableCapabilityListHeader = "关闭BundleId能力: "
-
-//push证书工单基本信息
-var CreatePushCertMessage = "请根据账号信息登陆Apple后台，按照信息创建push证书并上传至rocket证书管理系统"
 
 //profile工单基本信息
 var CreateOrUpdateProfileCertMessage = "请根据账号信息登陆Apple后台，按照信息创建profile文件并上传至rocket证书管理系统"
