@@ -43,14 +43,14 @@ type outerData struct {
 	ComposeSearchInOneMethod []outerConfig `json:"composeSearchInOneMethod"`
 }
 
-// GetDetectConfig retrieves all configures from tb_detect_config table
-// and returns them to requestor.
+// GetDetectConfig retrieves all eligible configures from tb_detect_config table
+// and returns them to the requestor.
 func GetDetectConfig(c *gin.Context) {
 	platform, exist := c.GetQuery("platform")
 	if !exist {
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": -1,
-			"message":   "platform was not foundd",
+			"message":   "platform was not found",
 			"data":      "platform was not found"})
 
 		return
