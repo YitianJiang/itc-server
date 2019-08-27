@@ -133,7 +133,8 @@ func pack(origin *[]dal.DetectConfigStruct, checkType int) []outerConfig {
 			if o.Permissions != "" {
 				t.Permissions = strings.Split(o.Permissions, ";")
 			}
-		case 3:
+			// TODO
+			// case 3:
 		}
 		t.Description = o.DescInfo
 		t.GPFlag = strconv.Itoa(o.GpFlag)
