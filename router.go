@@ -19,6 +19,9 @@ func InitRouter(r *ginex.Engine) {
 	//获取鉴权接口
 	r.GET("/t/generateToken", detect.GetToken)
 
+	// 获取检测项配置信息
+	r.GET("/api/detectConfig/getItcDetectConfig", detect.GetDetectConfig)
+
 	//检测服务检测异常报警接口
 	api.POST("/check_server/alarm", detect.Alram)
 	//获取IOS隐私调用API信息
