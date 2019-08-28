@@ -185,8 +185,8 @@ type BundleIdCapabilityReqObj struct {
 }
 
 type BundleCapabilityRelationship struct {
-	BundleId           DataIdAndTypeItemObj `json:"bundleId" binding:"required"`
-	AppConsentBundleId DataIdAndTypeItemObj `json:"appConsentBundleId"`
+	BundleId           DataIdAndTypeItemObj  `json:"bundleId" binding:"required"`
+	AppConsentBundleId *DataIdAndTypeItemObj `json:"appConsentBundleId,omitempty"`
 }
 
 type BundleCapabilityAttributes struct {

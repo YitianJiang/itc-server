@@ -1287,8 +1287,10 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 
 		//注意！当配置APPLE_ID_AUTH能力时，如果选择RELATED_APP_CONSENT需要指定绑定的bundleId
 		if configValue == "RELATED_APP_CONSENT" {
-			openBundleIdCapabilityRequest.Data.Relationships.AppConsentBundleId.Data.Type = "appConsentBundleId"
-			openBundleIdCapabilityRequest.Data.Relationships.AppConsentBundleId.Data.Id = requestData.AppConsentBundleId
+			var appConsentBundleIdData devconnmanager.DataIdAndTypeItemObj
+			appConsentBundleIdData.Data.Type = "bundleIds"
+			appConsentBundleIdData.Data.Id = requestData.AppConsentBundleId
+			openBundleIdCapabilityRequest.Data.Relationships.AppConsentBundleId = &appConsentBundleIdData
 		}
 
 		if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, &openBundleIdCapabilityResponse) {
