@@ -1,12 +1,13 @@
 package dal
 
 import (
-	"code.byted.org/clientQA/itc-server/const"
+	"fmt"
+	"time"
+
+	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
-	"fmt"
-	"time"
 )
 
 /**
@@ -16,7 +17,7 @@ type DetectConfigStruct struct {
 	gorm.Model
 	KeyInfo      string `json:"key"`
 	CheckType    int    `json:"type"`     //0--权限，1--api,2--action,3--其他
-	Priority     int    `json:"priority"` //0--一般，1--低危，2--中危，3--高危
+	Priority     int    `json:"priority"` //-1--无危险，0--一般，1--低危，2--中危，3--高危
 	Ability      string `json:"ability"`
 	DescInfo     string `json:"desc"`
 	DetectType   string `json:"detectType"`
@@ -27,6 +28,7 @@ type DetectConfigStruct struct {
 	Platform     int    `json:"platform"`  //0--安卓，1--iOS
 	GpFlag       int    `json:"gpFlag"`    //0--非GP，1--GP
 	SensiFlag    int    `json:"sensiFlag"` //0--非隐私，1--隐私
+	Permissions  string `json:"permissions"`
 }
 
 /**
@@ -36,7 +38,7 @@ type DetectConfigListInfo struct {
 	Id        uint      `json:"id"`
 	KeyInfo   string    `json:"key"`
 	CreatedAt time.Time `json:"createTime"`
-	Priority  int       `json:"priority"` //0--一般，1--低危，2--中危，3--高危
+	Priority  int       `json:"priority"` //-1--无危险，0--一般，1--低危，2--中危，3--高危
 	Ability   string    `json:"ability"`
 	DescInfo  string    `json:"desc"`
 	Creator   string    `json:"creator"`
@@ -63,6 +65,7 @@ type DetectConfigInfo struct {
 	Platform     interface{} `json:"platform"` //0--安卓，1--iOS
 	GpFlag       interface{} `json:"gpFlag"`
 	SensiFlag    interface{} `json:"sensiFlag"`
+	Permissions  string      `json:"permissions"`
 }
 
 /**
