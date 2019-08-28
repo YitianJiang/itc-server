@@ -574,6 +574,10 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 
 	logs.Info("request:%v", requestData)
 
+	if requestData.ConfigCapabilitiesChange[_const.APPLE_ID_AUTH] == "RELATED_APP_CONSENT" && requestData.AppConsentBundleId == "" {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "app_consent_bundle_id缺失", nil)
+		return
+	}
 	if !checkProfileValidation(&requestData, c) {
 		return
 	}
