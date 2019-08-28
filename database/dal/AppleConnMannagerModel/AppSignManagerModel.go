@@ -121,6 +121,7 @@ type CreateBundleProfileRequest struct {
 	EnableCapabilitiesChange  []string          `json:"enable_capabilities_change"`
 	DisableCapabilitiesChange []string          `json:"disable_capabilities_change"`
 	ConfigCapabilitiesChange  map[string]string `json:"config_capabilities_change"`
+	AppConsentBundleId        string            `json:"app_consent_bundle_id"`
 }
 
 type BundleIdInfo struct {
@@ -184,7 +185,8 @@ type BundleIdCapabilityReqObj struct {
 }
 
 type BundleCapabilityRelationship struct {
-	BundleId DataIdAndTypeItemObj `json:"bundleId" binding:"required"`
+	BundleId           DataIdAndTypeItemObj `json:"bundleId" binding:"required"`
+	AppConsentBundleId DataIdAndTypeItemObj `json:"appConsentBundleId"`
 }
 
 type BundleCapabilityAttributes struct {

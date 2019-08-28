@@ -1273,7 +1273,7 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 
 	//更改能力config配置
 	for configName, configValue := range *configChange {
-		logs.Info("%s", configName+configValue)
+		logs.Info("配置能力：%s", configName+configValue)
 		var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
 		var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
 		openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
@@ -1285,6 +1285,12 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 		openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type = "bundleIds"
 		openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = requestData.BundleIdId
 
+		//注意！当配置APPLE_ID_AUTH能力时，如果选择RELATED_APP_CONSENT需要指定绑定的bundleId
+		if configValue == "RELATED_APP_CONSENT" {
+			openBundleIdCapabilityRequest.Data.Relationships.AppConsentBundleId.Data.Type = "appConsentBundleId"
+			openBundleIdCapabilityRequest.Data.Relationships.AppConsentBundleId.Data.Id = requestData.AppConsentBundleId
+		}
+
 		if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, &openBundleIdCapabilityResponse) {
 			failChannel <- configName
 		} else {
@@ -1293,6 +1299,7 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 		logs.Info("打开配置能力response：%v", openBundleIdCapabilityResponse)
 	}
 
+	//使用协程打开配置能力时出现了返回201但实际没有打开的情况
 	/*go func(configName, configValue string) {
 		var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
 		var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
