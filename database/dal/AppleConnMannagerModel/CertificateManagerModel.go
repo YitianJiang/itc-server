@@ -100,7 +100,8 @@ type DelCertRequest struct {
 	CertOperator string `form:"cert_principal"`
 }
 type DelCertFeedback struct {
-	CustomerJson DelCertFeedbackCustomer `json:"customer_parameter"`
+	CustomerJson        DelCertFeedbackCustomer `json:"customer_parameter"`
+	AdditionalParameter `json:"additional_parameter"`
 }
 
 type DelCertFeedbackCustomer struct {
@@ -123,9 +124,20 @@ type UserName struct {
 }
 
 type RecAppName struct {
+	gorm.Model
 	AppName string `gorm:"app_name"`
 }
 
 func (CertInfo) TableName() string {
 	return "tt_apple_certificate"
+}
+
+type CreateOrUpdateCertInfoForLark struct {
+	//CertName     string
+	CertType    string
+	TeamId      string
+	AccountType string
+	CsrUrl      string
+	BundleId    string
+	UserName    string
 }

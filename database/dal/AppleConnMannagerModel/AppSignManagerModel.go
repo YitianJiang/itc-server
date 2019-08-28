@@ -312,12 +312,25 @@ type ApproveAppBindAccountCustomerParam struct {
 
 type ApproveAuthorizationApplicationParamFromLark struct {
 	ApproveAuthorizationApplicationCustomerParam `json:"customer_parameter"`
+	AdditionalParameter                          `json:"additional_parameter"`
 }
 
 type ApproveAuthorizationApplicationCustomerParam struct {
-	Result   string `json:"result"       binding:"required"`
-	UserName string `json:"userName"       binding:"required"`
-	TeamId   string `json:"teamId"       binding:"required"`
+	Authorization string `json:"authorization"       binding:"required"`
+	IsApproved    int    `json:"isApproved"          binding:"required"`
+	UserName      string `json:"userName"            binding:"required"`
+	TeamId        string `json:"teamId"              binding:"required"`
+}
+
+type FinishTicketParamFromLark struct {
+	AdditionalParameter       `json:"additional_parameter"`
+	FinishTicketCustomerParam `json:"customer_parameter"`
+}
+
+type FinishTicketCustomerParam struct {
+	TicketType string `json:"ticketType"          binding:"required"`
+	BundleId   string `json:"bundleId"            binding:"required"`
+	UserName   string `json:"userName"            binding:"required"`
 }
 
 type AppSignListRequest struct {
@@ -404,7 +417,7 @@ func (AppBundleProfiles) TableName() string {
 
 //todo 线上该dbname为"tt_apple_bundleid"
 func (AppleBundleId) TableName() string {
-	return "tt_apple_bundleid"
+	return "tt_apple_bundleId"
 }
 func (AppleProfile) TableName() string {
 	return "tt_apple_profile"

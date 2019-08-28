@@ -90,6 +90,7 @@ func RecordError(message string, err error) {
 }
 
 func AssembleJsonResponse(c *gin.Context, errorCode int, message string, data interface{}) {
+	logs.Info("结果返回：errorCode：%d; message: %s", errorCode, message)
 	c.JSON(http.StatusOK, gin.H{
 		"errorCode": errorCode,
 		"message":   message,
@@ -98,6 +99,7 @@ func AssembleJsonResponse(c *gin.Context, errorCode int, message string, data in
 }
 
 func AssembleJsonResponseWithStatusCode(c *gin.Context, statusCode int, message string, data interface{}) {
+	logs.Info("结果返回：statusCode：%d; message: %s", statusCode, message)
 	c.JSON(statusCode, gin.H{
 		"errorNo": statusCode,
 		"message": message,

@@ -18,6 +18,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -200,7 +201,7 @@ func ApplyForAuthorization(c *gin.Context) {
 	return
 }
 
-//生成绑定账号审核消息卡片内容
+//生成权限申请审核消息卡片内容
 func generateCardInfoOfApplyForAuthorization(requestData *devconnmanager.AuthorizationApplicationRequest) *[][]form.CardElementForm {
 	var cardFormArray [][]form.CardElementForm
 
@@ -221,19 +222,13 @@ func generateCardInfoOfApplyForAuthorization(requestData *devconnmanager.Authori
 		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountHeader, (*accountInfos)[0].AccountName))
 	}*/
 
-	var authorizationString string
-	switch requestData.Authorization {
-	case "all_cert_manager":
-		authorizationString = "全部证书管理"
-	case "dev_cert_manager":
-		authorizationString = "开发证书管理"
-	}
+	authorizationString := _const.CertManagerAuthorization[requestData.Authorization]
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AuthorizationHeader, authorizationString))
 
 	return &cardFormArray
 }
 
-//生成绑定账号审核消息卡片action
+//生成权限申请审核消息卡片action
 func generateActionsOfApplyForAuthorization(teamId string, userName string, authorization string) *[]form.CardActionForm {
 	var cardActions []form.CardActionForm
 	var cardAction form.CardActionForm
@@ -243,14 +238,14 @@ func generateActionsOfApplyForAuthorization(teamId string, userName string, auth
 	var hideOther = false
 	var url = utils.ApproveApplyForAuthorizationUrl
 
-	approveButtonParams := map[string]interface{}{"result": authorization, "teamId": teamId, "userName": userName}
-	rejectButtonParams := map[string]interface{}{"result": "-1", "teamId": teamId, "userName": userName}
+	approveButtonParams := map[string]interface{}{"authorization": authorization, "isApproved": 1, "teamId": teamId, "userName": userName}
+	rejectButtonParams := map[string]interface{}{"authorization": authorization, "isApproved": -1, "teamId": teamId, "userName": userName}
 
-	approveButton, err := form.GenerateButtonForm(&approveButtonText, nil, nil, nil, "post", url, false, false, &approveButtonParams, nil, &hideOther)
+	approveButton, err := form.GenerateButtonForm(&approveButtonText, nil, nil, nil, "post", url, true, false, &approveButtonParams, nil, &hideOther)
 	if err != nil {
 		utils.RecordError("生成审核卡片同意button失败，", err)
 	}
-	rejectButton, err := form.GenerateButtonForm(&rejectButtonText, nil, nil, nil, "post", url, false, false, &rejectButtonParams, nil, &hideOther)
+	rejectButton, err := form.GenerateButtonForm(&rejectButtonText, nil, nil, nil, "post", url, true, false, &rejectButtonParams, nil, &hideOther)
 	if err != nil {
 		utils.RecordError("生成审核卡片拒绝button失败，", err)
 	}
@@ -262,7 +257,8 @@ func generateActionsOfApplyForAuthorization(teamId string, userName string, auth
 }
 
 func ApproveAuthorizationApplication(c *gin.Context) {
-	//todo  需要给回执
+	//审核完成后需要给申请人回执
+	logs.Info("权限申请审核")
 	var requestData devconnmanager.ApproveAuthorizationApplicationParamFromLark
 	bindJsonError := c.ShouldBindJSON(&requestData)
 	utils.RecordError("绑定post请求body出错：%v", bindJsonError)
@@ -271,20 +267,26 @@ func ApproveAuthorizationApplication(c *gin.Context) {
 		return
 	}
 	logs.Info("request:%v", requestData)
-	if requestData.Result == "-1" {
+
+	authorizationString := _const.CertManagerAuthorization[requestData.Authorization]
+	if requestData.IsApproved == -1 {
+		//已拒绝
+		sendApplyForAuthorResultToApplicant(requestData.OpenId, requestData.UserName, authorizationString, "拒绝")
 		utils.AssembleJsonResponse(c, _const.SUCCESS, "权限审核成功", nil)
 		return
-	}
-	if requestData.Result != "all_cert_manager" && requestData.Result != "dev_cert_manager" {
+	} else if requestData.Authorization != "all_cert_manager" && requestData.Authorization != "dev_cert_manager" {
+		logs.Error("审批权限申请错误：请求参数有误")
 		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数有误", nil)
 		return
 	}
 
 	teamId := strings.ToLower(requestData.TeamId) + "_space_account"
-	if !utils.GiveUsersPermission(&[]string{requestData.UserName}, teamId, &[]string{requestData.Result}) {
+	if !utils.GiveUsersPermission(&[]string{requestData.UserName}, teamId, &[]string{requestData.Authorization}) {
+		logs.Error("审批权限申请错误：权限赋予失败")
 		utils.AssembleJsonResponseWithStatusCode(c, http.StatusInternalServerError, "审核失败:权限赋予失败", nil)
 	}
-
+	//已通过
+	sendApplyForAuthorResultToApplicant(requestData.OpenId, requestData.UserName, authorizationString, "通过")
 	utils.AssembleJsonResponse(c, _const.SUCCESS, "权限审核成功", nil)
 	return
 }
@@ -506,7 +508,7 @@ func CreateAppBindAccount(c *gin.Context) {
 	accountCertInfos := devconnmanager.QueryAppAccountCert(conditions)
 	var appAccountCert devconnmanager.AppAccountCert
 
-	if len(*accountCertInfos) == 0 {
+	if accountCertInfos != nil && len(*accountCertInfos) == 0 {
 		//插入数据
 		appAccountCert.TeamId = requestData.TeamId
 		appAccountCert.DevCertId = ""
@@ -555,7 +557,7 @@ func CreateAppBindAccount(c *gin.Context) {
 
 //Bundle id（连带Profile）创建\更新\恢复接口
 //todo profile不能和已有的重名
-//todo 只传bundleId？
+//是否可以只传bundleId？
 func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 	logs.Info("创建/更新/恢复bundle id")
 	var requestData devconnmanager.CreateBundleProfileRequest
@@ -763,8 +765,9 @@ func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.Cr
 				return
 			}
 			cardInfos := generateCardOfCreateBundleId(requestData)
+			cardAction := generateActionsOfFinish(requestData.UserName, "createBundleId", requestData.BundleId)
 			//logs.Info("%v",*cardInfos)
-			err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--创建BundleId")
+			err := sendIOSCertLarkMessage(cardInfos, cardAction, requestData.BundlePrincipal, &botService, "--创建BundleId")
 			utils.RecordError("发送创建bundleId工单失败：", err)
 			if err != nil {
 				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送创建bundleId工单失败", nil)
@@ -784,8 +787,9 @@ func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.Cr
 				return
 			}
 			cardInfos := generateCardOfUpdateBundleId(requestData)
+			cardAction := generateActionsOfFinish(requestData.UserName, "updateBundleId", requestData.BundleId)
 			//logs.Info("%v",*cardInfos)
-			err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--更新BundleId")
+			err := sendIOSCertLarkMessage(cardInfos, cardAction, requestData.BundlePrincipal, &botService, "--更新BundleId")
 			utils.RecordError("发送更新bundleId工单失败：", err)
 			if err != nil {
 				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送更新bundleId工单失败", nil)
@@ -806,8 +810,9 @@ func createOrUpdateOrRestoreBundleIdForEnterprise(requestData *devconnmanager.Cr
 			return
 		}
 		cardInfos := generateCardOfCreateBundleId(requestData)
+		cardAction := generateActionsOfFinish(requestData.UserName, "restoreBundleId", requestData.BundleId)
 		//logs.Info("%v",*cardInfos)
-		err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--恢复BundleId")
+		err := sendIOSCertLarkMessage(cardInfos, cardAction, requestData.BundlePrincipal, &botService, "--恢复BundleId")
 		utils.RecordError("发送恢复bundleId工单失败：", err)
 		if err != nil {
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送恢复bundleId工单失败", nil)
@@ -906,6 +911,27 @@ func generateCardOfCreateBundleId(requestData *devconnmanager.CreateBundleProfil
 		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DistProfileTypeHeader, requestData.DistProfileInfo.ProfileType))
 	}
 	return &cardFormArray
+}
+
+//生成工单消息卡片完成action
+func generateActionsOfFinish(userName, ticketType, bundleId string) *[]form.CardActionForm {
+	var cardActions []form.CardActionForm
+	var cardAction form.CardActionForm
+	var buttons []form.CardButtonForm
+	var finishButtonText = utils.FinishButtonText
+	var hideOther = false
+	var url = utils.FinishTicketUrl
+
+	finishButtonParams := map[string]interface{}{"ticketType": ticketType, "bundleId": bundleId, "userName": userName}
+
+	finishButton, err := form.GenerateButtonForm(&finishButtonText, nil, nil, nil, "post", url, true, false, &finishButtonParams, nil, &hideOther)
+	if err != nil {
+		utils.RecordError("生成完成工单卡片同意button失败，", err)
+	}
+	buttons = append(buttons, *finishButton)
+	cardAction.Buttons = buttons
+	cardActions = append(cardActions, cardAction)
+	return &cardActions
 }
 
 func generateCardOfUpdateBundleId(requestData *devconnmanager.CreateBundleProfileRequest) *[][]form.CardElementForm {
@@ -1187,6 +1213,7 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 			} else if (*bundleIdProfile)[0].PushCertId == "" || (*bundleIdProfile)[0].PushCertId == _const.NeedUpdate {
 				//发送创建push证书的工单
 				if sendPushCertLark(requestData) {
+					//发送成功后更新数据库
 					_ = devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundleid_id": requestData.BundleIdId}, map[string]interface{}{"push_cert_id": _const.NeedUpdate})
 				}
 			}
@@ -1298,7 +1325,16 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 func sendPushCertLark(requestData *devconnmanager.CreateBundleProfileRequest) bool {
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
-	cardInfos := generateCardOfPushCert(requestData)
+
+	certInfo := devconnmanager.CreateOrUpdateCertInfoForLark{
+		UserName:    requestData.UserName,
+		BundleId:    requestData.BundleId,
+		AccountType: requestData.AccountType,
+		TeamId:      requestData.TeamId,
+		CertType:    requestData.BundleType + "_PUSH",
+		CsrUrl:      _const.TOS_CSR_FILE_URL_PUSH,
+	}
+	cardInfos := generateCardOfCreateOrUpdateCert(utils.CreateCertMessage, &certInfo)
 	//logs.Info("%v",*cardInfos)
 	err := sendIOSCertLarkMessage(cardInfos, nil, requestData.BundlePrincipal, &botService, "--创建push证书")
 	utils.RecordError("发送创建push证书工单失败：", err)
@@ -1306,37 +1342,6 @@ func sendPushCertLark(requestData *devconnmanager.CreateBundleProfileRequest) bo
 		return false
 	}
 	return true
-}
-
-//生成创建push证书消息卡片内容
-func generateCardOfPushCert(requestData *devconnmanager.CreateBundleProfileRequest) *[][]form.CardElementForm {
-	var cardFormArray [][]form.CardElementForm
-
-	//插入提示信息
-	messageText := utils.CreatePushCertMessage
-	messageForm := form.GenerateTextTag(&messageText, false, nil)
-	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
-
-	//插入用户名，账户名，bundleId，push相关
-
-	//插入基本信息
-	cardFormArray = append(cardFormArray, generateCenterText("基本信息部分"))
-	accountInfos := devconnmanager.QueryAccountInfo(map[string]interface{}{"team_id": requestData.TeamId})
-	if len(*accountInfos) != 1 {
-		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TeamIdHeader, requestData.TeamId))
-		logs.Error("获取teamId对应的account失败：%s 错误原因：teamId对应的account记录数不等于1", requestData.TeamId)
-	} else {
-		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountHeader, (*accountInfos)[0].AccountName))
-	}
-
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, requestData.UserName))
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdNameHeader, requestData.BundleIdName))
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdHeader, requestData.BundleId))
-	cardFormArray = append(cardFormArray, getDividerOfCard())
-
-	cardFormArray = append(cardFormArray, generateCenterText("Push证书信息部分"))
-	cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.PushCertHeader, utils.CsrText, _const.TOS_CSR_FILE_URL_PUSH))
-	return &cardFormArray
 }
 
 //todo  根据id修改
@@ -1354,6 +1359,7 @@ func createProfile(profileInfo *devconnmanager.ProfileInfo, bundleIdInfo *devcon
 		if !uploadResult {
 			return errors.New("upload profile tos error")
 		}
+		//2020-08-20T06:31:20.101+0000
 		timeString := strings.Split(appleResult.Data.Attributes.ExpirationDate, "+")[0]
 		exp, _ := time.Parse("2006-01-02T15:04:05", timeString)
 		//插入profile记录
@@ -1555,6 +1561,9 @@ func insertDatabaseAfterCreateBundleIdForEnterprise(needUpdateDevProfile, needUp
 		field := appleBundleIdElem.FieldByName(capabilityKey)
 		field.SetString(capabilityValue)
 	}
+	//以下两个能力是创建bundleId就默认打开的，前端也不会传这两个字段，目前由于enterprise账号无法与苹果后台交互，因此写死
+	appleBundleId.GAME_CENTER = "GAME_CENTER"
+	appleBundleId.IN_APP_PURCHASE = "IN_APP_PURCHASE"
 	appleBundleId.BundleidName = requestData.BundleIdName
 	appleBundleId.BundleId = requestData.BundleId
 	appleBundleId.BundleidType = requestData.BundleType
@@ -1672,7 +1681,49 @@ func ApproveAppBindAccountFeedback(c *gin.Context) {
 func sendApproveResultToApplicant(requestData *devconnmanager.ApproveAppBindAccountParamFromLark, accountCertInfo *devconnmanager.AppAccountCert, action string) {
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
-	response, err := botService.GetUserInfoByOpenId(requestData.OpenId)
+	name := getUserNameByOpenId(requestData.OpenId, &botService)
+	accountInfo := getAccountInfoByTeamId(requestData.TeamId)
+	title := "应用绑定账号审核结果通知"
+	message := fmt.Sprintf("你提交的应用[%s]绑定账号[%s]申请 已于%s 被%s %s", accountCertInfo.AppName, accountInfo.AccountName, time.Now().Format("2006-01-02 15:04:05"), name, action)
+	alertTextWithTitleToPeople(title, message, requestData.UserName+"@bytedance.com", &botService)
+}
+
+//完成工单按钮
+func FinishTicketFeedback(c *gin.Context) {
+	var requestData devconnmanager.FinishTicketParamFromLark
+	err := c.ShouldBindJSON(&requestData)
+	utils.RecordError("绑定post请求body出错：%v", err)
+	if err != nil {
+		utils.AssembleJsonResponseWithStatusCode(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
+		return
+	}
+	logs.Info("请求参数：%v", requestData)
+	var ticketType string
+	switch requestData.TicketType {
+	case "createBundleId":
+		ticketType = "创建bundle id"
+	case "updateBundleId":
+		ticketType = "更新bundle id"
+	case "restoreBundleId":
+		ticketType = "恢复bundle id"
+	}
+	sendFinishTicketToApplicant(requestData.UserName, ticketType, requestData.BundleId, requestData.OpenId)
+	utils.AssembleJsonResponse(c, _const.SUCCESS, "success", "工单已完成: "+ticketType)
+	return
+}
+
+func sendFinishTicketToApplicant(userName, ticketType, bundleId, openId string) {
+	botService := service.BotService{}
+	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
+	name := getUserNameByOpenId(openId, &botService)
+	title := "BundleId操作工单结果通知"
+	message := fmt.Sprintf("你提交的%s工单[bundleId:%s]已于%s 被%s 完成", ticketType, bundleId, time.Now().Format("2006-01-02 15:04:05"), name)
+	alertTextWithTitleToPeople(title, message, userName+"@bytedance.com", &botService)
+}
+
+func getUserNameByOpenId(openId string, botService *service.BotService) string {
+	response, err := botService.GetUserInfoByOpenId(openId)
+	logs.Info("%v", response)
 	utils.RecordError("获取用户信息错误", err)
 	name := "null"
 	logs.Info("%v", response)
@@ -1680,10 +1731,7 @@ func sendApproveResultToApplicant(requestData *devconnmanager.ApproveAppBindAcco
 	case string:
 		name = response["name"].(string)
 	}
-	accountInfo := getAccountInfoByTeamId(requestData.TeamId)
-	title := "应用绑定账号审核结果通知"
-	message := fmt.Sprintf("你提交的应用[%s]绑定账号[%s]申请 已于%s 被%s %s", accountCertInfo.AppName, accountInfo.AccountName, time.Now().Format("2006-01-02 15:04:05"), name, action)
-	alertTextWithTitleToPeople(title, message, requestData.UserName+"@bytedance.com", &botService)
+	return name
 }
 
 func getAccountInfoByTeamId(teamId string) *devconnmanager.AccountInfo {
@@ -1730,7 +1778,7 @@ func DeleteProfile(c *gin.Context) {
 		abot := service.BotService{}
 		abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 		appleUrl := utils.APPLE_DELETE_PROFILE_URL + deleteRequest.ProfileId
-		if deleteRequest.Operator == "" || deleteRequest.Operator == _const.UNDEFINED{
+		if deleteRequest.Operator == "" || deleteRequest.Operator == _const.UNDEFINED {
 			deleteRequest.Operator = utils.CreateCertPrincipal
 		}
 		param := map[string]interface{}{
@@ -1895,7 +1943,7 @@ func DeleteBundleid(c *gin.Context) {
 		abot := service.BotService{}
 		abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 		url := utils.APPLE_DELETE_BUNDLE_URL + delRequest.BundleidId
-		if delRequest.Operator == "" || delRequest.Operator == _const.UNDEFINED{
+		if delRequest.Operator == "" || delRequest.Operator == _const.UNDEFINED {
 			delRequest.Operator = utils.CreateCertPrincipal
 		}
 		param := map[string]interface{}{
@@ -1909,7 +1957,7 @@ func DeleteBundleid(c *gin.Context) {
 		cardContent := generateCardOfBundleDelete(&delRequest, url, (*bundleid)[0].BundleId, (*bundleid)[0].BundleId, pushCertInfo)
 		cardAction := generateActionOfBundleDelete(&param)
 
-		sendErr := sendIOSCertLarkMessage(cardContent, cardAction, delRequest.Operator, &abot,"--删除BundleId")
+		sendErr := sendIOSCertLarkMessage(cardContent, cardAction, delRequest.Operator, &abot, "--删除BundleId")
 		if sendErr != nil {
 			utils.RecordError("工单发送lark消息失败，", sendErr)
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送工单lark消息失败", "")
@@ -2291,6 +2339,7 @@ func generateCardOfApproveBindAccount(appAccountCert *devconnmanager.AppAccountC
 	//插入userName, appId, appName, appType, teamId, accountName
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, appAccountCert.UserName))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AppIdHeader, appAccountCert.AppId))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BusinessHeader, getAppNameByAppId(appAccountCert.AppId)))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AppNameHeader, appAccountCert.AppName))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AppTypeHeader, appAccountCert.AppType))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TargetTeamIdHeader, appAccountCert.TeamId))
@@ -2303,6 +2352,15 @@ func generateCardOfApproveBindAccount(appAccountCert *devconnmanager.AppAccountC
 		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountTypeHeader, (*accountInfos)[0].AccountType))
 	}
 	return &cardFormArray
+}
+
+func getAppNameByAppId(appIdString string) string {
+	appId, err := strconv.Atoi(appIdString)
+	if err != nil {
+		logs.Error("appId（%s）转int失败：%v", appIdString, err)
+	}
+	appIdMap := utils.NewGetAppMap()
+	return appIdMap[appId]
 }
 
 //生成绑定账号审核消息卡片action
@@ -2358,7 +2416,7 @@ func packeBundleProfileCert(c *gin.Context, bqr *devconnmanager.APPandBundle) *d
 	packProfileSection(bqr, &bundleInfo.ProfileCertSection)
 	bundleInfo.PushCert.CertId = bqr.PushCertId
 	//push_cert信息整合--
-	if bqr.PushCertId != "" && bqr.PushCertId != _const.NeedUpdate && bqr.PushCertId != _const.Deleting{
+	if bqr.PushCertId != "" && bqr.PushCertId != _const.NeedUpdate && bqr.PushCertId != _const.Deleting {
 		pushCert := devconnmanager.QueryCertInfoByCertId(bqr.PushCertId)
 		if pushCert == nil {
 			utils.RecordError("数据库查询push证书信息失败", nil)
@@ -2410,17 +2468,17 @@ func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle, bundleInfo 
 }
 
 //API3-1，重组profile信息
-func packProfileSection(bqr *devconnmanager.APPandBundle,profile *devconnmanager.BundleProfileGroup) {
+func packProfileSection(bqr *devconnmanager.APPandBundle, profile *devconnmanager.BundleProfileGroup) {
 	profile.DevProfile.ProfileId = bqr.DevProfileId
 	profile.DistProfile.ProfileId = bqr.DistProfileId
-	if bqr.ProfileType != ""{
+	if bqr.ProfileType != "" {
 		if strings.Contains(bqr.ProfileType, "APP_DEVELOPMENT") {
 			profile.DevProfile.ProfileType = bqr.ProfileType
 			profile.DevProfile.ProfileId = bqr.ProfileId
 			profile.DevProfile.ProfileName = bqr.ProfileName
 			profile.DevProfile.ProfileDownloadUrl = bqr.ProfileDownloadUrl
 			profile.DevProfile.ProfileExpireDate = bqr.ProfileExpireDate
-		} else{
+		} else {
 			profile.DistProfile.ProfileType = bqr.ProfileType
 			profile.DistProfile.ProfileName = bqr.ProfileName
 			profile.DistProfile.ProfileId = bqr.ProfileId
@@ -2746,9 +2804,9 @@ func filterProfileInfo(profileInfo *devconnmanager.BundleProfileInfo) {
 func permLevelTrans(permActions []string) string {
 	if permActions == nil {
 		return "0"
-	}else {
+	} else {
 		var level = 0
-		for _,perm := range permActions {
+		for _, perm := range permActions {
 			if perm == _const.PermAdmin {
 				level = 3
 			} else if perm == _const.PermAllCert && level < 2 {
@@ -2795,4 +2853,13 @@ func alertTextWithTitleToPeople(title string, text string, userEmail string, bot
 	// 发送消息
 	_, err = botService.SendMessage(*richTextMessage)
 	utils.RecordError("bot发送消息错误", err)
+}
+
+func sendApplyForAuthorResultToApplicant(openId, userName, authorization, action string) {
+	botService := service.BotService{}
+	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
+	name := getUserNameByOpenId(openId, &botService)
+	title := "证书权限申请审核结果通知"
+	message := fmt.Sprintf("你提交的证书权限[%s]申请 已于%s 被%s %s", authorization, time.Now().Format("2006-01-02 15:04:05"), name, action)
+	alertTextWithTitleToPeople(title, message, userName+"@bytedance.com", &botService)
 }

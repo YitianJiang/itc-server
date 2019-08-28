@@ -12,6 +12,7 @@ import (
 	"code.byted.org/yuyilei/bot-api/service"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
@@ -142,26 +143,22 @@ func InsertCertificate(c *gin.Context) {
 		csrFileUrl := _const.TOS_CSR_FILE_URL_PUSH
 		var err error
 		if body.IsUpdate == "1" {
-			err = sendUpdateCertAlertToLark(body.AccountName, body.CertType, csrFileUrl, body.CertPrincipal, body.UserName, &botService, body.BundleId)
+			if !sendUpdateCertAlertToLark(&body, csrFileUrl, &botService) {
+				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送新建证书提醒lark失败", nil)
+				return
+			}
 		} else {
-			err = sendCreateCertAlertToLark(body.AccountName, body.CertType, csrFileUrl, body.CertPrincipal, body.UserName, &botService, body.BundleId)
-		}
-
-		utils.RecordError("发送新建证书提醒lark失败：", err)
-		if err != nil {
-			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送新建证书提醒lark失败", nil)
-			return
+			if !sendCreateCertAlertToLark(&body, csrFileUrl, &botService) {
+				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送更新证书提醒lark失败", nil)
+				return
+			}
 		}
 		err = devconnmanager.UpdateAppBundleProfiles(map[string]interface{}{"bundle_id": body.BundleId}, map[string]interface{}{"push_cert_id": _const.NeedUpdate})
 		if err != nil {
 			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "更新app_bundle_id_profile表失败", nil)
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{
-			"data":      nil,
-			"errorCode": 0,
-			"errorInfo": "",
-		})
+		utils.AssembleJsonResponse(c, _const.SUCCESS, "success", nil)
 		return
 	}
 
@@ -182,11 +179,7 @@ func InsertCertificate(c *gin.Context) {
 		}
 		dbResult := devconnmanager.InsertCertInfo(&certInfo)
 		if !dbResult {
-			c.JSON(http.StatusOK, gin.H{
-				"data":      certInfo,
-				"errorCode": 9,
-				"errorInfo": "往数据库中插入证书信息失败",
-			})
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "往数据库中插入证书信息失败", certInfo)
 			return
 		}
 		//组装lark消息 发送给负责人（用户指定or系统默认）
@@ -195,15 +188,12 @@ func InsertCertificate(c *gin.Context) {
 		if body.CertPrincipal == "" {
 			body.CertPrincipal = utils.CreateCertPrincipal
 		}
-		err := sendCreateCertAlertToLark(certInfo.AccountName, certInfo.CertType, certInfo.CsrFileUrl, body.CertPrincipal, body.UserName, &botService)
-		utils.RecordError("发送新建证书提醒lark失败：", err)
-
 		filterCert(&certInfo)
-		c.JSON(http.StatusOK, gin.H{
-			"data":      certInfo,
-			"errorCode": 0,
-			"errorInfo": "",
-		})
+		if !sendCreateCertAlertToLark(&body, certInfo.CsrFileUrl, &botService) {
+			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "发送新建证书lark失败", certInfo)
+			return
+		}
+		utils.AssembleJsonResponse(c, _const.SUCCESS, "success", certInfo)
 		return
 	}
 
@@ -527,7 +517,7 @@ func DeleteCertificate(c *gin.Context) {
 	}
 }
 
-//lark卡片点击已删除后异步更新db操作人信息
+//lark卡片点击已删除后异步更新db操作人信息，查询苹果后台并更新bundleId能力，给申请者回执
 func AsynDeleteCertFeedback(c *gin.Context) {
 	logs.Notice("点击已删除")
 	var feedbackInfo devconnmanager.DelCertFeedback
@@ -540,6 +530,12 @@ func AsynDeleteCertFeedback(c *gin.Context) {
 		})
 		return
 	}
+	certInfo := devconnmanager.QueryDeletedCertInfoByCertId(feedbackInfo.CustomerJson.CertId)
+	if certInfo == nil {
+		utils.AssembleJsonResponseWithStatusCode(c, http.StatusInternalServerError, "无匹配的证书信息", nil)
+		return
+	}
+	go sendDeleteCertResultToApplicant(feedbackInfo.OpenId, feedbackInfo.CustomerJson.UserName, certInfo.CertName, certInfo.CertType, certInfo.AccountName)
 	//更新对应cert_id的op_user信息
 	condition := map[string]interface{}{
 		"cert_id": feedbackInfo.CustomerJson.CertId,
@@ -573,10 +569,7 @@ func AsynDeleteCertFeedback(c *gin.Context) {
 		//去苹果后台查询能力并更新数据库
 		go updateBundleIdCapabilities(feedbackInfo.CustomerJson.BundleIdId, feedbackInfo.CustomerJson.TeamId)
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"errorCode": 0,
-		"errorInfo": "",
-	})
+	utils.AssembleJsonResponse(c, _const.SUCCESS, "", nil)
 	return
 }
 
@@ -781,7 +774,7 @@ func dealCertName(certName string) string {
 	for i := 0; i < len(certName); i++ {
 		if certName[i] == ':' {
 			continue
-		} else if certName[i] == ' ' || certName[i] == '.' || certName[i] == '(' || certName[i] == ')'{
+		} else if certName[i] == ' ' || certName[i] == '.' || certName[i] == '(' || certName[i] == ')' {
 			ret += "_"
 		} else {
 			ret += string(certName[i])
@@ -790,87 +783,72 @@ func dealCertName(certName string) string {
 	return ret
 }
 
-func sendCreateCertAlertToLark(accountName, certType, csrUrl, principal, userName string, botService *service.BotService, bundleId ...string) error {
-	cardMessage := generateSendMessageForm(accountName, certType, csrUrl, userName, bundleId...)
-	//发送消息
-	email := principal
-	if !strings.Contains(principal, "@bytedance.com") {
-		email += "@bytedance.com"
-	}
-	cardMessage.Email = &email
-	sendMsgResp, err := botService.SendMessage(*cardMessage)
-	logs.Info("SendCardMessage response= %v", sendMsgResp)
-	return err
-}
-
-func generateSendMessageForm(accountName, certType, csrUrl, userName string, bundleId ...string) *form.SendMessageForm {
-	cardInfoFormArray := generateCardInfoOfCreateCert(accountName, certType, csrUrl, userName, bundleId...)
-	cardHeaderTitle := "iOS证书管理通知--创建证书"
-	cardForm := form.GenerateCardForm(nil, getCardHeader(cardHeaderTitle), *cardInfoFormArray, nil)
-	cardMessageContent := form.GenerateCardMessageContent(cardForm)
-	cardMessage, err := form.GenerateMessage("interactive", cardMessageContent)
-	utils.RecordError("card信息生成出错: ", err)
-	return cardMessage
-}
-
-func sendUpdateCertAlertToLark(accountName, certType, csrUrl, principal, userName string, botService *service.BotService, bundleId ...string) error {
-	cardMessage := generateUpdateCertMessageForm(accountName, certType, csrUrl, userName, bundleId...)
-	//发送消息
-	email := principal
-	if !strings.Contains(principal, "@bytedance.com") {
-		email += "@bytedance.com"
-	}
-	cardMessage.Email = &email
-	sendMsgResp, err := botService.SendMessage(*cardMessage)
-	logs.Info("SendCardMessage response= %v", sendMsgResp)
-	return err
-}
-
-func generateUpdateCertMessageForm(accountName, certType, csrUrl, userName string, bundleId ...string) *form.SendMessageForm {
-	cardInfoFormArray := generateCardInfoOfUpdateCert(accountName, certType, csrUrl, userName, bundleId...)
-	cardHeaderTitle := "iOS证书管理通知--更新证书"
-	cardForm := form.GenerateCardForm(nil, getCardHeader(cardHeaderTitle), *cardInfoFormArray, nil)
-	cardMessageContent := form.GenerateCardMessageContent(cardForm)
-	cardMessage, err := form.GenerateMessage("interactive", cardMessageContent)
-	utils.RecordError("card信息生成出错: ", err)
-	return cardMessage
-}
-
-func generateCardInfoOfUpdateCert(accountName, certType, csrUrl, userName string, bundleId ...string) *[][]form.CardElementForm {
+func generateCardOfCreateOrUpdateCert(message string, certInfo *devconnmanager.CreateOrUpdateCertInfoForLark) *[][]form.CardElementForm {
 	var cardFormArray [][]form.CardElementForm
 
 	//插入提示信息
-	messageText := utils.UpdateCertMessage
-	messageForm := form.GenerateTextTag(&messageText, false, nil)
+	messageForm := form.GenerateTextTag(&message, false, nil)
 	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
 
-	//插入账号信息
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.CreateCertAccountHeader, accountName))
-
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, userName))
-
-	//插入证书类型信息
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.CreateCertTypeHeader, certType))
-
-	//push证书需要bundleId
-	if len(bundleId) > 0 {
-		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdHeader, bundleId[0]))
+	//插入基本信息：用户名，账户名，[bundleId]
+	cardFormArray = append(cardFormArray, generateCenterText("基本信息部分"))
+	accountInfos := devconnmanager.QueryAccountInfo(map[string]interface{}{"team_id": certInfo.TeamId})
+	if len(*accountInfos) != 1 {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TeamIdHeader, certInfo.TeamId))
+		logs.Error("获取teamId对应的account失败：%s 错误原因：teamId对应的account记录数不等于1", certInfo.TeamId)
+	} else {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.AccountHeader, (*accountInfos)[0].AccountName))
 	}
 
-	//插入csr文件url信息
-	var csrInfoFormList []form.CardElementForm
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, certInfo.UserName))
+	if certInfo.BundleId != "" {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdHeader, certInfo.BundleId))
+	}
+	cardFormArray = append(cardFormArray, getDividerOfCard())
 
-	csrHeader := utils.CsrHeader
-	csrHeaderForm := form.GenerateTextTag(&csrHeader, false, nil)
-	csrHeaderForm.Style = &utils.GrayHeaderStyle
-	csrInfoFormList = append(csrInfoFormList, *csrHeaderForm)
-
-	csrText := utils.CsrText
-	csrUrlForm := form.GenerateATag(&csrText, false, csrUrl)
-	csrInfoFormList = append(csrInfoFormList, *csrUrlForm)
-
-	cardFormArray = append(cardFormArray, csrInfoFormList)
+	//插入证书相关：csr，类型
+	cardFormArray = append(cardFormArray, generateCenterText("证书信息部分"))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.CreateCertTypeHeader, certInfo.CertType))
+	cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.CsrHeader, utils.CsrText, certInfo.CsrUrl))
 	return &cardFormArray
+}
+
+func sendCreateCertAlertToLark(requestData *devconnmanager.InsertCertRequest, csrUrl string, botService *service.BotService) bool {
+	certInfo := devconnmanager.CreateOrUpdateCertInfoForLark{
+		UserName:    requestData.UserName,
+		BundleId:    requestData.BundleId,
+		AccountType: requestData.AccountType,
+		TeamId:      requestData.TeamId,
+		CertType:    requestData.CertType,
+		CsrUrl:      csrUrl,
+	}
+	cardInfos := generateCardOfCreateOrUpdateCert(utils.CreateCertMessage, &certInfo)
+	//logs.Info("%v",*cardInfos)
+	err := sendIOSCertLarkMessage(cardInfos, nil, requestData.CertPrincipal, botService, "--创建证书")
+	utils.RecordError("发送创建证书工单失败：", err)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+func sendUpdateCertAlertToLark(requestData *devconnmanager.InsertCertRequest, csrUrl string, botService *service.BotService) bool {
+	certInfo := devconnmanager.CreateOrUpdateCertInfoForLark{
+		UserName:    requestData.UserName,
+		BundleId:    requestData.BundleId,
+		AccountType: requestData.AccountType,
+		TeamId:      requestData.TeamId,
+		CertType:    requestData.CertType,
+		CsrUrl:      csrUrl,
+	}
+	cardInfos := generateCardOfCreateOrUpdateCert(utils.UpdateCertMessage, &certInfo)
+	//logs.Info("%v",*cardInfos)
+	err := sendIOSCertLarkMessage(cardInfos, nil, requestData.CertPrincipal, botService, "--更新证书")
+	utils.RecordError("发送更新证书工单失败：", err)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func getCardHeader(headerTitle string) *form.CardElementForm {
@@ -880,64 +858,6 @@ func getCardHeader(headerTitle string) *form.CardElementForm {
 	utils.RecordError("生成cardHeader错误: ", err)
 
 	return cardHeader
-}
-
-func generateCardInfoOfCreateCert(accountName, certType, csrUrl, userName string, bundleId ...string) *[][]form.CardElementForm {
-	var cardFormArray [][]form.CardElementForm
-
-	//插入提示信息
-	messageText := utils.CreateCertMessage
-	messageForm := form.GenerateTextTag(&messageText, false, nil)
-	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
-
-	//插入账号信息
-	var accountFormList []form.CardElementForm
-
-	accountHeader := utils.CreateCertAccountHeader
-	accountHeaderForm := form.GenerateTextTag(&accountHeader, false, nil)
-	accountHeaderForm.Style = &utils.GrayHeaderStyle
-	accountFormList = append(accountFormList, *accountHeaderForm)
-
-	accountNameForm := form.GenerateTextTag(&accountName, false, nil)
-	accountFormList = append(accountFormList, *accountNameForm)
-
-	cardFormArray = append(cardFormArray, accountFormList)
-
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.UserNameHeader, userName))
-
-	//插入证书类型信息
-	var certTypeFormList []form.CardElementForm
-
-	certTypeHeader := utils.CreateCertTypeHeader
-	certTypeHeaderForm := form.GenerateTextTag(&certTypeHeader, false, nil)
-	certTypeHeaderForm.Style = &utils.GrayHeaderStyle
-	certTypeFormList = append(certTypeFormList, *certTypeHeaderForm)
-
-	certTypeTextForm := form.GenerateTextTag(&certType, false, nil)
-	certTypeFormList = append(certTypeFormList, *certTypeTextForm)
-
-	cardFormArray = append(cardFormArray, certTypeFormList)
-
-	//push证书需要bundleId
-	if len(bundleId) > 0 {
-		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.BundleIdHeader, bundleId[0]))
-	}
-
-	//插入csr文件url信息
-	var csrInfoFormList []form.CardElementForm
-
-	csrHeader := utils.CsrHeader
-	csrHeaderForm := form.GenerateTextTag(&csrHeader, false, nil)
-	csrHeaderForm.Style = &utils.GrayHeaderStyle
-	csrInfoFormList = append(csrInfoFormList, *csrHeaderForm)
-
-	csrText := utils.CsrText
-	csrUrlForm := form.GenerateATag(&csrText, false, csrUrl)
-	csrInfoFormList = append(csrInfoFormList, *csrUrlForm)
-
-	cardFormArray = append(cardFormArray, csrInfoFormList)
-
-	return &cardFormArray
 }
 
 func filterCert(certInfo *devconnmanager.CertInfo) {
@@ -1007,7 +927,10 @@ func sendIOSCertLarkMessage(cardInfoFormArray *[][]form.CardElementForm, cardAct
 	}
 	cardMessageContent := form.GenerateCardMessageContent(cardForm)
 	cardMessage, err := form.GenerateMessage("interactive", cardMessageContent)
-	//utils.RecordError("card信息生成出错: ", err)
+	utils.RecordError("card信息生成出错: ", err)
+	if cardMessage == nil {
+		return errors.New("card信息生成出错")
+	}
 	//发送消息
 	email := certOperator
 	if !strings.Contains(certOperator, "@bytedance.com") {
@@ -1015,7 +938,12 @@ func sendIOSCertLarkMessage(cardInfoFormArray *[][]form.CardElementForm, cardAct
 	}
 	cardMessage.Email = &email
 	sendMsgResp, err := botService.SendMessage(*cardMessage)
-	logs.Info("SendCardMessage response= %v", sendMsgResp)
+	logs.Info("发送飞书lark消息响应= %v", sendMsgResp)
+	if code, ok := sendMsgResp["code"].(float64); ok && code != 0 {
+		if message, ok := sendMsgResp["msg"].(string); ok {
+			return errors.New(message)
+		}
+	}
 	return err
 }
 
@@ -1060,7 +988,7 @@ func generateActionsOfCertDelete(param *map[string]interface{}) *[]form.CardActi
 	var text = utils.DeleteButtonText
 	var hideOther = false
 	var url = utils.DELCERT_FEEDBACK_URL
-	button, err := form.GenerateButtonForm(&text, nil, nil, nil, "post", url, false, false, param, nil, &hideOther)
+	button, err := form.GenerateButtonForm(&text, nil, nil, nil, "post", url, true, false, param, nil, &hideOther)
 	if err != nil {
 		utils.RecordError("生成卡片button失败，", err)
 	}
@@ -1189,4 +1117,13 @@ func larkNotifyUsers(groupName string, userNames []string, message string) bool 
 		return false
 	}
 	return true
+}
+
+func sendDeleteCertResultToApplicant(openId, userName, certName, certType, accountName string) {
+	botService := service.BotService{}
+	botService.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
+	name := getUserNameByOpenId(openId, &botService)
+	title := "证书删除结果通知"
+	message := fmt.Sprintf("你提交的证书删除申请\n[账号：%s，证书名：%s，类型：%s]\n已于%s 被%s 完成", accountName, certName, certType, time.Now().Format("2006-01-02 15:04:05"), name)
+	alertTextWithTitleToPeople(title, message, userName+"@bytedance.com", &botService)
 }
