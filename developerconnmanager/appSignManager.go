@@ -24,7 +24,6 @@ import (
 	"time"
 )
 
-//todo actionURL修改
 //tos通用处理逻辑
 func uploadProfileToTos(profileContent []byte, tosFilePath string) bool {
 	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME_JYT, _const.TOS_BUCKET_TOKEN_JYT)
@@ -334,6 +333,7 @@ func GetBundleIdCapabilitiesInfo(c *gin.Context) {
 	}
 	responseData.SettingsCapabilitiesInfo = make(map[string][]string)
 	responseData.SettingsCapabilitiesInfo[_const.ICLOUD] = _const.CloudSettings
+	responseData.SettingsCapabilitiesInfo[_const.APPLE_ID_AUTH] = _const.AppleInAuthSettings
 	if requestData.AppType == "iOS" {
 		responseData.SelectCapabilitiesInfo = _const.IOSSelectCapabilities
 		responseData.SettingsCapabilitiesInfo[_const.DATA_PROTECTION] = _const.ProtectionSettings
