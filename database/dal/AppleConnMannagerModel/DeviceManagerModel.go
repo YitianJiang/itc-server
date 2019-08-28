@@ -4,16 +4,16 @@ import "code.byted.org/gopkg/gorm"
 
 type DeviceInfo struct {
 	gorm.Model
-	UdId              string   `gorm:"ud_id"                   json:"udId"              binding:"required"`
-	DeviceId          string   `gorm:"device_id"               json:"deviceId"          binding:"required"`
-	DeviceClass       string   `gorm:"device_class"            json:"deviceClass"       binding:"required"`
-	DeviceName        string   `gorm:"device_name"             json:"deviceName"        binding:"required"`
-	DeviceModel       string   `gorm:"device_model"            json:"deviceModel"       binding:"required"`
-	DevicePlatform    string   `gorm:"device_platform"         json:"devicePlatform"    binding:"required"`
-	DeviceStatus      string   `gorm:"device_status"           json:"deviceStatus"      binding:"required"`
-	DeviceAddedDate   string   `gorm:"device_added_date"       json:"deviceAddedDate"   binding:"required"`
-	OpUser            string   `gorm:"op_user"                 json:"opUser"            binding:"required"`
-	TeamId            string   `gorm:"team_id"                 json:"teamId,omitempty"  binding:"required"`
+	UdId              string   `gorm:"ud_id"                   json:"ud_id"              binding:"required"`
+	DeviceId          string   `gorm:"device_id"               json:"device_id"`
+	DeviceClass       string   `gorm:"device_class"            json:"device_class"`
+	DeviceName        string   `gorm:"device_name"             json:"device_name"        binding:"required"`
+	DeviceModel       string   `gorm:"device_model"            json:"device_model"       binding:"required"`
+	DevicePlatform    string   `gorm:"device_platform"         json:"device_platform"    binding:"required"`
+	DeviceStatus      string   `gorm:"device_status"           json:"device_status"`
+	DeviceAddedDate   string   `gorm:"device_added_date"       json:"device_added_date"`
+	OpUser            string   `gorm:"op_user"                 json:"op_user"            binding:"required"`
+	TeamId            string   `gorm:"team_id"                 json:"team_id"            binding:"required"`
 }
 
 type GetDevicesInfoRequest struct {
@@ -21,14 +21,13 @@ type GetDevicesInfoRequest struct {
 }
 
 type AddDeviceInfoRequest struct {
-	UserName          string       `json:"user_name"            binding:"required"`
+	OpUser            string       `json:"op_user"              binding:"required"`
 	TeamId            string       `json:"team_id"              binding:"required"`
 	DeviceName        string       `json:"device_name"          binding:"required"`
 	Udid              string       `json:"udid"                 binding:"required"`
 	DevicePlatform    string       `json:"device_platform"      binding:"required"`
 	AccountType       string       `json:"account_type"         binding:"required"`
-	DevicePrincipal   string       `json:"device_principal"     binding:"required"`
-
+	DevicePrincipal   string       `json:"device_principal"`
 }
 
 //苹果添加设备信息请求
@@ -53,11 +52,12 @@ type AddDevInfoAppRet struct {
 }
 
 type UpdateDeviceInfoRequest struct {
-	UserName          string       `json:"user_name"            binding:"required"`
+	OpUser            string       `json:"op_user"              binding:"required"`
 	TeamId            string       `json:"team_id"              binding:"required"`
 	DeviceId          string       `json:"device_id"            binding:"required"`
-	DeviceName        string       `json:"device_name"                                  gorm:"device_name"                       `
-	DeviceStatus      string       `json:"device_status"                                gorm:"device_status"`
+	UdId              string       `json:"ud_id"                binding:"required"`
+	DeviceName        string       `json:"device_name"`
+	DeviceStatus      string       `json:"device_status"`
 	DevicePrincipal   string       `json:"device_principal"`
 	AccountType       string       `json:"account_type"         binding:"required"`
 }
@@ -83,7 +83,8 @@ type UpdateDeviceFeedback struct {
 }
 
 type UpdateDeviceFeedbackJson struct {
-	DeviceId string     `json:"device_id"        binding:"required"`
+	TeamId   string     `json:"team_id"          binding:"required"`
+	UdId     string     `json:"ud_id"            binding:"required"`
 	OpUser   string     `json:"op_user"          binding:"required"`
 }
 

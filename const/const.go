@@ -40,6 +40,7 @@ const (
 	APPLE_UPDATE_DEVICE_INFO_URL="https://api.appstoreconnect.apple.com/v1/devices/"
 	APPLE_ADD_DEVICE_INFO_URL="https://api.appstoreconnect.apple.com/v1/devices"
 	APPLE_DEVICE_TYPE="devices"
+	APPLE_DEVICE_ENABLED_STATUS="ENABLED"
 )
 
 const (

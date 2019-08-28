@@ -226,16 +226,17 @@ const (
 )
 
 //更新设备工单卡片基本信息
-var UpdateDeviceMessage="请根据设备信息登录Apple后台更新设备信息"
-var DeviceIdHeader="device id: "
-var DeviceStatusHeader="设备状态: "
+var UpdateDeviceMessage="请登录Apple后台,并到TeamId对应的账号下更新UDID对应设备的名称和状态为如下，更新完毕后请点击\"已更新\""
+var DeviceIdHeader="UDID: "
+var DeviceStatusHeader="请更新设备状态为: "
+var DeviceNameUpdateHeader="请更新设备名称为: "
 var UpdateDeviceButtonText="已更新"
 
 //新增设备工单卡片基本信息
-var AddDeviceMessage="请根据设备信息登录Apple后台添加设备并将设备信息上传至itc证书管理后台"
-var DeviceNameHeader="设备名称: "
-var UDIDHeader="UDID: "
-var PlatformHeader="平台: "
+var AddDeviceMessage="请登录Apple后台,并到TeamId对应的账号下根据以下信息添加设备，并将设备信息上传至itc证书管理后台"
+var DeviceNameAddHeader="要添加设备的名称: "
+var UDIDHeader="要添加设备的UDID: "
+var PlatformHeader="要添加设备的平台: "
 
 //新建证书工单卡片基本信息
 var CreateCertMessage = "请根据配置信息登录Apple后台手动生成证书并上传至rocket证书管理后台"
