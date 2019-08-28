@@ -417,7 +417,7 @@ func (AppBundleProfiles) TableName() string {
 
 //todo 线上该dbname为"tt_apple_bundleid"
 func (AppleBundleId) TableName() string {
-	return "tt_apple_bundleId"
+	return "tt_apple_bundleid"
 }
 func (AppleProfile) TableName() string {
 	return "tt_apple_profile"
