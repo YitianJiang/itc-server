@@ -44,10 +44,14 @@ func generateCardOfDeviceUpdate(deviceId string, deviceName string, deviceStatus
 	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
 
 	//插入设备名称、UDID、平台
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TeamIdHeader,teamId))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.TeamIdHeader, teamId))
 	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeviceIdHeader, deviceId))
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeviceNameUpdateHeader, deviceName))
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeviceStatusHeader, deviceStatus))
+	if deviceName!=""&&deviceName!=_const.UNDEFINED {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeviceNameUpdateHeader, deviceName))
+	}
+	if deviceStatus!=""&&deviceName!=_const.UNDEFINED {
+		cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeviceStatusHeader, deviceStatus))
+	}
 
 	return &cardFormArray
 }
