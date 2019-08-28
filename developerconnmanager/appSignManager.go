@@ -508,30 +508,32 @@ func CreateAppBindAccount(c *gin.Context) {
 	accountCertInfos := devconnmanager.QueryAppAccountCert(conditions)
 	var appAccountCert devconnmanager.AppAccountCert
 
-	if accountCertInfos != nil && len(*accountCertInfos) == 0 {
-		//插入数据
-		appAccountCert.TeamId = requestData.TeamId
-		appAccountCert.DevCertId = ""
-		appAccountCert.DistCertId = ""
-		appAccountCert.AccountVerifyStatus = "0"
-		appAccountCert.AppType = requestData.AppType
-		appAccountCert.UserName = requestData.UserName
-		appAccountCert.AppId = requestData.AppId
-		appAccountCert.AppName = requestData.AppName
-		err := devconnmanager.InsertRecord(&appAccountCert)
-		if err != nil {
-			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库插入失败", "failed")
-			return
+	if accountCertInfos != nil {
+		if len(*accountCertInfos) == 0 {
+			//插入数据
+			appAccountCert.TeamId = requestData.TeamId
+			appAccountCert.DevCertId = ""
+			appAccountCert.DistCertId = ""
+			appAccountCert.AccountVerifyStatus = "0"
+			appAccountCert.AppType = requestData.AppType
+			appAccountCert.UserName = requestData.UserName
+			appAccountCert.AppId = requestData.AppId
+			appAccountCert.AppName = requestData.AppName
+			err := devconnmanager.InsertRecord(&appAccountCert)
+			if err != nil {
+				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库插入失败", "failed")
+				return
+			}
+		} else if len(*accountCertInfos) == 1 {
+			//更新数据
+			conditions := map[string]interface{}{"id": (*accountCertInfos)[0].ID}
+			err, returnModel := devconnmanager.UpdateAppAccountCertAndGetModelByMap(conditions, appAccountCertMap)
+			if err != nil {
+				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库更新失败", "failed")
+				return
+			}
+			appAccountCert = *returnModel
 		}
-	} else if len(*accountCertInfos) == 1 {
-		//更新数据
-		conditions := map[string]interface{}{"id": (*accountCertInfos)[0].ID}
-		err, returnModel := devconnmanager.UpdateAppAccountCertAndGetModelByMap(conditions, appAccountCertMap)
-		if err != nil {
-			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库更新失败", "failed")
-			return
-		}
-		appAccountCert = *returnModel
 	} else {
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "存在多条app_id和app_name都相同的数据，无法更新", "failed")
 		return
