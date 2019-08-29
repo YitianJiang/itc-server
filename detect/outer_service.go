@@ -167,26 +167,6 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 		return
 	}
 
-	// tasks := dal.QueryDetectModelsByMap(map[string]interface{}{
-	// 	"app_id":      appID,
-	// 	"app_version": appVersion})
-	// if tasks == nil || len(*tasks) == 0 {
-	// 	errMsg := "未查询到 APP ID: " + appID + ", Version: " +
-	// 		appVersion + " 对应的检测任务"
-	// 	logs.Error("%v", errMsg)
-	// 	errorReturn(c, errMsg)
-	// 	return
-	// }
-
-	// var results [][]dal.DetectQueryStruct
-	// for _, t := range *tasks {
-	// 	result := getDetectResult(c, strconv.Itoa(int(t.ID)), "6")
-	// 	if result == nil {
-	// 		return
-	// 	}
-	// 	results = append(results, *result)
-	// }
-
 	task := queryLastestDetectResult(map[string]interface{}{
 		"app_id":      appID,
 		"app_version": appVersion})
