@@ -22,8 +22,6 @@ var MiddleLarkPeople = []string{"kanghuaisong", "yinzhihong", "gongrui", "zhangs
 var HighLarkPeople = []string{"kanghuaisong", "yinzhihong", "gongrui", "zhangshuai.02", "chenyujun", "hejiahui.2019", "maoyu"}
 var PermLarkPeople = []string{"kanghuaisong", "lirensheng"}
 
-// var PermLarkPeople = []string{"kanghuaisong", "lirensheng"}
-var PermLarkPeople = []string{"hejiahui.2019"} // TEST
 var AppVersionProject = map[string]string{"13": "1", "27": "35", "32": "23", "1128": "375", "1112": "397"}
 
 //权限配置页面操作人员
@@ -34,9 +32,8 @@ var PermToModify = map[string]int{
 	"yangzhiqian":   1,
 	"zhaoxuan.li":   1,
 	//测试加入
-	//"fanjuan.xqp":1,
-	"liyixian.lym":  1,
-	"hejiahui.2019": 1,
+	// "liyixian.lym":  1,
+	// "hejiahui.2019": 1,
 }
 
 const (
