@@ -317,31 +317,43 @@ func QueryIgnoredHistory(c *gin.Context) {
 安卓获取检测任务详情---数组形式
 */
 func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
-	taskId := c.DefaultQuery("taskId", "")
-	if taskId == "" {
+	taskID := c.DefaultQuery("taskId", "")
+	if taskID == "" {
 		logs.Error("缺少taskId参数")
 		errorReturn(c, "缺少taskId参数")
 		return
 	}
-	toolId := c.DefaultQuery("toolId", "")
-	if toolId == "" {
+
+	toolID := c.DefaultQuery("toolId", "")
+	if toolID == "" {
 		logs.Error("缺少toolId参数")
 		errorReturn(c, "缺少toolId参数")
 		return
 	}
 
 	//切换到旧版本
-	if toolId != "6" {
+	if toolID != "6" {
 		QueryTaskBinaryCheckContent(c)
 		return
 	}
+
+	result := getDetectResult(c, taskID, toolID)
+	if result == nil {
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "success",
+		"errorCode": 0,
+		"data":      result,
+	})
+
+	return
+}
+
+func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.DetectQueryStruct {
 	//一次查所有
-	var methodIgs = make(map[string]interface{})
-	var strIgs = make(map[string]interface{})
-	var perIgs = make(map[int]interface{})
 	allPermList := GetPermList()
-	var appId int
-	var errIg error
 	//获取任务信息
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id": taskId,
@@ -349,45 +361,38 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 	if detect == nil || len(*detect) == 0 {
 		logs.Error("未查询到该taskid对应的检测任务，%v", taskId)
 		errorReturn(c, "未查询到该taskid对应的检测任务")
-		return
+		return nil
 	}
 	//查询增量信息
 	queryData := make(map[string]string)
 	queryData["appId"] = (*detect)[0].AppId
-	appId, _ = strconv.Atoi((*detect)[0].AppId)
+	appId, _ := strconv.Atoi((*detect)[0].AppId)
 	queryData["platform"] = strconv.Itoa((*detect)[0].Platform)
-	methodIgs, strIgs, _, errIg = getIgnoredInfo_2(queryData)
+
+	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(queryData)
 	if errIg != nil {
 		logs.Error("可忽略信息数据库查询失败,%v", errIg) //如果可忽略信息没有的话,录入日志但不影响后续操作
 	}
-	condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
-	perIgs = GetIgnoredPermission(appId)
 
+	condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
 	//查询基础信息和敏感信息
 	contents, err := dal.QueryDetectInfo_2(condition)
 	if err != nil {
 		errorReturn(c, "查询检测结果信息数据库操作失败")
-		return
+		return nil
 	}
 	details, err2 := dal.QueryDetectContentDetail(condition)
 	if err2 != nil {
 		errorReturn(c, "查询检测结果信息数据库操作失败")
-		return
+		return nil
 	}
 	if contents == nil || len(*contents) == 0 || details == nil || len(*details) == 0 {
 		logs.Info("未查询到该任务对应的检测内容,taskId:" + taskId)
 		errorReturn(c, "未查询到该任务对应的检测内容")
-		return
+		return nil
 	}
-	//查询权限信息，此处为空--代表旧版无权限确认部分
-	info, err3 := dal.QueryPermAppRelation(map[string]interface{}{
-		"task_id": taskId,
-	})
-	var hasPermListFlag = true //标识是否进行权限分条确认的结果标识
-	if err3 != nil || info == nil || len(*info) == 0 {
-		logs.Error("taskId:" + taskId + ",未查询到该任务的权限确认信息")
-		hasPermListFlag = false
-	}
+
+	info, hasPermListFlag := getPermAPPReltion(taskId)
 
 	detailMap := make(map[int][]dal.DetectContentDetail)
 	permsMap := make(map[int]dal.PermAppRelation)
@@ -435,6 +440,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 	finalResult = append(finalResult, firstResult)
 	finalResult = append(finalResult, midResult...)
 
+	perIgs := GetIgnoredPermission(appId)
 	//任务检测结果组输出重组
 	for i := 0; i < len(finalResult); i++ {
 		details := detailMap[finalResult[i].Index]
@@ -443,7 +449,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 		//获取敏感信息输出结果
 		methods_un, strs_un := GetDetectDetailOutInfo(details, c, methodIgs, strIgs)
 		if methods_un == nil && strs_un == nil {
-			return
+			return nil
 		}
 		finalResult[i].SMethods = methods_un
 		finalResult[i].SStrs = make([]dal.SStr, 0)
@@ -464,13 +470,21 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 
 	}
 
-	logs.Info("query detect result success!")
-	c.JSON(http.StatusOK, gin.H{
-		"message":   "success",
-		"errorCode": 0,
-		"data":      finalResult,
-	})
-	return
+	return &finalResult
+}
+
+func getPermAPPReltion(taskID string) (*[]dal.PermAppRelation, bool) {
+	//查询权限信息，此处为空--代表旧版无权限确认部分
+	info, err := dal.QueryPermAppRelation(map[string]interface{}{
+		"task_id": taskID})
+	// var hasPermListFlag = true //标识是否进行权限分条确认的结果标识
+	if err != nil || info == nil || len(*info) == 0 {
+		logs.Error("taskId:" + taskID + ",未查询到该任务的权限确认信息")
+		// hasPermListFlag = false
+		return nil, false
+	}
+
+	return info, true
 }
 
 /**
