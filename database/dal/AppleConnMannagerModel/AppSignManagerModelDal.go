@@ -196,6 +196,22 @@ func QueryAppleBundleId(queryData map[string]interface{}) *[]AppleBundleId {
 	return &result
 }
 
+func QueryAppleBundleIdWithNotNullBundleIdId(queryData map[string]interface{}) *[]AppleBundleId {
+	conn, err := database.GetConneection()
+	if err != nil {
+		utils.RecordError("Get DB Connection Failed: ", err)
+		return nil
+	}
+	defer conn.Close()
+	db := conn.Table(AppleBundleId{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	var result = make([]AppleBundleId, 0)
+	if err := db.Where(queryData).Not("bundleid_id", "").Find(&result).Error; err != nil {
+		utils.RecordError("查询 tt_apple_bundleId 失败，查询条件："+fmt.Sprint(queryData)+",errInfo：", err)
+		return nil
+	}
+	return &result
+}
+
 /**
 删除操作
 */

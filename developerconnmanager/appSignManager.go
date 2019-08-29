@@ -24,7 +24,6 @@ import (
 	"time"
 )
 
-//todo actionURL修改
 //tos通用处理逻辑
 func uploadProfileToTos(profileContent []byte, tosFilePath string) bool {
 	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME_JYT, _const.TOS_BUCKET_TOKEN_JYT)
@@ -201,6 +200,17 @@ func ApplyForAuthorization(c *gin.Context) {
 	return
 }
 
+//查找teamId下的为Primary APP id的bundleIdId
+func QueryPrimaryBundleIds(c *gin.Context) {
+	teamId := c.Query("team_id")
+	if teamId == "" {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "缺少参数", nil)
+		return
+	}
+	primaryBundleIds := devconnmanager.QueryAppleBundleIdWithNotNullBundleIdId(map[string]interface{}{"team_id": teamId, "APPLE_ID_AUTH": "PRIMARY_APP_CONSENT"})
+	utils.AssembleJsonResponse(c, _const.SUCCESS, "success", primaryBundleIds)
+}
+
 //生成权限申请审核消息卡片内容
 func generateCardInfoOfApplyForAuthorization(requestData *devconnmanager.AuthorizationApplicationRequest) *[][]form.CardElementForm {
 	var cardFormArray [][]form.CardElementForm
@@ -334,6 +344,7 @@ func GetBundleIdCapabilitiesInfo(c *gin.Context) {
 	}
 	responseData.SettingsCapabilitiesInfo = make(map[string][]string)
 	responseData.SettingsCapabilitiesInfo[_const.ICLOUD] = _const.CloudSettings
+	responseData.SettingsCapabilitiesInfo[_const.APPLE_ID_AUTH] = _const.AppleInAuthSettings
 	if requestData.AppType == "iOS" {
 		responseData.SelectCapabilitiesInfo = _const.IOSSelectCapabilities
 		responseData.SettingsCapabilitiesInfo[_const.DATA_PROTECTION] = _const.ProtectionSettings
@@ -395,7 +406,6 @@ func GetAppSignListDetailInfo(c *gin.Context) {
 	appNameList = strings.TrimSuffix(appNameList, ",")
 	appNameList += ")"
 	//根据app_id和app_name获取bundleid信息+profile信息
-	//todo 更改bundleid表名
 	var bQueryResult []devconnmanager.APPandBundle
 	sql_c := "select abp.app_name,abp.bundle_id as bundle_id_index,abp.bundleid_isdel as bundle_id_is_del,abp.push_cert_id,abp.dev_profile_id,abp.dist_profile_id,ap.profile_id,ap.profile_name,ap.profile_expire_date,ap.profile_type,ap.profile_download_url,ab.*" +
 		" from tt_apple_bundleid ab,tt_app_bundleId_profiles abp left join tt_apple_profile ap " +
@@ -508,30 +518,32 @@ func CreateAppBindAccount(c *gin.Context) {
 	accountCertInfos := devconnmanager.QueryAppAccountCert(conditions)
 	var appAccountCert devconnmanager.AppAccountCert
 
-	if accountCertInfos != nil && len(*accountCertInfos) == 0 {
-		//插入数据
-		appAccountCert.TeamId = requestData.TeamId
-		appAccountCert.DevCertId = ""
-		appAccountCert.DistCertId = ""
-		appAccountCert.AccountVerifyStatus = "0"
-		appAccountCert.AppType = requestData.AppType
-		appAccountCert.UserName = requestData.UserName
-		appAccountCert.AppId = requestData.AppId
-		appAccountCert.AppName = requestData.AppName
-		err := devconnmanager.InsertRecord(&appAccountCert)
-		if err != nil {
-			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库插入失败", "failed")
-			return
+	if accountCertInfos != nil {
+		if len(*accountCertInfos) == 0 {
+			//插入数据
+			appAccountCert.TeamId = requestData.TeamId
+			appAccountCert.DevCertId = ""
+			appAccountCert.DistCertId = ""
+			appAccountCert.AccountVerifyStatus = "0"
+			appAccountCert.AppType = requestData.AppType
+			appAccountCert.UserName = requestData.UserName
+			appAccountCert.AppId = requestData.AppId
+			appAccountCert.AppName = requestData.AppName
+			err := devconnmanager.InsertRecord(&appAccountCert)
+			if err != nil {
+				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库插入失败", "failed")
+				return
+			}
+		} else if len(*accountCertInfos) == 1 {
+			//更新数据
+			conditions := map[string]interface{}{"id": (*accountCertInfos)[0].ID}
+			err, returnModel := devconnmanager.UpdateAppAccountCertAndGetModelByMap(conditions, appAccountCertMap)
+			if err != nil {
+				utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库更新失败", "failed")
+				return
+			}
+			appAccountCert = *returnModel
 		}
-	} else if len(*accountCertInfos) == 1 {
-		//更新数据
-		conditions := map[string]interface{}{"id": (*accountCertInfos)[0].ID}
-		err, returnModel := devconnmanager.UpdateAppAccountCertAndGetModelByMap(conditions, appAccountCertMap)
-		if err != nil {
-			utils.AssembleJsonResponse(c, http.StatusInternalServerError, "数据库更新失败", "failed")
-			return
-		}
-		appAccountCert = *returnModel
 	} else {
 		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "存在多条app_id和app_name都相同的数据，无法更新", "failed")
 		return
@@ -574,6 +586,10 @@ func CreateOrUpdateOrRestoreBundleId(c *gin.Context) {
 
 	logs.Info("request:%v", requestData)
 
+	if requestData.ConfigCapabilitiesChange[_const.APPLE_ID_AUTH] == "RELATED_APP_CONSENT" && requestData.AppConsentBundleId == "" {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "app_consent_bundle_id缺失", nil)
+		return
+	}
 	if !checkProfileValidation(&requestData, c) {
 		return
 	}
@@ -1273,7 +1289,7 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 
 	//更改能力config配置
 	for configName, configValue := range *configChange {
-		logs.Info("%s", configName+configValue)
+		logs.Info("配置能力：%s", configName+configValue)
 		var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
 		var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
 		openBundleIdCapabilityRequest.Data.Type = "bundleIdCapabilities"
@@ -1285,6 +1301,14 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 		openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Type = "bundleIds"
 		openBundleIdCapabilityRequest.Data.Relationships.BundleId.Data.Id = requestData.BundleIdId
 
+		//注意！当配置APPLE_ID_AUTH能力时，如果选择RELATED_APP_CONSENT需要指定绑定的bundleId
+		if configValue == "RELATED_APP_CONSENT" {
+			var appConsentBundleIdData devconnmanager.DataIdAndTypeItemObj
+			appConsentBundleIdData.Data.Type = "bundleIds"
+			appConsentBundleIdData.Data.Id = requestData.AppConsentBundleId
+			openBundleIdCapabilityRequest.Data.Relationships.AppConsentBundleId = &appConsentBundleIdData
+		}
+
 		if !ReqToAppleHasObjMethod("POST", _const.APPLE_BUNDLE_ID_CAPABILITIES_MANAGER_URL, tokenString, &openBundleIdCapabilityRequest, &openBundleIdCapabilityResponse) {
 			failChannel <- configName
 		} else {
@@ -1293,6 +1317,7 @@ func updateAllCapabilitiesInApple(tokenString string, requestData *devconnmanage
 		logs.Info("打开配置能力response：%v", openBundleIdCapabilityResponse)
 	}
 
+	//使用协程打开配置能力时出现了返回201但实际没有打开的情况
 	/*go func(configName, configValue string) {
 		var openBundleIdCapabilityRequest devconnmanager.OpenBundleIdCapabilityRequest
 		var openBundleIdCapabilityResponse devconnmanager.OpenBundleIdCapabilityResponse
@@ -1436,6 +1461,7 @@ func insertDatabaseAfterCreateBundleId(requestData *devconnmanager.CreateBundleP
 	appleBundleId.BundleidName = requestData.BundleIdName
 	appleBundleId.BundleId = requestData.BundleId
 	appleBundleId.BundleidType = requestData.BundleType
+	appleBundleId.TeamId = requestData.TeamId
 
 	logs.Info("bundle id能力对象：%v", appleBundleId)
 	err = devconnmanager.InsertRecord(&appleBundleId)
@@ -1567,6 +1593,7 @@ func insertDatabaseAfterCreateBundleIdForEnterprise(needUpdateDevProfile, needUp
 	appleBundleId.BundleidName = requestData.BundleIdName
 	appleBundleId.BundleId = requestData.BundleId
 	appleBundleId.BundleidType = requestData.BundleType
+	appleBundleId.TeamId = requestData.TeamId
 
 	logs.Info("bundle id能力对象：%v", appleBundleId)
 	err = devconnmanager.InsertRecord(&appleBundleId)
