@@ -17,9 +17,9 @@ const LARK_URL = "https://rocket-api.bytedance.net/api/v1/robot/person/send"
 const OFFICE_LARK_URL = "https://open.feishu.cn/open-apis/message/v3/send/"
 const LARK_Email2Id_URL = "https://open.feishu.cn/open-apis/user/v3/email2id"
 
-var LowLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong"}
-var MiddleLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong", "gongrui", "zhangshuai.02"}
-var HighLarkPeople = []string{"kanghuaisong", "fanjuan.xqp", "yinzhihong", "gongrui", "zhangshuai.02", "chenyujun"}
+var LowLarkPeople = []string{"kanghuaisong", "yinzhihong", "hejiahui.2019", "maoyu"}
+var MiddleLarkPeople = []string{"kanghuaisong", "yinzhihong", "gongrui", "zhangshuai.02", "hejiahui.2019", "maoyu"}
+var HighLarkPeople = []string{"kanghuaisong", "yinzhihong", "gongrui", "zhangshuai.02", "chenyujun", "hejiahui.2019", "maoyu"}
 var PermLarkPeople = []string{"kanghuaisong", "lirensheng"}
 var AppVersionProject = map[string]string{"13": "1", "27": "35", "32": "23", "1128": "375", "1112": "397"}
 
@@ -96,6 +96,7 @@ const APPMAP = `{"data":[{"appName":"今日头条","AppId":13,"doc":"https://doc
 const (
 	ICLOUD          = "ICLOUD"
 	DATA_PROTECTION = "DATA_PROTECTION"
+	APPLE_ID_AUTH   = "APPLE_ID_AUTH"
 )
 const (
 	Organization = "Organization"
@@ -115,10 +116,12 @@ const (
 
 var IOSSelectCapabilities = []string{"ACCESS_WIFI_INFORMATION", "APP_GROUPS", "ASSOCIATED_DOMAINS", "AUTOFILL_CREDENTIAL_PROVIDER", "CLASSKIT", "GAME_CENTER",
 	"HEALTHKIT", "HOMEKIT", "HOT_SPOT", "IN_APP_PURCHASE", "INTER_APP_AUDIO", "MULTIPATH", "NETWORK_EXTENSIONS", "NFC_TAG_READING", "PERSONAL_VPN",
-	"PUSH_NOTIFICATIONS", "SIRIKIT", "WALLET", "WIRELESS_ACCESSORY_CONFIGURATION"}
-var MacSelectCapabilities = []string{"ASSOCIATED_DOMAINS", "NETWORK_EXTENSIONS", "PERSONAL_VPN", "PUSH_NOTIFICATIONS"}
+	"PUSH_NOTIFICATIONS", "SIRIKIT", "WALLET", "WIRELESS_ACCESSORY_CONFIGURATION", "MAPS", "FONT_INSTALLATION", "COREMEDIA_HLS_LOW_LATENCY"}
+var MacSelectCapabilities = []string{"ASSOCIATED_DOMAINS", "NETWORK_EXTENSIONS", "PERSONAL_VPN", "PUSH_NOTIFICATIONS", "GAME_CENTER", "MAPS",
+	"COREMEDIA_HLS_LOW_LATENCY", "NETWORK_CUSTOM_PROTOCOL", "SYSTEM_EXTENSION_INSTALL"}
 var CloudSettings = []string{"XCODE_6", "XCODE_5"}
 var ProtectionSettings = []string{"COMPLETE_PROTECTION", "PROTECTED_UNLESS_OPEN", "PROTECTED_UNTIL_FIRST_USER_AUTH"}
+var AppleInAuthSettings = []string{"PRIMARY_APP_CONSENT", "RELATED_APP_CONSENT"}
 
 var RolesInfoMap = map[string]string{"账号持有者": "ACCOUNT_HOLDER", "管理": "ADMIN", "财务": "FINANCE", "App管理": "APP_MANAGER", "开发人员": "DEVELOPER", "营销": "MARKETING", "销售": "SALES", "用户支持": "CUSTOMER_SUPPORT"}
 var RolesIndexList = []string{"ACCOUNT_HOLDER", "ADMIN", "FINANCE", "APP_MANAGER", "DEVELOPER", "MARKETING", "SALES", "CUSTOMER_SUPPORT"}
@@ -143,11 +146,15 @@ var IOSSelectCapabilitiesMap = map[string]string{
 	"SIRIKIT":                          "SIRIKIT",
 	"WALLET":                           "WALLET",
 	"WIRELESS_ACCESSORY_CONFIGURATION": "WIRELESS_ACCESSORY_CONFIGURATION",
+	"FONT_INSTALLATION":                "FONT_INSTALLATION",
+	"APPLE_ID_AUTH":                    "APPLE_ID_AUTH",
+	"COREMEDIA_HLS_LOW_LATENCY":        "COREMEDIA_HLS_LOW_LATENCY",
 }
 
 var ConfigCapabilityMap = map[string]string{
 	ICLOUD:          "ICLOUD_VERSION",
 	DATA_PROTECTION: "DATA_PROTECTION_PERMISSION_LEVEL",
+	APPLE_ID_AUTH:   "TIBURON_APP_CONSENT",
 }
 
 const (
@@ -161,3 +168,8 @@ const PermAdmin = "admin"
 const PermAllCert = "all_cert_manager"
 const PermDevCert = "dev_cert_manager"
 const Deleting = "deleting"
+
+var CertManagerAuthorization = map[string]string{
+	"all_cert_manager": "全部证书管理",
+	"dev_cert_manager": "开发证书管理",
+}

@@ -8,6 +8,7 @@ import (
 	"code.byted.org/gopkg/logs"
 	"time"
 )
+
 //todo apple OpenAPI 操作失败报警至群中
 func DeleteCertInfo(condition map[string]interface{}) bool {
 	connection, err := database.GetConneection()
@@ -199,6 +200,23 @@ func QueryCertInfoByCertId(certId string) *CertInfo {
 	defer conn.Close()
 	var certInfo CertInfo
 	if err = conn.LogMode(_const.DB_LOG_MODE).Table(CertInfo{}.TableName()).Where("cert_id=?", certId).Find(&certInfo).Error; err != nil {
+		logs.Error("Query DB Failed:", err)
+		return nil
+	}
+	return &certInfo
+}
+
+func QueryDeletedCertInfoByCertId(certId string) *CertInfo {
+	conn, err := database.GetConneection()
+	if err != nil {
+		logs.Error("Get DB Connection Failed: ", err)
+		return nil
+	}
+	defer conn.Close()
+	var certInfo CertInfo
+	if err = conn.LogMode(_const.DB_LOG_MODE).Table(CertInfo{}.TableName()).
+		Unscoped().Where(map[string]interface{}{"cert_id": certId}).
+		Not("deleted_at is null").Find(&certInfo).Error; err != nil {
 		logs.Error("Query DB Failed:", err)
 		return nil
 	}

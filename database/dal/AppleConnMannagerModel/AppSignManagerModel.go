@@ -121,6 +121,7 @@ type CreateBundleProfileRequest struct {
 	EnableCapabilitiesChange  []string          `json:"enable_capabilities_change"`
 	DisableCapabilitiesChange []string          `json:"disable_capabilities_change"`
 	ConfigCapabilitiesChange  map[string]string `json:"config_capabilities_change"`
+	AppConsentBundleId        string            `json:"app_consent_bundle_id"`
 }
 
 type BundleIdInfo struct {
@@ -184,7 +185,8 @@ type BundleIdCapabilityReqObj struct {
 }
 
 type BundleCapabilityRelationship struct {
-	BundleId DataIdAndTypeItemObj `json:"bundleId" binding:"required"`
+	BundleId           DataIdAndTypeItemObj  `json:"bundleId" binding:"required"`
+	AppConsentBundleId *DataIdAndTypeItemObj `json:"appConsentBundleId,omitempty"`
 }
 
 type BundleCapabilityAttributes struct {
@@ -312,12 +314,25 @@ type ApproveAppBindAccountCustomerParam struct {
 
 type ApproveAuthorizationApplicationParamFromLark struct {
 	ApproveAuthorizationApplicationCustomerParam `json:"customer_parameter"`
+	AdditionalParameter                          `json:"additional_parameter"`
 }
 
 type ApproveAuthorizationApplicationCustomerParam struct {
-	Result   string `json:"result"       binding:"required"`
-	UserName string `json:"userName"       binding:"required"`
-	TeamId   string `json:"teamId"       binding:"required"`
+	Authorization string `json:"authorization"       binding:"required"`
+	IsApproved    int    `json:"isApproved"          binding:"required"`
+	UserName      string `json:"userName"            binding:"required"`
+	TeamId        string `json:"teamId"              binding:"required"`
+}
+
+type FinishTicketParamFromLark struct {
+	AdditionalParameter       `json:"additional_parameter"`
+	FinishTicketCustomerParam `json:"customer_parameter"`
+}
+
+type FinishTicketCustomerParam struct {
+	TicketType string `json:"ticketType"          binding:"required"`
+	BundleId   string `json:"bundleId"            binding:"required"`
+	UserName   string `json:"userName"            binding:"required"`
 }
 
 type AppSignListRequest struct {
@@ -383,6 +398,12 @@ type AppleBundleId struct {
 	CLASSKIT                         string `gorm:"column:CLASSKIT"                            json:"CLASSKIT"`
 	AUTOFILL_CREDENTIAL_PROVIDER     string `gorm:"column:AUTOFILL_CREDENTIAL_PROVIDER"        json:"AUTOFILL_CREDENTIAL_PROVIDER"`
 	ACCESS_WIFI_INFORMATION          string `gorm:"column:ACCESS_WIFI_INFORMATION"             json:"ACCESS_WIFI_INFORMATION"`
+	APPLE_ID_AUTH                    string `gorm:"column:APPLE_ID_AUTH"                       json:"APPLE_ID_AUTH"`
+	FONT_INSTALLATION                string `gorm:"column:FONT_INSTALLATION"                   json:"FONT_INSTALLATION"`
+	COREMEDIA_HLS_LOW_LATENCY        string `gorm:"column:COREMEDIA_HLS_LOW_LATENCY"           json:"COREMEDIA_HLS_LOW_LATENCY"`
+	NETWORK_CUSTOM_PROTOCOL          string `gorm:"column:NETWORK_CUSTOM_PROTOCOL"             json:"NETWORK_CUSTOM_PROTOCOL"`
+	SYSTEM_EXTENSION_INSTALL         string `gorm:"column:SYSTEM_EXTENSION_INSTALL"            json:"SYSTEM_EXTENSION_INSTALL"`
+	TeamId                           string `gorm:"column:team_id"                             json:"team_id"`
 }
 type AppleProfile struct {
 	gorm.Model
@@ -402,7 +423,6 @@ func (AppBundleProfiles) TableName() string {
 	return "tt_app_bundleId_profiles"
 }
 
-//todo 线上该dbname为"tt_apple_bundleid"
 func (AppleBundleId) TableName() string {
 	return "tt_apple_bundleid"
 }
