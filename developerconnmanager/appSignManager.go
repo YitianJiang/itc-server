@@ -200,6 +200,17 @@ func ApplyForAuthorization(c *gin.Context) {
 	return
 }
 
+//查找teamId下的为Primary APP id的bundleIdId
+func QueryPrimaryBundleIds(c *gin.Context) {
+	teamId := c.Query("team_id")
+	if teamId == "" {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "缺少参数", nil)
+		return
+	}
+	primaryBundleIds := devconnmanager.QueryAppleBundleIdWithNotNullBundleIdId(map[string]interface{}{"team_id": teamId, "APPLE_ID_AUTH": "PRIMARY_APP_CONSENT"})
+	utils.AssembleJsonResponse(c, _const.SUCCESS, "success", primaryBundleIds)
+}
+
 //生成权限申请审核消息卡片内容
 func generateCardInfoOfApplyForAuthorization(requestData *devconnmanager.AuthorizationApplicationRequest) *[][]form.CardElementForm {
 	var cardFormArray [][]form.CardElementForm
@@ -395,7 +406,6 @@ func GetAppSignListDetailInfo(c *gin.Context) {
 	appNameList = strings.TrimSuffix(appNameList, ",")
 	appNameList += ")"
 	//根据app_id和app_name获取bundleid信息+profile信息
-	//todo 更改bundleid表名
 	var bQueryResult []devconnmanager.APPandBundle
 	sql_c := "select abp.app_name,abp.bundle_id as bundle_id_index,abp.bundleid_isdel as bundle_id_is_del,abp.push_cert_id,abp.dev_profile_id,abp.dist_profile_id,ap.profile_id,ap.profile_name,ap.profile_expire_date,ap.profile_type,ap.profile_download_url,ab.*" +
 		" from tt_apple_bundleid ab,tt_app_bundleId_profiles abp left join tt_apple_profile ap " +
