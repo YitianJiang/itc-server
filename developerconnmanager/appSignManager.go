@@ -1461,6 +1461,7 @@ func insertDatabaseAfterCreateBundleId(requestData *devconnmanager.CreateBundleP
 	appleBundleId.BundleidName = requestData.BundleIdName
 	appleBundleId.BundleId = requestData.BundleId
 	appleBundleId.BundleidType = requestData.BundleType
+	appleBundleId.TeamId = requestData.TeamId
 
 	logs.Info("bundle id能力对象：%v", appleBundleId)
 	err = devconnmanager.InsertRecord(&appleBundleId)
@@ -1592,6 +1593,7 @@ func insertDatabaseAfterCreateBundleIdForEnterprise(needUpdateDevProfile, needUp
 	appleBundleId.BundleidName = requestData.BundleIdName
 	appleBundleId.BundleId = requestData.BundleId
 	appleBundleId.BundleidType = requestData.BundleType
+	appleBundleId.TeamId = requestData.TeamId
 
 	logs.Info("bundle id能力对象：%v", appleBundleId)
 	err = devconnmanager.InsertRecord(&appleBundleId)

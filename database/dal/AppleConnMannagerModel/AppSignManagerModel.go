@@ -403,6 +403,7 @@ type AppleBundleId struct {
 	COREMEDIA_HLS_LOW_LATENCY        string `gorm:"column:COREMEDIA_HLS_LOW_LATENCY"           json:"COREMEDIA_HLS_LOW_LATENCY"`
 	NETWORK_CUSTOM_PROTOCOL          string `gorm:"column:NETWORK_CUSTOM_PROTOCOL"             json:"NETWORK_CUSTOM_PROTOCOL"`
 	SYSTEM_EXTENSION_INSTALL         string `gorm:"column:SYSTEM_EXTENSION_INSTALL"            json:"SYSTEM_EXTENSION_INSTALL"`
+	TeamId                           string `gorm:"column:team_id"                             json:"team_id"`
 }
 type AppleProfile struct {
 	gorm.Model
