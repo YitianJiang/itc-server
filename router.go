@@ -200,4 +200,15 @@ func InitRouter(r *ginex.Engine) {
 		authorizationManager.POST("/applyForAuthorization", developerconnmanager.ApplyForAuthorization)
 		authorizationManager.POST("/approveAuthorizationApplication", developerconnmanager.ApproveAuthorizationApplication)
 	}
+
+	deviceapi := r.Group("/v1/deviceManage")
+	{
+		deviceapi.POST("/deviceInfoAdd", developerconnmanager.AddDeviceInfo)
+		deviceapi.GET("/deviceInfoGet", developerconnmanager.QueryDeviceInfo)
+		deviceapi.POST("/deviceInfoUpdate", developerconnmanager.UpdateDeviceInfo)
+		deviceapi.POST("/asynAddDeviceFeedback", developerconnmanager.AsynAddDeviceFeedback)
+		deviceapi.POST("/asynUpdateDeviceFeedback", developerconnmanager.AsynUpdateDeviceFeedback)
+		deviceapi.GET("/deviceInfoSynchronize", developerconnmanager.SynchronizeDeviceInfo)
+	}
+
 }
