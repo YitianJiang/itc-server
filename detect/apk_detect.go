@@ -317,17 +317,10 @@ func QueryIgnoredHistory(c *gin.Context) {
 安卓获取检测任务详情---数组形式
 */
 func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
-	taskID := c.DefaultQuery("taskId", "")
-	if taskID == "" {
-		logs.Error("缺少taskId参数")
-		errorReturn(c, "缺少taskId参数")
-		return
-	}
-
-	toolID := c.DefaultQuery("toolId", "")
-	if toolID == "" {
-		logs.Error("缺少toolId参数")
-		errorReturn(c, "缺少toolId参数")
+	taskID, taskExist := c.GetQuery("taskId")
+	toolID, toolExist := c.GetQuery("toolId")
+	if !taskExist || !toolExist {
+		errorReturn(c, "Miss taskId or toolId")
 		return
 	}
 
@@ -393,6 +386,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	}
 
 	info, hasPermListFlag := getPermAPPReltion(taskId)
+	fmt.Println(info, hasPermListFlag)
 
 	detailMap := make(map[int][]dal.DetectContentDetail)
 	permsMap := make(map[int]dal.PermAppRelation)
@@ -436,6 +430,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 			midResult = append(midResult, queryResult)
 		}
 	}
+	fmt.Println(permsMap)
 	finalResult := make([]dal.DetectQueryStruct, 0)
 	finalResult = append(finalResult, firstResult)
 	finalResult = append(finalResult, midResult...)
@@ -460,6 +455,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 			thePerm := permsMap[finalResult[i].Index]
 			permissionsP, errP := GetTaskPermissions_2(thePerm, perIgs, allPermList)
 			if errP != nil || permissionsP == nil || len(*permissionsP) == 0 {
+				fmt.Println(">>>>> error")
 				finalResult[i].Permissions_2 = permissions
 			} else {
 				finalResult[i].Permissions_2 = (*permissionsP)
@@ -667,10 +663,8 @@ func methodRiskLevelUpdate(ids *[]string, levels *[]string, configIds *[]dal.Det
 权限结果输出解析
 */
 func GetTaskPermissions_2(info dal.PermAppRelation, perIgs map[int]interface{}, allPermList map[int]interface{}) (*PermSlice, error) {
-	bytePerms := []byte(info.PermInfos)
-
 	var infos []interface{}
-	if err := json.Unmarshal(bytePerms, &infos); err != nil {
+	if err := json.Unmarshal([]byte(info.PermInfos), &infos); err != nil {
 		logs.Error("taskId:" + fmt.Sprint(info.TaskId) + ",该任务的权限信息存储格式出错")
 		return nil, err
 	}
