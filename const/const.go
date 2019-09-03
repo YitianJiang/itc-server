@@ -21,7 +21,6 @@ var LowLarkPeople = []string{"kanghuaisong", "yinzhihong", "hejiahui.2019", "mao
 var MiddleLarkPeople = []string{"kanghuaisong", "yinzhihong", "gongrui", "zhangshuai.02", "hejiahui.2019", "maoyu"}
 var HighLarkPeople = []string{"kanghuaisong", "yinzhihong", "gongrui", "zhangshuai.02", "chenyujun", "hejiahui.2019", "maoyu"}
 var PermLarkPeople = []string{"kanghuaisong", "lirensheng"}
-
 var AppVersionProject = map[string]string{"13": "1", "27": "35", "32": "23", "1128": "375", "1112": "397"}
 
 //权限配置页面操作人员
@@ -31,17 +30,14 @@ var PermToModify = map[string]int{
 	"lirensheng":    1,
 	"yangzhiqian":   1,
 	"zhaoxuan.li":   1,
-	//测试加入
-	// "liyixian.lym":  1,
-	// "hejiahui.2019": 1,
 }
 
 const (
-	UPDATE_DEVICE_FEEDBACK_URL ="https://itc.bytedance.net/v1/deviceManage/asynUpdateDeviceFeedback"
-	APPLE_UPDATE_DEVICE_INFO_URL="https://api.appstoreconnect.apple.com/v1/devices/"
-	APPLE_ADD_DEVICE_INFO_URL="https://api.appstoreconnect.apple.com/v1/devices"
-	APPLE_DEVICE_TYPE="devices"
-	APPLE_DEVICE_ENABLED_STATUS="ENABLED"
+	UPDATE_DEVICE_FEEDBACK_URL   = "https://itc.bytedance.net/v1/deviceManage/asynUpdateDeviceFeedback"
+	APPLE_UPDATE_DEVICE_INFO_URL = "https://api.appstoreconnect.apple.com/v1/devices/"
+	APPLE_ADD_DEVICE_INFO_URL    = "https://api.appstoreconnect.apple.com/v1/devices"
+	APPLE_DEVICE_TYPE            = "devices"
+	APPLE_DEVICE_ENABLED_STATUS  = "ENABLED"
 )
 
 const (
