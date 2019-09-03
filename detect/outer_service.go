@@ -182,15 +182,6 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 		return
 	}
 
-	// compatibleResult := map[string]interface{}{
-	// 	"index":          (*result)[0].Index,
-	// 	"apkName":        (*result)[0].ApkName,
-	// 	"version":        (*result)[0].Version,
-	// 	"channel":        (*result)[0].Channel,
-	// 	"sMethods":       (*result)[0].SMethods,
-	// 	"sStrs":          (*result)[0].SStrs_new,
-	// 	"permissionList": (*result)[0].Permissions_2}
-
 	c.JSON(http.StatusOK, gin.H{
 		"errorCode":    0,
 		"message":      "success",
