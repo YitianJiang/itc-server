@@ -320,6 +320,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 	taskID, taskExist := c.GetQuery("taskId")
 	toolID, toolExist := c.GetQuery("toolId")
 	if !taskExist || !toolExist {
+		logs.Error("Miss taskId or toolId")
 		errorReturn(c, "Miss taskId or toolId")
 		return
 	}
@@ -332,6 +333,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 
 	result := getDetectResult(c, taskID, toolID)
 	if result == nil {
+		logs.Error("Failed to get %v binary detect result", taskID)
 		return
 	}
 
@@ -341,6 +343,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 		"data":      result,
 	})
 
+	logs.Debug("Get %v binary detect result success", taskID)
 	return
 }
 

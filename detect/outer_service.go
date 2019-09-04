@@ -47,10 +47,12 @@ type outerData struct {
 func GetDetectConfig(c *gin.Context) {
 	platform, exist := c.GetQuery("platform")
 	if !exist {
+		msg := "Miss platform"
+		logs.Error(msg)
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": -1,
-			"message":   "platform was not found",
-			"data":      "platform was not found"})
+			"message":   msg,
+			"data":      msg})
 
 		return
 	}
@@ -61,12 +63,15 @@ func GetDetectConfig(c *gin.Context) {
 	// case platform == "1": // iOS
 	// 	detectConfig(c, 1)
 	default:
+		msg := "Do not support platform: " + platform
+		logs.Error(msg)
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": -1,
-			"message":   "platform doesn't support",
-			"data":      "platform doesn't support"})
+			"message":   msg,
+			"data":      msg})
 	}
 
+	logs.Debug("Get detect config success")
 	return
 }
 
@@ -74,10 +79,12 @@ func detectConfig(c *gin.Context, platform int) {
 	permissions, methods, strs, composites := getConfigList(platform)
 	if permissions == nil || methods == nil ||
 		strs == nil || composites == nil {
+		msg := "Database error"
+		logs.Error(msg)
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": -1,
-			"message":   "database error",
-			"data":      "database error"})
+			"message":   msg,
+			"data":      msg})
 
 		return
 	}
@@ -159,10 +166,12 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 	appID, idExist := c.GetQuery("appId")
 	appVersion, versionExist := c.GetQuery("appVersion")
 	if !idExist || !versionExist {
+		msg := "Miss APP id or version"
+		logs.Error(msg)
 		c.JSON(http.StatusOK, gin.H{
 			"errorCode": -1,
-			"message":   "Miss APP id or version",
-			"data":      "Miss APP id or version"})
+			"message":   msg,
+			"data":      msg})
 
 		return
 	}
@@ -171,14 +180,16 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 		"app_id":      appID,
 		"app_version": appVersion})
 	if task == nil {
-		errMsg := "未查询到 APP ID: " + appID + ", Version: " +
-			appVersion + " 对应的检测任务"
-		errorReturn(c, errMsg)
+		msg := "Failed to find record in database about APP ID is " +
+			appID + " and Version is " + appVersion
+		logs.Error(msg)
+		errorReturn(c, msg)
 		return
 	}
 
 	result := getDetectResult(c, strconv.Itoa(int(task.ID)), "6")
 	if result == nil {
+		logs.Error("Failed to get task ID %v binary detect result", task.ID)
 		return
 	}
 
@@ -188,6 +199,7 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 		"data":         *result,
 		"extraConfirm": nil})
 
+	logs.Debug("Get task ID %v binary detect result success", task.ID)
 	return
 }
 
@@ -198,6 +210,7 @@ func queryLastestDetectResult(param map[string]interface{}) *dal.DetectStruct {
 		return nil
 	}
 	defer connection.Close()
+
 	var detect dal.DetectStruct
 	db := connection.Table(dal.DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	if err := db.Where(param).Order("created_at desc").First(&detect).Error; err != nil {
