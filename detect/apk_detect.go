@@ -333,7 +333,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 
 	result := getDetectResult(c, taskID, toolID)
 	if result == nil {
-		logs.Error("Failed to get %v binary detect result", taskID)
+		logs.Error("Failed to get task ID %v binary detect result", taskID)
 		return
 	}
 
@@ -343,7 +343,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 		"data":      result,
 	})
 
-	logs.Debug("Get %v binary detect result success", taskID)
+	logs.Debug("Get task ID %v binary detect result success", taskID)
 	return
 }
 
