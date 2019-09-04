@@ -2,10 +2,7 @@ package utils
 
 import (
 	"bytes"
-	_const "code.byted.org/clientQA/itc-server/const"
-	"code.byted.org/gopkg/logs"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
 	"io"
 	"io/ioutil"
 	"math"
@@ -15,6 +12,10 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	_const "code.byted.org/clientQA/itc-server/const"
+	"code.byted.org/gopkg/logs"
+	"github.com/gin-gonic/gin"
 )
 
 const DETECT_URL_PRO = "10.1.221.188:9527"
@@ -205,9 +206,19 @@ func PostJsonHttp3(rbody []byte, token, url string) (bool, string) {
 		return false, ""
 	}
 	//处理返回结果
-	response, _ := client.Do(reqest)
+	response, err := client.Do(reqest)
+	if err != nil {
+		logs.Error("Failed to send HTTP request")
+		return false, ""
+	}
 	defer response.Body.Close()
-	body, _ := ioutil.ReadAll(response.Body)
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		logs.Error("Failed to read content from HTTP response")
+		return false, ""
+	}
+
 	m := make(map[string]interface{})
 	if err := json.Unmarshal(body, &m); err != nil {
 		logs.Error("读取返回body出错！", err.Error())
