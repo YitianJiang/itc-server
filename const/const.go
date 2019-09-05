@@ -30,17 +30,14 @@ var PermToModify = map[string]int{
 	"lirensheng":    1,
 	"yangzhiqian":   1,
 	"zhaoxuan.li":   1,
-	//测试加入
-	//"fanjuan.xqp":1,
-	//"liyixian.lym":1,
 }
 
 const (
-	UPDATE_DEVICE_FEEDBACK_URL ="https://itc.bytedance.net/v1/deviceManage/asynUpdateDeviceFeedback"
-	APPLE_UPDATE_DEVICE_INFO_URL="https://api.appstoreconnect.apple.com/v1/devices/"
-	APPLE_ADD_DEVICE_INFO_URL="https://api.appstoreconnect.apple.com/v1/devices"
-	APPLE_DEVICE_TYPE="devices"
-	APPLE_DEVICE_ENABLED_STATUS="ENABLED"
+	UPDATE_DEVICE_FEEDBACK_URL   = "https://itc.bytedance.net/v1/deviceManage/asynUpdateDeviceFeedback"
+	APPLE_UPDATE_DEVICE_INFO_URL = "https://api.appstoreconnect.apple.com/v1/devices/"
+	APPLE_ADD_DEVICE_INFO_URL    = "https://api.appstoreconnect.apple.com/v1/devices"
+	APPLE_DEVICE_TYPE            = "devices"
+	APPLE_DEVICE_ENABLED_STATUS  = "ENABLED"
 )
 
 const (

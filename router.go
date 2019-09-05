@@ -21,6 +21,8 @@ func InitRouter(r *ginex.Engine) {
 
 	// 获取检测项配置信息
 	r.GET("/api/detectConfig/getItcDetectConfig", detect.GetDetectConfig)
+	// 获取检测任务结果
+	r.GET("/api/detect/getTaskDetailNotItc", detect.GetSpecificAppVersionDetectResults)
 
 	//检测服务检测异常报警接口
 	api.POST("/check_server/alarm", detect.Alram)
