@@ -8,25 +8,31 @@ import (
 	"code.byted.org/yuyilei/bot-api/form"
 	"code.byted.org/yuyilei/bot-api/service"
 	"github.com/gin-gonic/gin"
+	"math"
 	"net/http"
+	"strconv"
+	"time"
 )
 
-func generateCardOfProfileExpired(appName string, bundleid string, profileType string,profileName string,profileId string) *[][]form.CardElementForm {
+func generateCardOfProfileExpired(expiredProfileCardInput *devconnmanager.ExpiredProfileCardInput) *[][]form.CardElementForm {
 	var cardFormArray [][]form.CardElementForm
 	//插入提示信息
 	messageText := utils.ProfileExpiredCardHeader
 	messageForm := form.GenerateTextTag(&messageText, false, nil)
 	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.ProfileNameHeader,profileName))
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.ProfileTypeHeader,profileType))
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.ProfileIdHeader,profileId))
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.ProfileExpiredBundleIdHeader,bundleid))
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.ProfileExpiredAppNameHeader,appName))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.ProfileNameHeader,expiredProfileCardInput.ProfileName))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.ProfileTypeHeader,expiredProfileCardInput.ProfileType))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.ProfileIdHeader,expiredProfileCardInput.ProfileId))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.ProfileExpiredBundleIdHeader,expiredProfileCardInput.BundleId))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.ProfileExpiredAppNameHeader,expiredProfileCardInput.AppName))
 	divideText := utils.DivideText
 	divideForm := form.GenerateTextTag(&divideText, false, nil)
 	cardFormArray = append(cardFormArray, []form.CardElementForm{*divideForm})
+	timeToExpired:=strconv.Itoa(int(math.Floor(expiredProfileCardInput.ProfileExpireDate.Sub(time.Now()).Hours()/24)))
+	cardFormArray = append(cardFormArray, *generateEmphasisInfoLineOfCard(utils.ProfileExpiredTimeToNow,timeToExpired+_const.DayTimeUnit))
 	cardFormArray = append(cardFormArray, *generateEmphasisInfoLineOfCard(utils.ProfileExpiredTipHeader,""))
-	cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.ProfileUpdateHeader,_const.ITC_SIGN_SYSTEM_ADDRESS,_const.ITC_SIGN_SYSTEM_ADDRESS))
+	cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.ProfileUpdateHeader,
+		_const.ITC_SIGN_SYSTEM_ADDRESS+expiredProfileCardInput.AppId,_const.ITC_SIGN_SYSTEM_ADDRESS+expiredProfileCardInput.AppId))
 	return &cardFormArray
 }
 
@@ -41,8 +47,7 @@ func NotifyProfileExpired(c *gin.Context) {
 	abot := service.BotService{}
 	abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 	for _,expiredProfileCardInput :=range *expiredProfileCardInputs{
-		cardElementForms := generateCardOfProfileExpired(expiredProfileCardInput.AppName, expiredProfileCardInput.BundleId,
-			expiredProfileCardInput.ProfileType,expiredProfileCardInput.ProfileName,expiredProfileCardInput.ProfileId)
+		cardElementForms := generateCardOfProfileExpired(&expiredProfileCardInput)
 		if err := sendIOSCertLarkMessage(cardElementForms, nil, expiredProfileCardInput.UserName, &abot);err != nil{
 			logs.Error("向app: %v负责人%v发送消息卡片提醒一个月后profile过期失败%v",expiredProfileCardInput.AppName,expiredProfileCardInput.UserName, err)
 		}
@@ -65,23 +70,25 @@ func generateEmphasisInfoLineOfCard(header string, content string) *[]form.CardE
 	return &infoLineFormList
 }
 
-func generateCardOfCertExpired(teamId string,accountName string, certType string, certName string,certId string,appNames string) *[][]form.CardElementForm {
+func generateCardOfCertExpired(expiredCertCardInput *devconnmanager.ExpiredCertCardInput,appNames string) *[][]form.CardElementForm {
 	var cardFormArray [][]form.CardElementForm
 	//插入提示信息
 	messageTextFront := utils.CertExpiredCardHeader
 	messageFormFront := form.GenerateTextTag(&messageTextFront, false, nil)
 	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageFormFront})
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeleteCertNameHeader,certName))
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.CreateCertTypeHeader,certType))
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeleteCertIdHeader,certId))
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.CertExpiredAccountNameHeader,accountName))
-	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.CertExpiredTeamIdHeader,teamId))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeleteCertNameHeader,expiredCertCardInput.CertName))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.CreateCertTypeHeader,expiredCertCardInput.CertType))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.DeleteCertIdHeader,expiredCertCardInput.CertId))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.CertExpiredAccountNameHeader,expiredCertCardInput.AccountName))
+	cardFormArray = append(cardFormArray, *generateInfoLineOfCard(utils.CertExpiredTeamIdHeader,expiredCertCardInput.TeamId))
 	divideText := utils.DivideText
 	divideForm := form.GenerateTextTag(&divideText, false, nil)
 	cardFormArray = append(cardFormArray, []form.CardElementForm{*divideForm})
+	timeToExpired:=strconv.Itoa(int(math.Floor(expiredCertCardInput.CertExpireDate.Sub(time.Now()).Hours()/24)))
+	cardFormArray = append(cardFormArray, *generateEmphasisInfoLineOfCard(utils.CertExpiredTimeToNow,timeToExpired+_const.DayTimeUnit))
 	cardFormArray = append(cardFormArray, *generateEmphasisInfoLineOfCard(utils.CertExpiredAppHeader,appNames))
 	cardFormArray = append(cardFormArray, *generateEmphasisInfoLineOfCard(utils.CertExpiredTipHeader,""))
-	cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.CertBindChangeHeader,_const.ITC_SIGN_SYSTEM_ADDRESS,_const.ITC_SIGN_SYSTEM_ADDRESS))
+	cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.CertBindChangeHeader,_const.ITC_CERT_SYSTEM_ADDRESS,_const.ITC_CERT_SYSTEM_ADDRESS))
 	return &cardFormArray
 }
 
@@ -106,8 +113,7 @@ func NotifyCertExpired(c *gin.Context) {
 			}
 		}
 		for principal,appNames:=range appNamePrincipalMap{
-			cardElementForms := generateCardOfCertExpired(expiredCertInfo.TeamId,expiredCertInfo.AccountName,expiredCertInfo.CertType,
-				expiredCertInfo.CertName,expiredCertInfo.CertId,appNames)
+			cardElementForms := generateCardOfCertExpired(&expiredCertInfo,appNames)
 			if err := sendIOSCertLarkMessage(cardElementForms, nil, principal, &abot);err!=nil{
 				logs.Error("向app: %v负责人%v发送消息卡片提醒一个月后证书过期失败%v",appNames,principal, err)
 			}

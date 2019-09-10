@@ -32,7 +32,11 @@ var PermToModify = map[string]int{
 	"zhaoxuan.li":   1,
 }
 
-const 	ITC_SIGN_SYSTEM_ADDRESS = "https://rocket.bytedance.net/rocket/itc/iossignature"
+const(
+	ITC_SIGN_SYSTEM_ADDRESS = "https://rocket.bytedance.net/rocket/itc/iossignature?biz="
+	ITC_CERT_SYSTEM_ADDRESS = "https://rocket.bytedance.net/rocket/itc/ioscertification"
+	DayTimeUnit = "天"
+)
 
 const (
 	UPDATE_DEVICE_FEEDBACK_URL   = "https://itc.bytedance.net/v1/deviceManage/asynUpdateDeviceFeedback"
@@ -119,6 +123,7 @@ const (
 	IOS_PUSH            = "IOS_PUSH"
 	MAC_PUSH            = "MAC_PUSH"
 	PUSH_NOTIFICATIONS  = "PUSH_NOTIFICATIONS"
+	PUSH                = "PUSH"
 	DEVELOPMENT         = "DEVELOPMENT"
 	DISTRIBUTION        = "DISTRIBUTION"
 )

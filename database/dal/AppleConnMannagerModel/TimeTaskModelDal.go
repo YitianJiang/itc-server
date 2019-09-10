@@ -35,13 +35,14 @@ func QueryExpiredProfileRelatedInfo() (*[]ExpiredProfileCardInput,bool) {
 			condition["dist_adhoc_profile_id"]=expiredProfileInfo.ProfileId
 		}
 		var appRelatedInfo AppRelatedInfo
+		connOrigin:=conn
 		if err=conn.LogMode(_const.DB_LOG_MODE).Table(AppBundleProfiles{}.TableName()).
 			Where(condition).Find(&appRelatedInfo).
 			Error; err != nil {
 			logs.Error("Query DB Failed:", err)
 			return  &expiredProfileCardInputs,false
 		}
-
+		conn=connOrigin
 		cardExpiredMessageInput:=ConbineCardMessafeInputInfo(&expiredProfileInfo,&appRelatedInfo)
 		expiredProfileCardInputs=append(expiredProfileCardInputs, *cardExpiredMessageInput)
 	}
@@ -53,8 +54,10 @@ func ConbineCardMessafeInputInfo(expiredProfileInfo *ExpiredProfileInfo,appRelat
 	expiredProfileCardInput.ProfileId=expiredProfileInfo.ProfileId
 	expiredProfileCardInput.ProfileType=expiredProfileInfo.ProfileType
 	expiredProfileCardInput.ProfileName=expiredProfileInfo.ProfileName
+	expiredProfileCardInput.ProfileExpireDate=expiredProfileInfo.ProfileExpireDate
 	expiredProfileCardInput.BundleId=appRelatedInfo.BundleId
 	expiredProfileCardInput.AppName=appRelatedInfo.AppName
+	expiredProfileCardInput.AppId=appRelatedInfo.AppId
 	expiredProfileCardInput.UserName=appRelatedInfo.UserName
 	return &expiredProfileCardInput
 }
@@ -82,7 +85,7 @@ func QueryExpiredCertRelatedInfo() (*[]ExpiredCertCardInput,bool) {
 		connOrigin:=conn
 		conn=conn.LogMode(_const.DB_LOG_MODE)
 		switch strs[1] {
-		case _const.IOS_PUSH:
+		case _const.PUSH:
 			conn = conn.Table(AppBundleProfiles{}.TableName()).Where("push_cert_id=?",expiredCertCardInput.CertId)
 		case _const.DEVELOPMENT:
 			conn = conn.Table(AppAccountCert{}.TableName()).Where("dev_cert_id=?",expiredCertCardInput.CertId).Where("account_verify_status=1")
