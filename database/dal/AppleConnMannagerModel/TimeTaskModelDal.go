@@ -84,7 +84,7 @@ func QueryExpiredCertRelatedInfo() (*[]ExpiredCertCardInput,bool) {
 		strs:=strings.Split(expiredCertCardInput.CertType,"_")
 		connOrigin:=conn
 		conn=conn.LogMode(_const.DB_LOG_MODE)
-		switch strs[1] {
+		switch strs[len(strs)-1] {
 		case _const.PUSH:
 			conn = conn.Table(AppBundleProfiles{}.TableName()).Where("push_cert_id=?",expiredCertCardInput.CertId)
 		case _const.DEVELOPMENT:
