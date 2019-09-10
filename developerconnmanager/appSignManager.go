@@ -2481,6 +2481,9 @@ func bundleCapacityRepack(bundleStruct *devconnmanager.APPandBundle, bundleInfo 
 	if bundleStruct.DATA_PROTECTION != "" {
 		bundleInfo.ConfigCapObj["DATA_PROTECTION"] = bundleStruct.DATA_PROTECTION
 	}
+	if bundleStruct.APPLE_ID_AUTH != "" {
+		bundleInfo.ConfigCapObj["APPLE_ID_AUTH"] = bundleStruct.APPLE_ID_AUTH
+	}
 
 	//enableList
 	bundleInfo.EnableCapList = make([]string, 0)
