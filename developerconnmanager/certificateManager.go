@@ -597,7 +597,9 @@ func queryBundleIdCapabilities(bundleIdId string, teamId string) *map[string]int
 			capabilitiesMap[capability.Attributes.CapabilityType] = capability.Id
 		} else {
 			//配置能力
-			capabilitiesMap[capability.Attributes.CapabilityType] = capability.Attributes.Settings[0].Options[0].Key
+			if capability.Attributes.CapabilityType != "APPLE_ID_AUTH"{
+				capabilitiesMap[capability.Attributes.CapabilityType] = capability.Attributes.Settings[0].Options[0].Key
+			}
 		}
 	}
 	return &capabilitiesMap

@@ -152,7 +152,7 @@ var IOSSelectCapabilitiesMap = map[string]string{
 	"WALLET":                           "WALLET",
 	"WIRELESS_ACCESSORY_CONFIGURATION": "WIRELESS_ACCESSORY_CONFIGURATION",
 	"FONT_INSTALLATION":                "FONT_INSTALLATION",
-	"APPLE_ID_AUTH":                    "APPLE_ID_AUTH",
+	//"APPLE_ID_AUTH":                    "APPLE_ID_AUTH",
 	"COREMEDIA_HLS_LOW_LATENCY":        "COREMEDIA_HLS_LOW_LATENCY",
 }
 
