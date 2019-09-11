@@ -7,12 +7,43 @@ import (
 	"code.byted.org/gopkg/logs"
 	"code.byted.org/yuyilei/bot-api/form"
 	"code.byted.org/yuyilei/bot-api/service"
+	"errors"
 	"github.com/gin-gonic/gin"
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
+
+func sendExpiredCardMessage(cardInfoFormArray *[][]form.CardElementForm, cardActions *[]form.CardActionForm, groupChatId string, botService *service.BotService, suffixs ...string) error {
+	//生成卡片
+	cardHeaderTitle := "iOS证书管理通知"
+	for _, suffix := range suffixs {
+		cardHeaderTitle += suffix
+	}
+	var cardForm *form.CardForm
+	if cardActions != nil {
+		cardForm = form.GenerateCardForm(nil, getCardHeader(cardHeaderTitle), *cardInfoFormArray, *cardActions)
+	} else {
+		cardForm = form.GenerateCardForm(nil, getCardHeader(cardHeaderTitle), *cardInfoFormArray, nil)
+	}
+	cardMessageContent := form.GenerateCardMessageContent(cardForm)
+	cardMessage, err := form.GenerateMessage("interactive", cardMessageContent)
+	utils.RecordError("card信息生成出错: ", err)
+	if cardMessage == nil {
+		return errors.New("card信息生成出错")
+	}
+	cardMessage.ChatID = &groupChatId
+	sendMsgResp, err := botService.SendMessage(*cardMessage)
+	logs.Info("发送飞书lark消息响应= %v", sendMsgResp)
+	if code, ok := sendMsgResp["code"].(float64); ok && code != 0 {
+		if message, ok := sendMsgResp["msg"].(string); ok {
+			return errors.New(message)
+		}
+	}
+	return err
+}
 
 func generateCardOfProfileExpired(expiredProfileCardInput *devconnmanager.ExpiredProfileCardInput) *[][]form.CardElementForm {
 	var cardFormArray [][]form.CardElementForm
@@ -48,11 +79,11 @@ func NotifyProfileExpired(c *gin.Context) {
 	abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 	for _,expiredProfileCardInput :=range *expiredProfileCardInputs{
 		cardElementForms := generateCardOfProfileExpired(&expiredProfileCardInput)
-		if err := sendIOSCertLarkMessage(cardElementForms, nil, expiredProfileCardInput.UserName, &abot);err != nil{
-			logs.Error("向app: %v负责人%v发送消息卡片提醒一个月后profile过期失败%v",expiredProfileCardInput.AppName,expiredProfileCardInput.UserName, err)
+		if err := sendExpiredCardMessage(cardElementForms, nil, _const.IOS_CERT_MANAGE_GROUP_CHAT_ID , &abot);err != nil{
+			logs.Error("向iOS证书管理群发送消息卡片提醒一个月后描述文件过期失败%v", err)
 		}
 	}
-	AssembleJsonResponse(c,  _const.SUCCESS, "向app负责人发送消息卡片提醒一个月后profile过期 成功", nil)
+	AssembleJsonResponse(c,  _const.SUCCESS, "向iOS证书管理群发送消息卡片提醒一个月后描述文件过期 成功", nil)
 	return
 }
 
@@ -103,22 +134,19 @@ func NotifyCertExpired(c *gin.Context) {
 	abot := service.BotService{}
 	abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 	for _, expiredCertInfo := range *expiredCertInfos {
-		appNamePrincipalMap:=make(map[string]string)
-		//把负责人负责的app都放到一张卡片中统一通知
-		for _,appAndPrincipal :=range expiredCertInfo.AppAndPrincipals {
-			if _, ok := appNamePrincipalMap[appAndPrincipal.UserName]; !ok {
-				appNamePrincipalMap[appAndPrincipal.UserName] = appAndPrincipal.AppName
-			} else {
-				appNamePrincipalMap[appAndPrincipal.UserName] +=  "、"+appAndPrincipal.AppName
+		    var affectedAppNamesTogether string
+		    if len(expiredCertInfo.AffectedApps)==0{
+		    	continue
+		    }
+		    for _,affectedApp:=range expiredCertInfo.AffectedApps {
+			    affectedAppNamesTogether += affectedApp.AppName + "、"
+		    }
+		    affectedAppNamesTogether=strings.TrimRight(affectedAppNamesTogether,"、")
+			cardElementForms := generateCardOfCertExpired(&expiredCertInfo,affectedAppNamesTogether)
+			if err := sendExpiredCardMessage(cardElementForms, nil, _const.IOS_CERT_MANAGE_GROUP_CHAT_ID, &abot);err!=nil{
+				logs.Error("向iOS证书管理群发送消息卡片提醒一个月后证书过期失败%v", err)
 			}
-		}
-		for principal,appNames:=range appNamePrincipalMap{
-			cardElementForms := generateCardOfCertExpired(&expiredCertInfo,appNames)
-			if err := sendIOSCertLarkMessage(cardElementForms, nil, principal, &abot);err!=nil{
-				logs.Error("向app: %v负责人%v发送消息卡片提醒一个月后证书过期失败%v",appNames,principal, err)
-			}
-		}
 	}
-	AssembleJsonResponse(c, _const.SUCCESS, "向各app负责人发送消息卡片提醒一个月后证书过期 成功", nil)
+	AssembleJsonResponse(c, _const.SUCCESS, "向iOS证书管理群发送消息卡片提醒一个月后证书过期 成功", nil)
 	return
 }

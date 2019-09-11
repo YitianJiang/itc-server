@@ -58,7 +58,6 @@ func ConbineCardMessafeInputInfo(expiredProfileInfo *ExpiredProfileInfo,appRelat
 	expiredProfileCardInput.BundleId=appRelatedInfo.BundleId
 	expiredProfileCardInput.AppName=appRelatedInfo.AppName
 	expiredProfileCardInput.AppId=appRelatedInfo.AppId
-	expiredProfileCardInput.UserName=appRelatedInfo.UserName
 	return &expiredProfileCardInput
 }
 
@@ -80,7 +79,7 @@ func QueryExpiredCertRelatedInfo() (*[]ExpiredCertCardInput,bool) {
 	}
 	var ret []ExpiredCertCardInput
 	for _,expiredCertCardInput :=range expiredCertCardInputs{
-		var appAndPrincipals []AppAndPrincipal
+		var affectedApps []AffectedApp
 		strs:=strings.Split(expiredCertCardInput.CertType,"_")
 		connOrigin:=conn
 		conn=conn.LogMode(_const.DB_LOG_MODE)
@@ -92,12 +91,12 @@ func QueryExpiredCertRelatedInfo() (*[]ExpiredCertCardInput,bool) {
 		case _const.DISTRIBUTION:
 			conn = conn.Table(AppAccountCert{}.TableName()).Where("dist_cert_id=?",expiredCertCardInput.CertId).Where("account_verify_status=1")
 		}
-		if err:= conn.Find(&appAndPrincipals).Error; err != nil {
+		if err:= conn.Find(&affectedApps).Error; err != nil {
 			logs.Error("Query DB Failed:", err)
 			return &ret, false
 		}
 		conn=connOrigin
-		expiredCertCardInput.AppAndPrincipals=appAndPrincipals
+		expiredCertCardInput.AffectedApps=affectedApps
 		ret=append(ret, expiredCertCardInput)
 	}
 	return &ret,true

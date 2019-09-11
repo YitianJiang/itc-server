@@ -18,7 +18,6 @@ type AppRelatedInfo struct {
 	AppName          string     `gorm:"column:app_name"`
 	BundleId         string     `gorm:"column:bundle_id"`
 	AppId            string     `gorm:"column:app_id"`
-	UserName         string     `gorm:"column:user_name"`
 }
 
 type ExpiredProfileCardInput struct {
@@ -28,7 +27,6 @@ type ExpiredProfileCardInput struct {
 	ProfileId           string
 	ProfileName         string
 	ProfileType         string
-	UserName            string
 	ProfileExpireDate   time.Time
 }
 
@@ -39,12 +37,11 @@ type ExpiredCertCardInput struct {
 	CertType            string              `gorm:"column:cert_type"`
 	CertName            string              `gorm:"column:cert_name"`
 	CertId              string              `gorm:"column:cert_id"`
-	AppAndPrincipals    []AppAndPrincipal
+	AffectedApps        []AffectedApp       `gorm:"-"`
 	CertExpireDate      time.Time           `gorm:"column:cert_expire_date"`
 }
 
-type AppAndPrincipal struct {
+type AffectedApp struct {
 	gorm.Model
 	AppName          string `gorm:"column:app_name"`
-	UserName         string `gorm:"column:user_name"`
 }
