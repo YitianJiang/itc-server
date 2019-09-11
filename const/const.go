@@ -32,6 +32,13 @@ var PermToModify = map[string]int{
 	"zhaoxuan.li":   1,
 }
 
+const(
+	ITC_SIGN_SYSTEM_ADDRESS = "https://rocket.bytedance.net/rocket/itc/iossignature?biz="
+	ITC_CERT_SYSTEM_ADDRESS = "https://rocket.bytedance.net/rocket/itc/ioscertification"
+	DayTimeUnit = "天"
+	IOS_CERT_MANAGE_GROUP_CHAT_ID = "oc_6524b9b1d771ecca33a0dac3df185fd7"
+)
+
 const (
 	UPDATE_DEVICE_FEEDBACK_URL   = "https://itc.bytedance.net/v1/deviceManage/asynUpdateDeviceFeedback"
 	APPLE_UPDATE_DEVICE_INFO_URL = "https://api.appstoreconnect.apple.com/v1/devices/"
@@ -117,6 +124,9 @@ const (
 	IOS_PUSH            = "IOS_PUSH"
 	MAC_PUSH            = "MAC_PUSH"
 	PUSH_NOTIFICATIONS  = "PUSH_NOTIFICATIONS"
+	PUSH                = "PUSH"
+	DEVELOPMENT         = "DEVELOPMENT"
+	DISTRIBUTION        = "DISTRIBUTION"
 )
 
 var IOSSelectCapabilities = []string{"ACCESS_WIFI_INFORMATION", "APP_GROUPS", "ASSOCIATED_DOMAINS", "AUTOFILL_CREDENTIAL_PROVIDER", "CLASSKIT", "GAME_CENTER",

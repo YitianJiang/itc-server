@@ -226,6 +226,25 @@ const (
 	ApproveApplyForAuthorizationUrl = "https://itc.bytedance.net/v1/authorization/approveAuthorizationApplication"
 	FinishTicketUrl                 = "https://itc.bytedance.net/v1/appleConnManage/finishTicket"
 )
+//证书将要过期工单基本信息
+var CertExpiredCardHeader = "下面的证书即将过期: "
+var CertExpiredTeamIdHeader = "证书所在账号的teamId: "
+var CertExpiredAccountNameHeader = "与证书关联的账号名称: "
+var CertExpiredAppHeader = "受影响的app有: "
+var CertBindChangeHeader = "itc换绑证书地址: "
+var RedHeaderStyle = "color: red"
+var CertExpiredTipHeader = "请到itc证书管理后台换绑证书"
+var DivideText = "--------------------------------------------------\n"
+var CertExpiredTimeToNow = "现在离证书过期还有: "
+
+//描述文件将要过期工单基本信息
+var ProfileIdHeader = "描述文件Id："
+var ProfileExpiredBundleIdHeader = "与该描述文件关联的bundleId: "
+var ProfileExpiredAppNameHeader = "与该描述文件关联的app名称: "
+var ProfileUpdateHeader = "itc更新描述文件地址: "
+var ProfileExpiredTipHeader = "请到itc证书管理后台更新描述文件"
+var ProfileExpiredCardHeader = "下面的描述文件即将过期: "
+var ProfileExpiredTimeToNow = "现在离描述文件过期还有: "
 
 //更新设备工单卡片基本信息
 var UpdateDeviceMessage="请登录Apple后台,并到TeamId对应的账号下更新UDID对应设备的名称和状态为如下，更新完毕后请点击\"已更新\""
