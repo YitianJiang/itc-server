@@ -100,7 +100,7 @@ func HiveQuery(c *gin.Context){
 	json.Unmarshal(jsGot, &jp)
 	rows := jp.Rows
 	//将数据存至数据库
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 	}

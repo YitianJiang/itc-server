@@ -27,7 +27,7 @@ func (c P8fileManager) TableName() string {
 }
 
 //func InsertBundleId (bundleid BundleIdManager) bool {
-//	connection, err := database.GetConneection()
+//	connection, err := database.GetDBConnection()
 //	if err != nil {
 //		logs.Error("Connect to Db failed: %v", err)
 //		return false
@@ -42,7 +42,7 @@ func (c P8fileManager) TableName() string {
 //}
 
 func InsertBundleIdAndP8 (p8info P8fileManager) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false
@@ -57,7 +57,7 @@ func InsertBundleIdAndP8 (p8info P8fileManager) bool {
 }
 
 func SearchBundleIds () (*[]P8fileManager,bool) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	var BundleIdsObjResponse []P8fileManager
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
@@ -72,7 +72,7 @@ func SearchBundleIds () (*[]P8fileManager,bool) {
 }
 
 func SearchP8String(input map[string]interface{}) (*P8fileManager,bool) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	var BundleIdsObjResponse P8fileManager
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)

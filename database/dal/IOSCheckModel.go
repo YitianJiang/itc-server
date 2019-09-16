@@ -29,7 +29,7 @@ func (IOSCheckTask) TableName() string{
 
 //insert data
 func InsertICT(ictModel IOSCheckTask) (uint, bool) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return 0, false
@@ -44,7 +44,7 @@ func InsertICT(ictModel IOSCheckTask) (uint, bool) {
 }
 //query data
 func QueryICT(data map[string]interface{}) (*[]IOSCheckTask, uint) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return nil, 0
@@ -78,7 +78,7 @@ func QueryICT(data map[string]interface{}) (*[]IOSCheckTask, uint) {
 	if condition == "" {
 		condition = " 1=1 "
 	}
-	connect, err := database.GetConneection()
+	connect, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return nil, 0
@@ -94,7 +94,7 @@ func QueryICT(data map[string]interface{}) (*[]IOSCheckTask, uint) {
 }
 //update data
 func UpdateICT(ictModel IOSCheckTask) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return false

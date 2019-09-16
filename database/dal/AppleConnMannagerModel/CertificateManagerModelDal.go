@@ -11,7 +11,7 @@ import (
 
 //todo apple OpenAPI 操作失败报警至群中
 func DeleteCertInfo(condition map[string]interface{}) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false
@@ -25,7 +25,7 @@ func DeleteCertInfo(condition map[string]interface{}) bool {
 }
 
 func InsertCertInfo(CertInfo *CertInfo) bool {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return false
@@ -39,7 +39,7 @@ func InsertCertInfo(CertInfo *CertInfo) bool {
 }
 
 func QueryCertInfo(condition map[string]interface{}, expireSoon string, permsResult int) *[]CertInfo {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return nil
@@ -108,7 +108,7 @@ func GetAppNamesByCertId(conn *gorm.DB, certType string, certId string) []RecApp
 }
 
 func QueryExpiredCertInfos() *[]CertInfo {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return nil
@@ -152,7 +152,7 @@ func isExpired(certInfo CertInfo) bool {
 }
 
 func QueryEffectAppList(certId string, certType string) []string {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return nil
@@ -168,7 +168,7 @@ func QueryEffectAppList(certId string, certType string) []string {
 }
 
 func QueryUserNameByAppName(appList []string) []string {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return nil
@@ -192,7 +192,7 @@ func QueryUserNameByAppName(appList []string) []string {
 }
 
 func QueryCertInfoByCertId(certId string) *CertInfo {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return nil
@@ -207,7 +207,7 @@ func QueryCertInfoByCertId(certId string) *CertInfo {
 }
 
 func QueryDeletedCertInfoByCertId(certId string) *CertInfo {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return nil
@@ -224,7 +224,7 @@ func QueryDeletedCertInfoByCertId(certId string) *CertInfo {
 }
 
 func UpdateCertInfo(condition map[string]interface{}, priv_key_url string) bool {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return false
@@ -244,7 +244,7 @@ func UpdateCertInfo(condition map[string]interface{}, priv_key_url string) bool 
 }
 
 func UpdateCertInfoAfterUpload(condition map[string]interface{}, inputs map[string]interface{}) *CertInfo {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return nil
@@ -263,7 +263,7 @@ func UpdateCertInfoAfterUpload(condition map[string]interface{}, inputs map[stri
 }
 
 func CheckCertExit(teamId string) int {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return -1
@@ -283,7 +283,7 @@ func CheckCertExit(teamId string) int {
 }
 
 func UpdateCertInfoByMap(condition map[string]interface{}, updateInfo map[string]interface{}) bool {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return false

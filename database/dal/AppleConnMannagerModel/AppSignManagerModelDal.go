@@ -13,7 +13,7 @@ import (
 条件：record对应的struct有TableName()方法
 */
 func InsertRecord(record interface{}) error {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return err
@@ -33,7 +33,7 @@ func InsertRecord(record interface{}) error {
 返回nil---查询fail，返回空数组--无相关数据
 */
 func QueryAppAccountCert(queryData map[string]interface{}) *[]AppAccountCert {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return nil
@@ -52,7 +52,7 @@ func QueryAppAccountCert(queryData map[string]interface{}) *[]AppAccountCert {
 删除操作
 */
 func DeleteAppAccountCert(queryData map[string]interface{}) error {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return err
@@ -71,7 +71,7 @@ func DeleteAppAccountCert(queryData map[string]interface{}) error {
 更新操作
 */
 func UpdateAppAccountCert(queryData, item map[string]interface{}) error {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return err
@@ -90,7 +90,7 @@ func UpdateAppAccountCert(queryData, item map[string]interface{}) error {
 返回记录model
 */
 func UpdateAppAccountCertAndGetModelByMap(condition map[string]interface{}, updateInfo map[string]interface{}) (error, *AppAccountCert) {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return err, nil
@@ -109,7 +109,7 @@ func UpdateAppAccountCertAndGetModelByMap(condition map[string]interface{}, upda
 不返回model
 */
 func UpdateAppAccountCertByMap(condition map[string]interface{}, updateInfo map[string]interface{}) bool {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return false
@@ -127,7 +127,7 @@ func UpdateAppAccountCertByMap(condition map[string]interface{}, updateInfo map[
 返回nil---查询fail，返回空数组--无相关数据
 */
 func QueryAppBundleProfiles(queryData map[string]interface{}) *[]AppBundleProfiles {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return nil
@@ -146,7 +146,7 @@ func QueryAppBundleProfiles(queryData map[string]interface{}) *[]AppBundleProfil
 删除操作
 */
 func DeleteAppBundleProfiles(queryData map[string]interface{}) error {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return err
@@ -162,7 +162,7 @@ func DeleteAppBundleProfiles(queryData map[string]interface{}) error {
 }
 
 func UpdateAppBundleProfiles(queryData, item map[string]interface{}) error {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return err
@@ -181,7 +181,7 @@ func UpdateAppBundleProfiles(queryData, item map[string]interface{}) error {
 返回nil---查询fail，返回空数组--无相关数据
 */
 func QueryAppleBundleId(queryData map[string]interface{}) *[]AppleBundleId {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return nil
@@ -197,7 +197,7 @@ func QueryAppleBundleId(queryData map[string]interface{}) *[]AppleBundleId {
 }
 
 func QueryAppleBundleIdWithNotNullBundleIdId(queryData map[string]interface{}) *[]AppleBundleId {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return nil
@@ -216,7 +216,7 @@ func QueryAppleBundleIdWithNotNullBundleIdId(queryData map[string]interface{}) *
 删除操作
 */
 func DeleteAppleBundleId(queryData map[string]interface{}) error {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return err
@@ -232,7 +232,7 @@ func DeleteAppleBundleId(queryData map[string]interface{}) error {
 }
 
 func UpdateAppleBundleId(queryData, item map[string]interface{}) error {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return err
@@ -251,7 +251,7 @@ func UpdateAppleBundleId(queryData, item map[string]interface{}) error {
 返回nil---查询fail，返回空数组--无相关数据
 */
 func QueryAppleProfile(queryData map[string]interface{}) *[]AppleProfile {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return nil
@@ -271,7 +271,7 @@ func QueryAppleProfile(queryData map[string]interface{}) *[]AppleProfile {
 返回nil---查询fail，返回空数组--无相关数据
 */
 func QueryAppleProfileWithList(col string, datas *[]interface{}) *[]AppleProfile {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return nil
@@ -291,7 +291,7 @@ func QueryAppleProfileWithList(col string, datas *[]interface{}) *[]AppleProfile
 删除操作
 */
 func DeleteAppleProfile(queryData map[string]interface{}) error {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return err
@@ -310,7 +310,7 @@ func DeleteAppleProfile(queryData map[string]interface{}) error {
 更新操作
 */
 func UpdateAppleProfile(queryData map[string]interface{}, updateData map[string]interface{}) error {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return err
@@ -324,7 +324,7 @@ func UpdateAppleProfile(queryData map[string]interface{}, updateData map[string]
 	return nil
 }
 func UpdateAppleProfileBatch(col string, rangeData *[]interface{}, updateData map[string]interface{}) error {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return err
@@ -342,7 +342,7 @@ func UpdateAppleProfileBatch(col string, rangeData *[]interface{}, updateData ma
 根据app_id联查，获取cert_section
 */
 func QueryWithSql(sql string, result interface{}) error {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		utils.RecordError("Get DB Connection Failed: ", err)
 		return err

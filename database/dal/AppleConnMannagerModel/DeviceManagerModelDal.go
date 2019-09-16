@@ -8,7 +8,7 @@ import (
 
 func QueryDevicesInfo(condition map[string]interface{}) (*[]DeviceInfo,bool) {
 	var devicesInfo []DeviceInfo
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return  &devicesInfo,false
@@ -24,7 +24,7 @@ func QueryDevicesInfo(condition map[string]interface{}) (*[]DeviceInfo,bool) {
 }
 
 func UpdateDeviceInfoDB(condition map[string]interface{},updateInfo map[string]interface{}) bool {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return false
@@ -41,7 +41,7 @@ func UpdateDeviceInfoDB(condition map[string]interface{},updateInfo map[string]i
 }
 
 func AddDeviceInfoDB(deviceInfo *DeviceInfo) bool {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return false
@@ -57,7 +57,7 @@ func AddDeviceInfoDB(deviceInfo *DeviceInfo) bool {
 }
 
 func AddOrUpdateDeviceInfo(condition map[string]interface{},deviceInfo *DeviceInfo) bool{
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return  false

@@ -34,7 +34,7 @@ func (c CertificateModel) TableName() string {
 增/查/删 证书
 */
 func InsertCertificate(certificate CertificateModel) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false
@@ -49,7 +49,7 @@ func InsertCertificate(certificate CertificateModel) bool {
 }
 
 func QueryCertificate(condition map[string]interface{}) *[]CertificateModel {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil
@@ -63,7 +63,7 @@ func QueryCertificate(condition map[string]interface{}) *[]CertificateModel {
 }
 
 func QueryLikeCertificate(condition map[string]interface{}) *[]CertificateModel {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil
@@ -104,7 +104,7 @@ func QueryLikeCertificate(condition map[string]interface{}) *[]CertificateModel 
 }
 
 func DeleteCertificate(condition map[string]interface{}) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false

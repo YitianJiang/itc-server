@@ -27,7 +27,7 @@ type ChartInfoStruct struct {
 }
 
 func QueryReportsInfo (condition string) (*[]DetectStruct,error) {
-	connection,err := database.GetConneection()
+	connection,err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil,err

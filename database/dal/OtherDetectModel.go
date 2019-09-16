@@ -97,7 +97,7 @@ func (OtherDetailInfoStruct) TableName() string {
 新增其他检测任务
 */
 func InsertOtherDetect(otherInfo OtherDetectModel) int {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db failed,%v", err)
 		return 0
@@ -117,7 +117,7 @@ func InsertOtherDetect(otherInfo OtherDetectModel) int {
 查询aar检测任务
 */
 func QueryOtherDetectModelsByMap(param map[string]interface{}) *[]OtherDetectModel {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil
@@ -136,7 +136,7 @@ func QueryOtherDetectModelsByMap(param map[string]interface{}) *[]OtherDetectMod
 查询检测任务列表
 */
 func QueryOtherDetctModelOfList(pageInfo map[string]int, condition string) (*[]OtherDetectModel, int, error) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil, 0, err
@@ -162,7 +162,7 @@ func QueryOtherDetctModelOfList(pageInfo map[string]int, condition string) (*[]O
 更新检测任务信息
 */
 func UpdateOtherDetectModelByMap(condition string, param map[string]interface{}) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return err
@@ -180,7 +180,7 @@ func UpdateOtherDetectModelByMap(condition string, param map[string]interface{})
 批量插入aar检测信息到数据库
 */
 func InsertOtherDetectDetailBatch(details *[]OtherDetailInfoStruct) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil
@@ -205,7 +205,7 @@ func InsertOtherDetectDetailBatch(details *[]OtherDetailInfoStruct) error {
 查询aar检测结果详情
 */
 func QueryOtherDetectDetail(param map[string]interface{}) *[]OtherDetailInfoStruct {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil
@@ -224,7 +224,7 @@ func QueryOtherDetectDetail(param map[string]interface{}) *[]OtherDetailInfoStru
 更新aar检测结果
 */
 func UpdateOtherDetailInfoByMap(condition string, param map[string]interface{}) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return err
@@ -242,7 +242,7 @@ func UpdateOtherDetailInfoByMap(condition string, param map[string]interface{}) 
 批量更新aar旧报告内容
 */
 func UpdateOldAArMethods(ids *[]string, infos *[]string) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return err
