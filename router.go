@@ -213,4 +213,10 @@ func InitRouter(r *ginex.Engine) {
 		deviceapi.GET("/deviceInfoSynchronize", developerconnmanager.SynchronizeDeviceInfo)
 	}
 
+	timedtaskapi:=r.Group("/v1/timedTask")
+	{
+		timedtaskapi.GET("/CertExpiredNotify", developerconnmanager.NotifyCertExpired)
+		timedtaskapi.GET("/ProfileExpiredNotify", developerconnmanager.NotifyProfileExpired)
+	}
+
 }
