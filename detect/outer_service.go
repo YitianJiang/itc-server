@@ -218,8 +218,8 @@ func queryLastestDetectResult(
 	if err := db.Debug().Where(condition).Order("created_at desc").
 		First(&detect).Error; err != nil {
 		logs.Error("Cannot find binary detect result about version %v :%v", condition["app_version"], err)
-		// If the binary detect result about specific version was
-		// not found, we will return the lastest binary detect result.
+		// Return the lastest binary detect result if the binary detect
+		// result of specific version was not found.
 		delete(condition, "app_version")
 		if err := db.Debug().Where(condition).Order("created_at desc").
 			First(&detect).Error; err != nil {
