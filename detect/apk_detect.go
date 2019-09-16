@@ -458,7 +458,6 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 			thePerm := permsMap[finalResult[i].Index]
 			permissionsP, errP := GetTaskPermissions_2(thePerm, perIgs, allPermList)
 			if errP != nil || permissionsP == nil || len(*permissionsP) == 0 {
-				fmt.Println(">>>>> error")
 				finalResult[i].Permissions_2 = permissions
 			} else {
 				finalResult[i].Permissions_2 = (*permissionsP)
