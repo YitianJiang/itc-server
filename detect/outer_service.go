@@ -178,10 +178,11 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 
 	task := queryLastestDetectResult(map[string]interface{}{
 		"app_id":      appID,
-		"app_version": appVersion})
+		"app_version": appVersion,
+		"platform":    0})
 	if task == nil {
-		msg := "Failed to find record in database about APP ID is " +
-			appID + " and Version is " + appVersion
+		msg := "Failed to find binary detect result in database about" +
+			" APP ID is " + appID + " and Version is " + appVersion
 		logs.Error(msg)
 		errorReturn(c, msg)
 		return
@@ -204,9 +205,9 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 }
 
 func queryLastestDetectResult(param map[string]interface{}) *dal.DetectStruct {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
+		logs.Error("Connect to DB failed: %v", err)
 		return nil
 	}
 	defer connection.Close()
@@ -217,5 +218,6 @@ func queryLastestDetectResult(param map[string]interface{}) *dal.DetectStruct {
 		logs.Error("%v", err)
 		return nil
 	}
+
 	return &detect
 }
