@@ -263,6 +263,21 @@ func UnconfirmedDetail(c *gin.Context) {
 
 }
 
+func getID(c *gin.Context) (uint64, error) {
+
+	id, exist := c.GetQuery("id")
+	if !exist {
+		return 0, errors.New("Miss id")
+	}
+
+	detectionID, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		return 0, errors.New("Parse id error: " + err.Error())
+	}
+
+	return detectionID, nil
+}
+
 func getDetectionDetail(id uint64) (map[interface{}]interface{}, error) {
 
 	var result map[interface{}]interface{}
@@ -272,19 +287,24 @@ func getDetectionDetail(id uint64) (map[interface{}]interface{}, error) {
 // Confirm set the specific detection's the value of confirmed TRUE.
 func Confirm(c *gin.Context) {
 
-	id, exist := c.GetQuery("id")
-	if !exist {
-		ReturnMsg(c, FAILURE, "Miss id")
-		return
-	}
+	// id, exist := c.GetQuery("id")
+	// if !exist {
+	// 	ReturnMsg(c, FAILURE, "Miss id")
+	// 	return
+	// }
 
-	detectionID, err := strconv.ParseUint(id, 10, 64)
+	// detectionID, err := strconv.ParseUint(id, 10, 64)
+	// if err != nil {
+	// 	ReturnMsg(c, FAILURE, "Parse id error: "+err.Error())
+	// 	return
+	// }
+
+	id, err := getID(c)
 	if err != nil {
-		ReturnMsg(c, FAILURE, "Parse id error: "+err.Error())
-		return
+		ReturnMsg(c, FAILURE, err.Error())
 	}
 
-	if err := confirmDetection(detectionID); err != nil {
+	if err := confirmDetection(id); err != nil {
 		ReturnMsg(c, FAILURE, "Confirm failed: "+err.Error())
 		return
 	}
