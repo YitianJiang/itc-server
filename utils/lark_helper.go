@@ -226,6 +226,11 @@ const (
 	ApproveApplyForAuthorizationUrl = "https://itc.bytedance.net/v1/authorization/approveAuthorizationApplication"
 	FinishTicketUrl                 = "https://itc.bytedance.net/v1/appleConnManage/finishTicket"
 )
+
+//查询数据库过期描述文件和证书信息的提示
+var QueryExpiredProfileFailTip = "从数据库中查询将要过期的描述文件失败"
+var QueryExpiredCertFailTip = "从数据库中查询将要过期的证书失败"
+
 //证书将要过期工单基本信息
 var CertExpiredCardHeader = "下面的证书即将过期: "
 var CertExpiredTeamIdHeader = "证书所在账号的teamId: "
