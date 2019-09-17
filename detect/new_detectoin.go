@@ -1,0 +1,379 @@
+package detect
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strconv"
+	"time"
+
+	"code.byted.org/clientQA/itc-server/database"
+	"code.byted.org/gopkg/gorm"
+	"code.byted.org/gopkg/logs"
+	"github.com/gin-gonic/gin"
+)
+
+type detectionBasic struct {
+	APPID      string `gorm:"column:app_id"  json:"appid"       `
+	APPVersion string `json:"appVersion"  gorm:"column:app_version"`
+	Platform   string `json:"platform"    gorm:"column:platform"`
+	RDUserName string `json:"rd_username" gorm:"column:rd_username"`
+	RDEmail    string `json:"rd_email"    gorm:"column:rd_email"`
+}
+
+// If the type is "敏感方法", the key is equal to className.methodName
+type detectionDetail struct {
+	Key           string         `json:"key"      gorm:"column:key_name"`
+	Description   string         `json:"desc"     gorm:"column:description"`
+	Type          string         `json:"type"     gorm:"column:type"`
+	RiskLevel     int            `json:"priority" gorm:"column:risk_level"`
+	Creator       string         `json:"creator"  gorm:"column:creator"`
+	CallLocations []callLocation `json:"callLocs"`
+}
+
+type callLocation struct {
+	ClassName  string `json:"class_name"`
+	MethodName string `json:"method_name"`
+	LineNumber string `json:"line_number"`
+}
+
+// Confirmation contains the detail information of unconfirmed sensitive
+// permissions/methods/strings.
+type Confirmation struct {
+	detectionBasic
+	Permissions      []detectionDetail `json:"new_permissions"`
+	SensitiveMethods []detectionDetail `json:"new_sensiMethodCall"`
+	SensitiveStrings []detectionDetail `json:"new_sensiStrCall"`
+}
+
+// NewDetection corresponds to table new_detection.
+type NewDetection struct {
+	// detectionBasic
+	// detectionDetail
+	ID            uint64    `gorm:"column:id"`
+	CreatedAt     time.Time `gorm:"column:created_at"`
+	APPID         string    `gorm:"column:app_id"`
+	APPVersion    string    `gorm:"column:app_version"`
+	Platform      string    `gorm:"column:platform"`
+	RDUserName    string    `gorm:"column:rd_username"`
+	RDEmail       string    `gorm:"column:rd_email"`
+	Key           string    `gorm:"column:key_name"`
+	Description   string    `gorm:"column:description"`
+	Type          string    `gorm:"column:type"`
+	RiskLevel     int       `gorm:"column:risk_level"`
+	Creator       string    `gorm:"column:creator"`
+	CallLocations string    `gorm:"column:call_locations"`
+	Confirmed     bool      `gorm:"column:confirmed"`
+}
+
+// UploadUnconfirmedDetections writes the new detections to tables in
+// database and invite the confirmor to join the specific Lark group
+// in order to inform him/her to comfirm the new detections.
+func UploadUnconfirmedDetections(c *gin.Context) {
+
+	body, err := ioutil.ReadAll(c.Request.Body)
+	if err != nil {
+		msg := "Failed to read request body: " + err.Error()
+		ReturnMsg(c, FAILURE, msg)
+		return
+	}
+
+	var detections Confirmation
+	if err := json.Unmarshal(body, &detections); err != nil {
+		msg := "Failed to unmarshal new detections: %v"
+		ReturnMsg(c, FAILURE, msg)
+		return
+	}
+
+	printConfirmations(&detections)
+
+	go handleNewDetections(&detections)
+
+	ReturnMsg(c, SUCCESS, "Receive new detections success")
+	return
+}
+
+func printConfirmations(detections *Confirmation) {
+
+	fmt.Println(">>>>>>>>>> Permissions <<<<<<<<<<")
+	for _, v := range detections.Permissions {
+		fmt.Printf("%v %v %v %v %v %v %v %v %v %v\n",
+			detections.APPID, detections.APPVersion,
+			detections.Platform, detections.RDUserName,
+			detections.RDEmail, v.Key, v.Description,
+			v.RiskLevel, v.Type, v.Creator)
+	}
+
+	fmt.Println(">>>>>>>>>> Method <<<<<<<<<<")
+	for _, v := range detections.SensitiveMethods {
+		fmt.Printf("%v %v %v %v %v %v %v %v %v %v %v\n",
+			detections.APPID, detections.APPVersion,
+			detections.Platform, detections.RDUserName,
+			detections.RDEmail, v.Key, v.Description,
+			v.RiskLevel, v.Type, v.Creator, v.CallLocations)
+	}
+
+	fmt.Println(">>>>>>>>>> Strings <<<<<<<<<<")
+	for _, v := range detections.SensitiveStrings {
+		fmt.Printf("%v %v %v %v %v %v %v %v %v %v %v\n",
+			detections.APPID, detections.APPVersion,
+			detections.Platform, detections.RDUserName,
+			detections.RDEmail, v.Key, v.Description,
+			v.RiskLevel, v.Type, v.Creator, v.CallLocations)
+	}
+}
+
+func handleNewDetections(detections *Confirmation) {
+
+	if err := storeNewDetections(detections); err != nil {
+		logs.Error("Failed to store new detections")
+		return
+	}
+
+	if err := informConfirmor("TODO", detections.RDEmail); err != nil {
+		logs.Error("Failed to inform the confirmor")
+		return
+	}
+
+	return
+}
+
+// TODO
+func storeNewDetections(detections *Confirmation) error {
+
+	// Diff with exist but unconfirmed detections
+
+	db, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return nil
+	}
+	defer db.Close()
+
+	storeNewPermissions(db, detections)
+	storeNewSensiMethods(db, detections)
+	storeNewSensiStrings(db, detections)
+
+	return nil
+}
+
+func storeNewPermissions(db *gorm.DB, detections *Confirmation) error {
+
+	for i := range detections.Permissions {
+		if err := insertDetection(db, &NewDetection{
+			APPID:       detections.detectionBasic.APPID,
+			APPVersion:  detections.detectionBasic.APPVersion,
+			Platform:    detections.detectionBasic.Platform,
+			RDUserName:  detections.detectionBasic.RDUserName,
+			RDEmail:     detections.detectionBasic.RDEmail,
+			Key:         detections.Permissions[i].Key,
+			Description: detections.Permissions[i].Description,
+			Type:        detections.Permissions[i].Type,
+			RiskLevel:   detections.Permissions[i].RiskLevel,
+			Creator:     detections.Permissions[i].Creator,
+			Confirmed:   false,
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func storeNewSensiMethods(db *gorm.DB, detections *Confirmation) error {
+
+	for i := range detections.SensitiveMethods {
+		callLocation, _ := json.Marshal(detections.SensitiveMethods[i].CallLocations)
+		if err := insertDetection(db, &NewDetection{
+			APPID:         detections.detectionBasic.APPID,
+			APPVersion:    detections.detectionBasic.APPVersion,
+			Platform:      detections.detectionBasic.Platform,
+			RDUserName:    detections.detectionBasic.RDUserName,
+			RDEmail:       detections.detectionBasic.RDEmail,
+			Key:           detections.SensitiveMethods[i].Key,
+			Description:   detections.SensitiveMethods[i].Description,
+			Type:          detections.SensitiveMethods[i].Type,
+			RiskLevel:     detections.SensitiveMethods[i].RiskLevel,
+			Creator:       detections.SensitiveMethods[i].Creator,
+			CallLocations: string(callLocation),
+			Confirmed:     false,
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func storeNewSensiStrings(db *gorm.DB, detections *Confirmation) error {
+
+	for i := range detections.SensitiveStrings {
+		callLocation, _ := json.Marshal(detections.SensitiveMethods[i].CallLocations)
+		if err := insertDetection(db, &NewDetection{
+			APPID:         detections.detectionBasic.APPID,
+			APPVersion:    detections.detectionBasic.APPVersion,
+			Platform:      detections.detectionBasic.Platform,
+			RDUserName:    detections.detectionBasic.RDUserName,
+			RDEmail:       detections.detectionBasic.RDEmail,
+			Key:           detections.SensitiveStrings[i].Key,
+			Description:   detections.SensitiveStrings[i].Description,
+			Type:          detections.SensitiveStrings[i].Type,
+			RiskLevel:     detections.SensitiveStrings[i].RiskLevel,
+			Creator:       detections.SensitiveStrings[i].Creator,
+			CallLocations: string(callLocation),
+			Confirmed:     false,
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func insertDetection(db *gorm.DB, detection *NewDetection) error {
+	if err := db.Debug().Create(detection).Error; err != nil {
+		logs.Error("Failed to create record in table new_detection: %v", err.Error())
+		return err
+	}
+
+	return nil
+}
+
+// UnconfirmedList returns all unconfirmed detections from table new_detection.
+func UnconfirmedList(c *gin.Context) {}
+
+// UnconfirmedDetail returns the detail of the specific detection from table new_detection.
+func UnconfirmedDetail(c *gin.Context) {
+
+	// id, exist := c.GetQuery("id")
+	// if !exist {
+	// 	ReturnMsg(c, FAILURE, "Miss id")
+	// 	return
+	// }
+
+	// detectionID, err := strconv.ParseUint(id, 10, 64)
+	// if err != nil {
+	// 	ReturnMsg(c, FAILURE, "Parse id error: "+err.Error())
+	// 	return
+	// }
+
+	// result, err := getDetectionDetail(detectionID)
+
+}
+
+func getDetectionDetail(id uint64) (map[interface{}]interface{}, error) {
+
+	var result map[interface{}]interface{}
+	return result, nil
+}
+
+// Confirm set the specific detection's the value of confirmed TRUE.
+func Confirm(c *gin.Context) {
+
+	id, exist := c.GetQuery("id")
+	if !exist {
+		ReturnMsg(c, FAILURE, "Miss id")
+		return
+	}
+
+	detectionID, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		ReturnMsg(c, FAILURE, "Parse id error: "+err.Error())
+		return
+	}
+
+	if err := confirmDetection(detectionID); err != nil {
+		ReturnMsg(c, FAILURE, "Confirm failed: "+err.Error())
+		return
+	}
+
+	ReturnMsg(c, SUCCESS, "success")
+	return
+}
+
+func confirmDetection(id uint64) error {
+
+	db, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return nil
+	}
+	defer db.Close()
+
+	if _, err := retrieveDetection(db, map[string]interface{}{
+		"id": id,
+	}); err != nil {
+		return err
+	}
+
+	if err := updateDetection(db, &NewDetection{ID: id}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func retrieveDetection(db *gorm.DB, condition map[string]interface{}) (
+	[]NewDetection, error) {
+
+	var detections []NewDetection
+	if err := db.Debug().Where(condition).
+		Find(&detections).Error; err != nil {
+		logs.Error("Failed to retrieve detections from table new_detection: %v", err)
+		return nil, err
+	}
+
+	if len(detections) <= 0 {
+		logs.Error("Cannot find any matched detection")
+		return nil, errors.New("Cannot find any matched detection")
+	}
+
+	return detections, nil
+}
+
+func updateDetection(db *gorm.DB, detection *NewDetection) error {
+
+	if err := db.Debug().Model(detection).
+		Update("confirmed", true).Error; err != nil {
+		logs.Error("Failed to update detection in table new_detection: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+// TODO
+// We will send message directly to the group if the confirmor is unknown.
+func informConfirmor(group string, emailPrefix string) error {
+
+	if emailPrefix == "" {
+	}
+
+	return nil
+}
+
+// Error code
+const (
+	FAILURE = -1
+	SUCCESS = 0
+)
+
+// ReturnMsg shows necessary information for requestor.
+func ReturnMsg(c *gin.Context, code int, msg string) {
+
+	switch code {
+	case FAILURE:
+		logs.Error(msg)
+	case SUCCESS:
+		logs.Debug(msg)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"errorCode": code,
+		"message":   msg,
+	})
+
+	return
+}
