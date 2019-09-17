@@ -67,16 +67,28 @@ func generateCardOfProfileExpired(expiredProfileCardInput *devconnmanager.Expire
 	return &cardFormArray
 }
 
+func generateCardOfQueryDbFail(queryFailTip string) *[][]form.CardElementForm {
+	var cardFormArray [][]form.CardElementForm
+	messageText := queryFailTip
+	messageForm := form.GenerateTextTag(&messageText, false, nil)
+	cardFormArray = append(cardFormArray, []form.CardElementForm{*messageForm})
+	return &cardFormArray
+}
+
 func NotifyProfileExpired(c *gin.Context) {
 	logs.Info("HttpRequest：向app负责人发送消息卡片提醒profile一个月后过期")
+	abot := service.BotService{}
+	abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 	expiredProfileCardInputs,queryResult:=devconnmanager.QueryExpiredProfileRelatedInfo()
 	if !queryResult{
 		logs.Error("从数据库中查询profile相关信息失败")
 		AssembleJsonResponse(c, http.StatusInternalServerError, "从数据库中查询profile相关信息失败", "failed")
+		cardElementForms :=generateCardOfQueryDbFail(utils.QueryExpiredProfileFailTip)
+		if err := sendExpiredCardMessage(cardElementForms, nil, _const.IOS_CERT_MANAGE_GROUP_CHAT_ID , &abot);err != nil{
+			logs.Error("向iOS证书管理群发送消息卡片提醒从数据库中查询将要过期的描述文件失败%v", err)
+		}
 		return
 	}
-	abot := service.BotService{}
-	abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 	for _,expiredProfileCardInput :=range *expiredProfileCardInputs{
 		cardElementForms := generateCardOfProfileExpired(&expiredProfileCardInput)
 		if err := sendExpiredCardMessage(cardElementForms, nil, _const.IOS_CERT_MANAGE_GROUP_CHAT_ID , &abot);err != nil{
@@ -125,14 +137,18 @@ func generateCardOfCertExpired(expiredCertCardInput *devconnmanager.ExpiredCertC
 
 func NotifyCertExpired(c *gin.Context) {
 	logs.Info("检查一个月内将要过期的证书并发送卡片通知")
+	abot := service.BotService{}
+	abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 	expiredCertInfos,queryResult := devconnmanager.QueryExpiredCertRelatedInfo()
 	if !queryResult{
 		logs.Error("查询将要过期的证书信息失败")
 		AssembleJsonResponse(c, http.StatusInternalServerError, "查询将要过期的证书信息失败", "failed")
+		cardElementForms :=generateCardOfQueryDbFail(utils.QueryExpiredCertFailTip)
+		if err := sendExpiredCardMessage(cardElementForms, nil, _const.IOS_CERT_MANAGE_GROUP_CHAT_ID , &abot);err != nil{
+			logs.Error("向iOS证书管理群发送消息卡片提醒从数据库中查询将要过期的证书失败%v", err)
+		}
 		return
 	}
-	abot := service.BotService{}
-	abot.SetAppIdAndAppSecret(utils.IOSCertificateBotAppId, utils.IOSCertificateBotAppSecret)
 	for _, expiredCertInfo := range *expiredCertInfos {
 		    var affectedAppNamesTogether string
 		    if len(expiredCertInfo.AffectedApps)==0{
