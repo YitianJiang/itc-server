@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"code.byted.org/clientQA/itc-server/const"
+	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
@@ -48,16 +48,18 @@ func UploadFile(c *gin.Context) {
 	url := ""
 	nameI, f := c.Get("username")
 	if !f {
-		errorReturn(c,"未获取到用户信息！",-1)
+		errorReturn(c, "未获取到用户信息！", -1)
 		return
 	}
 	//解析上传文件
-	filepath,filename,ok := getFilesFromRequest(c,"uploadFile",true)
+	filepath, filename, ok := getFilesFromRequest(c, "uploadFile", true)
 	if !ok {
+		logs.Error("Failed to parse file %v", filename)
 		return
 	}
-	mFilepath,mFilename,ok2 := getFilesFromRequest(c,"mappingFile",false)
+	mFilepath, mFilename, ok2 := getFilesFromRequest(c, "mappingFile", false)
 	if !ok2 {
+		logs.Error("Failed to parse file %v", filename)
 		return
 	}
 	//发送lark消息到个人
@@ -74,13 +76,13 @@ func UploadFile(c *gin.Context) {
 	platform := c.DefaultPostForm("platform", "")
 	if platform == "" {
 		logs.Error("缺少platform参数！")
-		errorReturn(c,"缺少platform参数！",-3)
+		errorReturn(c, "缺少platform参数！", -3)
 		return
 	}
 	appId := c.DefaultPostForm("appId", "")
 	if appId == "" {
 		logs.Error("缺少appId参数！")
-		errorReturn(c,"缺少appId参数！",-3)
+		errorReturn(c, "缺少appId参数！", -3)
 		return
 	}
 	checkItem := c.DefaultPostForm("checkItem", "")
@@ -101,7 +103,7 @@ func UploadFile(c *gin.Context) {
 		return
 	}
 	if mFilepath != "" {
-		flagM := strings.HasSuffix(mFilename,".txt")
+		flagM := strings.HasSuffix(mFilename, ".txt")
 		if !flagM {
 			errorFormatFile(c)
 			return
@@ -181,9 +183,7 @@ func UploadFile(c *gin.Context) {
 	}
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
-		//todo 更改url
 		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
-		//callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -193,22 +193,22 @@ func UploadFile(c *gin.Context) {
 		fileWriter, err := bodyWriter.CreateFormFile("file", filepath)
 		if err != nil {
 			logs.Error("%s", "error writing to buffer: "+err.Error())
-			errorReturn(c,"二进制包处理错误，请联系相关人员！")
+			errorReturn(c, "二进制包处理错误，请联系相关人员！")
 			return
 		}
 		fileHandler, err := os.Open(filepath)
 		defer fileHandler.Close()
 		_, err = io.Copy(fileWriter, fileHandler)
 		if mFilepath != "" {
-			fileWriterM,errM := bodyWriter.CreateFormFile("mFile",mFilepath)
+			fileWriterM, errM := bodyWriter.CreateFormFile("mFile", mFilepath)
 			if errM != nil {
 				logs.Error("%s", "error writing to buffer: "+errM.Error())
-				errorReturn(c,"mapping文件处理错误，请联系相关人员！")
+				errorReturn(c, "mapping文件处理错误，请联系相关人员！")
 				return
 			}
 			mFileHeader, _ := os.Open(mFilepath)
 			defer mFileHeader.Close()
-			io.Copy(fileWriterM,mFileHeader)
+			io.Copy(fileWriterM, mFileHeader)
 		}
 		contentType := bodyWriter.FormDataContentType()
 		err = bodyWriter.Close()
@@ -242,7 +242,7 @@ func UploadFile(c *gin.Context) {
 			logs.Info("upload detect url's response: %+v", data)
 			//删掉临时文件
 			os.Remove(filepath)
-			if mFilepath != ""{
+			if mFilepath != "" {
 				os.Remove(mFilepath)
 			}
 		}
@@ -255,25 +255,26 @@ func UploadFile(c *gin.Context) {
 		},
 	})
 }
+
 //emptyError标识该文件必须上传，且对文件大小有要求（大于1M）
-func getFilesFromRequest(c *gin.Context,fieldName string,emptyError bool)(string,string,bool){
-	file,header,_ := c.Request.FormFile(fieldName)
+func getFilesFromRequest(c *gin.Context, fieldName string, emptyError bool) (string, string, bool) {
+	file, header, _ := c.Request.FormFile(fieldName)
 	if file == nil {
-		if emptyError{
-			errorReturn(c,fieldName+":未选择上传的文件！",-2)
+		if emptyError {
+			errorReturn(c, fieldName+":未选择上传的文件！", -2)
 			logs.Error("未选择上传的文件！")
-			return "","",false
-		}else{
-			return "","",true
+			return "", "", false
+		} else {
+			return "", "", true
 		}
 	}
 	defer file.Close()
 	//logs.Error(fmt.Sprint(header.Size << 20))
-	if emptyError{
+	if emptyError {
 		if header.Size < (1 << 20) {
-			errorReturn(c,fieldName+":上传的文件有问题（文件大小异常），请排查！",-2)
+			errorReturn(c, fieldName+":上传的文件有问题（文件大小异常），请排查！", -2)
 			logs.Error("上传的文件有问题（文件大小异常）")
-			return "","",false
+			return "", "", false
 		}
 	}
 	filename := header.Filename
@@ -285,18 +286,18 @@ func getFilesFromRequest(c *gin.Context,fieldName string,emptyError bool)(string
 	filepath := _tmpDir + "/" + filename
 	out, err := os.Create(filepath)
 	if err != nil {
-		errorReturn(c,fieldName+":安装包文件处理失败，请联系相关人员！",-6)
+		errorReturn(c, fieldName+":安装包文件处理失败，请联系相关人员！", -6)
 		logs.Fatal("临时文件保存失败")
-		return "","",false
+		return "", "", false
 	}
 	defer out.Close()
 	_, err = io.Copy(out, file)
 	if err != nil {
-		errorReturn(c,fieldName+":安装包文件处理失败，请联系相关人员！",-6)
+		errorReturn(c, fieldName+":安装包文件处理失败，请联系相关人员！", -6)
 		logs.Fatal("临时文件保存失败")
-		return "","",false
+		return "", "", false
 	}
-	return filepath,filename,true
+	return filepath, filename, true
 }
 
 /**
@@ -530,9 +531,9 @@ func UpdateDetectInfos(c *gin.Context) {
 	//此处测试时注释掉
 	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
 	for _, creator := range larkList {
-		utils.UserInGroup(creator)                                                                      //将用户拉入预审平台群
+		utils.UserInGroup(creator)                                                                             //将用户拉入预审平台群
 		res := utils.LarkDetectResult(creator, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, false) //new lark卡片通知形式
-		logs.Info("taskId: " +taskId+ ", creator: "+ creator+", lark message result: " + fmt.Sprint(res))
+		logs.Info("taskId: " + taskId + ", creator: " + creator + ", lark message result: " + fmt.Sprint(res))
 	}
 	//发给群消息沿用旧的机器人，给群ID对应群发送消息
 	toGroupID := (*detect)[0].ToGroup
