@@ -23,6 +23,10 @@ func InitRouter(r *ginex.Engine) {
 	r.GET("/api/detectConfig/getItcDetectConfig", detect.GetDetectConfig)
 	// 获取检测任务结果
 	r.GET("/api/detect/getTaskDetailNotItc", detect.GetSpecificAppVersionDetectResults)
+	r.POST("/detect/new/uploadUnconfirmedDetections", detect.UploadUnconfirmedDetections)
+	r.GET("/detect/new/unconfirmedList", detect.UnconfirmedList)
+	r.GET("/detect/new/unconfirmedDetail", detect.UnconfirmedDetail)
+	r.GET("/detect/new/confirm", detect.Confirm)
 
 	//检测服务检测异常报警接口
 	api.POST("/check_server/alarm", detect.Alram)
@@ -213,7 +217,7 @@ func InitRouter(r *ginex.Engine) {
 		deviceapi.GET("/deviceInfoSynchronize", developerconnmanager.SynchronizeDeviceInfo)
 	}
 
-	timedtaskapi:=r.Group("/v1/timedTask")
+	timedtaskapi := r.Group("/v1/timedTask")
 	{
 		timedtaskapi.GET("/CertExpiredNotify", developerconnmanager.NotifyCertExpired)
 		timedtaskapi.GET("/ProfileExpiredNotify", developerconnmanager.NotifyProfileExpired)
