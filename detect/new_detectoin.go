@@ -247,8 +247,22 @@ func UnconfirmedList(c *gin.Context) {}
 // UnconfirmedDetail returns the detail of the specific detection from table new_detection.
 func UnconfirmedDetail(c *gin.Context) {
 
-	// result, err := getDetectionDetail(detectionID)
+	id, err := getID(c)
+	if err != nil {
+		ReturnMsg(c, FAILURE, err.Error())
+		return
+	}
 
+	result, err := getDetectionDetail(id)
+	if err != nil {
+		ReturnMsg(c, FAILURE, err.Error())
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"errorCode": SUCCESS,
+		"message":   "success",
+		"data":      result})
+	return
 }
 
 func getID(c *gin.Context) (uint64, error) {
@@ -266,6 +280,7 @@ func getID(c *gin.Context) (uint64, error) {
 	return detectionID, nil
 }
 
+// TODO
 func getDetectionDetail(id uint64) (map[interface{}]interface{}, error) {
 
 	var result map[interface{}]interface{}
@@ -278,6 +293,7 @@ func Confirm(c *gin.Context) {
 	id, err := getID(c)
 	if err != nil {
 		ReturnMsg(c, FAILURE, err.Error())
+		return
 	}
 
 	if err := confirmDetection(id); err != nil {
