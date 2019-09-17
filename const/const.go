@@ -20,7 +20,7 @@ const LARK_Email2Id_URL = "https://open.feishu.cn/open-apis/user/v3/email2id"
 var LowLarkPeople = []string{"kanghuaisong", "yinzhihong", "hejiahui.2019", "maoyu"}
 var MiddleLarkPeople = []string{"kanghuaisong", "yinzhihong", "gongrui", "zhangshuai.02", "hejiahui.2019", "maoyu"}
 var HighLarkPeople = []string{"kanghuaisong", "yinzhihong", "gongrui", "zhangshuai.02", "chenyujun", "hejiahui.2019", "maoyu"}
-var PermLarkPeople = []string{"kanghuaisong", "lirensheng"}
+var PermLarkPeople = []string{"kanghuaisong", "lirensheng", "zhuqingying"}
 var AppVersionProject = map[string]string{"13": "1", "27": "35", "32": "23", "1128": "375", "1112": "397"}
 
 //权限配置页面操作人员
@@ -32,10 +32,10 @@ var PermToModify = map[string]int{
 	"zhaoxuan.li":   1,
 }
 
-const(
-	ITC_SIGN_SYSTEM_ADDRESS = "https://rocket.bytedance.net/rocket/itc/iossignature?biz="
-	ITC_CERT_SYSTEM_ADDRESS = "https://rocket.bytedance.net/rocket/itc/ioscertification"
-	DayTimeUnit = "天"
+const (
+	ITC_SIGN_SYSTEM_ADDRESS       = "https://rocket.bytedance.net/rocket/itc/iossignature?biz="
+	ITC_CERT_SYSTEM_ADDRESS       = "https://rocket.bytedance.net/rocket/itc/ioscertification"
+	DayTimeUnit                   = "天"
 	IOS_CERT_MANAGE_GROUP_CHAT_ID = "oc_6524b9b1d771ecca33a0dac3df185fd7"
 )
 
@@ -163,7 +163,7 @@ var IOSSelectCapabilitiesMap = map[string]string{
 	"WIRELESS_ACCESSORY_CONFIGURATION": "WIRELESS_ACCESSORY_CONFIGURATION",
 	"FONT_INSTALLATION":                "FONT_INSTALLATION",
 	//"APPLE_ID_AUTH":                    "APPLE_ID_AUTH",
-	"COREMEDIA_HLS_LOW_LATENCY":        "COREMEDIA_HLS_LOW_LATENCY",
+	"COREMEDIA_HLS_LOW_LATENCY": "COREMEDIA_HLS_LOW_LATENCY",
 }
 
 var ConfigCapabilityMap = map[string]string{
