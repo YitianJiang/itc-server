@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	_const "code.byted.org/clientQA/itc-server/const"
+	"code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
@@ -48,33 +48,18 @@ func UploadFile(c *gin.Context) {
 	url := ""
 	nameI, f := c.Get("username")
 	if !f {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "未获取到用户信息！",
-			"errorCode": -1,
-			"data":      "未获取到用户信息！",
-		})
+		errorReturn(c,"未获取到用户信息！",-1)
 		return
 	}
-	file, header, err := c.Request.FormFile("uploadFile")
-	if file == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "未选择上传的文件！",
-			"errorCode": -2,
-		})
-		logs.Error("未选择上传的文件！")
+	//解析上传文件
+	filepath,filename,ok := getFilesFromRequest(c,"uploadFile",true)
+	if !ok {
 		return
 	}
-	//问题文件提前排查（大小<1m）
-	if header.Size < (1 << 20) {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "上传的文件有问题（文件大小异常），请排查！",
-			"errorCode": -2,
-		})
-		logs.Error("上传的文件有问题（文件大小异常）")
+	mFilepath,mFilename,ok2 := getFilesFromRequest(c,"mappingFile",false)
+	if !ok2 {
 		return
 	}
-	defer file.Close()
-	filename := header.Filename
 	//发送lark消息到个人
 	toLarker := c.DefaultPostForm("toLarker", "")
 	var name string
@@ -89,19 +74,13 @@ func UploadFile(c *gin.Context) {
 	platform := c.DefaultPostForm("platform", "")
 	if platform == "" {
 		logs.Error("缺少platform参数！")
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "缺少platform参数！",
-			"errorCode": -3,
-		})
+		errorReturn(c,"缺少platform参数！",-3)
 		return
 	}
 	appId := c.DefaultPostForm("appId", "")
 	if appId == "" {
 		logs.Error("缺少appId参数！")
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "缺少appId参数！",
-			"errorCode": -4,
-		})
+		errorReturn(c,"缺少appId参数！",-3)
 		return
 	}
 	checkItem := c.DefaultPostForm("checkItem", "")
@@ -114,12 +93,19 @@ func UploadFile(c *gin.Context) {
 	extraInfo.CallBackAddr = callBackAddr
 	extraInfo.SkipSelfFlag = skip != ""
 
-	//检验文件格式是否是apk或者ipa
+	//检验文件格式是否是apk或者ipa,校验mapping文件格式
 	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".ipa") ||
 		strings.HasSuffix(filename, ".aab")
 	if !flag {
 		errorFormatFile(c)
 		return
+	}
+	if mFilepath != "" {
+		flagM := strings.HasSuffix(mFilename,".txt")
+		if !flagM {
+			errorFormatFile(c)
+			return
+		}
 	}
 	//检验文件与platform是否匹配，0-安卓apk，1-iOS ipa
 	if platform == "0" {
@@ -154,33 +140,9 @@ func UploadFile(c *gin.Context) {
 		logs.Error("platform参数不合法！")
 		return
 	}
-	_tmpDir := "./tmp"
-	exist, err := PathExists(_tmpDir)
-	if !exist {
-		os.Mkdir(_tmpDir, os.ModePerm)
-	}
-	out, err := os.Create(_tmpDir + "/" + filename)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "安装包文件处理失败，请联系相关人员！",
-			"errorCode": -6,
-		})
-		logs.Fatal("临时文件保存失败")
-		return
-	}
-	defer out.Close()
-	_, err = io.Copy(out, file)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "安装包文件处理失败，请联系相关人员！",
-			"errorCode": -6,
-		})
-		logs.Fatal("临时文件保存失败")
-		return
-	}
+
 	//调试，暂时注释
 	recipients := name
-	filepath := _tmpDir + "/" + filename
 	//1、上传至tos,测试暂时注释
 	//tosUrl, err := upload2Tos(filepath)
 	//2、将相关信息保存至数据库
@@ -219,8 +181,9 @@ func UploadFile(c *gin.Context) {
 	}
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
+		//todo 更改url
 		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
-		//callBackUrl := "http://10.224.14.220:6789/updateDetectInfos"
+		//callBackUrl := "http://10.224.13.149:6789/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -230,16 +193,23 @@ func UploadFile(c *gin.Context) {
 		fileWriter, err := bodyWriter.CreateFormFile("file", filepath)
 		if err != nil {
 			logs.Error("%s", "error writing to buffer: "+err.Error())
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "二进制包处理错误，请联系相关人员！",
-				"errorCode": -1,
-				"data":      "二进制包处理错误，请联系相关人员！",
-			})
+			errorReturn(c,"二进制包处理错误，请联系相关人员！")
 			return
 		}
 		fileHandler, err := os.Open(filepath)
 		defer fileHandler.Close()
 		_, err = io.Copy(fileWriter, fileHandler)
+		if mFilepath != "" {
+			fileWriterM,errM := bodyWriter.CreateFormFile("mFile",mFilepath)
+			if errM != nil {
+				logs.Error("%s", "error writing to buffer: "+errM.Error())
+				errorReturn(c,"mapping文件处理错误，请联系相关人员！")
+				return
+			}
+			mFileHeader, _ := os.Open(mFilepath)
+			defer mFileHeader.Close()
+			io.Copy(fileWriterM,mFileHeader)
+		}
 		contentType := bodyWriter.FormDataContentType()
 		err = bodyWriter.Close()
 		logs.Info("url: ", url)
@@ -248,25 +218,20 @@ func UploadFile(c *gin.Context) {
 			MaxIdleConnsPerHost: 0,
 		}
 		toolHttp := &http.Client{
-			Timeout:   300 * time.Second,
+			Timeout:   600 * time.Second,
 			Transport: &tr,
 		}
 		response, err := toolHttp.Post(url, contentType, bodyBuffer)
 		logs.Notice("taskId:"+fmt.Sprint(dbDetectModelId)+",传输后的bodyBuffer：%v", bodyBuffer)
 		if err != nil {
-			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",上传二进制包出错,%v", err)
-			//response,err = toolHttp.Post(url,contentType,bodyBuffer)
-			//if err != nil {
-			//	logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",重新上传二进制包出错,%v", err)
+			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",上传二进制包出错,", err.Error())
+			dbDetectModel.ID = dbDetectModelId
+			DetectTaskErrorHandle(dbDetectModel, "2", "上传二进制包出错")
 			//及时报警
 			for _, lark_people := range _const.LowLarkPeople {
-				dbDetectModel.ID = dbDetectModelId
-				DetectTaskErrorHandle(dbDetectModel, "2", "上传二进制包出错")
 				utils.LarkDingOneInner(lark_people, "上传二进制包出错，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
 			}
-			//}
 		}
-
 		resBody := &bytes.Buffer{}
 		if response != nil {
 			defer response.Body.Close()
@@ -277,6 +242,9 @@ func UploadFile(c *gin.Context) {
 			logs.Info("upload detect url's response: %+v", data)
 			//删掉临时文件
 			os.Remove(filepath)
+			if mFilepath != ""{
+				os.Remove(mFilepath)
+			}
 		}
 	}()
 	c.JSON(http.StatusOK, gin.H{
@@ -286,6 +254,49 @@ func UploadFile(c *gin.Context) {
 			"taskId": dbDetectModelId,
 		},
 	})
+}
+//emptyError标识该文件必须上传，且对文件大小有要求（大于1M）
+func getFilesFromRequest(c *gin.Context,fieldName string,emptyError bool)(string,string,bool){
+	file,header,_ := c.Request.FormFile(fieldName)
+	if file == nil {
+		if emptyError{
+			errorReturn(c,fieldName+":未选择上传的文件！",-2)
+			logs.Error("未选择上传的文件！")
+			return "","",false
+		}else{
+			return "","",true
+		}
+	}
+	defer file.Close()
+	//logs.Error(fmt.Sprint(header.Size << 20))
+	if emptyError{
+		if header.Size < (1 << 20) {
+			errorReturn(c,fieldName+":上传的文件有问题（文件大小异常），请排查！",-2)
+			logs.Error("上传的文件有问题（文件大小异常）")
+			return "","",false
+		}
+	}
+	filename := header.Filename
+	_tmpDir := "./tmp"
+	exist, err := PathExists(_tmpDir)
+	if !exist {
+		os.Mkdir(_tmpDir, os.ModePerm)
+	}
+	filepath := _tmpDir + "/" + filename
+	out, err := os.Create(filepath)
+	if err != nil {
+		errorReturn(c,fieldName+":安装包文件处理失败，请联系相关人员！",-6)
+		logs.Fatal("临时文件保存失败")
+		return "","",false
+	}
+	defer out.Close()
+	_, err = io.Copy(out, file)
+	if err != nil {
+		errorReturn(c,fieldName+":安装包文件处理失败，请联系相关人员！",-6)
+		logs.Fatal("临时文件保存失败")
+		return "","",false
+	}
+	return filepath,filename,true
 }
 
 /**
