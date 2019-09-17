@@ -19,7 +19,7 @@ type detectionBasic struct {
 	APPID      string `gorm:"column:app_id"  json:"appid"       `
 	APPVersion string `json:"appVersion"  gorm:"column:app_version"`
 	Platform   string `json:"platform"    gorm:"column:platform"`
-	RDUserName string `json:"rd_username" gorm:"column:rd_username"`
+	RDName     string `json:"rd_username" gorm:"column:rd_username"`
 	RDEmail    string `json:"rd_email"    gorm:"column:rd_email"`
 }
 
@@ -57,7 +57,7 @@ type NewDetection struct {
 	APPID         string    `gorm:"column:app_id"`
 	APPVersion    string    `gorm:"column:app_version"`
 	Platform      string    `gorm:"column:platform"`
-	RDUserName    string    `gorm:"column:rd_username"`
+	RDName        string    `gorm:"column:rd_name"`
 	RDEmail       string    `gorm:"column:rd_email"`
 	Key           string    `gorm:"column:key_name"`
 	Description   string    `gorm:"column:description"`
@@ -101,7 +101,7 @@ func printConfirmations(detections *Confirmation) {
 	for _, v := range detections.Permissions {
 		fmt.Printf("%v %v %v %v %v %v %v %v %v %v\n",
 			detections.APPID, detections.APPVersion,
-			detections.Platform, detections.RDUserName,
+			detections.Platform, detections.RDName,
 			detections.RDEmail, v.Key, v.Description,
 			v.RiskLevel, v.Type, v.Creator)
 	}
@@ -110,7 +110,7 @@ func printConfirmations(detections *Confirmation) {
 	for _, v := range detections.SensitiveMethods {
 		fmt.Printf("%v %v %v %v %v %v %v %v %v %v %v\n",
 			detections.APPID, detections.APPVersion,
-			detections.Platform, detections.RDUserName,
+			detections.Platform, detections.RDName,
 			detections.RDEmail, v.Key, v.Description,
 			v.RiskLevel, v.Type, v.Creator, v.CallLocations)
 	}
@@ -119,7 +119,7 @@ func printConfirmations(detections *Confirmation) {
 	for _, v := range detections.SensitiveStrings {
 		fmt.Printf("%v %v %v %v %v %v %v %v %v %v %v\n",
 			detections.APPID, detections.APPVersion,
-			detections.Platform, detections.RDUserName,
+			detections.Platform, detections.RDName,
 			detections.RDEmail, v.Key, v.Description,
 			v.RiskLevel, v.Type, v.Creator, v.CallLocations)
 	}
@@ -166,7 +166,7 @@ func storeNewPermissions(db *gorm.DB, detections *Confirmation) error {
 			APPID:       detections.detectionBasic.APPID,
 			APPVersion:  detections.detectionBasic.APPVersion,
 			Platform:    detections.detectionBasic.Platform,
-			RDUserName:  detections.detectionBasic.RDUserName,
+			RDName:      detections.detectionBasic.RDName,
 			RDEmail:     detections.detectionBasic.RDEmail,
 			Key:         detections.Permissions[i].Key,
 			Description: detections.Permissions[i].Description,
@@ -190,7 +190,7 @@ func storeNewSensiMethods(db *gorm.DB, detections *Confirmation) error {
 			APPID:         detections.detectionBasic.APPID,
 			APPVersion:    detections.detectionBasic.APPVersion,
 			Platform:      detections.detectionBasic.Platform,
-			RDUserName:    detections.detectionBasic.RDUserName,
+			RDName:        detections.detectionBasic.RDName,
 			RDEmail:       detections.detectionBasic.RDEmail,
 			Key:           detections.SensitiveMethods[i].Key,
 			Description:   detections.SensitiveMethods[i].Description,
@@ -215,7 +215,7 @@ func storeNewSensiStrings(db *gorm.DB, detections *Confirmation) error {
 			APPID:         detections.detectionBasic.APPID,
 			APPVersion:    detections.detectionBasic.APPVersion,
 			Platform:      detections.detectionBasic.Platform,
-			RDUserName:    detections.detectionBasic.RDUserName,
+			RDName:        detections.detectionBasic.RDName,
 			RDEmail:       detections.detectionBasic.RDEmail,
 			Key:           detections.SensitiveStrings[i].Key,
 			Description:   detections.SensitiveStrings[i].Description,
@@ -281,9 +281,37 @@ func getID(c *gin.Context) (uint64, error) {
 }
 
 // TODO
-func getDetectionDetail(id uint64) (map[interface{}]interface{}, error) {
+func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 
-	var result map[interface{}]interface{}
+	db, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return nil, err
+	}
+	defer db.Close()
+
+	data, err := retrieveDetection(db, map[string]interface{}{
+		"id": id})
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: GET APPName using RPC
+	appName := "抖音"
+	result := map[string]interface{}{
+		"id":          data[0].ID,
+		"key":         data[0].Key,
+		"risk_level":  data[0].RiskLevel,
+		"type":        data[0].Type,
+		"decription":  data[0].Description,
+		"platform":    data[0].Platform,
+		"rd_name":     data[0].RDName,
+		"rd_email":    data[0].RDEmail,
+		"creator":     data[0].Creator,
+		"app_name":    appName,
+		"app_version": data[0].APPVersion,
+	}
+
 	return result, nil
 }
 
