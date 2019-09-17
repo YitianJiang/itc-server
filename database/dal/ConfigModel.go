@@ -19,7 +19,7 @@ func (ItemConfig) TableName() string{
 }
 //insert
 func InsertItemConfig(config ItemConfig) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false
@@ -34,7 +34,7 @@ func InsertItemConfig(config ItemConfig) bool {
 }
 //query by condition
 func QueryConfigByCondition(condition string) *[]ItemConfig {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil
@@ -50,7 +50,7 @@ func QueryConfigByCondition(condition string) *[]ItemConfig {
 }
 //update
 func UpdateConfigByCondition(condition string, config ItemConfig) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false

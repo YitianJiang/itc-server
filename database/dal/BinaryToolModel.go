@@ -18,7 +18,7 @@ func (BinaryDetectTool) TableName() string {
 }
 //query by map
 func QueryBinaryToolsByCondition(condition string) *[]BinaryDetectTool{
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil
@@ -33,7 +33,7 @@ func QueryBinaryToolsByCondition(condition string) *[]BinaryDetectTool{
 }
 //insert data
 func InsertBinaryTool(binaryTool BinaryDetectTool) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false

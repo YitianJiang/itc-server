@@ -105,7 +105,7 @@ func (TaskSelfItem) TableName() string {
 
 //检查项管理增加自查项
 func InsertItemModel(mutilItem MutilitemStruct) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return false
@@ -321,7 +321,7 @@ func InsertItemModel(mutilItem MutilitemStruct) bool {
 
 //query data
 func QueryItemsByCondition(data map[string]interface{}) *[]QueryItemStruct {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return nil
@@ -377,7 +377,7 @@ func DeleteItemsByCondition(condition map[string]interface{}) bool {
 	itemId, _ := strconv.Atoi(condition["id"].(string))
 	isAll, _ := strconv.Atoi(condition["isGG"].(string))
 	appId := condition["appId"] //string
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return false
@@ -492,7 +492,7 @@ func ConfirmSelfCheck(param map[string]interface{}) (bool, *DetectStruct) {
 	taskId := param["taskId"]
 	data := param["data"]
 	//连接数据库
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return false, nil
@@ -578,7 +578,7 @@ func ConfirmSelfCheck(param map[string]interface{}) (bool, *DetectStruct) {
 
 //根据任务id拿到对应的自查信息
 func GetSelfCheckByTaskId(condition string) (map[uint]int, map[uint]string, map[uint]string) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return nil, nil, nil
@@ -609,7 +609,7 @@ func GetSelfCheckByTaskId(condition string) (map[uint]int, map[uint]string, map[
 	return item, remark, confirmer
 }
 func QueryItem(condition map[string]interface{}) *[]ItemStruct {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return nil
@@ -624,7 +624,7 @@ func QueryItem(condition map[string]interface{}) *[]ItemStruct {
 	return &items
 }
 func InsertAppSelfItem(appItem AppSelfItem) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return false
@@ -640,7 +640,7 @@ func InsertAppSelfItem(appItem AppSelfItem) bool {
 
 //查询app对应自查项
 func QueryAppSelfItem(condition map[string]interface{}) *[]AppSelfItem {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return nil
@@ -658,7 +658,7 @@ func QueryAppSelfItem(condition map[string]interface{}) *[]AppSelfItem {
 
 //插入taskId自查项
 func InsertTaskSelfItem(taskItem TaskSelfItem) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return false
@@ -673,7 +673,7 @@ func InsertTaskSelfItem(taskItem TaskSelfItem) bool {
 
 //查询taskId自查项
 func QueryTaskSelfItemList(taskId int) (bool, []interface{}) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return false, nil

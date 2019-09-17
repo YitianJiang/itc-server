@@ -277,7 +277,7 @@ func (PrivacyHistory) TableName() string {
 
 //insert data
 func InsertDetectModel(detectModel DetectStruct) uint {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return 0
@@ -292,7 +292,7 @@ func InsertDetectModel(detectModel DetectStruct) uint {
 
 //update data
 func UpdateDetectModel(detectModel DetectStruct, content DetectContent) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return err
@@ -320,7 +320,7 @@ func UpdateDetectModel(detectModel DetectStruct, content DetectContent) error {
 
 //update data-----fj
 func UpdateDetectModelNew(detectModel DetectStruct) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return err
@@ -342,7 +342,7 @@ func UpdateDetectModelNew(detectModel DetectStruct) error {
 
 //delete data
 func DeleteDetectModel(detectModeId string) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return err
@@ -360,7 +360,7 @@ func DeleteDetectModel(detectModeId string) error {
  * 更新tos地址
  */
 func UpdateDetectTosUrl(path string, taskId uint) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false
@@ -377,7 +377,7 @@ func UpdateDetectTosUrl(path string, taskId uint) bool {
 
 //query by map
 func QueryDetectModelsByMap(param map[string]interface{}) *[]DetectStruct {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil
@@ -394,7 +394,7 @@ func QueryDetectModelsByMap(param map[string]interface{}) *[]DetectStruct {
 
 //query data
 func QueryTasksByCondition(data map[string]interface{}) (*[]DetectStruct, uint) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return nil, 0
@@ -428,7 +428,7 @@ func QueryTasksByCondition(data map[string]interface{}) (*[]DetectStruct, uint) 
 	if condition == "" {
 		condition = " 1=1 "
 	}
-	connect, err := database.GetConneection()
+	connect, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return nil, 0
@@ -445,7 +445,7 @@ func QueryTasksByCondition(data map[string]interface{}) (*[]DetectStruct, uint) 
 
 //query by map
 func QueryTaskBinaryCheckContent(condition string) *[]DetectContent {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil
@@ -467,7 +467,7 @@ func ConfirmBinaryResult(data map[string]string) bool {
 	remark := data["remark"]
 	status := data["status"]
 	statusInt, _ := strconv.Atoi(status)
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false
@@ -500,7 +500,7 @@ func ConfirmApkBinaryResultNew(data map[string]string) bool {
 	remark := data["remark"]
 	statusInt, _ := strconv.Atoi(data["status"])
 	//statusInt, _ := strconv.Atoi(status)
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false
@@ -524,7 +524,7 @@ func ConfirmApkBinaryResultNew(data map[string]string) bool {
 }
 
 func UpdateOldApkDetectDetailLevel(ids *[]string, levels *[]string, configIds *[]DetailExtraInfo) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return err
@@ -552,7 +552,7 @@ func UpdateOldApkDetectDetailLevel(ids *[]string, levels *[]string, configIds *[
 检测信息insert-----fj
 */
 func InsertDetectInfo(info DetectInfo) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil
@@ -576,7 +576,7 @@ func InsertDetectInfo(info DetectInfo) error {
 敏感信息详情insert------fj
 */
 func InsertDetectDetail(detail DetectContentDetail) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil
@@ -596,7 +596,7 @@ func InsertDetectDetail(detail DetectContentDetail) error {
 }
 
 func InsertDetectDetailBatch(details *[]DetectContentDetail) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil
@@ -621,7 +621,7 @@ func InsertDetectDetailBatch(details *[]DetectContentDetail) error {
 未确认敏感信息数据量查询-----fj
 */
 func QueryUnConfirmDetectContent(condition string) (int, int) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return -1, -1
@@ -646,7 +646,7 @@ func QueryUnConfirmDetectContent(condition string) (int, int) {
 查询apk检测info-----fj
 */
 func QueryDetectInfo(condition string) (*DetectInfo, error) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil, err
@@ -668,7 +668,7 @@ func QueryDetectInfo(condition string) (*DetectInfo, error) {
 兼容.aab查询内容
 */
 func QueryDetectInfo_2(condition string) (*[]DetectInfo, error) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil, err
@@ -690,7 +690,7 @@ func QueryDetectInfo_2(condition string) (*[]DetectInfo, error) {
 查询apk敏感信息----fj
 */
 func QueryDetectContentDetail(condition string) (*[]DetectContentDetail, error) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil, err
@@ -713,7 +713,7 @@ func QueryDetectContentDetail(condition string) (*[]DetectContentDetail, error) 
 可忽略信息insert------fj
 */
 func InsertIgnoredInfo(detail IgnoreInfoStruct) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil
@@ -736,7 +736,7 @@ func InsertIgnoredInfo(detail IgnoreInfoStruct) error {
 可忽略信息批量insert------fj
 */
 func InsertIgnoredInfoBatch(details *[]IgnoreInfoStruct) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil
@@ -764,7 +764,7 @@ func InsertIgnoredInfoBatch(details *[]IgnoreInfoStruct) error {
 查询可忽略信息----fj
 */
 func QueryIgnoredInfo(queryInfo map[string]string) (*[]IgnoreInfoStruct, error) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil, err
@@ -783,7 +783,7 @@ func QueryIgnoredInfo(queryInfo map[string]string) (*[]IgnoreInfoStruct, error) 
 
 //query tb_ios_detect_content
 func QueryNewIOSDetectModel(condition map[string]interface{}) *[]IOSNewDetectContent {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return nil
@@ -800,7 +800,7 @@ func QueryNewIOSDetectModel(condition map[string]interface{}) *[]IOSNewDetectCon
 
 //update tb_ios_detect_content
 func UpdateNewIOSDetectModel(model IOSNewDetectContent, updates map[string]interface{}) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return false
@@ -815,7 +815,7 @@ func UpdateNewIOSDetectModel(model IOSNewDetectContent, updates map[string]inter
 
 //iOS 检测结果分类处理
 func InsertNewIOSDetect(black, method, privacy IOSNewDetectContent) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return false
@@ -844,7 +844,7 @@ func InsertNewIOSDetect(black, method, privacy IOSNewDetectContent) bool {
 
 //insert tb_ios_detect_permission
 func CreatePrivacyHistoryModel(permission PrivacyHistory) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return err
@@ -860,7 +860,7 @@ func CreatePrivacyHistoryModel(permission PrivacyHistory) error {
 
 //query tb_ios_privacy_history
 func QueryPrivacyHistoryModel(condition map[string]interface{}) *[]PrivacyHistory {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return nil
@@ -879,7 +879,7 @@ func QueryPrivacyHistoryModel(condition map[string]interface{}) *[]PrivacyHistor
 查询新旧中间数据
 */
 func QueryIOSDetectContent(condition map[string]interface{}) *[]IOSDetectContent {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return nil
@@ -970,7 +970,7 @@ type CallLocInfo struct {
 查询当前taskId对应app的上一次检测taskId
 */
 func QueryLastTaskId(taskId int) int {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return -1

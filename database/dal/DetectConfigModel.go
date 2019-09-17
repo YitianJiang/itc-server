@@ -126,7 +126,7 @@ func (PermAppRelation) TableName() string {
 新增权限
 */
 func InsertDetectConfig(data DetectConfigStruct) (uint, error) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db err,%v", err)
 		return 0, err
@@ -146,7 +146,7 @@ func InsertDetectConfig(data DetectConfigStruct) (uint, error) {
 查询权限信息
 */
 func QueryDetectConfig(queryData map[string]interface{}) *[]DetectConfigStruct {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db error,%v", err)
 		return nil
@@ -166,7 +166,7 @@ func QueryDetectConfig(queryData map[string]interface{}) *[]DetectConfigStruct {
 查询权限列表信息
 */
 func QueryDetectConfigList(condition string, pageInfo map[string]int) (*[]DetectConfigStruct, int, error) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db error,%v", err)
 		return nil, 0, err
@@ -197,7 +197,7 @@ func QueryDetectConfigList(condition string, pageInfo map[string]int) (*[]Detect
 根据权限信息模糊联查使用该权限的app情况
 */
 func QueryDetectConfigWithSql(sql string) (*[]QueryInfoWithPerm, error) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db error,%v", err)
 		return nil, err
@@ -217,7 +217,7 @@ func QueryDetectConfigWithSql(sql string) (*[]QueryInfoWithPerm, error) {
 修改权限信息
 */
 func UpdataDetectConfig(data map[string]interface{}) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db failed, %v", err)
 		return err
@@ -237,7 +237,7 @@ func UpdataDetectConfig(data map[string]interface{}) error {
 删除权限信息----暂不对外提供接口
 */
 func DeleteDetectConfig(condition string) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db failed,%v", err)
 		return err
@@ -256,7 +256,7 @@ func DeleteDetectConfig(condition string) error {
 新增权限app对应关系
 */
 func InsertPermAppRelation(relation PermAppRelation) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db failed,%v", err)
 		return err
@@ -276,7 +276,7 @@ func InsertPermAppRelation(relation PermAppRelation) error {
 更新权限app对应关系
 */
 func UpdataPermAppRelation(data *PermAppRelation) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db failed,%v", err)
 		return err
@@ -297,7 +297,7 @@ func UpdataPermAppRelation(data *PermAppRelation) error {
 查询权限app关系
 */
 func QueryPermAppRelation(data map[string]interface{}) (*[]PermAppRelation, error) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db failed,%v", err)
 		return nil, err
@@ -316,7 +316,7 @@ func QueryPermAppRelation(data map[string]interface{}) (*[]PermAppRelation, erro
 查询权限信息withGroup
 */
 func QueryPermAppRelationWithGroup(data map[string]interface{}) (*[]PermAppRelation, error) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db failed,%v", err)
 		return nil, err
@@ -335,7 +335,7 @@ func QueryPermAppRelationWithGroup(data map[string]interface{}) (*[]PermAppRelat
 新增权限操作历史
 */
 func InsertPermOperationHistory(data PermHistory) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db failed,%v", err)
 		return err
@@ -355,7 +355,7 @@ func InsertPermOperationHistory(data PermHistory) error {
 批量插入群仙操作历史
 */
 func BatchInsertPermHistory(infos *[]PermHistory) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db failed,%v", err)
 		return err
@@ -380,7 +380,7 @@ func BatchInsertPermHistory(infos *[]PermHistory) error {
 查询权限操作历史
 */
 func QueryPermHistory(queryData map[string]interface{}) (*[]PermHistory, error) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db failed,%v", err)
 		return nil, err

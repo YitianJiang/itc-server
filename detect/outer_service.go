@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/gopkg/logs"
@@ -178,10 +177,12 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 
 	task := queryLastestDetectResult(map[string]interface{}{
 		"app_id":      appID,
-		"app_version": appVersion})
+		"app_version": appVersion,
+		"platform":    0,
+		"status":      1})
 	if task == nil {
-		msg := "Failed to find record in database about APP ID is " +
-			appID + " and Version is " + appVersion
+		msg := "Failed to find binary detect result in database about" +
+			" APP ID is " + appID + " and Version is " + appVersion
 		logs.Error(msg)
 		errorReturn(c, msg)
 		return
@@ -203,19 +204,29 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 	return
 }
 
-func queryLastestDetectResult(param map[string]interface{}) *dal.DetectStruct {
-	connection, err := database.GetConneection()
+func queryLastestDetectResult(
+	condition map[string]interface{}) *dal.DetectStruct {
+
+	db, err := database.GetDBConnection()
 	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
+		logs.Error("Connect to DB failed: %v", err)
 		return nil
 	}
-	defer connection.Close()
+	defer db.Close()
 
 	var detect dal.DetectStruct
-	db := connection.Table(dal.DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	if err := db.Where(param).Order("created_at desc").First(&detect).Error; err != nil {
-		logs.Error("%v", err)
-		return nil
+	if err := db.Debug().Where(condition).Order("created_at desc").
+		First(&detect).Error; err != nil {
+		logs.Error("Cannot find binary detect result about version %v :%v", condition["app_version"], err)
+		// Return the lastest binary detect result if the binary detect
+		// result of specific version was not found.
+		delete(condition, "app_version")
+		if err := db.Debug().Where(condition).Order("created_at desc").
+			First(&detect).Error; err != nil {
+			logs.Error("Cannot find any binary detect result")
+			return nil
+		}
 	}
+
 	return &detect
 }

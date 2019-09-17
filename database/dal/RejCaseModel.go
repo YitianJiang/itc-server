@@ -67,7 +67,7 @@ func (rejCase) TableName() string {
 */
 
 func QueryByConditions(param map[string]string) (*[]RejListInfo,int,error){
-	connection,err :=database.GetConneection()
+	connection,err :=database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed:%v",err)
 		return nil,0,err
@@ -104,7 +104,7 @@ func QueryByConditions(param map[string]string) (*[]RejListInfo,int,error){
 	}
 
 	var total totalStruct
-	connect,err := database.GetConneection()
+	connect,err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
 		return nil,0,err
@@ -126,7 +126,7 @@ func QueryByConditions(param map[string]string) (*[]RejListInfo,int,error){
 	add rejCases
 */
 func InsertRejCase(data map[string]interface{}) error {
-	connection,err :=database.GetConneection()
+	connection,err :=database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed:%v",err)
 		return err
@@ -161,7 +161,7 @@ func InsertRejCase(data map[string]interface{}) error {
 	logical delete rejCase in the database
  */
 func DeleteCase(id int) error  {
-	connection,err :=database.GetConneection()
+	connection,err :=database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed:%v",err)
 		return err
@@ -177,7 +177,7 @@ func DeleteCase(id int) error  {
 }
 
 func UpdateRejCaseofSolution(data map[string]string) error {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed:%v", err)
 		return err

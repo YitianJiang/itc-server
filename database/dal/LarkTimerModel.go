@@ -34,7 +34,7 @@ func (LarkGroupMsg) TableName() string {
 }
 
 func InsertLarkMsgTimer(timer LarkMsgTimer) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false
@@ -67,7 +67,7 @@ func InsertLarkMsgTimer(timer LarkMsgTimer) bool {
 	return true
 }
 func QueryLarkMsgTimerByAppId(appId int) *LarkMsgTimer {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil
@@ -84,7 +84,7 @@ func QueryLarkMsgTimerByAppId(appId int) *LarkMsgTimer {
 }
 //insert data
 func InsertLarkGroup(group LarkGroupMsg) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false
@@ -100,7 +100,7 @@ func InsertLarkGroup(group LarkGroupMsg) bool {
 }
 //query data by condition
 func QueryLarkGroupByCondition(condition string) *[]LarkGroupMsg {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil
@@ -122,7 +122,7 @@ func QueryLarkGroupByCondition(condition string) *[]LarkGroupMsg {
 }
 //update data by id
 func UpdateLarkGroupById(larkGroup LarkGroupMsg) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false
@@ -145,7 +145,7 @@ func UpdateLarkGroupById(larkGroup LarkGroupMsg) bool {
 }
 //delete data by id
 func DeleteLarkGroupById(larkGroup LarkGroupMsg) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false

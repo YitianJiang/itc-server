@@ -1,14 +1,15 @@
 package devconnmanager
 
 import (
+	"strings"
+
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/logs"
-	"strings"
 )
 
 func DeleteAccountInfo(teamId string) int {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return -1
@@ -34,7 +35,7 @@ func DeleteAccountInfo(teamId string) int {
 }
 
 func InsertAccountInfo(accountInfo AccountInfo) int {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return -1
@@ -61,7 +62,7 @@ func InsertAccountInfo(accountInfo AccountInfo) int {
 }
 
 func QueryAccountInfo(condition map[string]interface{}) *[]AccountInfo {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return nil
@@ -97,7 +98,7 @@ func CheckAllCertManagerAndAdmin(perms []string) bool {
 	}
 	checkResult := false
 	for _, perm := range perms {
-		if perm == "admin"||perm=="all_cert_manager" {
+		if perm == "admin" || perm == "all_cert_manager" {
 			checkResult = true
 			break
 		}
@@ -130,7 +131,7 @@ func TransferValues2AccInfoWithAuth(accountInfo *AccountInfo, perms []string) *A
 }
 
 func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]interface{} {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return nil
@@ -159,7 +160,7 @@ func QueryAccInfoWithAuth(resPerms *GetPermsResponse) *[]interface{} {
 
 //获取权限信息MAP
 func QueryAccInfoMapWithoutAuth(resPerms *GetPermsResponse) *map[string]AccInfoWithoutAuth {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return nil
@@ -180,7 +181,7 @@ func QueryAccInfoMapWithoutAuth(resPerms *GetPermsResponse) *map[string]AccInfoW
 }
 
 func UpdateAccountInfo(accountInfo AccountInfo) int {
-	conn, err := database.GetConneection()
+	conn, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Get DB Connection Failed: ", err)
 		return -1

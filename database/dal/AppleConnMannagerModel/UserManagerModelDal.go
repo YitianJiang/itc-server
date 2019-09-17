@@ -7,7 +7,7 @@ import (
 )
 
 func DeleteVisibleAppInfo(condition map[string]interface{}) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false
@@ -19,7 +19,7 @@ func DeleteVisibleAppInfo(condition map[string]interface{}) bool {
 }
 
 func InsertVisibleAppInfo (appInfo RetAllVisibleAppItem,teamId string) bool {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false
@@ -39,7 +39,7 @@ func InsertVisibleAppInfo (appInfo RetAllVisibleAppItem,teamId string) bool {
 }
 
 func SearchVisibleAppInfos (condition map[string]interface{}) (*[]RetAllVisibleAppItem,bool) {
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	var AllVisibleAppObjResponse []RetAllVisibleAppItem
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
@@ -67,7 +67,7 @@ func addStringFromSlice(x []string) string{
 }
 
 func InsertUserPermEditHistoryDB(userPermInfoReq *UserPermEditReq) bool{
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false
@@ -113,7 +113,7 @@ func InsertUserPermEditHistoryDB(userPermInfoReq *UserPermEditReq) bool{
 }
 
 func InsertUserInvitedHistoryDB(userInvitedInfoReq *UserInvitedReq,invitedOrCancel string) bool{
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false
@@ -133,7 +133,7 @@ func InsertUserInvitedHistoryDB(userInvitedInfoReq *UserInvitedReq,invitedOrCanc
 }
 
 func DeleteUserHistoryDB(UserDeleteobj *UserDeleteReq,invitedOrCancel string) bool{
-	connection, err := database.GetConneection()
+	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return false
