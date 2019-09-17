@@ -247,18 +247,6 @@ func UnconfirmedList(c *gin.Context) {}
 // UnconfirmedDetail returns the detail of the specific detection from table new_detection.
 func UnconfirmedDetail(c *gin.Context) {
 
-	// id, exist := c.GetQuery("id")
-	// if !exist {
-	// 	ReturnMsg(c, FAILURE, "Miss id")
-	// 	return
-	// }
-
-	// detectionID, err := strconv.ParseUint(id, 10, 64)
-	// if err != nil {
-	// 	ReturnMsg(c, FAILURE, "Parse id error: "+err.Error())
-	// 	return
-	// }
-
 	// result, err := getDetectionDetail(detectionID)
 
 }
@@ -286,18 +274,6 @@ func getDetectionDetail(id uint64) (map[interface{}]interface{}, error) {
 
 // Confirm set the specific detection's the value of confirmed TRUE.
 func Confirm(c *gin.Context) {
-
-	// id, exist := c.GetQuery("id")
-	// if !exist {
-	// 	ReturnMsg(c, FAILURE, "Miss id")
-	// 	return
-	// }
-
-	// detectionID, err := strconv.ParseUint(id, 10, 64)
-	// if err != nil {
-	// 	ReturnMsg(c, FAILURE, "Parse id error: "+err.Error())
-	// 	return
-	// }
 
 	id, err := getID(c)
 	if err != nil {
