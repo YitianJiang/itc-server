@@ -259,10 +259,21 @@ func UnconfirmedList(c *gin.Context) {
 	if int(sieve["page"].(float64)) <= 0 ||
 		int(sieve["pageSize"].(float64)) <= 0 {
 		ReturnMsg(c, FAILURE, "Invalid page or pageSize")
+		return
 	}
 
-	data, err := getDetectionList(sieve)
+	data, total, err := getDetectionList(sieve)
+	if err != nil {
+		ReturnMsg(c, FAILURE, "Failed to get detection list: "+err.Error())
+		return
+	}
 
+	c.JSON(http.StatusOK, gin.H{
+		"errorCode": SUCCESS,
+		"message":   "success",
+		"total":     total,
+		"data":      data})
+	logs.Info("Get unconfirmed detections list success")
 	return
 }
 
@@ -277,12 +288,12 @@ type detectionOutline struct {
 }
 
 func getDetectionList(
-	sieve map[string]interface{}) ([]detectionOutline, error) {
+	sieve map[string]interface{}) ([]detectionOutline, int, error) {
 
 	db, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
-		return nil, err
+		return nil, 0, err
 	}
 	defer db.Close()
 
@@ -294,12 +305,13 @@ func getDetectionList(
 
 	data, err := getDetectionOutline(db, sieve)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	pages := len(data)/pageSize + 1
-	if pages < 0 || page > pages {
-		return nil, errors.New("Invalid page")
+	if pages < 0 || page > pages ||
+		(page == pages && (len(data)%pageSize == 0)) {
+		return nil, 0, errors.New("Invalid page")
 	}
 
 	var result []detectionOutline
@@ -314,7 +326,7 @@ func getDetectionList(
 		}
 	}
 
-	return result, nil
+	return result, len(data), nil
 }
 
 func getDetectionOutline(db *gorm.DB, sieve map[string]interface{}) (
