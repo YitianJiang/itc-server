@@ -262,10 +262,6 @@ func UnconfirmedList(c *gin.Context) {
 	}
 
 	data, err := getDetectionList(sieve)
-	fmt.Println(">>>>>>>>>> show <<<<<<<<<<")
-	for i := range data {
-		fmt.Println(data[i])
-	}
 
 	return
 }
@@ -299,10 +295,6 @@ func getDetectionList(
 	data, err := getDetectionOutline(db, sieve)
 	if err != nil {
 		return nil, err
-	}
-	fmt.Println(">>>>>>>>>> data <<<<<<<<<<")
-	for i := range data {
-		fmt.Println(data[i])
 	}
 
 	pages := len(data)/pageSize + 1
