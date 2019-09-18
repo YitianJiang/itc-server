@@ -25,6 +25,8 @@ type detectionBasic struct {
 
 // If the type is "敏感方法", the key is equal to className.methodName
 type detectionDetail struct {
+	ClassName     string         `json:"className"`
+	MethodName    string         `json:"methodName"`
 	Key           string         `json:"key"      gorm:"column:key_name"`
 	Description   string         `json:"desc"     gorm:"column:description"`
 	Type          string         `json:"type"     gorm:"column:type"`
@@ -87,7 +89,7 @@ func UploadUnconfirmedDetections(c *gin.Context) {
 		return
 	}
 
-	printConfirmations(&detections)
+	// printConfirmations(&detections)
 
 	go handleNewDetections(&detections)
 
@@ -185,14 +187,16 @@ func storeNewPermissions(db *gorm.DB, detections *Confirmation) error {
 func storeNewSensiMethods(db *gorm.DB, detections *Confirmation) error {
 
 	for i := range detections.SensitiveMethods {
-		callLocation, _ := json.Marshal(detections.SensitiveMethods[i].CallLocations)
+		callLocation, _ := json.Marshal(
+			detections.SensitiveMethods[i].CallLocations)
 		if err := insertDetection(db, &NewDetection{
-			APPID:         detections.detectionBasic.APPID,
-			APPVersion:    detections.detectionBasic.APPVersion,
-			Platform:      detections.detectionBasic.Platform,
-			RDName:        detections.detectionBasic.RDName,
-			RDEmail:       detections.detectionBasic.RDEmail,
-			Key:           detections.SensitiveMethods[i].Key,
+			APPID:      detections.detectionBasic.APPID,
+			APPVersion: detections.detectionBasic.APPVersion,
+			Platform:   detections.detectionBasic.Platform,
+			RDName:     detections.detectionBasic.RDName,
+			RDEmail:    detections.detectionBasic.RDEmail,
+			Key: detections.SensitiveMethods[i].ClassName +
+				"." + detections.SensitiveMethods[i].MethodName,
 			Description:   detections.SensitiveMethods[i].Description,
 			Type:          detections.SensitiveMethods[i].Type,
 			RiskLevel:     detections.SensitiveMethods[i].RiskLevel,
@@ -343,7 +347,8 @@ func getDetectionOutline(db *gorm.DB, sieve map[string]interface{}) (
 	return result, nil
 }
 
-// UnconfirmedDetail returns the detail of the specific detection from table new_detection.
+// UnconfirmedDetail returns the detail of the specific detection
+// from table new_detection.
 func UnconfirmedDetail(c *gin.Context) {
 
 	id, err := getID(c)
@@ -364,6 +369,7 @@ func UnconfirmedDetail(c *gin.Context) {
 	return
 }
 
+// id for table new_detection.
 func getID(c *gin.Context) (uint64, error) {
 
 	id, exist := c.GetQuery("id")
