@@ -3,7 +3,6 @@ package detect
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -89,42 +88,10 @@ func UploadUnconfirmedDetections(c *gin.Context) {
 		return
 	}
 
-	// printConfirmations(&detections)
-
 	go handleNewDetections(&detections)
 
 	ReturnMsg(c, SUCCESS, "Receive new detections success")
 	return
-}
-
-func printConfirmations(detections *Confirmation) {
-
-	fmt.Println(">>>>>>>>>> Permissions <<<<<<<<<<")
-	for _, v := range detections.Permissions {
-		fmt.Printf("%v %v %v %v %v %v %v %v %v %v\n",
-			detections.APPID, detections.APPVersion,
-			detections.Platform, detections.RDName,
-			detections.RDEmail, v.Key, v.Description,
-			v.RiskLevel, v.Type, v.Creator)
-	}
-
-	fmt.Println(">>>>>>>>>> Method <<<<<<<<<<")
-	for _, v := range detections.SensitiveMethods {
-		fmt.Printf("%v %v %v %v %v %v %v %v %v %v %v\n",
-			detections.APPID, detections.APPVersion,
-			detections.Platform, detections.RDName,
-			detections.RDEmail, v.Key, v.Description,
-			v.RiskLevel, v.Type, v.Creator, v.CallLocations)
-	}
-
-	fmt.Println(">>>>>>>>>> Strings <<<<<<<<<<")
-	for _, v := range detections.SensitiveStrings {
-		fmt.Printf("%v %v %v %v %v %v %v %v %v %v %v\n",
-			detections.APPID, detections.APPVersion,
-			detections.Platform, detections.RDName,
-			detections.RDEmail, v.Key, v.Description,
-			v.RiskLevel, v.Type, v.Creator, v.CallLocations)
-	}
 }
 
 func handleNewDetections(detections *Confirmation) {
