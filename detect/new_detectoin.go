@@ -323,7 +323,7 @@ func UnconfirmedList(c *gin.Context) {
 type detectionOutline struct {
 	ID          uint64 `gorm:"column:id"          json:"id"`
 	RDName      string `gorm:"column:rd_name"     json:"rd_name"`
-	Key         string `gorm:"column:key_name"    json:"key"`
+	Key         string `gorm:"column:key_name"    json:"key_name"`
 	Description string `gorm:"column:description" json:"description"`
 	Type        string `gorm:"column:type"        json:"type"`
 	RiskLevel   int    `gorm:"column:risk_level"  json:"risk_level"`
@@ -404,6 +404,7 @@ func UnconfirmedDetail(c *gin.Context) {
 	result, err := getDetectionDetail(id)
 	if err != nil {
 		ReturnMsg(c, FAILURE, err.Error())
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
