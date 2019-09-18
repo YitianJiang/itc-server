@@ -199,10 +199,11 @@ func getUncnofirmedDetectionKeys(
 	return result, nil
 }
 
-func storeNewPermissions(db *gorm.DB, detections *Confirmation) error {
+func storeNewPermissions(db *gorm.DB, detections *Confirmation) {
 
 	for i := range detections.Permissions {
-		if err := insertDetection(db, &NewDetection{
+		// It is acceptable if one detection was damaged.
+		insertDetection(db, &NewDetection{
 			APPID:       detections.detectionBasic.APPID,
 			APPVersion:  detections.detectionBasic.APPVersion,
 			Platform:    detections.detectionBasic.Platform,
@@ -214,20 +215,21 @@ func storeNewPermissions(db *gorm.DB, detections *Confirmation) error {
 			RiskLevel:   detections.Permissions[i].RiskLevel,
 			Creator:     detections.Permissions[i].Creator,
 			Confirmed:   false,
-		}); err != nil {
-			return err
-		}
+		})
 	}
-
-	return nil
 }
 
-func storeNewSensiMethods(db *gorm.DB, detections *Confirmation) error {
+func storeNewSensiMethods(db *gorm.DB, detections *Confirmation) {
 
 	for i := range detections.SensitiveMethods {
-		callLocation, _ := json.Marshal(
+		// It is acceptable if one detection was damaged.
+		callLocation, err := json.Marshal(
 			detections.SensitiveMethods[i].CallLocations)
-		if err := insertDetection(db, &NewDetection{
+		if err != nil {
+			logs.Error("Failed to marshal data: %v\n%v", err, detections.SensitiveMethods[i])
+			continue
+		}
+		insertDetection(db, &NewDetection{
 			APPID:         detections.detectionBasic.APPID,
 			APPVersion:    detections.detectionBasic.APPVersion,
 			Platform:      detections.detectionBasic.Platform,
@@ -240,19 +242,21 @@ func storeNewSensiMethods(db *gorm.DB, detections *Confirmation) error {
 			Creator:       detections.SensitiveMethods[i].Creator,
 			CallLocations: string(callLocation),
 			Confirmed:     false,
-		}); err != nil {
-			return err
-		}
+		})
 	}
 
-	return nil
 }
 
-func storeNewSensiStrings(db *gorm.DB, detections *Confirmation) error {
+func storeNewSensiStrings(db *gorm.DB, detections *Confirmation) {
 
 	for i := range detections.SensitiveStrings {
-		callLocation, _ := json.Marshal(detections.SensitiveStrings[i].CallLocations)
-		if err := insertDetection(db, &NewDetection{
+		// It is acceptable if one detection was damaged.
+		callLocation, err := json.Marshal(detections.SensitiveStrings[i].CallLocations)
+		if err != nil {
+			logs.Error("Failed to marshal data: %v\n%v", err, detections.SensitiveStrings[i])
+			continue
+		}
+		insertDetection(db, &NewDetection{
 			APPID:         detections.detectionBasic.APPID,
 			APPVersion:    detections.detectionBasic.APPVersion,
 			Platform:      detections.detectionBasic.Platform,
@@ -265,17 +269,14 @@ func storeNewSensiStrings(db *gorm.DB, detections *Confirmation) error {
 			Creator:       detections.SensitiveStrings[i].Creator,
 			CallLocations: string(callLocation),
 			Confirmed:     false,
-		}); err != nil {
-			return err
-		}
+		})
 	}
-
-	return nil
 }
 
 func insertDetection(db *gorm.DB, detection *NewDetection) error {
+
 	if err := db.Debug().Create(detection).Error; err != nil {
-		logs.Error("Failed to create record in table new_detection: %v", err.Error())
+		logs.Error("Failed to insert detection in table new_detection: %v\n%v", err, *detection)
 		return err
 	}
 
