@@ -242,7 +242,102 @@ func insertDetection(db *gorm.DB, detection *NewDetection) error {
 }
 
 // UnconfirmedList returns all unconfirmed detections from table new_detection.
-func UnconfirmedList(c *gin.Context) {}
+func UnconfirmedList(c *gin.Context) {
+
+	body, err := ioutil.ReadAll(c.Request.Body)
+	if err != nil {
+		ReturnMsg(c, FAILURE, "Failed to read request body: "+err.Error())
+		return
+	}
+
+	sieve := make(map[string]interface{})
+	if err := json.Unmarshal(body, &sieve); err != nil {
+		ReturnMsg(c, FAILURE, "Failed to unmarshal request body: "+err.Error())
+		return
+	}
+
+	if int(sieve["page"].(float64)) <= 0 ||
+		int(sieve["pageSize"].(float64)) <= 0 {
+		ReturnMsg(c, FAILURE, "Invalid page or pageSize")
+	}
+
+	data, err := getDetectionList(sieve)
+	fmt.Println(">>>>>>>>>> show <<<<<<<<<<")
+	for i := range data {
+		fmt.Println(data[i])
+	}
+
+	return
+}
+
+type detectionOutline struct {
+	ID          uint64 `gorm:"column:id"          json:"id"`
+	RDName      string `gorm:"column:rd_name"     json:"rd_name"`
+	Key         string `gorm:"column:key_name"    json:"key"`
+	Description string `gorm:"column:description" json:"description"`
+	Type        string `gorm:"column:type"        json:"type"`
+	RiskLevel   int    `gorm:"column:risk_level"  json:"risk_level"`
+	Creator     string `gorm:"column:creator"     json:"creator"`
+}
+
+func getDetectionList(
+	sieve map[string]interface{}) ([]detectionOutline, error) {
+
+	db, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return nil, err
+	}
+	defer db.Close()
+
+	page := int(sieve["page"].(float64))
+	pageSize := int(sieve["pageSize"].(float64))
+	delete(sieve, "page")
+	delete(sieve, "pageSize")
+	sieve["confirmed"] = false // Only retrieve unconfirmed detections.
+
+	data, err := getDetectionOutline(db, sieve)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(">>>>>>>>>> data <<<<<<<<<<")
+	for i := range data {
+		fmt.Println(data[i])
+	}
+
+	pages := len(data)/pageSize + 1
+	if pages < 0 || page > pages {
+		return nil, errors.New("Invalid page")
+	}
+
+	var result []detectionOutline
+	if page == pages {
+		// Last page
+		for i := (page - 1) * pageSize; i < len(data); i++ {
+			result = append(result, data[i])
+		}
+	} else {
+		for i := 0; i < pageSize; i++ {
+			result = append(result, data[(page-1)*pageSize+i])
+		}
+	}
+
+	return result, nil
+}
+
+func getDetectionOutline(db *gorm.DB, sieve map[string]interface{}) (
+	[]detectionOutline, error) {
+
+	var result []detectionOutline
+	if err := db.Debug().Table("new_detection").
+		Select("id, rd_name, key_name, description, type, risk_level, creator").
+		Where(sieve).Find(&result).Error; err != nil {
+		logs.Error("Failed to retrieve detection outline: %v", err)
+		return nil, err
+	}
+
+	return result, nil
+}
 
 // UnconfirmedDetail returns the detail of the specific detection from table new_detection.
 func UnconfirmedDetail(c *gin.Context) {
@@ -280,7 +375,6 @@ func getID(c *gin.Context) (uint64, error) {
 	return detectionID, nil
 }
 
-// TODO
 func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 
 	db, err := database.GetDBConnection()
