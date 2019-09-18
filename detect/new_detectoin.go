@@ -145,8 +145,6 @@ func handleNewDetections(detections *Confirmation) {
 // TODO
 func storeNewDetections(detections *Confirmation) error {
 
-	// Diff with exist but unconfirmed detections
-
 	db, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
@@ -162,6 +160,7 @@ func storeNewDetections(detections *Confirmation) error {
 		return err
 	}
 
+	// Remove detections that exist but are unconfirmed.
 	removeDuplicatePermission(detections, keyMap)
 	removeDuplicateSensitiveMethod(detections, keyMap)
 	removeDuplicateSensitiveString(detections, keyMap)
