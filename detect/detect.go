@@ -281,7 +281,10 @@ func getFilesFromRequest(c *gin.Context, fieldName string, emptyError bool) (str
 	_tmpDir := "./tmp"
 	exist, err := PathExists(_tmpDir)
 	if !exist {
-		os.Mkdir(_tmpDir, os.ModePerm)
+		if err := os.Mkdir(_tmpDir, os.ModePerm); err != nil {
+			logs.Error("Failed to make directory %v", _tmpDir)
+			return "", "", false
+		}
 	}
 	filepath := _tmpDir + "/" + filename
 	out, err := os.Create(filepath)
