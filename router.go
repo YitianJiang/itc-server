@@ -24,7 +24,7 @@ func InitRouter(r *ginex.Engine) {
 	// 获取检测任务结果
 	r.GET("/api/detect/getTaskDetailNotItc", detect.GetSpecificAppVersionDetectResults)
 	r.POST("/detect/new/uploadUnconfirmedDetections", detect.UploadUnconfirmedDetections)
-	r.GET("/detect/new/unconfirmedList", detect.UnconfirmedList)
+	r.POST("/detect/new/unconfirmedList", detect.UnconfirmedList)
 	r.GET("/detect/new/unconfirmedDetail", detect.UnconfirmedDetail)
 	r.GET("/detect/new/confirm", detect.Confirm)
 
