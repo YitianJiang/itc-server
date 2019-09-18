@@ -154,11 +154,83 @@ func storeNewDetections(detections *Confirmation) error {
 	}
 	defer db.Close()
 
+	keyMap, err := getUncnofirmedDetectionKeys(db, map[string]interface{}{
+		"app_id":    detections.APPID,
+		"platform":  detections.Platform,
+		"confirmed": false})
+	if err != nil {
+		return err
+	}
+
+	removeDuplicatePermission(detections, keyMap)
+	removeDuplicateSensitiveMethod(detections, keyMap)
+	removeDuplicateSensitiveString(detections, keyMap)
+
 	storeNewPermissions(db, detections)
 	storeNewSensiMethods(db, detections)
 	storeNewSensiStrings(db, detections)
 
 	return nil
+}
+
+func removeDuplicatePermission(
+	detections *Confirmation, keyMap map[string]bool) {
+
+	var r []detectionDetail
+	for i := range detections.Permissions {
+		if _, ok := keyMap[detections.Permissions[i].Key]; !ok {
+			r = append(r, detections.Permissions[i])
+		}
+	}
+	detections.Permissions = r
+}
+
+func removeDuplicateSensitiveMethod(
+	detections *Confirmation, keyMap map[string]bool) {
+
+	var r []detectionDetail
+	for i := range detections.SensitiveMethods {
+		detections.SensitiveMethods[i].Key =
+			detections.SensitiveMethods[i].ClassName + "." +
+				detections.SensitiveMethods[i].MethodName
+		if _, ok := keyMap[detections.SensitiveMethods[i].Key]; !ok {
+			r = append(r, detections.SensitiveMethods[i])
+		}
+	}
+	detections.SensitiveMethods = r
+}
+
+func removeDuplicateSensitiveString(
+	detections *Confirmation, keyMap map[string]bool) {
+
+	var r []detectionDetail
+	for i := range detections.SensitiveStrings {
+		if _, ok := keyMap[detections.SensitiveStrings[i].Key]; !ok {
+			r = append(r, detections.SensitiveStrings[i])
+		}
+	}
+	detections.SensitiveStrings = r
+}
+
+func getUncnofirmedDetectionKeys(
+	db *gorm.DB, condition map[string]interface{}) (map[string]bool, error) {
+
+	var keys []struct {
+		Key string `gorm:"column:key_name"`
+	}
+	if err := db.Debug().Table("new_detection").Select("key_name").
+		Where(condition).Scan(&keys).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
+	}
+
+	// The value of map is useless.
+	result := make(map[string]bool)
+	for i := range keys {
+		result[keys[i].Key] = false
+	}
+
+	return result, nil
 }
 
 func storeNewPermissions(db *gorm.DB, detections *Confirmation) error {
@@ -190,13 +262,12 @@ func storeNewSensiMethods(db *gorm.DB, detections *Confirmation) error {
 		callLocation, _ := json.Marshal(
 			detections.SensitiveMethods[i].CallLocations)
 		if err := insertDetection(db, &NewDetection{
-			APPID:      detections.detectionBasic.APPID,
-			APPVersion: detections.detectionBasic.APPVersion,
-			Platform:   detections.detectionBasic.Platform,
-			RDName:     detections.detectionBasic.RDName,
-			RDEmail:    detections.detectionBasic.RDEmail,
-			Key: detections.SensitiveMethods[i].ClassName +
-				"." + detections.SensitiveMethods[i].MethodName,
+			APPID:         detections.detectionBasic.APPID,
+			APPVersion:    detections.detectionBasic.APPVersion,
+			Platform:      detections.detectionBasic.Platform,
+			RDName:        detections.detectionBasic.RDName,
+			RDEmail:       detections.detectionBasic.RDEmail,
+			Key:           detections.SensitiveMethods[i].Key,
 			Description:   detections.SensitiveMethods[i].Description,
 			Type:          detections.SensitiveMethods[i].Type,
 			RiskLevel:     detections.SensitiveMethods[i].RiskLevel,
@@ -214,7 +285,7 @@ func storeNewSensiMethods(db *gorm.DB, detections *Confirmation) error {
 func storeNewSensiStrings(db *gorm.DB, detections *Confirmation) error {
 
 	for i := range detections.SensitiveStrings {
-		callLocation, _ := json.Marshal(detections.SensitiveMethods[i].CallLocations)
+		callLocation, _ := json.Marshal(detections.SensitiveStrings[i].CallLocations)
 		if err := insertDetection(db, &NewDetection{
 			APPID:         detections.detectionBasic.APPID,
 			APPVersion:    detections.detectionBasic.APPVersion,
@@ -420,6 +491,7 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 }
 
 // Confirm set the specific detection's the value of confirmed TRUE.
+// TODO: insert the confirmed detection to table...
 func Confirm(c *gin.Context) {
 
 	id, err := getID(c)
