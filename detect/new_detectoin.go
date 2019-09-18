@@ -3,6 +3,7 @@ package detect
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -315,7 +316,7 @@ func UnconfirmedList(c *gin.Context) {
 		"message":   "success",
 		"total":     total,
 		"data":      data})
-	logs.Info("Get unconfirmed detections list success")
+	logs.Info("Get unconfirmed detection list success")
 	return
 }
 
@@ -345,14 +346,14 @@ func getDetectionList(
 	delete(sieve, "pageSize")
 	sieve["confirmed"] = false // Only retrieve unconfirmed detections.
 
+	// The length of data will always greater than zero.
 	data, err := getDetectionOutline(db, sieve)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	pages := len(data)/pageSize + 1
-	if pages < 0 || page > pages ||
-		(page == pages && (len(data)%pageSize == 0)) {
+	if pages < 0 || page > pages {
 		return nil, 0, errors.New("Invalid page")
 	}
 
@@ -380,6 +381,11 @@ func getDetectionOutline(db *gorm.DB, sieve map[string]interface{}) (
 		Where(sieve).Find(&result).Error; err != nil {
 		logs.Error("Failed to retrieve detection outline: %v", err)
 		return nil, err
+	}
+
+	if len(result) <= 0 {
+		logs.Error("Cannot find any matched detection, condition error: %v", sieve)
+		return nil, fmt.Errorf("Cannot find any matched detection, condition error: %v", sieve)
 	}
 
 	return result, nil
