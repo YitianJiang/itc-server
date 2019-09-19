@@ -1,8 +1,10 @@
 package detect
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -24,14 +26,15 @@ type detectionBasic struct {
 
 // If the type is "敏感方法", the key is equal to className.methodName
 type detectionDetail struct {
-	ClassName     string         `json:"className"`
-	MethodName    string         `json:"methodName"`
-	Key           string         `json:"key"      gorm:"column:key_name"`
-	Description   string         `json:"desc"     gorm:"column:description"`
-	Type          string         `json:"type"     gorm:"column:type"`
-	RiskLevel     int            `json:"priority" gorm:"column:risk_level"`
-	Creator       string         `json:"creator"  gorm:"column:creator"`
-	CallLocations []callLocation `json:"callLocs"`
+	DetectConfigID uint64         `json:"cnofigid"`
+	ClassName      string         `json:"className"`
+	MethodName     string         `json:"methodName"`
+	Key            string         `json:"key"      gorm:"column:key_name"`
+	Description    string         `json:"desc"     gorm:"column:description"`
+	Type           string         `json:"type"     gorm:"column:type"`
+	RiskLevel      int            `json:"priority" gorm:"column:risk_level"`
+	Creator        string         `json:"creator"  gorm:"column:creator"`
+	CallLocations  []callLocation `json:"callLocs"`
 }
 
 type callLocation struct {
@@ -53,20 +56,21 @@ type Confirmation struct {
 type NewDetection struct {
 	// detectionBasic
 	// detectionDetail
-	ID            uint64    `gorm:"column:id"`
-	CreatedAt     time.Time `gorm:"column:created_at"`
-	APPID         string    `gorm:"column:app_id"`
-	APPVersion    string    `gorm:"column:app_version"`
-	Platform      string    `gorm:"column:platform"`
-	RDName        string    `gorm:"column:rd_name"`
-	RDEmail       string    `gorm:"column:rd_email"`
-	Key           string    `gorm:"column:key_name"`
-	Description   string    `gorm:"column:description"`
-	Type          string    `gorm:"column:type"`
-	RiskLevel     int       `gorm:"column:risk_level"`
-	Creator       string    `gorm:"column:creator"`
-	CallLocations string    `gorm:"column:call_locations"`
-	Confirmed     bool      `gorm:"column:confirmed"`
+	ID             uint64    `gorm:"column:id"`
+	CreatedAt      time.Time `gorm:"column:created_at"`
+	APPID          string    `gorm:"column:app_id"`
+	APPVersion     string    `gorm:"column:app_version"`
+	Platform       string    `gorm:"column:platform"`
+	RDName         string    `gorm:"column:rd_name"`
+	RDEmail        string    `gorm:"column:rd_email"`
+	DetectConfigID uint64    `gorm:"column:detect_config_id"`
+	Key            string    `gorm:"column:key_name"`
+	Description    string    `gorm:"column:description"`
+	Type           string    `gorm:"column:type"`
+	RiskLevel      int       `gorm:"column:risk_level"`
+	Creator        string    `gorm:"column:creator"`
+	CallLocations  string    `gorm:"column:call_locations"`
+	Confirmed      bool      `gorm:"column:confirmed"`
 }
 
 // UploadUnconfirmedDetections writes the new detections to tables in
@@ -101,7 +105,7 @@ func handleNewDetections(detections *Confirmation) {
 		return
 	}
 
-	if err := informConfirmor("TODO", detections.RDEmail); err != nil {
+	if err := informConfirmor("何佳辉自嗨", detections.RDEmail, "BOOM"); err != nil {
 		logs.Error("Failed to inform the confirmor")
 		return
 	}
@@ -109,7 +113,6 @@ func handleNewDetections(detections *Confirmation) {
 	return
 }
 
-// TODO
 func storeNewDetections(detections *Confirmation) error {
 
 	db, err := database.GetDBConnection()
@@ -204,17 +207,18 @@ func storeNewPermissions(db *gorm.DB, detections *Confirmation) {
 	for i := range detections.Permissions {
 		// It is acceptable if one detection was damaged.
 		insertDetection(db, &NewDetection{
-			APPID:       detections.detectionBasic.APPID,
-			APPVersion:  detections.detectionBasic.APPVersion,
-			Platform:    detections.detectionBasic.Platform,
-			RDName:      detections.detectionBasic.RDName,
-			RDEmail:     detections.detectionBasic.RDEmail,
-			Key:         detections.Permissions[i].Key,
-			Description: detections.Permissions[i].Description,
-			Type:        detections.Permissions[i].Type,
-			RiskLevel:   detections.Permissions[i].RiskLevel,
-			Creator:     detections.Permissions[i].Creator,
-			Confirmed:   false,
+			APPID:          detections.detectionBasic.APPID,
+			APPVersion:     detections.detectionBasic.APPVersion,
+			Platform:       detections.detectionBasic.Platform,
+			RDName:         detections.detectionBasic.RDName,
+			RDEmail:        detections.detectionBasic.RDEmail,
+			DetectConfigID: detections.Permissions[i].DetectConfigID,
+			Key:            detections.Permissions[i].Key,
+			Description:    detections.Permissions[i].Description,
+			Type:           detections.Permissions[i].Type,
+			RiskLevel:      detections.Permissions[i].RiskLevel,
+			Creator:        detections.Permissions[i].Creator,
+			Confirmed:      false,
 		})
 	}
 }
@@ -230,18 +234,19 @@ func storeNewSensiMethods(db *gorm.DB, detections *Confirmation) {
 			continue
 		}
 		insertDetection(db, &NewDetection{
-			APPID:         detections.detectionBasic.APPID,
-			APPVersion:    detections.detectionBasic.APPVersion,
-			Platform:      detections.detectionBasic.Platform,
-			RDName:        detections.detectionBasic.RDName,
-			RDEmail:       detections.detectionBasic.RDEmail,
-			Key:           detections.SensitiveMethods[i].Key,
-			Description:   detections.SensitiveMethods[i].Description,
-			Type:          detections.SensitiveMethods[i].Type,
-			RiskLevel:     detections.SensitiveMethods[i].RiskLevel,
-			Creator:       detections.SensitiveMethods[i].Creator,
-			CallLocations: string(callLocation),
-			Confirmed:     false,
+			APPID:          detections.detectionBasic.APPID,
+			APPVersion:     detections.detectionBasic.APPVersion,
+			Platform:       detections.detectionBasic.Platform,
+			RDName:         detections.detectionBasic.RDName,
+			RDEmail:        detections.detectionBasic.RDEmail,
+			DetectConfigID: detections.SensitiveMethods[i].DetectConfigID,
+			Key:            detections.SensitiveMethods[i].Key,
+			Description:    detections.SensitiveMethods[i].Description,
+			Type:           detections.SensitiveMethods[i].Type,
+			RiskLevel:      detections.SensitiveMethods[i].RiskLevel,
+			Creator:        detections.SensitiveMethods[i].Creator,
+			CallLocations:  string(callLocation),
+			Confirmed:      false,
 		})
 	}
 
@@ -257,18 +262,19 @@ func storeNewSensiStrings(db *gorm.DB, detections *Confirmation) {
 			continue
 		}
 		insertDetection(db, &NewDetection{
-			APPID:         detections.detectionBasic.APPID,
-			APPVersion:    detections.detectionBasic.APPVersion,
-			Platform:      detections.detectionBasic.Platform,
-			RDName:        detections.detectionBasic.RDName,
-			RDEmail:       detections.detectionBasic.RDEmail,
-			Key:           detections.SensitiveStrings[i].Key,
-			Description:   detections.SensitiveStrings[i].Description,
-			Type:          detections.SensitiveStrings[i].Type,
-			RiskLevel:     detections.SensitiveStrings[i].RiskLevel,
-			Creator:       detections.SensitiveStrings[i].Creator,
-			CallLocations: string(callLocation),
-			Confirmed:     false,
+			APPID:          detections.detectionBasic.APPID,
+			APPVersion:     detections.detectionBasic.APPVersion,
+			Platform:       detections.detectionBasic.Platform,
+			RDName:         detections.detectionBasic.RDName,
+			RDEmail:        detections.detectionBasic.RDEmail,
+			DetectConfigID: detections.SensitiveStrings[i].DetectConfigID,
+			Key:            detections.SensitiveStrings[i].Key,
+			Description:    detections.SensitiveStrings[i].Description,
+			Type:           detections.SensitiveStrings[i].Type,
+			RiskLevel:      detections.SensitiveStrings[i].RiskLevel,
+			Creator:        detections.SensitiveStrings[i].Creator,
+			CallLocations:  string(callLocation),
+			Confirmed:      false,
 		})
 	}
 }
@@ -449,8 +455,6 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	// TODO: GET APPName using RPC
-	appName := "抖音"
 	result := map[string]interface{}{
 		"id":          data[0].ID,
 		"key":         data[0].Key,
@@ -461,7 +465,6 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 		"rd_name":     data[0].RDName,
 		"rd_email":    data[0].RDEmail,
 		"creator":     data[0].Creator,
-		"app_name":    appName,
 		"app_version": data[0].APPVersion,
 	}
 
@@ -469,7 +472,6 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 }
 
 // Confirm set the specific detection's the value of confirmed TRUE.
-// TODO: insert the confirmed detection to table...
 func Confirm(c *gin.Context) {
 
 	id, err := getID(c)
@@ -538,14 +540,407 @@ func updateDetection(db *gorm.DB, detection *NewDetection) error {
 	return nil
 }
 
-// TODO
-// We will send message directly to the group if the confirmor is unknown.
-func informConfirmor(group string, emailPrefix string) error {
+// APP ID and secret
+const (
+	// The robot created by hejiahui.2019@bytedance.com
+	MyAPPID     = "cli_9d0b4c6489a89103"
+	MyAPPSecret = "eON0MP2j2WY4DxSqzZ0gfhRdIsVccHaY"
+)
 
-	if emailPrefix == "" {
+// We will send message directly to the group if the confirmor is unknown.
+func informConfirmor(groupName string, userEmail string, message string) error {
+
+	var msg string
+	if userEmail == "" {
+		msg = message
+	} else {
+		// Of course we can use non-xxxSimple functions, but using
+		// use xxxSimple functions make the code more readable.
+		exist, err := isUserInGroupSimple(groupName, userEmail)
+		if err != nil {
+			return err
+		}
+
+		if !exist {
+			if err := addUserToGroupSimple(
+				groupName, userEmail); err != nil {
+				return err
+			}
+		}
+
+		openID, _, err := getOpenIDandUserIDSimple(userEmail)
+		msg = fmt.Sprintf("<at open_id=\"%v\"></at>%v", openID, message)
+	}
+
+	if err := sendLarkMessageToGroupSimple(groupName, msg); err != nil {
+		return err
 	}
 
 	return nil
+}
+
+func isUserInGroupSimple(groupName string, userEmail string) (bool, error) {
+	token, err := getTenantAccessToken(MyAPPID, MyAPPSecret)
+	if err != nil {
+		logs.Error("Failed to get tenant access token: %v", err)
+		return false, err
+	}
+
+	return isUserInGroup(token, groupName, userEmail)
+}
+
+func isUserInGroup(token string, groupName string, userEmail string) (bool, error) {
+
+	memberList, err := getGroupMemberList(token, groupName)
+	if err != nil {
+		return false, err
+	}
+
+	openID, userID, err := getOpenIDandUserID(token, userEmail)
+	if err != nil {
+		return false, err
+	}
+
+	for i := range memberList {
+		if memberList[i].(map[string]interface{})["open_id"].(interface{}) == openID &&
+			memberList[i].(map[string]interface{})["user_id"].(interface{}) == userID {
+			logs.Info("User %v was already in the group %v", userEmail, groupName)
+			return true, nil
+		}
+	}
+
+	logs.Info("User %v was not in the group %v", userEmail, groupName)
+	return false, nil
+}
+
+// sendLarkMessageToGroupSimple assumes the default robot is in the group.
+func sendLarkMessageToGroupSimple(groupName string, message string) error {
+	token, err := getTenantAccessToken(MyAPPID, MyAPPSecret)
+	if err != nil {
+		logs.Error("Failed to get tenant access token: %v", err)
+		return err
+	}
+	logs.Info("tenant access token: %v", token)
+
+	groupChatID, err := getGroupChatID(token, groupName)
+	if err != nil {
+		return err
+	}
+
+	if err := sendLarkMessageToGroup(token, groupChatID, message); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func sendLarkMessageToGroup(
+	token string, groupChatID string, message string) error {
+
+	if err := sendTEXTLarkMessage(
+		token, "", "", "", "", groupChatID, message); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// rootID is the id of specific message, optional.
+// If send message to user, then we need openID/userID/userEmail.
+// If send message to group, then we need groupChatID.
+func sendTEXTLarkMessage(token string, rootID string,
+	openID string, userID string, userEmail string,
+	groupChatID string, message string) error {
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + token,
+		"Content-Type":  "application/json"}
+
+	data, err := json.Marshal(map[string]interface{}{
+		"open_id":  openID,
+		"root_id":  rootID,
+		"chat_id":  groupChatID,
+		"user_id":  userID,
+		"email":    userEmail,
+		"msg_type": "text", // Fixed
+		"content":  map[string]interface{}{"text": message}})
+	if err != nil {
+		return err
+	}
+
+	// The URL was fixed and only used here, so hard code is ok.
+	body, err := SendHTTPRequest("POST",
+		"https://open.feishu.cn/open-apis/message/v4/send/",
+		headers, data)
+
+	response := make(map[string]interface{})
+	if err := json.Unmarshal(body, &response); err != nil {
+		return err
+	}
+	if int(response["code"].(float64)) != 0 {
+		return fmt.Errorf("code: %v, message:%v", response["code"], response["msg"])
+	}
+
+	return nil
+}
+
+// addUserToGroupSimple assumes the default robot is in the group.
+func addUserToGroupSimple(groupName string, userEmail string) error {
+
+	token, err := getTenantAccessToken(MyAPPID, MyAPPSecret)
+	if err != nil {
+		logs.Error("Failed to get tenant access token: %v", err)
+		return err
+	}
+
+	groupChatID, err := getGroupChatID(token, groupName)
+	if err != nil {
+		logs.Error("Failed to get chat id for group %v", groupName)
+		return err
+	}
+
+	openID, userID, err := getOpenIDandUserID(token, userEmail)
+	if err != nil {
+		logs.Error("Failed to get open id and user id for user %v", userEmail)
+		return err
+	}
+
+	if err := addUserToGroup(
+		token, groupChatID, openID, userID); err != nil {
+		logs.Error("Failed to add user %v to group %v: %v", userEmail, groupName, err)
+		return err
+	}
+
+	logs.Info("User %v was invited to group %v", userEmail, groupName)
+	return nil
+}
+
+func addUserToGroup(
+	token string, groupChatID string, openID string, userID string) error {
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + token,
+		"Content-Type":  "application/json"}
+
+	data, err := json.Marshal(map[string]interface{}{
+		"chat_id":  groupChatID,
+		"user_ids": []interface{}{userID},
+		"open_ids": []interface{}{openID}})
+	if err != nil {
+		logs.Error("Failed to marshal data for addUserToGroup")
+		return err
+	}
+
+	// The URL was fixed and only used here, so hard code is ok.
+	body, err := SendHTTPRequest("POST",
+		"https://open.feishu.cn/open-apis/chat/v4/chatter/add/",
+		headers, data)
+
+	response := make(map[string]interface{})
+	if err := json.Unmarshal(body, &response); err != nil {
+		logs.Error("Failed to unmarshal  for addUserToGroup")
+		return err
+	}
+	if int(response["code"].(float64)) != 0 {
+		return fmt.Errorf("code: %v, message:%v", response["code"], response["msg"])
+	}
+
+	logs.Info("User(open_id: %v, user_id: %v) was invited to group (chat_id: %v)", openID, userID, groupChatID)
+	return nil
+}
+
+func getGroupMemberList(token string, groupName string) ([]interface{}, error) {
+
+	groupChatID, err := getGroupChatID(token, groupName)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := getGroupDetail(token, groupChatID)
+	return data.(map[string]interface{})["members"].([]interface{}), err
+}
+
+func getGroupDetail(token string, groupChatID string) (interface{}, error) {
+
+	header := map[string]string{
+		"Authorization": "Bearer " + token,
+		"Content-Type":  "application/json"}
+	// The URL was fixed and only used here, so hard code is ok.
+	body, err := SendHTTPRequest("POST",
+		fmt.Sprintf("https://open.feishu.cn/open-apis/chat/v4/info?chat_id=%v", groupChatID),
+		header, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response := make(map[string]interface{})
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, err
+	}
+	if int(response["code"].(float64)) != 0 {
+		return nil, fmt.Errorf("error code: %v, message:%v", response["code"], response["msg"])
+	}
+
+	return response["data"].(interface{}), nil
+}
+
+func getGroupChatID(token string, groupName string) (string, error) {
+
+	groupList, err := getGroupList(token)
+	if err != nil {
+		return "", err
+	}
+
+	for i := range groupList {
+		if groupList[i].(map[string]interface{})["name"].(string) == groupName {
+			return groupList[i].(map[string]interface{})["chat_id"].(string), nil
+		}
+	}
+
+	return "", fmt.Errorf("Cannot find any matched group chat id for %v", groupName)
+}
+
+func getGroupList(token string) ([]interface{}, error) {
+
+	header := map[string]string{
+		"Authorization": "Bearer " + token,
+		"Content-Type":  "application/json"}
+	// The URL was fixed and only used here, so hard code is ok.
+	body, err := SendHTTPRequest("POST",
+		"https://open.feishu.cn/open-apis/chat/v4/list",
+		header, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response := make(map[string]interface{})
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, err
+	}
+
+	if int(response["code"].(float64)) != 0 {
+		return nil, fmt.Errorf("error code: %v, message:%v", response["code"], response["msg"])
+	}
+
+	return response["data"].(map[string]interface{})["groups"].([]interface{}), nil
+}
+
+func getOpenIDandUserIDSimple(userEmail string) (string, string, error) {
+
+	token, err := getTenantAccessToken(MyAPPID, MyAPPSecret)
+	if err != nil {
+		logs.Error("Failed to get tenant access token: %v", err)
+		return "", "", err
+	}
+	logs.Info("tenant access token: %v", token)
+
+	return getOpenIDandUserID(token, userEmail)
+}
+
+// The format of user email should be xxx@bytedance.com.
+func getOpenIDandUserID(
+	token string, userEmail string) (string, string, error) {
+
+	data, err := json.Marshal(map[string]interface{}{
+		"email": userEmail})
+	if err != nil {
+		return "", "", err
+	}
+
+	header := map[string]string{
+		"Authorization": "Bearer " + token,
+		"Content-Type":  "application/json"}
+
+	// The URL was fixed and only used here, so hard code is ok.
+	body, err := SendHTTPRequest("POST",
+		"https://open.feishu.cn/open-apis/user/v4/email2id",
+		header, data)
+	if err != nil {
+		return "", "", err
+	}
+
+	response := make(map[string]interface{})
+	if err := json.Unmarshal(body, &response); err != nil {
+		return "", "", err
+	}
+
+	if int(response["code"].(float64)) != 0 {
+		return "", "", fmt.Errorf("code: %v message: %v", response["code"], response["msg"])
+	}
+
+	return response["data"].(map[string]interface{})["open_id"].(string),
+		response["data"].(map[string]interface{})["user_id"].(string),
+		nil
+}
+
+func getTenantAccessToken(appID string, appSecret string) (string, error) {
+
+	data, err := json.Marshal(map[string]interface{}{
+		"app_id":     appID,
+		"app_secret": appSecret})
+	if err != nil {
+		logs.Error("Failed to marshal data: %v", err)
+		return "", err
+	}
+
+	// The URL was fixed and only used here, so hard code is ok.
+	body, err := SendHTTPRequest("POST",
+		"https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal/",
+		nil, data)
+	if err != nil {
+		logs.Error("Failed to Send data: %v", err)
+		return "", err
+	}
+
+	response := make(map[string]interface{})
+	if err := json.Unmarshal(body, &response); err != nil {
+		logs.Error("Failed to unmarshal data: %v", err)
+		return "", err
+	}
+
+	if int(response["code"].(float64)) != 0 {
+		return "", fmt.Errorf("code: %v message: %v", response["code"], response["msg"])
+	}
+
+	return response["tenant_access_token"].(string), nil
+}
+
+// SendHTTPRequest uses specific method sending data to specific URL
+// via HTTP request with optional authentication.
+func SendHTTPRequest(method string, url string, headers map[string]string,
+	data []byte) ([]byte, error) {
+
+	// Construct HTTP handler
+	req, err := http.NewRequest(method, url, bytes.NewBuffer([]byte(data)))
+	if err != nil {
+		logs.Error("Failed to construct HTTP request")
+		return nil, err
+	}
+
+	// Set request header
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	logs.Debug("%v", req)
+
+	// Send HTTP request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		logs.Error("Failed to send HTTP request")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Read HTTP response
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logs.Error("Failed to read content from HTTP response")
+		return nil, err
+	}
+	logs.Debug("%v", string(body))
+
+	return body, err
 }
 
 // Error code
