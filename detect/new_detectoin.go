@@ -26,7 +26,7 @@ type detectionBasic struct {
 
 // If the type is "敏感方法", the key is equal to className.methodName
 type detectionDetail struct {
-	DetectConfigID uint64         `json:"cnofigid"`
+	DetectConfigID uint64         `json:"configid"`
 	ClassName      string         `json:"className"`
 	MethodName     string         `json:"methodName"`
 	Key            string         `json:"key"      gorm:"column:key_name"`
