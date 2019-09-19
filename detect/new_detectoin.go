@@ -737,6 +737,10 @@ func addUserToGroup(
 	body, err := SendHTTPRequest("POST",
 		"https://open.feishu.cn/open-apis/chat/v4/chatter/add/",
 		headers, data)
+	if err != nil {
+		logs.Error("Failed to send http request for addUserToGroup: %v", err)
+		return err
+	}
 
 	response := make(map[string]interface{})
 	if err := json.Unmarshal(body, &response); err != nil {
