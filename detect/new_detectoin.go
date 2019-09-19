@@ -17,11 +17,11 @@ import (
 )
 
 type detectionBasic struct {
-	APPID      string `gorm:"column:app_id"  json:"appid"       `
-	APPVersion string `json:"appVersion"  gorm:"column:app_version"`
-	Platform   string `json:"platform"    gorm:"column:platform"`
-	RDName     string `json:"rd_username" gorm:"column:rd_username"`
-	RDEmail    string `json:"rd_email"    gorm:"column:rd_email"`
+	APPID      string `json:"appid"`
+	APPVersion string `json:"appVersion"`
+	Platform   string `json:"platform"`
+	RDName     string `json:"rd_username"`
+	RDEmail    string `json:"rd_email"`
 }
 
 // If the type is "敏感方法", the key is equal to className.methodName
@@ -29,11 +29,11 @@ type detectionDetail struct {
 	DetectConfigID uint64         `json:"configid"`
 	ClassName      string         `json:"className"`
 	MethodName     string         `json:"methodName"`
-	Key            string         `json:"key"      gorm:"column:key_name"`
-	Description    string         `json:"desc"     gorm:"column:description"`
-	Type           string         `json:"type"     gorm:"column:type"`
-	RiskLevel      int            `json:"priority" gorm:"column:risk_level"`
-	Creator        string         `json:"creator"  gorm:"column:creator"`
+	Key            string         `json:"key"`
+	Description    string         `json:"desc"`
+	Type           string         `json:"type"`
+	RiskLevel      int            `json:"priority"`
+	Creator        string         `json:"creator"`
 	CallLocations  []callLocation `json:"callLocs"`
 }
 
@@ -118,7 +118,7 @@ func storeNewDetections(detections *Confirmation) error {
 	db, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
-		return nil
+		return err
 	}
 	defer db.Close()
 
@@ -127,6 +127,7 @@ func storeNewDetections(detections *Confirmation) error {
 		"platform":  detections.Platform,
 		"confirmed": false})
 	if err != nil {
+		logs.Error("Failed to get unconfirmed detection keys")
 		return err
 	}
 
@@ -452,6 +453,7 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 	data, err := retrieveDetection(db, map[string]interface{}{
 		"id": id})
 	if err != nil {
+		logs.Error("Failed to retrieve detection")
 		return nil, err
 	}
 
@@ -494,7 +496,7 @@ func confirmDetection(id uint64) error {
 	db, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to DB failed: %v", err)
-		return nil
+		return err
 	}
 	defer db.Close()
 
@@ -517,7 +519,7 @@ func retrieveDetection(db *gorm.DB, condition map[string]interface{}) (
 	var detections []NewDetection
 	if err := db.Debug().Where(condition).
 		Find(&detections).Error; err != nil {
-		logs.Error("Failed to retrieve detections from table new_detection: %v", err)
+		logs.Error("Database error: %v", err)
 		return nil, err
 	}
 
