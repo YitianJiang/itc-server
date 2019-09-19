@@ -35,16 +35,19 @@ func QueryExpiredProfileRelatedInfo() (*[]ExpiredProfileCardInput, bool) {
 		} else {
 			condition["dist_adhoc_profile_id"] = expiredProfileInfo.ProfileId
 		}
-		var appRelatedInfo AppRelatedInfo
+		var appRelatedInfos []AppRelatedInfo
 		connOrigin := conn
 		if err = conn.LogMode(_const.DB_LOG_MODE).Table(AppBundleProfiles{}.TableName()).
-			Where(condition).Find(&appRelatedInfo).
+			Where(condition).Find(&appRelatedInfos).
 			Error; err != nil {
 			logs.Error("Query DB Failed:", err)
 			return &expiredProfileCardInputs, false
 		}
 		conn = connOrigin
-		cardExpiredMessageInput := ConbineCardMessafeInputInfo(&expiredProfileInfo, &appRelatedInfo)
+		if len(appRelatedInfos)==0{
+			continue
+		}
+		cardExpiredMessageInput := ConbineCardMessafeInputInfo(&expiredProfileInfo, &(appRelatedInfos[0]))
 		expiredProfileCardInputs = append(expiredProfileCardInputs, *cardExpiredMessageInput)
 	}
 	return &expiredProfileCardInputs, true
