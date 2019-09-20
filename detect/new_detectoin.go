@@ -120,11 +120,17 @@ func handleNewDetections(detections *Confirmation) {
 	appID = settings["app_id"].(string)
 	appSecret = settings["app_secret"].(string)
 
-	if err := informConfirmor(settings["group_name"].(string),
-		detections.RDEmail,
-		settings["message"].(string)); err != nil {
-		logs.Error("Failed to inform the confirmor %v", detections.RDEmail)
-		return
+	if len(detections.Permissions) > 0 ||
+		len(detections.SensitiveMethods) > 0 ||
+		len(detections.SensitiveStrings) > 0 {
+		if err := informConfirmor(settings["group_name"].(string),
+			detections.RDEmail,
+			settings["message"].(string)); err != nil {
+			logs.Error("Failed to inform the confirmor %v", detections.RDEmail)
+			return
+		}
+	} else {
+		logs.Info("There are no new detections")
 	}
 
 	return
