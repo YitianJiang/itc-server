@@ -766,7 +766,7 @@ func addUserToGroup(
 		"user_ids": []interface{}{userID},
 		"open_ids": []interface{}{openID}})
 	if err != nil {
-		logs.Error("Failed to marshal data for addUserToGroup")
+		logs.Error("Marshal failed in addUserToGroup: %v", err)
 		return err
 	}
 
@@ -781,7 +781,7 @@ func addUserToGroup(
 
 	response := make(map[string]interface{})
 	if err := json.Unmarshal(body, &response); err != nil {
-		logs.Error("Failed to unmarshal  for addUserToGroup")
+		logs.Error("Unmarshal failed in addUserToGroup: %v", err)
 		return err
 	}
 	if int(response["code"].(float64)) != 0 {
@@ -813,11 +813,13 @@ func getGroupDetail(token string, groupChatID string) (interface{}, error) {
 		fmt.Sprintf("https://open.feishu.cn/open-apis/chat/v4/info?chat_id=%v", groupChatID),
 		header, nil)
 	if err != nil {
+		logs.Error("Send http request failed in getGroupDetail: %v", err)
 		return nil, err
 	}
 
 	response := make(map[string]interface{})
 	if err := json.Unmarshal(body, &response); err != nil {
+		logs.Error("Unmarshal failed in getGroupDetail: %v", err)
 		return nil, err
 	}
 	if int(response["code"].(float64)) != 0 {
@@ -853,11 +855,13 @@ func getGroupList(token string) ([]interface{}, error) {
 		"https://open.feishu.cn/open-apis/chat/v4/list",
 		header, nil)
 	if err != nil {
+		logs.Error("Send http request failed in getGroupList: %v", err)
 		return nil, err
 	}
 
 	response := make(map[string]interface{})
 	if err := json.Unmarshal(body, &response); err != nil {
+		logs.Error("Unmarshal failed in getGroupList: %v", err)
 		return nil, err
 	}
 
@@ -899,11 +903,13 @@ func getOpenIDandUserID(
 		"https://open.feishu.cn/open-apis/user/v4/email2id",
 		header, data)
 	if err != nil {
+		logs.Error("Send HTTP request failed in getOpenIDandUserID: %v", err)
 		return "", "", err
 	}
 
 	response := make(map[string]interface{})
 	if err := json.Unmarshal(body, &response); err != nil {
+		logs.Error("Unmarshal failed in getOpenIDandUserID: %v", err)
 		return "", "", err
 	}
 
