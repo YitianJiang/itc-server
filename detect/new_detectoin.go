@@ -491,7 +491,7 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 	}
 	defer db.Close()
 
-	data, err := retrieveDetection(db, map[string]interface{}{
+	data, err := RetrieveDetection(db, map[string]interface{}{
 		"id": id})
 	if err != nil {
 		logs.Error("Failed to retrieve detection")
@@ -541,7 +541,7 @@ func confirmDetection(id uint64) error {
 	}
 	defer db.Close()
 
-	if _, err := retrieveDetection(db, map[string]interface{}{
+	if _, err := RetrieveDetection(db, map[string]interface{}{
 		"id": id,
 	}); err != nil {
 		return err
@@ -554,13 +554,14 @@ func confirmDetection(id uint64) error {
 	return nil
 }
 
-func retrieveDetection(db *gorm.DB, condition map[string]interface{}) (
+// RetrieveDetection returns all eligible detections from table new_detection.
+func RetrieveDetection(db *gorm.DB, condition map[string]interface{}) (
 	[]NewDetection, error) {
 
 	var detections []NewDetection
 	if err := db.Debug().Where(condition).
 		Find(&detections).Error; err != nil {
-		logs.Error("Database error: %v", err)
+		logs.Error("Database error in RetrieveDetection: %v", err)
 		return nil, err
 	}
 
