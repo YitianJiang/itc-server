@@ -675,6 +675,7 @@ func sendLarkMessageToGroup(
 
 	if err := sendTEXTLarkMessage(
 		token, "", "", "", "", groupChatID, message); err != nil {
+		logs.Error("Failed to send text lark message")
 		return err
 	}
 
@@ -701,6 +702,7 @@ func sendTEXTLarkMessage(token string, rootID string,
 		"msg_type": "text", // Fixed
 		"content":  map[string]interface{}{"text": message}})
 	if err != nil {
+		logs.Error("Marshal failed in sendTEXTLarkMessage: %v", err)
 		return err
 	}
 
@@ -711,6 +713,7 @@ func sendTEXTLarkMessage(token string, rootID string,
 
 	response := make(map[string]interface{})
 	if err := json.Unmarshal(body, &response); err != nil {
+		logs.Error("Unmarshal failed in sendTEXTLarkMessage: %v", err)
 		return err
 	}
 	if int(response["code"].(float64)) != 0 {
