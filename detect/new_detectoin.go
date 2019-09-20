@@ -98,6 +98,13 @@ func UploadUnconfirmedDetections(c *gin.Context) {
 	return
 }
 
+var (
+	appID     string
+	appSecret string
+	groupName string
+	message   string
+)
+
 func handleNewDetections(detections *Confirmation) {
 
 	if err := storeNewDetections(detections); err != nil {
@@ -105,12 +112,40 @@ func handleNewDetections(detections *Confirmation) {
 		return
 	}
 
-	if err := informConfirmor("何佳辉自嗨", detections.RDEmail, "BOOM"); err != nil {
-		logs.Error("Failed to inform the confirmor")
+	settings, err := getUploadNewDetectionsSettings("settings.json")
+	if err != nil {
+		logs.Error("Failed to get settings")
+		return
+	}
+	appID = settings["app_id"].(string)
+	appSecret = settings["app_secret"].(string)
+
+	if err := informConfirmor(settings["group_name"].(string),
+		detections.RDEmail,
+		settings["message"].(string)); err != nil {
+		logs.Error("Failed to inform the confirmor %v", detections.RDEmail)
 		return
 	}
 
 	return
+}
+
+func getUploadNewDetectionsSettings(
+	fileName string) (map[string]interface{}, error) {
+
+	data, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		logs.Error("IO ReadFile failed: %v", err)
+		return nil, err
+	}
+
+	result := make(map[string]interface{})
+	if err := json.Unmarshal(data, &result); err != nil {
+		logs.Error("Unmarshal failed: %v", err)
+		return nil, err
+	}
+
+	return result["upload_new_detections"].(map[string]interface{}), nil
 }
 
 func storeNewDetections(detections *Confirmation) error {
@@ -542,13 +577,6 @@ func updateDetection(db *gorm.DB, detection *NewDetection) error {
 	return nil
 }
 
-// APP ID and secret
-const (
-	// The robot created by hejiahui.2019@bytedance.com
-	MyAPPID     = "cli_9d0b4c6489a89103"
-	MyAPPSecret = "eON0MP2j2WY4DxSqzZ0gfhRdIsVccHaY"
-)
-
 // We will send message directly to the group if the confirmor is unknown.
 func informConfirmor(groupName string, userEmail string, message string) error {
 
@@ -582,7 +610,7 @@ func informConfirmor(groupName string, userEmail string, message string) error {
 }
 
 func isUserInGroupSimple(groupName string, userEmail string) (bool, error) {
-	token, err := getTenantAccessToken(MyAPPID, MyAPPSecret)
+	token, err := getTenantAccessToken(appID, appSecret)
 	if err != nil {
 		logs.Error("Failed to get tenant access token: %v", err)
 		return false, err
@@ -617,7 +645,7 @@ func isUserInGroup(token string, groupName string, userEmail string) (bool, erro
 
 // sendLarkMessageToGroupSimple assumes the default robot is in the group.
 func sendLarkMessageToGroupSimple(groupName string, message string) error {
-	token, err := getTenantAccessToken(MyAPPID, MyAPPSecret)
+	token, err := getTenantAccessToken(appID, appSecret)
 	if err != nil {
 		logs.Error("Failed to get tenant access token: %v", err)
 		return err
@@ -689,7 +717,7 @@ func sendTEXTLarkMessage(token string, rootID string,
 // addUserToGroupSimple assumes the default robot is in the group.
 func addUserToGroupSimple(groupName string, userEmail string) error {
 
-	token, err := getTenantAccessToken(MyAPPID, MyAPPSecret)
+	token, err := getTenantAccessToken(appID, appSecret)
 	if err != nil {
 		logs.Error("Failed to get tenant access token: %v", err)
 		return err
@@ -833,7 +861,7 @@ func getGroupList(token string) ([]interface{}, error) {
 
 func getOpenIDandUserIDSimple(userEmail string) (string, string, error) {
 
-	token, err := getTenantAccessToken(MyAPPID, MyAPPSecret)
+	token, err := getTenantAccessToken(appID, appSecret)
 	if err != nil {
 		logs.Error("Failed to get tenant access token: %v", err)
 		return "", "", err
