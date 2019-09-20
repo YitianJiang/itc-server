@@ -813,7 +813,7 @@ func getGroupDetail(token string, groupChatID string) (interface{}, error) {
 		fmt.Sprintf("https://open.feishu.cn/open-apis/chat/v4/info?chat_id=%v", groupChatID),
 		header, nil)
 	if err != nil {
-		logs.Error("Send http request failed in getGroupDetail: %v", err)
+		logs.Error("Send HTTP request failed in getGroupDetail: %v", err)
 		return nil, err
 	}
 
@@ -855,7 +855,7 @@ func getGroupList(token string) ([]interface{}, error) {
 		"https://open.feishu.cn/open-apis/chat/v4/list",
 		header, nil)
 	if err != nil {
-		logs.Error("Send http request failed in getGroupList: %v", err)
+		logs.Error("Send HTTP request failed in getGroupList: %v", err)
 		return nil, err
 	}
 
@@ -891,6 +891,7 @@ func getOpenIDandUserID(
 	data, err := json.Marshal(map[string]interface{}{
 		"email": userEmail})
 	if err != nil {
+		logs.Error("Marshal failed in getOpenIDandUserID: %v", err)
 		return "", "", err
 	}
 
@@ -928,7 +929,7 @@ func getTenantAccessToken(appID string, appSecret string) (string, error) {
 		"app_id":     appID,
 		"app_secret": appSecret})
 	if err != nil {
-		logs.Error("Failed to marshal data: %v", err)
+		logs.Error("Marshal failed in getTenantAccessToken: %v", err)
 		return "", err
 	}
 
@@ -937,13 +938,13 @@ func getTenantAccessToken(appID string, appSecret string) (string, error) {
 		"https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal/",
 		nil, data)
 	if err != nil {
-		logs.Error("Failed to Send data: %v", err)
+		logs.Error("Send HTTP request failed: %v", err)
 		return "", err
 	}
 
 	response := make(map[string]interface{})
 	if err := json.Unmarshal(body, &response); err != nil {
-		logs.Error("Failed to unmarshal data: %v", err)
+		logs.Error("Unmarshal failed in getTenantAccessToken: %v", err)
 		return "", err
 	}
 
