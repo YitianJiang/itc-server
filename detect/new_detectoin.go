@@ -512,7 +512,7 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 		"key":            data[0].Key,
 		"risk_level":     data[0].RiskLevel,
 		"type":           data[0].Type,
-		"decription":     data[0].Description,
+		"description":    data[0].Description,
 		"platform":       data[0].Platform,
 		"rd_name":        data[0].RDName,
 		"rd_email":       data[0].RDEmail,
