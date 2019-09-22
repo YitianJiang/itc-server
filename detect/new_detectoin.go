@@ -498,17 +498,27 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 		return nil, err
 	}
 
+	var location []callLocation
+	if data[0].Type != "权限" {
+		if err := json.Unmarshal(
+			[]byte(data[0].CallLocations), &location); err != nil {
+			logs.Error("Unmarshal error: %v", err)
+			return nil, err
+		}
+	}
+
 	result := map[string]interface{}{
-		"id":          data[0].ID,
-		"key":         data[0].Key,
-		"risk_level":  data[0].RiskLevel,
-		"type":        data[0].Type,
-		"decription":  data[0].Description,
-		"platform":    data[0].Platform,
-		"rd_name":     data[0].RDName,
-		"rd_email":    data[0].RDEmail,
-		"creator":     data[0].Creator,
-		"app_version": data[0].APPVersion,
+		"id":             data[0].ID,
+		"key":            data[0].Key,
+		"risk_level":     data[0].RiskLevel,
+		"type":           data[0].Type,
+		"decription":     data[0].Description,
+		"platform":       data[0].Platform,
+		"rd_name":        data[0].RDName,
+		"rd_email":       data[0].RDEmail,
+		"creator":        data[0].Creator,
+		"call_locations": location,
+		"app_version":    data[0].APPVersion,
 	}
 
 	return result, nil
