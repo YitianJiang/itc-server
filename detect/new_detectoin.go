@@ -491,7 +491,7 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 	}
 	defer db.Close()
 
-	data, err := RetrieveDetection(db, map[string]interface{}{
+	data, err := retrieveSingleDetection(db, map[string]interface{}{
 		"id": id})
 	if err != nil {
 		logs.Error("Failed to retrieve detection")
@@ -499,26 +499,26 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 	}
 
 	var location []callLocation
-	if data[0].Type != "权限" {
+	if data.Type != "权限" {
 		if err := json.Unmarshal(
-			[]byte(data[0].CallLocations), &location); err != nil {
+			[]byte(data.CallLocations), &location); err != nil {
 			logs.Error("Unmarshal error: %v", err)
 			return nil, err
 		}
 	}
 
 	result := map[string]interface{}{
-		"id":             data[0].ID,
-		"key":            data[0].Key,
-		"risk_level":     data[0].RiskLevel,
-		"type":           data[0].Type,
-		"description":    data[0].Description,
-		"platform":       data[0].Platform,
-		"rd_name":        data[0].RDName,
-		"rd_email":       data[0].RDEmail,
-		"creator":        data[0].Creator,
+		"id":             data.ID,
+		"key":            data.Key,
+		"risk_level":     data.RiskLevel,
+		"type":           data.Type,
+		"description":    data.Description,
+		"platform":       data.Platform,
+		"rd_name":        data.RDName,
+		"rd_email":       data.RDEmail,
+		"creator":        data.Creator,
 		"call_locations": location,
-		"app_version":    data[0].APPVersion,
+		"app_version":    data.APPVersion,
 	}
 
 	return result, nil
@@ -551,7 +551,7 @@ func confirmDetection(id uint64) error {
 	}
 	defer db.Close()
 
-	if _, err := RetrieveDetection(db, map[string]interface{}{
+	if _, err := retrieveSingleDetection(db, map[string]interface{}{
 		"id": id,
 	}); err != nil {
 		return err
@@ -564,6 +564,23 @@ func confirmDetection(id uint64) error {
 	return nil
 }
 
+func retrieveSingleDetection(db *gorm.DB, condition map[string]interface{}) (
+	*NewDetection, error) {
+
+	data, err := RetrieveDetection(db, condition)
+	if err != nil {
+		logs.Error("Failed to retrieve detection")
+		return nil, err
+	}
+
+	if len(data) <= 0 {
+		logs.Error("Cannot find any matched detection")
+		return nil, errors.New("Cannot find any matched detection")
+	}
+
+	return &data[0], nil
+}
+
 // RetrieveDetection returns all eligible detections from table new_detection.
 func RetrieveDetection(db *gorm.DB, condition map[string]interface{}) (
 	[]NewDetection, error) {
@@ -571,13 +588,8 @@ func RetrieveDetection(db *gorm.DB, condition map[string]interface{}) (
 	var detections []NewDetection
 	if err := db.Debug().Where(condition).
 		Find(&detections).Error; err != nil {
-		logs.Error("Database error in RetrieveDetection: %v", err)
+		logs.Error("Database error: %v", err)
 		return nil, err
-	}
-
-	if len(detections) <= 0 {
-		logs.Error("Cannot find any matched detection")
-		return nil, errors.New("Cannot find any matched detection")
 	}
 
 	return detections, nil
