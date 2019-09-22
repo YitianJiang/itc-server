@@ -338,26 +338,6 @@ func UpdateDetectInfos(c *gin.Context) {
 	}
 	toolIdInt, _ := strconv.Atoi(toolId)
 
-	//判断是否有name和version都一模一样的检测任务
-	//flag, sameErr := taskConsistent(appName, appVersion, (*detect)[0])
-	//if flag {
-	//	if sameErr == nil {
-	//		c.JSON(http.StatusOK, gin.H{
-	//			"message":   "success",
-	//			"errorCode": 0,
-	//			"data":      "success",
-	//		})
-	//		return
-	//	} else {
-	//		c.JSON(http.StatusOK, gin.H{
-	//			"message":   "error",
-	//			"errorCode": -1,
-	//			"data":      sameErr,
-	//		})
-	//		return
-	//	}
-	//}
-
 	//消息通知条数--检测项+自查项
 	var unConfirms int
 	var unSelfCheck = 0
