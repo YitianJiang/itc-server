@@ -219,4 +219,8 @@ func InitRouter(r *ginex.Engine) {
 		timedtaskapi.GET("/ProfileExpiredNotify", developerconnmanager.NotifyProfileExpired)
 	}
 
+	binaryCheckApi := r.Group("/v1/checkBinaryResult")
+	{
+		binaryCheckApi.POST("/checkIsBinary",developerconnmanager.CheckIsBinary)
+	}
 }

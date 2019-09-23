@@ -189,3 +189,9 @@ var CertManagerAuthorization = map[string]string{
 	"all_cert_manager": "全部证书管理",
 	"dev_cert_manager": "开发证书管理",
 }
+
+//集群管理机器人鉴权信息https://open.feishu.cn/app
+const (
+	BotApiId     = "cli_9da5998138e99101"
+	BotAppSecret = "Ic8mmrrOFXfyRpfC4dbaPbHsjsHqGfjN"
+)
