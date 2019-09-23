@@ -54,8 +54,6 @@ type Confirmation struct {
 
 // NewDetection corresponds to table new_detection.
 type NewDetection struct {
-	// detectionBasic
-	// detectionDetail
 	ID             uint64    `gorm:"column:id"`
 	CreatedAt      time.Time `gorm:"column:created_at"`
 	APPID          string    `gorm:"column:app_id"`
