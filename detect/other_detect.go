@@ -1135,7 +1135,6 @@ func OtherDetectTaskErrorHandle(taskId int, errCode string, errInfo string) erro
 		return err
 	}
 
-	// var errString = string(errBytes)
 	return dal.UpdateOtherDetectModelByMap(fmt.Sprintf("id = '%v'", taskId),
 		map[string]interface{}{"err_info": string(errBytes)})
 }
