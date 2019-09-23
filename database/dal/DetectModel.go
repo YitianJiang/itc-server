@@ -51,6 +51,12 @@ type ErrorStruct struct {
 	ErrInfo string `json:"errInfo"`
 }
 
+// The error type of detect service.
+const (
+	DetectServiceScriptError         = 1
+	DetectServiceInfrastructureError = 2
+)
+
 //包检测工具
 type DetectTool struct {
 	gorm.Model
