@@ -319,9 +319,7 @@ func UpdateDetectInfos(c *gin.Context) {
 	appVersion := c.Request.FormValue("appVersion")
 	htmlContent := c.Request.FormValue("content")
 
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": taskId,
-	})
+	detect := dal.QueryDetectModelsByMap(map[string]interface{}{"id": taskId})
 	if detect == nil || len(*detect) == 0 {
 		ReturnMsg(c, FAILURE, fmt.Sprintf("Cannot find any matched task about id %v", taskId))
 		return
