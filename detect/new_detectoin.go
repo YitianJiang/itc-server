@@ -131,7 +131,7 @@ func handleNewDetections(detections *Confirmation) {
 		len(detections.SensitiveStrings) > 0 {
 		if err := informConfirmor(settings["group_name"].(string),
 			detections.RDEmail,
-			fmt.Sprintf(settings["message"].(string), detections.APPID)); err != nil {
+			packMessage(detections)); err != nil {
 			logs.Error("Failed to inform the confirmor %v", detections.RDEmail)
 			return
 		}
@@ -625,12 +625,9 @@ func updateDetection(db *gorm.DB, detection *NewDetection) error {
 }
 
 // We will send message directly to the group if the confirmor is unknown.
-func informConfirmor(groupName string, userEmail string, message string) error {
+func informConfirmor(groupName string, userEmail string, msg string) error {
 
-	var msg string
-	if userEmail == "" {
-		msg = "【无人认领】" + message
-	} else {
+	if userEmail != "" {
 		// Of course we can use non-xxxSimple functions, but using
 		// use xxxSimple functions make the code more readable.
 		exist, err := isUserInGroupSimple(groupName, userEmail)
@@ -644,9 +641,6 @@ func informConfirmor(groupName string, userEmail string, message string) error {
 				return err
 			}
 		}
-
-		openID, _, err := getOpenIDandUserIDSimple(userEmail)
-		msg = fmt.Sprintf("<at open_id=\"%v\"></at>%v", openID, message)
 	}
 
 	if err := sendLarkMessageToGroupSimple(groupName, msg); err != nil {
@@ -654,6 +648,55 @@ func informConfirmor(groupName string, userEmail string, message string) error {
 	}
 
 	return nil
+}
+
+func packMessage(detections *Confirmation) string {
+
+	var atMsg string
+
+	openID, _, err := getOpenIDandUserIDSimple(detections.RDEmail)
+	if err != nil {
+		atMsg = "未知"
+	} else {
+		atMsg = fmt.Sprintf("<at open_id=\"%v\"></at>", openID)
+	}
+
+	msg := " 本次编译出现新增未确认项，请前往预审平台查看确认。\n" +
+		"查看与确认地址: https://rocket.bytedance.net/rocket/itc/branchCheck?biz=" +
+		detections.APPID + "\n\n" +
+		"【编译信息】\n" +
+		"应用名称: " + detections.APPName + "\n" +
+		"研发同学: " + atMsg + "\n" +
+		"Branch: " + detections.Branch + "\n" +
+		"COMMIT_ID: " + detections.CommitID + "\n\n"
+
+	if len(detections.Permissions) > 0 {
+		msg += "【新增权限】\n"
+		for i := range detections.Permissions {
+			msg += fmt.Sprintf("%v. %v\n",
+				i+1, detections.Permissions[i].Key)
+		}
+		msg += "\n"
+	}
+
+	if len(detections.SensitiveMethods) > 0 {
+		msg += "【新增敏感方法】\n"
+		for i := range detections.SensitiveMethods {
+			msg += fmt.Sprintf("%v. %v\n",
+				i+1, detections.SensitiveMethods[i].Key)
+		}
+		msg += "\n"
+	}
+
+	if len(detections.SensitiveStrings) > 0 {
+		msg += "【新增敏感字符串】\n"
+		for i := range detections.SensitiveStrings {
+			msg += fmt.Sprintf("%v. %v\n",
+				i+1, detections.SensitiveStrings[i].Key)
+		}
+	}
+
+	return msg
 }
 
 func isUserInGroupSimple(groupName string, userEmail string) (bool, error) {
