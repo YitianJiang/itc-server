@@ -18,10 +18,13 @@ import (
 
 type detectionBasic struct {
 	APPID      string `json:"appid"`
+	APPName    string `json:"appName"`
 	APPVersion string `json:"appVersion"`
 	Platform   string `json:"platform"`
 	RDName     string `json:"rd_username"`
 	RDEmail    string `json:"rd_email"`
+	CommitID   string `json:"commitId"`
+	Branch     string `json:"branch"`
 }
 
 // If the type is "敏感方法", the key is equal to className.methodName
@@ -32,6 +35,7 @@ type detectionDetail struct {
 	Key            string         `json:"key"`
 	Description    string         `json:"desc"`
 	Type           string         `json:"type"`
+	GPFlag         int            `json:"gpFlag"`
 	RiskLevel      int            `json:"priority"`
 	Creator        string         `json:"creator"`
 	CallLocations  []callLocation `json:"callLocs"`
@@ -57,14 +61,18 @@ type NewDetection struct {
 	ID             uint64    `gorm:"column:id"`
 	CreatedAt      time.Time `gorm:"column:created_at"`
 	APPID          string    `gorm:"column:app_id"`
+	APPName        string    `gorm:"column:app_name"`
 	APPVersion     string    `gorm:"column:app_version"`
 	Platform       string    `gorm:"column:platform"`
 	RDName         string    `gorm:"column:rd_name"`
 	RDEmail        string    `gorm:"column:rd_email"`
+	CommitID       string    `gorm:"column:commit_id"`
+	Branch         string    `gorm:"column:branch"`
 	DetectConfigID uint64    `gorm:"column:detect_config_id"`
 	Key            string    `gorm:"column:key_name"`
 	Description    string    `gorm:"column:description"`
 	Type           string    `gorm:"column:type"`
+	GPFlag         int       `gorm:"column:gp_flag"`
 	RiskLevel      int       `gorm:"column:risk_level"`
 	Creator        string    `gorm:"column:creator"`
 	CallLocations  string    `gorm:"column:call_locations"`
@@ -248,14 +256,18 @@ func storeNewPermissions(db *gorm.DB, detections *Confirmation) {
 		// It is acceptable if one detection was damaged.
 		insertDetection(db, &NewDetection{
 			APPID:          detections.detectionBasic.APPID,
+			APPName:        detections.detectionBasic.APPName,
 			APPVersion:     detections.detectionBasic.APPVersion,
 			Platform:       detections.detectionBasic.Platform,
 			RDName:         detections.detectionBasic.RDName,
 			RDEmail:        detections.detectionBasic.RDEmail,
+			CommitID:       detections.detectionBasic.CommitID,
+			Branch:         detections.detectionBasic.Branch,
 			DetectConfigID: detections.Permissions[i].DetectConfigID,
 			Key:            detections.Permissions[i].Key,
 			Description:    detections.Permissions[i].Description,
 			Type:           detections.Permissions[i].Type,
+			GPFlag:         detections.Permissions[i].GPFlag,
 			RiskLevel:      detections.Permissions[i].RiskLevel,
 			Creator:        detections.Permissions[i].Creator,
 			Confirmed:      false,
@@ -275,14 +287,18 @@ func storeNewSensiMethods(db *gorm.DB, detections *Confirmation) {
 		}
 		insertDetection(db, &NewDetection{
 			APPID:          detections.detectionBasic.APPID,
+			APPName:        detections.detectionBasic.APPName,
 			APPVersion:     detections.detectionBasic.APPVersion,
 			Platform:       detections.detectionBasic.Platform,
 			RDName:         detections.detectionBasic.RDName,
 			RDEmail:        detections.detectionBasic.RDEmail,
+			CommitID:       detections.detectionBasic.CommitID,
+			Branch:         detections.detectionBasic.Branch,
 			DetectConfigID: detections.SensitiveMethods[i].DetectConfigID,
 			Key:            detections.SensitiveMethods[i].Key,
 			Description:    detections.SensitiveMethods[i].Description,
 			Type:           detections.SensitiveMethods[i].Type,
+			GPFlag:         detections.SensitiveMethods[i].GPFlag,
 			RiskLevel:      detections.SensitiveMethods[i].RiskLevel,
 			Creator:        detections.SensitiveMethods[i].Creator,
 			CallLocations:  string(callLocation),
@@ -303,14 +319,18 @@ func storeNewSensiStrings(db *gorm.DB, detections *Confirmation) {
 		}
 		insertDetection(db, &NewDetection{
 			APPID:          detections.detectionBasic.APPID,
+			APPName:        detections.detectionBasic.APPName,
 			APPVersion:     detections.detectionBasic.APPVersion,
 			Platform:       detections.detectionBasic.Platform,
 			RDName:         detections.detectionBasic.RDName,
 			RDEmail:        detections.detectionBasic.RDEmail,
+			CommitID:       detections.detectionBasic.CommitID,
+			Branch:         detections.detectionBasic.Branch,
 			DetectConfigID: detections.SensitiveStrings[i].DetectConfigID,
 			Key:            detections.SensitiveStrings[i].Key,
 			Description:    detections.SensitiveStrings[i].Description,
 			Type:           detections.SensitiveStrings[i].Type,
+			GPFlag:         detections.SensitiveStrings[i].GPFlag,
 			RiskLevel:      detections.SensitiveStrings[i].RiskLevel,
 			Creator:        detections.SensitiveStrings[i].Creator,
 			CallLocations:  string(callLocation),
@@ -322,7 +342,7 @@ func storeNewSensiStrings(db *gorm.DB, detections *Confirmation) {
 func insertDetection(db *gorm.DB, detection *NewDetection) error {
 
 	if err := db.Debug().Create(detection).Error; err != nil {
-		logs.Error("Failed to insert detection in table new_detection: %v\n%v", err, *detection)
+		logs.Error("Database error: %v\n%v", err, *detection)
 		return err
 	}
 

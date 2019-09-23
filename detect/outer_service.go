@@ -1,6 +1,7 @@
 package detect
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -247,7 +248,7 @@ func retrieveLatestDetectResult(db *gorm.DB, condition map[string]interface{}) (
 // The type of detection
 const (
 	TypePermission = "权限"
-	TypeMthod      = "敏感方法"
+	TypeMethod     = "敏感方法"
 	TypeString     = "敏感词汇"
 )
 
@@ -257,24 +258,33 @@ func getExtraConfirmedDetection(db *gorm.DB, condition map[string]interface{}) (
 	condition["confirmed"] = true
 	detections, err := RetrieveDetection(db, condition)
 	if err != nil {
+		logs.Error("Failed to retrieve detection")
 		return nil, err
 	}
 
 	result := make(map[string]interface{})
-	var permissions []string
+	var permissions []map[string]interface{}
 	var methods []map[string]interface{}
-	var strs []string
+	var strs []map[string]interface{}
 	for i := range detections {
+		m := make(map[string]interface{})
+		m["configId"] = detections[i].DetectConfigID
+		m["status"] = 1
+		m["remark"] = ""
+		m["confirmer"] = ""
+		m["desc"] = detections[i].Description
+		m["gpFlag"] = detections[i].GPFlag
+		m["riskLevel"] = detections[i].RiskLevel
+		if err := do(m, &detections[i]); err != nil {
+			return nil, err
+		}
 		switch detections[i].Type {
 		case TypePermission:
-			permissions = append(permissions, detections[i].Key)
-		case TypeMthod:
-			k := strings.LastIndexByte(detections[i].Key, '.')
-			methods = append(methods, map[string]interface{}{
-				"className":  detections[i].Key[:k],
-				"methodName": detections[i].Key[k+1:]})
+			permissions = append(permissions, m)
+		case TypeMethod:
+			methods = append(methods, m)
 		case TypeString:
-			strs = append(strs, detections[i].Key)
+			strs = append(strs, m)
 		}
 	}
 
@@ -283,4 +293,29 @@ func getExtraConfirmedDetection(db *gorm.DB, condition map[string]interface{}) (
 	result["permissionList"] = permissions
 
 	return result, nil
+}
+
+func do(m map[string]interface{}, detection *NewDetection) error {
+
+	if detection.Type == TypePermission || detection.Type == TypeString {
+		m["key"] = detection.Key
+	}
+
+	if detection.Type == TypeMethod || detection.Type == TypeString {
+		var location []callLocation
+		if err := json.Unmarshal(
+			[]byte(detection.CallLocations), &location); err != nil {
+			logs.Error("Unmarshal error: %v", err)
+			return err
+		}
+		m["callLoc"] = location
+	}
+
+	if detection.Type == TypeMethod {
+		k := strings.LastIndexByte(detection.Key, '.')
+		m["className"] = detection.Key[:k]
+		m["methodName"] = detection.Key[k+1:]
+	}
+
+	return nil
 }
