@@ -1127,7 +1127,7 @@ aar任务检测问题记录
 */
 func OtherDetectTaskErrorHandle(taskId int, errCode string, errInfo string) error {
 
-	errBytes, err := json.Marshal(map[string]interface{}{
+	data, err := json.Marshal(map[string]interface{}{
 		"errCode": errCode,
 		"errInfo": errInfo})
 	if err != nil {
@@ -1136,7 +1136,7 @@ func OtherDetectTaskErrorHandle(taskId int, errCode string, errInfo string) erro
 	}
 
 	return dal.UpdateOtherDetectModelByMap(fmt.Sprintf("id = '%v'", taskId),
-		map[string]interface{}{"err_info": string(errBytes)})
+		map[string]interface{}{"err_info": string(data)})
 }
 
 /**
