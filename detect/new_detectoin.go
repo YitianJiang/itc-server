@@ -125,7 +125,7 @@ func handleNewDetections(detections *Confirmation) {
 		len(detections.SensitiveStrings) > 0 {
 		if err := informConfirmor(settings["group_name"].(string),
 			detections.RDEmail,
-			settings["message"].(string)); err != nil {
+			fmt.Sprintf(settings["message"].(string), detections.APPID)); err != nil {
 			logs.Error("Failed to inform the confirmor %v", detections.RDEmail)
 			return
 		}
@@ -611,7 +611,7 @@ func informConfirmor(groupName string, userEmail string, message string) error {
 
 	var msg string
 	if userEmail == "" {
-		msg = message
+		msg = "【无人认领】" + message
 	} else {
 		// Of course we can use non-xxxSimple functions, but using
 		// use xxxSimple functions make the code more readable.
