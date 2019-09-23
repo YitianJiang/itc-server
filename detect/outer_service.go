@@ -268,7 +268,7 @@ func getExtraConfirmedDetection(db *gorm.DB, condition map[string]interface{}) (
 	var strs []map[string]interface{}
 	for i := range detections {
 		m := make(map[string]interface{})
-		m["configId"] = detections[i].DetectConfigID
+		m["configid"] = detections[i].DetectConfigID
 		m["status"] = 1
 		m["remark"] = ""
 		m["confirmer"] = ""
@@ -280,10 +280,12 @@ func getExtraConfirmedDetection(db *gorm.DB, condition map[string]interface{}) (
 		}
 		switch detections[i].Type {
 		case TypePermission:
+			m["key"] = detections[i].Key
 			permissions = append(permissions, m)
 		case TypeMethod:
 			methods = append(methods, m)
 		case TypeString:
+			m["keys"] = detections[i].Key
 			strs = append(strs, m)
 		}
 	}
@@ -296,10 +298,6 @@ func getExtraConfirmedDetection(db *gorm.DB, condition map[string]interface{}) (
 }
 
 func do(m map[string]interface{}, detection *NewDetection) error {
-
-	if detection.Type == TypePermission || detection.Type == TypeString {
-		m["key"] = detection.Key
-	}
 
 	if detection.Type == TypeMethod || detection.Type == TypeString {
 		var location []callLocation
