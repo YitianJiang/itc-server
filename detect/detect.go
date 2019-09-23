@@ -310,12 +310,6 @@ func UpdateDetectInfos(c *gin.Context) {
 	logs.Info("回调开始，更新检测信息～～～")
 	taskId := c.Request.FormValue("task_ID")
 	if taskId == "" {
-		// logs.Error("缺少task_ID参数")
-		// c.JSON(http.StatusOK, gin.H{
-		// 	"message":   "缺少task_ID参数",
-		// 	"errorCode": -1,
-		// 	"data":      "缺少task_ID参数",
-		// })
 		ReturnMsg(c, FAILURE, "Miss task_ID")
 		return
 	}
@@ -329,12 +323,6 @@ func UpdateDetectInfos(c *gin.Context) {
 		"id": taskId,
 	})
 	if detect == nil || len(*detect) == 0 {
-		// logs.Error("未查询到该taskid对应的检测任务，%v", taskId)
-		// c.JSON(http.StatusOK, gin.H{
-		// 	"message":   "未查询到该taskid对应的检测任务",
-		// 	"errorCode": -2,
-		// 	"data":      "未查询到该taskid对应的检测任务",
-		// })
 		ReturnMsg(c, FAILURE, fmt.Sprintf("Cannot find any matched task about id %v", taskId))
 		return
 	}
