@@ -18,13 +18,12 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id": mapInfo["taskId"]})
 	var fisrtResult dal.JSONResultStruct
-	err_f := json.Unmarshal([]byte(info), &fisrtResult)
-	if err_f != nil {
-		logs.Error("taskId:"+fmt.Sprint(mapInfo["taskId"])+",二进制静态包检测返回信息格式错误！,%v", err_f)
-		message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",二进制静态包检测返回信息格式错误，请解决;" + fmt.Sprint(err_f)
+	if err := json.Unmarshal([]byte(info), &fisrtResult); err != nil {
+		logs.Error("taskId:"+fmt.Sprint(mapInfo["taskId"])+",二进制静态包检测返回信息格式错误！,%v", err)
+		message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",二进制静态包检测返回信息格式错误，请解决;" + fmt.Sprint(err)
 		DetectTaskErrorHandle((*detect)[0], "1", info)
 		utils.LarkDingOneInner("fanjuan.xqp", message)
-		return err_f, 0
+		return err, 0
 	}
 	// fmt.Println(fisrtResult)
 	// return fmt.Errorf("Test"), 0
