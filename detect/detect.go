@@ -423,7 +423,6 @@ func UpdateDetectInfos(c *gin.Context) {
 	var message string
 	creators := (*detect)[0].ToLarker
 	larkList := strings.Split(creators, ",")
-	//for _,creator := range larkList {
 	message = "你好，" + (*detect)[0].AppName + " " + (*detect)[0].AppVersion
 	platform := (*detect)[0].Platform
 	var os_code string
@@ -437,11 +436,8 @@ func UpdateDetectInfos(c *gin.Context) {
 
 	message += "  检测已经完成"
 
-	//message += " 完成二进制检测，请及时对每条未确认信息进行确认！\n"
-	//message += "如果安卓选择了GooglePlay检测和隐私检测，两个检测结果都需要进行确认，请不要遗漏！！！\n"
 	appId := (*detect)[0].AppId
 	appIdInt, _ := strconv.Atoi(appId)
-	//appVersion := (*detect)[0].AppVersion
 	var config *dal.LarkMsgTimer
 	config = dal.QueryLarkMsgTimerByAppId(appIdInt)
 	alterType := 0
