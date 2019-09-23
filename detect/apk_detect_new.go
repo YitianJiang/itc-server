@@ -1,13 +1,14 @@
 package detect
 
 import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
-	"encoding/json"
-	"fmt"
-	"strconv"
 )
 
 /**
@@ -16,8 +17,7 @@ import (
 func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 	logs.Info("新的安卓解析开始～～～～")
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": mapInfo["taskId"],
-	})
+		"id": mapInfo["taskId"]})
 	var fisrtResult dal.JSONResultStruct
 	err_f := json.Unmarshal([]byte(info), &fisrtResult)
 	if err_f != nil {
