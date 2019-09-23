@@ -171,11 +171,6 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 		return
 	}
 
-	// task := queryLastestDetectResult(condition)
-	// if task == nil {
-	// 	ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to find binary detect result about APP ID: %v and Version: %v", appID, appVersion))
-	// 	return
-	// }
 	db, err := database.GetDBConnection()
 	if err != nil {
 		ReturnMsg(c, FAILURE, fmt.Sprintf("Connect to DB failed: %v", err))
@@ -227,32 +222,6 @@ func getLatestDetectResult(db *gorm.DB, condition map[string]interface{}) (
 	}
 
 	return result, nil
-}
-
-func queryLastestDetectResult(
-	condition map[string]interface{}) *dal.DetectStruct {
-
-	db, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return nil
-	}
-	defer db.Close()
-
-	var detect dal.DetectStruct
-	if err := db.Debug().Where(condition).Order("created_at desc").
-		First(&detect).Error; err != nil {
-		logs.Error("Cannot find binary detect result about version %v :%v", condition["app_version"], err)
-
-		delete(condition, "app_version")
-		if err := db.Debug().Where(condition).Order("created_at desc").
-			First(&detect).Error; err != nil {
-			logs.Error("Cannot find any binary detect result")
-			return nil
-		}
-	}
-
-	return &detect
 }
 
 // retrieveLatestDetectResult returns the first eligible record on success.
