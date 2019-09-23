@@ -1140,12 +1140,7 @@ func OtherDetectTaskErrorHandle(taskId int, errCode string, errInfo string) erro
 	var updateData = map[string]interface{}{
 		"err_info": errString,
 	}
-	err := dal.UpdateOtherDetectModelByMap(condition, updateData)
-	if err != nil {
-		return err
-	} else {
-		return nil
-	}
+	return dal.UpdateOtherDetectModelByMap(condition, updateData)
 }
 
 /**
