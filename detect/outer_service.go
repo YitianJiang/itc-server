@@ -178,11 +178,10 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 	}
 	defer db.Close()
 
-	condition := map[string]interface{}{
+	task, err := getLatestDetectResult(db, map[string]interface{}{
 		"app_id":      appID,
 		"app_version": appVersion,
-		"platform":    0}
-	task, err := getLatestDetectResult(db, condition)
+		"platform":    0})
 	if err != nil {
 		ReturnMsg(c, FAILURE, "Failed to get binary detect result")
 		return
