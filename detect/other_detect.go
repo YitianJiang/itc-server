@@ -1126,10 +1126,7 @@ func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct
 aar任务检测问题记录
 */
 func OtherDetectTaskErrorHandle(taskId int, errCode string, errInfo string) error {
-	// var errStruct dal.ErrorStruct
-	// errStruct.ErrCode = errCode
-	// errStruct.ErrInfo = errInfo
-	// errBytes, _ := json.Marshal(errStruct)
+
 	errBytes, err := json.Marshal(map[string]interface{}{
 		"errCode": errCode,
 		"errInfo": errInfo})
