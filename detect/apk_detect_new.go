@@ -15,7 +15,6 @@ import (
 安卓json检测信息分析----兼容.aab格式检测结果---json到Struct
 */
 func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
-	logs.Info("新的安卓解析开始～～～～")
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id": mapInfo["taskId"]})
 	var fisrtResult dal.JSONResultStruct
@@ -27,6 +26,8 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 		utils.LarkDingOneInner("fanjuan.xqp", message)
 		return err_f, 0
 	}
+	// fmt.Println(fisrtResult)
+	// return fmt.Errorf("Test"), 0
 
 	//遍历结果数组，并将每组检测结果信息插入数据库
 	for index, result := range fisrtResult.Result {
@@ -92,7 +93,7 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 			//及时报警
 			message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",敏感method写入数据库失败，请解决;" + fmt.Sprint(err)
 			utils.LarkDingOneInner("fanjuan.xqp", message)
-			return err_f, 0
+			return err1, 0
 		}
 
 		//敏感方法解析
@@ -109,7 +110,7 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 			//及时报警
 			message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",敏感str写入数据库失败，请解决;" + fmt.Sprint(err)
 			utils.LarkDingOneInner("fanjuan.xqp", message)
-			return err_f, 0
+			return err2, 0
 		}
 	}
 
