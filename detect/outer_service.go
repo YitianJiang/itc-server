@@ -1,6 +1,7 @@
 package detect
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
 )
@@ -165,43 +167,66 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 	appID, idExist := c.GetQuery("appId")
 	appVersion, versionExist := c.GetQuery("appVersion")
 	if !idExist || !versionExist {
-		msg := "Miss APP id or version"
-		logs.Error(msg)
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -1,
-			"message":   msg,
-			"data":      msg})
-
+		ReturnMsg(c, FAILURE, "Miss APP id or version")
 		return
 	}
 
-	task := queryLastestDetectResult(map[string]interface{}{
+	// task := queryLastestDetectResult(condition)
+	// if task == nil {
+	// 	ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to find binary detect result about APP ID: %v and Version: %v", appID, appVersion))
+	// 	return
+	// }
+	db, err := database.GetDBConnection()
+	if err != nil {
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Connect to DB failed: %v", err))
+		return
+	}
+	defer db.Close()
+
+	condition := map[string]interface{}{
 		"app_id":      appID,
 		"app_version": appVersion,
-		"platform":    0,
-		"status":      1})
-	if task == nil {
-		msg := "Failed to find binary detect result in database about" +
-			" APP ID is " + appID + " and Version is " + appVersion
-		logs.Error(msg)
-		errorReturn(c, msg)
+		"platform":    0}
+	task, err := getLatestDetectResult(db, condition)
+	if err != nil {
+		ReturnMsg(c, FAILURE, "Failed to get binary detect result")
 		return
 	}
 
-	result := getDetectResult(c, strconv.Itoa(int(task.ID)), "6")
-	if result == nil {
+	// getExtraConfirmedDetections(condition)
+
+	data := getDetectResult(c, strconv.Itoa(int(task.ID)), "6")
+	if data == nil {
 		logs.Error("Failed to get task ID %v binary detect result", task.ID)
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"errorCode":    0,
+		"errorCode":    SUCCESS,
 		"message":      "success",
-		"data":         *result,
+		"data":         *data,
 		"extraConfirm": nil})
 
-	logs.Debug("Get task ID %v binary detect result success", task.ID)
+	logs.Info("Get task ID %v binary detect result success", task.ID)
 	return
+}
+
+func getLatestDetectResult(db *gorm.DB, condition map[string]interface{}) (
+	*dal.DetectStruct, error) {
+
+	condition["status"] = 1
+	result, err := retrieveLatestDetectResult(db, condition)
+	if err != nil {
+		// Return the lastest binary detect result if the binary detect
+		// result of specific version was not found.
+		delete(condition, "app_version")
+		result, err = retrieveLatestDetectResult(db, condition)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
 }
 
 func queryLastestDetectResult(
@@ -218,8 +243,7 @@ func queryLastestDetectResult(
 	if err := db.Debug().Where(condition).Order("created_at desc").
 		First(&detect).Error; err != nil {
 		logs.Error("Cannot find binary detect result about version %v :%v", condition["app_version"], err)
-		// Return the lastest binary detect result if the binary detect
-		// result of specific version was not found.
+
 		delete(condition, "app_version")
 		if err := db.Debug().Where(condition).Order("created_at desc").
 			First(&detect).Error; err != nil {
@@ -230,3 +254,32 @@ func queryLastestDetectResult(
 
 	return &detect
 }
+
+// retrieveLatestDetectResult returns the first eligible record on success.
+func retrieveLatestDetectResult(db *gorm.DB, condition map[string]interface{}) (
+	*dal.DetectStruct, error) {
+
+	var detect dal.DetectStruct
+	if err := db.Debug().Where(condition).Order("created_at desc").
+		First(&detect).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
+	}
+
+	return &detect, nil
+}
+
+// func getExtraConfirmedDetections(condition map[string]interface{}) {
+
+// 	db, err := database.GetDBConnection()
+// 	if err != nil {
+// 		logs.Error("Connect to DB failed: %v", err)
+// 		return
+// 	}
+// 	defer db.Close()
+
+// 	condition["confirmed"] = true
+// 	delete(condition, "status")
+// 	// RetrieveDetection(db, condition)
+
+// }
