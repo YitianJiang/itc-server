@@ -187,11 +187,18 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 		return
 	}
 
-	// getExtraConfirmedDetections(condition)
-
 	data := getDetectResult(c, strconv.Itoa(int(task.ID)), "6")
 	if data == nil {
 		logs.Error("Failed to get task ID %v binary detect result", task.ID)
+		return
+	}
+
+	extra, err := getExtraConfirmedDetection(db, map[string]interface{}{
+		"app_id":      appID,
+		"app_version": appVersion,
+		"platform":    0})
+	if err != nil {
+		ReturnMsg(c, FAILURE, "Failed to get extra confirmed detections")
 		return
 	}
 
@@ -199,7 +206,7 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 		"errorCode":    SUCCESS,
 		"message":      "success",
 		"data":         *data,
-		"extraConfirm": nil})
+		"extraConfirm": extra})
 
 	logs.Info("Get task ID %v binary detect result success", task.ID)
 	return
@@ -237,17 +244,43 @@ func retrieveLatestDetectResult(db *gorm.DB, condition map[string]interface{}) (
 	return &detect, nil
 }
 
-// func getExtraConfirmedDetections(condition map[string]interface{}) {
+// The type of detection
+const (
+	TypePermission = "权限"
+	TypeMthod      = "敏感方法"
+	TypeString     = "敏感词汇"
+)
 
-// 	db, err := database.GetDBConnection()
-// 	if err != nil {
-// 		logs.Error("Connect to DB failed: %v", err)
-// 		return
-// 	}
-// 	defer db.Close()
+func getExtraConfirmedDetection(db *gorm.DB, condition map[string]interface{}) (
+	map[string]interface{}, error) {
 
-// 	condition["confirmed"] = true
-// 	delete(condition, "status")
-// 	// RetrieveDetection(db, condition)
+	condition["confirmed"] = true
+	detections, err := RetrieveDetection(db, condition)
+	if err != nil {
+		return nil, err
+	}
 
-// }
+	result := make(map[string]interface{})
+	var permissions []string
+	var methods []map[string]interface{}
+	var strs []string
+	for i := range detections {
+		switch detections[i].Type {
+		case TypePermission:
+			permissions = append(permissions, detections[i].Key)
+		case TypeMthod:
+			k := strings.LastIndexByte(detections[i].Key, '.')
+			methods = append(methods, map[string]interface{}{
+				"className":  detections[i].Key[:k],
+				"methodName": detections[i].Key[k+1:]})
+		case TypeString:
+			strs = append(strs, detections[i].Key)
+		}
+	}
+
+	result["sMethods"] = methods
+	result["newStrs"] = strs
+	result["permissionList"] = permissions
+
+	return result, nil
+}
