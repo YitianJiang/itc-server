@@ -307,7 +307,7 @@ func getFilesFromRequest(c *gin.Context, fieldName string, emptyError bool) (str
  *更新检测包的检测信息_v2——----------fj
  */
 func UpdateDetectInfos(c *gin.Context) {
-	logs.Info("回调开始，更新检测信息～～～")
+	logs.Info("Binary detect tool start callback")
 	taskId := c.Request.FormValue("task_ID")
 	if taskId == "" {
 		ReturnMsg(c, FAILURE, "Miss task_ID")
@@ -328,7 +328,7 @@ func UpdateDetectInfos(c *gin.Context) {
 
 	//消息通知条数--检测项+自查项
 	var unConfirms int
-	var unSelfCheck = 0
+	var unSelfCheck int
 	if (*detect)[0].Platform == 0 {
 		if toolIdInt == 6 { //安卓兼容新版本
 			//安卓检测信息分析，并将检测信息写库-----fj
@@ -338,6 +338,7 @@ func UpdateDetectInfos(c *gin.Context) {
 			var errApk error
 			errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, mapInfo)
 			if errApk != nil {
+				ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to update APK detect reuslt: %v", errApk))
 				return
 			}
 		} else {
@@ -499,7 +500,7 @@ func UpdateDetectInfos(c *gin.Context) {
 			qa_bm = qa_map["name"].(string)
 		}
 	}
-	//此处测试时注释掉
+	// 此处测试时注释掉
 	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
 	for _, creator := range larkList {
 		utils.UserInGroup(creator)                                                                             //将用户拉入预审平台群
@@ -513,7 +514,7 @@ func UpdateDetectInfos(c *gin.Context) {
 		groupArr := strings.Split(group, ",")
 		for _, group_id := range groupArr {
 			to_lark_group := strings.Trim(group_id, " ")
-			//新样式
+			// 新样式
 			if utils.LarkDetectResult(to_lark_group, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, true) == false {
 				message += message + larkUrl
 				utils.LarkGroup(message, to_lark_group)
