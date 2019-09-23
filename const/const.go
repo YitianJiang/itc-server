@@ -17,10 +17,10 @@ const LARK_URL = "https://rocket-api.bytedance.net/api/v1/robot/person/send"
 const OFFICE_LARK_URL = "https://open.feishu.cn/open-apis/message/v3/send/"
 const LARK_Email2Id_URL = "https://open.feishu.cn/open-apis/user/v3/email2id"
 
-var LowLarkPeople = []string{"kanghuaisong", "yinzhihong", "hejiahui.2019", "maoyu"}
-var MiddleLarkPeople = []string{"kanghuaisong", "yinzhihong", "gongrui", "zhangshuai.02", "hejiahui.2019", "maoyu"}
-var HighLarkPeople = []string{"kanghuaisong", "yinzhihong", "gongrui", "zhangshuai.02", "chenyujun", "hejiahui.2019", "maoyu"}
-var PermLarkPeople = []string{"kanghuaisong", "lirensheng"}
+var LowLarkPeople = []string{"hejiahui.2019", "maoyu"}
+var MiddleLarkPeople = []string{"zhangshuai.02", "hejiahui.2019", "maoyu"}
+var HighLarkPeople = []string{"zhangshuai.02", "chenyujun", "hejiahui.2019", "maoyu"}
+var PermLarkPeople = []string{"lirensheng"}
 var AppVersionProject = map[string]string{"13": "1", "27": "35", "32": "23", "1128": "375", "1112": "397"}
 
 //权限配置页面操作人员
