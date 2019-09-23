@@ -461,9 +461,14 @@ func GetAllAPIConfigs() *map[string]interface{} {
 */
 func DetectTaskErrorHandle(detect dal.DetectStruct, errCode string, errInfo string) error {
 
-	errBytes, _ := json.Marshal(map[string]interface{}{
+	errBytes, err := json.Marshal(map[string]interface{}{
 		"errCode": errCode,
 		"errInfo": errInfo})
+	if err != nil {
+		logs.Error("Marshal error: %v", err)
+		return err
+	}
+
 	var errString = string(errBytes)
 	detect.ErrInfo = &errString
 	return dal.UpdateDetectModelNew(detect)
