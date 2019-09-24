@@ -22,26 +22,32 @@ const (
 /**
 安卓json检测信息分析----兼容.aab格式检测结果---json到Struct
 */
+
+// TOOD
+func retrieveExactDetectTask(condition map[string]interface{}) (
+	*dal.DetectStruct, error) {
+
+	var result dal.DetectStruct
+	return &result, nil
+}
+
 func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{"id": taskID})
 	var fisrtResult dal.JSONResultStruct
 	if err := json.Unmarshal([]byte(info), &fisrtResult); err != nil {
 		logs.Error("Task id: %v Unmarshal error: %v", taskID, err)
-		message := "taskId:" + fmt.Sprint(taskID) + ",二进制静态包检测返回信息格式错误，请解决;" + fmt.Sprint(err)
 		handleDetectTaskError((*detect)[0], DetectServiceScriptError, info)
-		utils.LarkDingOneInner(informer, message)
 		return err, 0
 	}
 
 	//遍历结果数组，并将每组检测结果信息插入数据库
 	for index, result := range fisrtResult.Result {
-		appInfos := result.AppInfo
 		methodsInfo := result.MethodInfos
 		strsInfo := result.StrInfos
 
 		//检测基础信息解析
-		if err := AppInfoAnalysis_2(appInfos,
+		if err := AppInfoAnalysis_2(result.AppInfo,
 			&dal.DetectInfo{TaskId: taskID, ToolId: toolID},
 			index); err != nil {
 			return err, 0
