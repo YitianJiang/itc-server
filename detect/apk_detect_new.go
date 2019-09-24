@@ -28,7 +28,7 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 	if err := json.Unmarshal([]byte(info), &fisrtResult); err != nil {
 		logs.Error("Task id: %v Unmarshal error: %v", mapInfo["taskId"], err)
 		message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",二进制静态包检测返回信息格式错误，请解决;" + fmt.Sprint(err)
-		DetectTaskErrorHandle((*detect)[0], DetectServiceScriptError, info)
+		handleDetectTaskError((*detect)[0], DetectServiceScriptError, info)
 		utils.LarkDingOneInner("fanjuan.xqp", message)
 		return err, 0
 	}
@@ -464,7 +464,7 @@ func GetAllAPIConfigs() *map[string]interface{} {
 /**
 检测任务发生问题逻辑处理
 */
-func DetectTaskErrorHandle(detect dal.DetectStruct,
+func handleDetectTaskError(detect dal.DetectStruct,
 	errCode interface{}, errInfo interface{}) error {
 
 	errBytes, err := json.Marshal(map[string]interface{}{

@@ -226,7 +226,7 @@ func UploadFile(c *gin.Context) {
 		if err != nil {
 			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",上传二进制包出错,", err.Error())
 			dbDetectModel.ID = dbDetectModelId
-			DetectTaskErrorHandle(dbDetectModel, DetectServiceInfrastructureError, "上传二进制包出错")
+			handleDetectTaskError(dbDetectModel, DetectServiceInfrastructureError, "上传二进制包出错")
 			//及时报警
 			for _, lark_people := range _const.LowLarkPeople {
 				utils.LarkDingOneInner(lark_people, "上传二进制包出错，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
