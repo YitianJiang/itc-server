@@ -15,6 +15,8 @@ import (
 const (
 	DetectServiceScriptError         = 1
 	DetectServiceInfrastructureError = 2
+
+	informer = "hejiahui.2019"
 )
 
 /**
@@ -29,7 +31,7 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 		logs.Error("Task id: %v Unmarshal error: %v", mapInfo["taskId"], err)
 		message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",二进制静态包检测返回信息格式错误，请解决;" + fmt.Sprint(err)
 		handleDetectTaskError((*detect)[0], DetectServiceScriptError, info)
-		utils.LarkDingOneInner("fanjuan.xqp", message)
+		utils.LarkDingOneInner(informer, message)
 		return err, 0
 	}
 	fmt.Println(fisrtResult)
@@ -97,7 +99,7 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 		if err := dal.InsertDetectDetailBatch(&allMethods); err != nil {
 			//及时报警
 			message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",敏感method写入数据库失败，请解决;" + fmt.Sprint(err)
-			utils.LarkDingOneInner("fanjuan.xqp", message)
+			utils.LarkDingOneInner(informer, message)
 			return err, 0
 		}
 
@@ -113,7 +115,7 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 		if err := dal.InsertDetectDetailBatch(&allStrs); err != nil {
 			//及时报警
 			message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",敏感str写入数据库失败，请解决;" + fmt.Sprint(err)
-			utils.LarkDingOneInner("fanjuan.xqp", message)
+			utils.LarkDingOneInner(informer, message)
 			return err, 0
 		}
 	}
@@ -160,7 +162,7 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 		if err := dal.UpdateDetectModelNew((*detect)[0]); err != nil {
 			message := "任务ID：" + fmt.Sprint(taskId) + "，appName和Version信息更新失败，失败原因：" + fmt.Sprint(err)
 			logs.Error(message)
-			utils.LarkDingOneInner("fanjuan.xqp", message)
+			utils.LarkDingOneInner(informer, message)
 			return err
 		}
 	}
@@ -186,7 +188,7 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 	relationship.PermInfos = permAppInfos
 	err1 := dal.InsertPermAppRelation(relationship)
 	if err1 != nil {
-		utils.LarkDingOneInner("fanjuan.xqp", "新增权限App关系失败！taskId:"+fmt.Sprint(taskId)+",appID="+(*detect)[0].AppId)
+		utils.LarkDingOneInner(informer, "新增权限App关系失败！taskId:"+fmt.Sprint(taskId)+",appID="+(*detect)[0].AppId)
 		return err1
 	}
 
@@ -198,7 +200,7 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 	if err != nil {
 		//及时报警
 		message := "taskId:" + fmt.Sprint(taskId) + ",appInfo写入数据库失败，请解决;" + fmt.Sprint(err)
-		utils.LarkDingOneInner("fanjuan.xqp", message)
+		utils.LarkDingOneInner(informer, message)
 		return err
 	}
 	return nil
@@ -259,7 +261,7 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 			if err != nil {
 				logs.Error("taskId:"+fmt.Sprint(taskId)+",update回调时新增权限失败，%v", err)
 				//及时报警
-				utils.LarkDingOneInner("fanjuan.xqp", "taskId:"+fmt.Sprint(taskId)+",update回调新增权限失败")
+				utils.LarkDingOneInner(informer, "taskId:"+fmt.Sprint(taskId)+",update回调新增权限失败")
 				return "", err
 			} else {
 				fhflag = true
@@ -314,7 +316,7 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 		if errB != nil {
 			logs.Error("taskId:" + fmt.Sprint(taskId) + ",插入权限第一次引入历史失败")
 			//及时报警
-			utils.LarkDingOneInner("fanjuan.xqp", "taskId:"+fmt.Sprint(taskId)+",插入权限第一次引入历史失败")
+			utils.LarkDingOneInner(informer, "taskId:"+fmt.Sprint(taskId)+",插入权限第一次引入历史失败")
 			return "", errB
 		}
 	}
