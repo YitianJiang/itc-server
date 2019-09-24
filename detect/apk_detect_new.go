@@ -22,14 +22,13 @@ const (
 /**
 安卓json检测信息分析----兼容.aab格式检测结果---json到Struct
 */
-func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
+func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": mapInfo["taskId"]})
+	detect := dal.QueryDetectModelsByMap(map[string]interface{}{"id": taskID})
 	var fisrtResult dal.JSONResultStruct
 	if err := json.Unmarshal([]byte(info), &fisrtResult); err != nil {
-		logs.Error("Task id: %v Unmarshal error: %v", mapInfo["taskId"], err)
-		message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",二进制静态包检测返回信息格式错误，请解决;" + fmt.Sprint(err)
+		logs.Error("Task id: %v Unmarshal error: %v", taskID, err)
+		message := "taskId:" + fmt.Sprint(taskID) + ",二进制静态包检测返回信息格式错误，请解决;" + fmt.Sprint(err)
 		handleDetectTaskError((*detect)[0], DetectServiceScriptError, info)
 		utils.LarkDingOneInner(informer, message)
 		return err, 0
@@ -43,9 +42,7 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 
 		//检测基础信息解析
 		if err := AppInfoAnalysis_2(appInfos,
-			&dal.DetectInfo{
-				TaskId: mapInfo["taskId"],
-				ToolId: mapInfo["toolId"]},
+			&dal.DetectInfo{TaskId: taskID, ToolId: toolID},
 			index); err != nil {
 			return err, 0
 		}
@@ -88,15 +85,15 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 			} else {
 				detailContent.RiskLevel = "3"
 			}
-			detailContent.TaskId = mapInfo["taskId"]
-			detailContent.ToolId = mapInfo["toolId"]
+			detailContent.TaskId = taskID
+			detailContent.ToolId = toolID
 			//新增兼容下标
 			detailContent.SubIndex = index
 			allMethods = append(allMethods, *MethodAnalysis(newMethod, &detailContent, extraInfo)) //内层去重，并放入写库信息数组
 		}
 		if err := dal.InsertDetectDetailBatch(&allMethods); err != nil {
 			//及时报警
-			message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",敏感method写入数据库失败，请解决;" + fmt.Sprint(err)
+			message := "taskId:" + fmt.Sprint(taskID) + ",敏感method写入数据库失败，请解决;" + fmt.Sprint(err)
 			utils.LarkDingOneInner(informer, message)
 			return err, 0
 		}
@@ -105,21 +102,21 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 		allStrs := make([]dal.DetectContentDetail, 0)
 		for _, strInfo := range strsInfo {
 			var detailContent dal.DetectContentDetail
-			detailContent.TaskId = mapInfo["taskId"]
-			detailContent.ToolId = mapInfo["toolId"]
+			detailContent.TaskId = taskID
+			detailContent.ToolId = toolID
 			detailContent.SubIndex = index
 			allStrs = append(allStrs, *StrAnalysis(strInfo, &detailContent, strInfos))
 		}
 		if err := dal.InsertDetectDetailBatch(&allStrs); err != nil {
 			//及时报警
-			message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",敏感str写入数据库失败，请解决;" + fmt.Sprint(err)
+			message := "taskId:" + fmt.Sprint(taskID) + ",敏感str写入数据库失败，请解决;" + fmt.Sprint(err)
 			utils.LarkDingOneInner(informer, message)
 			return err, 0
 		}
 	}
 
 	//任务状态更新----该app无需要特别确认的敏感方法、字符串或权限
-	errTaskUpdate, unConfirms := taskStatusUpdate(mapInfo["taskId"], mapInfo["toolId"], &(*detect)[0], false, 0)
+	errTaskUpdate, unConfirms := taskStatusUpdate(taskID, taskID, &(*detect)[0], false, 0)
 	if errTaskUpdate != "" {
 		return fmt.Errorf(errTaskUpdate), 0
 	}

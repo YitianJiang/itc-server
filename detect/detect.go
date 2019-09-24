@@ -332,12 +332,17 @@ func UpdateDetectInfos(c *gin.Context) {
 	if (*detect)[0].Platform == 0 {
 		if toolIdInt == 6 { //安卓兼容新版本
 			//安卓检测信息分析，并将检测信息写库-----fj
-			mapInfo := make(map[string]int)
-			mapInfo["taskId"], _ = strconv.Atoi(taskId)
-			mapInfo["toolId"], _ = strconv.Atoi(toolId)
+			taskID, err := strconv.Atoi(taskId)
+			if err != nil {
+				logs.Error("String convert error: %v", taskId)
+			}
+			toolID, err := strconv.Atoi(toolId)
+			if err != nil {
+				logs.Error("String convert error: %v", toolId)
+			}
 			var errApk error
 			go logs.Debug("Task id: %v json content: %v", taskId, jsonContent)
-			errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, mapInfo)
+			errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, taskID, toolID)
 			if errApk != nil {
 				ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to update APK detect reuslt: %v", errApk))
 				return
