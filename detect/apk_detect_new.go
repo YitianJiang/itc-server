@@ -232,6 +232,7 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 			continue
 		}
 		permRepeatMap[pers] = 1
+
 		//写app和perm对应关系
 		queryResult := dal.QueryDetectConfig(map[string]interface{}{
 			"key_info":   pers,
@@ -240,13 +241,15 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 		fhflag = false
 		permInfo := make(map[string]interface{})
 		if queryResult == nil || len(*queryResult) == 0 {
+			// Cannot find any matched pemisstion in the safe
+			// permission list which means this is a new permission.
 			var conf dal.DetectConfigStruct
 			conf.KeyInfo = pers
 			//将该权限的优先级定为--3高危
-			conf.Priority = 3
+			conf.Priority = RiskLevelHigh
 			//暂时定为固定---标识itc检测新增
 			conf.Creator = "itc"
-			conf.Platform = 0
+			conf.Platform = Android
 			perm_id, err := dal.InsertDetectConfig(conf)
 
 			if err != nil {

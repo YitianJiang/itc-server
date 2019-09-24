@@ -263,6 +263,12 @@ const (
 
 	Android = 0
 	iOS     = 1
+
+	RiskLevelNone   = -1
+	RiskLevelNormal = 0
+	RiskLevelLow    = 1
+	RiskLevelMid    = 2
+	RiskLevelHigh   = 3
 )
 
 func getExtraConfirmedDetection(db *gorm.DB, condition map[string]interface{}) (
