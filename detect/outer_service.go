@@ -267,7 +267,7 @@ const (
 	RiskLevelNone   = -1
 	RiskLevelNormal = 0
 	RiskLevelLow    = 1
-	RiskLevelMid    = 2
+	RiskLevelMiddle = 2
 	RiskLevelHigh   = 3
 )
 
