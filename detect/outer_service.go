@@ -213,10 +213,17 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 	return
 }
 
+// The status code of detection.
+const (
+	Unconfirmed   = 0
+	ConfirmedPass = 1
+	ConfirmedFail = 2
+)
+
 func getLatestDetectResult(db *gorm.DB, condition map[string]interface{}) (
 	*dal.DetectStruct, error) {
 
-	condition["status"] = 1
+	condition["status"] = ConfirmedPass
 	result, err := retrieveLatestDetectResult(db, condition)
 	if err != nil {
 		// Return the lastest binary detect result if the binary detect
@@ -269,7 +276,7 @@ func getExtraConfirmedDetection(db *gorm.DB, condition map[string]interface{}) (
 	for i := range detections {
 		m := make(map[string]interface{})
 		m["configid"] = detections[i].DetectConfigID
-		m["status"] = 1
+		m["status"] = ConfirmedPass
 		m["remark"] = ""
 		m["confirmer"] = ""
 		m["desc"] = detections[i].Description
