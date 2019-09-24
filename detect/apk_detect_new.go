@@ -147,21 +147,17 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 	var taskUpdateFlag = false
 	if info.Primary == nil || info.Primary.(float64) == 1 {
 		taskUpdateFlag = true
-	}
-	detectInfo.ApkName = info.ApkName
-	detectInfo.Version = info.ApkVersionName
-	detectInfo.Channel = info.Channel
-
-	if taskUpdateFlag {
 		(*detect)[0].AppName = info.ApkName
 		(*detect)[0].AppVersion = info.ApkVersionName
 		if err := dal.UpdateDetectModelNew((*detect)[0]); err != nil {
-			message := "任务ID：" + fmt.Sprint(detectInfo.TaskId) + "，appName和Version信息更新失败，失败原因：" + fmt.Sprint(err)
-			logs.Error(message)
-			utils.LarkDingOneInner(informer, message)
+			logs.Error("Task id: %v Failed to update detect task: %v", detectInfo.TaskId, err)
 			return err
 		}
 	}
+
+	detectInfo.ApkName = info.ApkName
+	detectInfo.Version = info.ApkVersionName
+	detectInfo.Channel = info.Channel
 
 	//更新任务的权限信息
 	var permissionArr = info.PermsInAppInfo
