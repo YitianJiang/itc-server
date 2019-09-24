@@ -11,22 +11,29 @@ import (
 	"code.byted.org/gopkg/logs"
 )
 
+// The error type of detect service.
+const (
+	DetectServiceScriptError         = 1
+	DetectServiceInfrastructureError = 2
+)
+
 /**
 安卓json检测信息分析----兼容.aab格式检测结果---json到Struct
 */
 func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
+
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id": mapInfo["taskId"]})
 	var fisrtResult dal.JSONResultStruct
 	if err := json.Unmarshal([]byte(info), &fisrtResult); err != nil {
-		logs.Error("taskId:"+fmt.Sprint(mapInfo["taskId"])+",二进制静态包检测返回信息格式错误！,%v", err)
+		logs.Error("Task id: %v Unmarshal error: %v", mapInfo["taskId"], err)
 		message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",二进制静态包检测返回信息格式错误，请解决;" + fmt.Sprint(err)
-		DetectTaskErrorHandle((*detect)[0], "1", info)
+		DetectTaskErrorHandle((*detect)[0], DetectServiceScriptError, info)
 		utils.LarkDingOneInner("fanjuan.xqp", message)
 		return err, 0
 	}
-	// fmt.Println(fisrtResult)
-	// return fmt.Errorf("Test"), 0
+	fmt.Println(fisrtResult)
+	return fmt.Errorf("Test"), 0
 
 	//遍历结果数组，并将每组检测结果信息插入数据库
 	for index, result := range fisrtResult.Result {
@@ -457,7 +464,8 @@ func GetAllAPIConfigs() *map[string]interface{} {
 /**
 检测任务发生问题逻辑处理
 */
-func DetectTaskErrorHandle(detect dal.DetectStruct, errCode string, errInfo string) error {
+func DetectTaskErrorHandle(detect dal.DetectStruct,
+	errCode interface{}, errInfo interface{}) error {
 
 	errBytes, err := json.Marshal(map[string]interface{}{
 		"errCode": errCode,
