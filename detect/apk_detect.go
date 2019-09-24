@@ -96,30 +96,30 @@ func GetPermList() map[int]interface{} {
 /**
 获取权限引入历史
 */
-func GetImportedPermission(appId int) map[int]interface{} {
-	result := make(map[int]interface{})
-	queryResult, err := dal.QueryPermHistory(map[string]interface{}{
-		"app_id": appId,
-	})
+func GetImportedPermission(appID int) map[int]interface{} {
+
+	queryResult, err := dal.QueryPermHistory(map[string]interface{}{"app_id": appID})
 	if err != nil || queryResult == nil || len(*queryResult) == 0 {
-		logs.Error("该app暂时没有确认信息")
-	} else {
-		for _, infoP := range *queryResult {
-			_, ok := result[infoP.PermId]
-			if !ok {
-				info := make(map[string]interface{})
-				info["version"] = infoP.AppVersion
-				info["status"] = infoP.Status
-				result[infoP.PermId] = info
-			} else if ok && infoP.Status == 0 {
-				v := result[infoP.PermId].(map[string]interface{})
-				v["version"] = infoP.AppVersion
-				result[infoP.PermId] = v
-			}
+		logs.Error("Cannot find any permission about app id: %v", appID)
+		return nil
+	}
+
+	result := make(map[int]interface{})
+	for _, infoP := range *queryResult {
+		_, ok := result[infoP.PermId]
+		if !ok {
+			info := make(map[string]interface{})
+			info["version"] = infoP.AppVersion
+			info["status"] = infoP.Status
+			result[infoP.PermId] = info
+		} else if ok && infoP.Status == 0 {
+			v := result[infoP.PermId].(map[string]interface{})
+			v["version"] = infoP.AppVersion
+			result[infoP.PermId] = v
 		}
 	}
-	return result
 
+	return result
 }
 
 /**
