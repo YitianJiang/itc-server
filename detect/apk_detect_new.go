@@ -25,6 +25,8 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 		utils.LarkDingOneInner("fanjuan.xqp", message)
 		return err, 0
 	}
+	// fmt.Println(fisrtResult)
+	// return fmt.Errorf("Test"), 0
 
 	//遍历结果数组，并将每组检测结果信息插入数据库
 	for index, result := range fisrtResult.Result {
@@ -85,12 +87,11 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 			detailContent.SubIndex = index
 			allMethods = append(allMethods, *MethodAnalysis(newMethod, &detailContent, extraInfo)) //内层去重，并放入写库信息数组
 		}
-		err1 := dal.InsertDetectDetailBatch(&allMethods)
-		if err1 != nil {
+		if err := dal.InsertDetectDetailBatch(&allMethods); err != nil {
 			//及时报警
 			message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",敏感method写入数据库失败，请解决;" + fmt.Sprint(err)
 			utils.LarkDingOneInner("fanjuan.xqp", message)
-			return err1, 0
+			return err, 0
 		}
 
 		//敏感方法解析
@@ -102,12 +103,11 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 			detailContent.SubIndex = index
 			allStrs = append(allStrs, *StrAnalysis(strInfo, &detailContent, strInfos))
 		}
-		err2 := dal.InsertDetectDetailBatch(&allStrs)
-		if err2 != nil {
+		if err := dal.InsertDetectDetailBatch(&allStrs); err != nil {
 			//及时报警
 			message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",敏感str写入数据库失败，请解决;" + fmt.Sprint(err)
 			utils.LarkDingOneInner("fanjuan.xqp", message)
-			return err2, 0
+			return err, 0
 		}
 	}
 
