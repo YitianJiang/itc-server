@@ -112,6 +112,7 @@ func getAPPPermissionHistory(appID int) map[int]interface{} {
 				"version": infoP.AppVersion,
 				"status":  infoP.Status}
 		} else if ok && infoP.Status == 0 {
+			// TODO
 			v := result[infoP.PermId].(map[string]interface{})
 			v["version"] = infoP.AppVersion
 			result[infoP.PermId] = v
