@@ -139,10 +139,8 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 		realIndex = index[0]
 	}
 
-	taskId := detectInfo.TaskId
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": taskId,
-	})
+		"id": detectInfo.TaskId})
 	appId, _ := strconv.Atoi((*detect)[0].AppId)
 
 	//判断appInfo信息是否为主要信息，只有主要信息--primary为1才会修改任务的appName和Version,或者primary为nil---只有一个信息
@@ -158,7 +156,7 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 		(*detect)[0].AppName = info.ApkName
 		(*detect)[0].AppVersion = info.ApkVersionName
 		if err := dal.UpdateDetectModelNew((*detect)[0]); err != nil {
-			message := "任务ID：" + fmt.Sprint(taskId) + "，appName和Version信息更新失败，失败原因：" + fmt.Sprint(err)
+			message := "任务ID：" + fmt.Sprint(detectInfo.TaskId) + "，appName和Version信息更新失败，失败原因：" + fmt.Sprint(err)
 			logs.Error(message)
 			utils.LarkDingOneInner(informer, message)
 			return err
@@ -174,7 +172,7 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 
 	//更新权限-app-task关系表
 	var relationship dal.PermAppRelation
-	relationship.TaskId = taskId
+	relationship.TaskId = detectInfo.TaskId
 	relationship.AppId = appId
 	if taskUpdateFlag {
 		relationship.AppVersion = (*detect)[0].AppVersion
@@ -186,7 +184,7 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 	relationship.PermInfos = permAppInfos
 	err1 := dal.InsertPermAppRelation(relationship)
 	if err1 != nil {
-		utils.LarkDingOneInner(informer, "新增权限App关系失败！taskId:"+fmt.Sprint(taskId)+",appID="+(*detect)[0].AppId)
+		utils.LarkDingOneInner(informer, "新增权限App关系失败！taskId:"+fmt.Sprint(detectInfo.TaskId)+",appID="+(*detect)[0].AppId)
 		return err1
 	}
 
@@ -197,7 +195,7 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 	err := dal.InsertDetectInfo(*detectInfo)
 	if err != nil {
 		//及时报警
-		message := "taskId:" + fmt.Sprint(taskId) + ",appInfo写入数据库失败，请解决;" + fmt.Sprint(err)
+		message := "taskId:" + fmt.Sprint(detectInfo.TaskId) + ",appInfo写入数据库失败，请解决;" + fmt.Sprint(err)
 		utils.LarkDingOneInner(informer, message)
 		return err
 	}
