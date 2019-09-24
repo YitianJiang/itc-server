@@ -45,8 +45,8 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 		detectInfo.TaskId = mapInfo["taskId"]
 		detectInfo.ToolId = mapInfo["toolId"]
 		//检测基础信息解析
-		if errInfo := AppInfoAnalysis_2(appInfos, &detectInfo, index); errInfo != nil {
-			return errInfo, 0
+		if err := AppInfoAnalysis_2(appInfos, &detectInfo, index); err != nil {
+			return err, 0
 		}
 
 		//获取敏感方法和字符串的确认信息methodInfo,strInfos，为信息初始化做准备
