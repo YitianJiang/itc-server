@@ -41,11 +41,12 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 		methodsInfo := result.MethodInfos
 		strsInfo := result.StrInfos
 
-		var detectInfo dal.DetectInfo
-		detectInfo.TaskId = mapInfo["taskId"]
-		detectInfo.ToolId = mapInfo["toolId"]
 		//检测基础信息解析
-		if err := AppInfoAnalysis_2(appInfos, &detectInfo, index); err != nil {
+		if err := AppInfoAnalysis_2(appInfos,
+			&dal.DetectInfo{
+				TaskId: mapInfo["taskId"],
+				ToolId: mapInfo["toolId"]},
+			index); err != nil {
 			return err, 0
 		}
 
