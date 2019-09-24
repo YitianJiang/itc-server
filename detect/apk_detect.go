@@ -98,14 +98,14 @@ func GetPermList() map[int]interface{} {
 */
 func GetImportedPermission(appID int) map[int]interface{} {
 
-	queryResult, err := dal.QueryPermHistory(map[string]interface{}{"app_id": appID})
-	if err != nil || queryResult == nil || len(*queryResult) == 0 {
+	history, err := dal.QueryPermHistory(map[string]interface{}{"app_id": appID})
+	if err != nil || history == nil || len(*history) == 0 {
 		logs.Error("Cannot find any permission about app id: %v", appID)
 		return nil
 	}
 
 	result := make(map[int]interface{})
-	for _, infoP := range *queryResult {
+	for _, infoP := range *history {
 		_, ok := result[infoP.PermId]
 		if !ok {
 			info := make(map[string]interface{})
