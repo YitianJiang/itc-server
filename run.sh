@@ -1,6 +1,6 @@
 #!/bin/bash
 
-psm=toutiao.clientqa.itcserver
+psm=toutiao.clientqa.itc-server
 
 if [ -f "output/bin/${psm}" ]; then
 	echo "Delete the old ${psm}"
