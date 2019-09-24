@@ -336,6 +336,7 @@ func UpdateDetectInfos(c *gin.Context) {
 			mapInfo["taskId"], _ = strconv.Atoi(taskId)
 			mapInfo["toolId"], _ = strconv.Atoi(toolId)
 			var errApk error
+			go logs.Debug("Task id: %v json content: %v", taskId, jsonContent)
 			errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, mapInfo)
 			if errApk != nil {
 				ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to update APK detect reuslt: %v", errApk))
