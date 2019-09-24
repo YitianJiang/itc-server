@@ -225,6 +225,6 @@ func InitRouter(r *ginex.Engine) {
 
 	binaryCheckApi := r.Group("/v1/checkBinaryResult")
 	{
-		binaryCheckApi.POST("/checkIsBinary",developerconnmanager.CheckIsBinary)
+		binaryCheckApi.POST("/checkIsBinary", developerconnmanager.CheckIsBinary)
 	}
 }

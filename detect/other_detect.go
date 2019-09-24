@@ -1126,21 +1126,17 @@ func getOtherDetectDetailAARP(c *gin.Context, infos *[]dal.OtherDetailInfoStruct
 aar任务检测问题记录
 */
 func OtherDetectTaskErrorHandle(taskId int, errCode string, errInfo string) error {
-	var errStruct dal.ErrorStruct
-	errStruct.ErrCode = errCode
-	errStruct.ErrInfo = errInfo
-	errBytes, _ := json.Marshal(errStruct)
-	var errString = string(errBytes)
-	condition := "id = '" + fmt.Sprint(taskId) + "'"
-	var updateData = map[string]interface{}{
-		"err_info": errString,
-	}
-	err := dal.UpdateOtherDetectModelByMap(condition, updateData)
+
+	data, err := json.Marshal(map[string]interface{}{
+		"errCode": errCode,
+		"errInfo": errInfo})
 	if err != nil {
+		logs.Error("Marshal error: %v", err)
 		return err
-	} else {
-		return nil
 	}
+
+	return dal.UpdateOtherDetectModelByMap(fmt.Sprintf("id = '%v'", taskId),
+		map[string]interface{}{"err_info": string(data)})
 }
 
 /**

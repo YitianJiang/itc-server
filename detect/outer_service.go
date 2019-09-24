@@ -1,6 +1,8 @@
 package detect
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -8,6 +10,7 @@ import (
 
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
 )
@@ -165,68 +168,159 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 	appID, idExist := c.GetQuery("appId")
 	appVersion, versionExist := c.GetQuery("appVersion")
 	if !idExist || !versionExist {
-		msg := "Miss APP id or version"
-		logs.Error(msg)
-		c.JSON(http.StatusOK, gin.H{
-			"errorCode": -1,
-			"message":   msg,
-			"data":      msg})
-
+		ReturnMsg(c, FAILURE, "Miss APP id or version")
 		return
 	}
 
-	task := queryLastestDetectResult(map[string]interface{}{
+	db, err := database.GetDBConnection()
+	if err != nil {
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Connect to DB failed: %v", err))
+		return
+	}
+	defer db.Close()
+
+	task, err := getLatestDetectResult(db, map[string]interface{}{
 		"app_id":      appID,
 		"app_version": appVersion,
-		"platform":    0,
-		"status":      1})
-	if task == nil {
-		msg := "Failed to find binary detect result in database about" +
-			" APP ID is " + appID + " and Version is " + appVersion
-		logs.Error(msg)
-		errorReturn(c, msg)
+		"platform":    0})
+	if err != nil {
+		ReturnMsg(c, FAILURE, "Failed to get binary detect result")
 		return
 	}
 
-	result := getDetectResult(c, strconv.Itoa(int(task.ID)), "6")
-	if result == nil {
+	data := getDetectResult(c, strconv.Itoa(int(task.ID)), "6")
+	if data == nil {
 		logs.Error("Failed to get task ID %v binary detect result", task.ID)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"errorCode":    0,
-		"message":      "success",
-		"data":         *result,
-		"extraConfirm": nil})
+	extra, err := getExtraConfirmedDetection(db, map[string]interface{}{
+		"app_id":      appID,
+		"app_version": appVersion,
+		"platform":    0})
+	if err != nil {
+		ReturnMsg(c, FAILURE, "Failed to get extra confirmed detections")
+		return
+	}
 
-	logs.Debug("Get task ID %v binary detect result success", task.ID)
+	c.JSON(http.StatusOK, gin.H{
+		"errorCode":    SUCCESS,
+		"message":      "success",
+		"data":         *data,
+		"extraConfirm": extra})
+
+	logs.Info("Get task ID %v binary detect result success", task.ID)
 	return
 }
 
-func queryLastestDetectResult(
-	condition map[string]interface{}) *dal.DetectStruct {
+// The status code of detection.
+const (
+	Unconfirmed   = 0
+	ConfirmedPass = 1
+	ConfirmedFail = 2
+)
 
-	db, err := database.GetDBConnection()
+func getLatestDetectResult(db *gorm.DB, condition map[string]interface{}) (
+	*dal.DetectStruct, error) {
+
+	condition["status"] = ConfirmedPass
+	result, err := retrieveLatestDetectResult(db, condition)
 	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return nil
+		// Return the lastest binary detect result if the binary detect
+		// result of specific version was not found.
+		delete(condition, "app_version")
+		result, err = retrieveLatestDetectResult(db, condition)
+		if err != nil {
+			return nil, err
+		}
 	}
-	defer db.Close()
+
+	return result, nil
+}
+
+// retrieveLatestDetectResult returns the first eligible record on success.
+func retrieveLatestDetectResult(db *gorm.DB, condition map[string]interface{}) (
+	*dal.DetectStruct, error) {
 
 	var detect dal.DetectStruct
 	if err := db.Debug().Where(condition).Order("created_at desc").
 		First(&detect).Error; err != nil {
-		logs.Error("Cannot find binary detect result about version %v :%v", condition["app_version"], err)
-		// Return the lastest binary detect result if the binary detect
-		// result of specific version was not found.
-		delete(condition, "app_version")
-		if err := db.Debug().Where(condition).Order("created_at desc").
-			First(&detect).Error; err != nil {
-			logs.Error("Cannot find any binary detect result")
-			return nil
+		logs.Error("Database error: %v", err)
+		return nil, err
+	}
+
+	return &detect, nil
+}
+
+// The type of detection
+const (
+	TypePermission = "权限"
+	TypeMethod     = "敏感方法"
+	TypeString     = "敏感词汇"
+)
+
+func getExtraConfirmedDetection(db *gorm.DB, condition map[string]interface{}) (
+	map[string]interface{}, error) {
+
+	condition["confirmed"] = true
+	detections, err := RetrieveDetection(db, condition)
+	if err != nil {
+		logs.Error("Failed to retrieve detection")
+		return nil, err
+	}
+
+	result := make(map[string]interface{})
+	var permissions []map[string]interface{}
+	var methods []map[string]interface{}
+	var strs []map[string]interface{}
+	for i := range detections {
+		m := make(map[string]interface{})
+		m["configid"] = detections[i].DetectConfigID
+		m["status"] = ConfirmedPass
+		m["remark"] = ""
+		m["confirmer"] = ""
+		m["desc"] = detections[i].Description
+		m["gpFlag"] = detections[i].GPFlag
+		m["riskLevel"] = detections[i].RiskLevel
+		if err := do(m, &detections[i]); err != nil {
+			return nil, err
+		}
+		switch detections[i].Type {
+		case TypePermission:
+			m["key"] = detections[i].Key
+			permissions = append(permissions, m)
+		case TypeMethod:
+			methods = append(methods, m)
+		case TypeString:
+			m["keys"] = detections[i].Key
+			strs = append(strs, m)
 		}
 	}
 
-	return &detect
+	result["sMethods"] = methods
+	result["newStrs"] = strs
+	result["permissionList"] = permissions
+
+	return result, nil
+}
+
+func do(m map[string]interface{}, detection *NewDetection) error {
+
+	if detection.Type == TypeMethod || detection.Type == TypeString {
+		var location []callLocation
+		if err := json.Unmarshal(
+			[]byte(detection.CallLocations), &location); err != nil {
+			logs.Error("Unmarshal error: %v", err)
+			return err
+		}
+		m["callLoc"] = location
+	}
+
+	if detection.Type == TypeMethod {
+		k := strings.LastIndexByte(detection.Key, '.')
+		m["className"] = detection.Key[:k]
+		m["methodName"] = detection.Key[k+1:]
+	}
+
+	return nil
 }

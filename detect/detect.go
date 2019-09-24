@@ -226,7 +226,7 @@ func UploadFile(c *gin.Context) {
 		if err != nil {
 			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",上传二进制包出错,", err.Error())
 			dbDetectModel.ID = dbDetectModelId
-			DetectTaskErrorHandle(dbDetectModel, "2", "上传二进制包出错")
+			handleDetectTaskError(dbDetectModel, DetectServiceInfrastructureError, "上传二进制包出错")
 			//及时报警
 			for _, lark_people := range _const.LowLarkPeople {
 				utils.LarkDingOneInner(lark_people, "上传二进制包出错，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
@@ -307,15 +307,10 @@ func getFilesFromRequest(c *gin.Context, fieldName string, emptyError bool) (str
  *更新检测包的检测信息_v2——----------fj
  */
 func UpdateDetectInfos(c *gin.Context) {
-	logs.Info("回调开始，更新检测信息～～～")
+	logs.Info("Binary detect tool start callback")
 	taskId := c.Request.FormValue("task_ID")
 	if taskId == "" {
-		logs.Error("缺少task_ID参数")
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "缺少task_ID参数",
-			"errorCode": -1,
-			"data":      "缺少task_ID参数",
-		})
+		ReturnMsg(c, FAILURE, "Miss task_ID")
 		return
 	}
 	toolId := c.Request.FormValue("tool_ID")
@@ -324,23 +319,16 @@ func UpdateDetectInfos(c *gin.Context) {
 	appVersion := c.Request.FormValue("appVersion")
 	htmlContent := c.Request.FormValue("content")
 
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": taskId,
-	})
+	detect := dal.QueryDetectModelsByMap(map[string]interface{}{"id": taskId})
 	if detect == nil || len(*detect) == 0 {
-		logs.Error("未查询到该taskid对应的检测任务，%v", taskId)
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "未查询到该taskid对应的检测任务",
-			"errorCode": -2,
-			"data":      "未查询到该taskid对应的检测任务",
-		})
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Cannot find any matched task about id %v", taskId))
 		return
 	}
 	toolIdInt, _ := strconv.Atoi(toolId)
 
 	//消息通知条数--检测项+自查项
 	var unConfirms int
-	var unSelfCheck = 0
+	var unSelfCheck int
 	if (*detect)[0].Platform == 0 {
 		if toolIdInt == 6 { //安卓兼容新版本
 			//安卓检测信息分析，并将检测信息写库-----fj
@@ -348,8 +336,10 @@ func UpdateDetectInfos(c *gin.Context) {
 			mapInfo["taskId"], _ = strconv.Atoi(taskId)
 			mapInfo["toolId"], _ = strconv.Atoi(toolId)
 			var errApk error
+			go logs.Debug("Task id: %v json content: %v", taskId, jsonContent)
 			errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, mapInfo)
 			if errApk != nil {
+				ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to update APK detect reuslt: %v", errApk))
 				return
 			}
 		} else {
@@ -434,7 +424,6 @@ func UpdateDetectInfos(c *gin.Context) {
 	var message string
 	creators := (*detect)[0].ToLarker
 	larkList := strings.Split(creators, ",")
-	//for _,creator := range larkList {
 	message = "你好，" + (*detect)[0].AppName + " " + (*detect)[0].AppVersion
 	platform := (*detect)[0].Platform
 	var os_code string
@@ -448,11 +437,8 @@ func UpdateDetectInfos(c *gin.Context) {
 
 	message += "  检测已经完成"
 
-	//message += " 完成二进制检测，请及时对每条未确认信息进行确认！\n"
-	//message += "如果安卓选择了GooglePlay检测和隐私检测，两个检测结果都需要进行确认，请不要遗漏！！！\n"
 	appId := (*detect)[0].AppId
 	appIdInt, _ := strconv.Atoi(appId)
-	//appVersion := (*detect)[0].AppVersion
 	var config *dal.LarkMsgTimer
 	config = dal.QueryLarkMsgTimerByAppId(appIdInt)
 	alterType := 0
@@ -511,7 +497,7 @@ func UpdateDetectInfos(c *gin.Context) {
 			qa_bm = qa_map["name"].(string)
 		}
 	}
-	//此处测试时注释掉
+	// 此处测试时注释掉
 	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
 	for _, creator := range larkList {
 		utils.UserInGroup(creator)                                                                             //将用户拉入预审平台群
@@ -525,7 +511,7 @@ func UpdateDetectInfos(c *gin.Context) {
 		groupArr := strings.Split(group, ",")
 		for _, group_id := range groupArr {
 			to_lark_group := strings.Trim(group_id, " ")
-			//新样式
+			// 新样式
 			if utils.LarkDetectResult(to_lark_group, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, true) == false {
 				message += message + larkUrl
 				utils.LarkGroup(message, to_lark_group)

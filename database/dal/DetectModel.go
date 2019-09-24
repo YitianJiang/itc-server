@@ -46,10 +46,6 @@ type RetDetectTasks struct {
 	NowPage uint
 	Tasks   []DetectStruct
 }
-type ErrorStruct struct {
-	ErrCode string `json:"errCode"` //1--检测服务脚本报错，2--检测服务基础报错
-	ErrInfo string `json:"errInfo"`
-}
 
 //包检测工具
 type DetectTool struct {

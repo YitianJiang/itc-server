@@ -18,10 +18,13 @@ import (
 
 type detectionBasic struct {
 	APPID      string `json:"appid"`
+	APPName    string `json:"appName"`
 	APPVersion string `json:"appVersion"`
 	Platform   string `json:"platform"`
 	RDName     string `json:"rd_username"`
 	RDEmail    string `json:"rd_email"`
+	CommitID   string `json:"commitId"`
+	Branch     string `json:"branch"`
 }
 
 // If the type is "敏感方法", the key is equal to className.methodName
@@ -32,6 +35,7 @@ type detectionDetail struct {
 	Key            string         `json:"key"`
 	Description    string         `json:"desc"`
 	Type           string         `json:"type"`
+	GPFlag         int            `json:"gpFlag"`
 	RiskLevel      int            `json:"priority"`
 	Creator        string         `json:"creator"`
 	CallLocations  []callLocation `json:"callLocs"`
@@ -54,19 +58,21 @@ type Confirmation struct {
 
 // NewDetection corresponds to table new_detection.
 type NewDetection struct {
-	// detectionBasic
-	// detectionDetail
 	ID             uint64    `gorm:"column:id"`
 	CreatedAt      time.Time `gorm:"column:created_at"`
 	APPID          string    `gorm:"column:app_id"`
+	APPName        string    `gorm:"column:app_name"`
 	APPVersion     string    `gorm:"column:app_version"`
 	Platform       string    `gorm:"column:platform"`
 	RDName         string    `gorm:"column:rd_name"`
 	RDEmail        string    `gorm:"column:rd_email"`
+	CommitID       string    `gorm:"column:commit_id"`
+	Branch         string    `gorm:"column:branch"`
 	DetectConfigID uint64    `gorm:"column:detect_config_id"`
 	Key            string    `gorm:"column:key_name"`
 	Description    string    `gorm:"column:description"`
 	Type           string    `gorm:"column:type"`
+	GPFlag         int       `gorm:"column:gp_flag"`
 	RiskLevel      int       `gorm:"column:risk_level"`
 	Creator        string    `gorm:"column:creator"`
 	CallLocations  string    `gorm:"column:call_locations"`
@@ -125,7 +131,7 @@ func handleNewDetections(detections *Confirmation) {
 		len(detections.SensitiveStrings) > 0 {
 		if err := informConfirmor(settings["group_name"].(string),
 			detections.RDEmail,
-			settings["message"].(string)); err != nil {
+			packMessage(detections)); err != nil {
 			logs.Error("Failed to inform the confirmor %v", detections.RDEmail)
 			return
 		}
@@ -250,14 +256,18 @@ func storeNewPermissions(db *gorm.DB, detections *Confirmation) {
 		// It is acceptable if one detection was damaged.
 		insertDetection(db, &NewDetection{
 			APPID:          detections.detectionBasic.APPID,
+			APPName:        detections.detectionBasic.APPName,
 			APPVersion:     detections.detectionBasic.APPVersion,
 			Platform:       detections.detectionBasic.Platform,
 			RDName:         detections.detectionBasic.RDName,
 			RDEmail:        detections.detectionBasic.RDEmail,
+			CommitID:       detections.detectionBasic.CommitID,
+			Branch:         detections.detectionBasic.Branch,
 			DetectConfigID: detections.Permissions[i].DetectConfigID,
 			Key:            detections.Permissions[i].Key,
 			Description:    detections.Permissions[i].Description,
 			Type:           detections.Permissions[i].Type,
+			GPFlag:         detections.Permissions[i].GPFlag,
 			RiskLevel:      detections.Permissions[i].RiskLevel,
 			Creator:        detections.Permissions[i].Creator,
 			Confirmed:      false,
@@ -277,14 +287,18 @@ func storeNewSensiMethods(db *gorm.DB, detections *Confirmation) {
 		}
 		insertDetection(db, &NewDetection{
 			APPID:          detections.detectionBasic.APPID,
+			APPName:        detections.detectionBasic.APPName,
 			APPVersion:     detections.detectionBasic.APPVersion,
 			Platform:       detections.detectionBasic.Platform,
 			RDName:         detections.detectionBasic.RDName,
 			RDEmail:        detections.detectionBasic.RDEmail,
+			CommitID:       detections.detectionBasic.CommitID,
+			Branch:         detections.detectionBasic.Branch,
 			DetectConfigID: detections.SensitiveMethods[i].DetectConfigID,
 			Key:            detections.SensitiveMethods[i].Key,
 			Description:    detections.SensitiveMethods[i].Description,
 			Type:           detections.SensitiveMethods[i].Type,
+			GPFlag:         detections.SensitiveMethods[i].GPFlag,
 			RiskLevel:      detections.SensitiveMethods[i].RiskLevel,
 			Creator:        detections.SensitiveMethods[i].Creator,
 			CallLocations:  string(callLocation),
@@ -305,14 +319,18 @@ func storeNewSensiStrings(db *gorm.DB, detections *Confirmation) {
 		}
 		insertDetection(db, &NewDetection{
 			APPID:          detections.detectionBasic.APPID,
+			APPName:        detections.detectionBasic.APPName,
 			APPVersion:     detections.detectionBasic.APPVersion,
 			Platform:       detections.detectionBasic.Platform,
 			RDName:         detections.detectionBasic.RDName,
 			RDEmail:        detections.detectionBasic.RDEmail,
+			CommitID:       detections.detectionBasic.CommitID,
+			Branch:         detections.detectionBasic.Branch,
 			DetectConfigID: detections.SensitiveStrings[i].DetectConfigID,
 			Key:            detections.SensitiveStrings[i].Key,
 			Description:    detections.SensitiveStrings[i].Description,
 			Type:           detections.SensitiveStrings[i].Type,
+			GPFlag:         detections.SensitiveStrings[i].GPFlag,
 			RiskLevel:      detections.SensitiveStrings[i].RiskLevel,
 			Creator:        detections.SensitiveStrings[i].Creator,
 			CallLocations:  string(callLocation),
@@ -324,7 +342,7 @@ func storeNewSensiStrings(db *gorm.DB, detections *Confirmation) {
 func insertDetection(db *gorm.DB, detection *NewDetection) error {
 
 	if err := db.Debug().Create(detection).Error; err != nil {
-		logs.Error("Failed to insert detection in table new_detection: %v\n%v", err, *detection)
+		logs.Error("Database error: %v\n%v", err, *detection)
 		return err
 	}
 
@@ -491,7 +509,7 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 	}
 	defer db.Close()
 
-	data, err := RetrieveDetection(db, map[string]interface{}{
+	data, err := retrieveSingleDetection(db, map[string]interface{}{
 		"id": id})
 	if err != nil {
 		logs.Error("Failed to retrieve detection")
@@ -499,26 +517,26 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 	}
 
 	var location []callLocation
-	if data[0].Type != "权限" {
+	if data.Type != "权限" {
 		if err := json.Unmarshal(
-			[]byte(data[0].CallLocations), &location); err != nil {
+			[]byte(data.CallLocations), &location); err != nil {
 			logs.Error("Unmarshal error: %v", err)
 			return nil, err
 		}
 	}
 
 	result := map[string]interface{}{
-		"id":             data[0].ID,
-		"key":            data[0].Key,
-		"risk_level":     data[0].RiskLevel,
-		"type":           data[0].Type,
-		"description":    data[0].Description,
-		"platform":       data[0].Platform,
-		"rd_name":        data[0].RDName,
-		"rd_email":       data[0].RDEmail,
-		"creator":        data[0].Creator,
+		"id":             data.ID,
+		"key":            data.Key,
+		"risk_level":     data.RiskLevel,
+		"type":           data.Type,
+		"description":    data.Description,
+		"platform":       data.Platform,
+		"rd_name":        data.RDName,
+		"rd_email":       data.RDEmail,
+		"creator":        data.Creator,
 		"call_locations": location,
-		"app_version":    data[0].APPVersion,
+		"app_version":    data.APPVersion,
 	}
 
 	return result, nil
@@ -551,7 +569,7 @@ func confirmDetection(id uint64) error {
 	}
 	defer db.Close()
 
-	if _, err := RetrieveDetection(db, map[string]interface{}{
+	if _, err := retrieveSingleDetection(db, map[string]interface{}{
 		"id": id,
 	}); err != nil {
 		return err
@@ -564,6 +582,23 @@ func confirmDetection(id uint64) error {
 	return nil
 }
 
+func retrieveSingleDetection(db *gorm.DB, condition map[string]interface{}) (
+	*NewDetection, error) {
+
+	data, err := RetrieveDetection(db, condition)
+	if err != nil {
+		logs.Error("Failed to retrieve detection")
+		return nil, err
+	}
+
+	if len(data) <= 0 {
+		logs.Error("Cannot find any matched detection")
+		return nil, errors.New("Cannot find any matched detection")
+	}
+
+	return &data[0], nil
+}
+
 // RetrieveDetection returns all eligible detections from table new_detection.
 func RetrieveDetection(db *gorm.DB, condition map[string]interface{}) (
 	[]NewDetection, error) {
@@ -571,13 +606,8 @@ func RetrieveDetection(db *gorm.DB, condition map[string]interface{}) (
 	var detections []NewDetection
 	if err := db.Debug().Where(condition).
 		Find(&detections).Error; err != nil {
-		logs.Error("Database error in RetrieveDetection: %v", err)
+		logs.Error("Database error: %v", err)
 		return nil, err
-	}
-
-	if len(detections) <= 0 {
-		logs.Error("Cannot find any matched detection")
-		return nil, errors.New("Cannot find any matched detection")
 	}
 
 	return detections, nil
@@ -595,12 +625,9 @@ func updateDetection(db *gorm.DB, detection *NewDetection) error {
 }
 
 // We will send message directly to the group if the confirmor is unknown.
-func informConfirmor(groupName string, userEmail string, message string) error {
+func informConfirmor(groupName string, userEmail string, msg string) error {
 
-	var msg string
-	if userEmail == "" {
-		msg = message
-	} else {
+	if userEmail != "" {
 		// Of course we can use non-xxxSimple functions, but using
 		// use xxxSimple functions make the code more readable.
 		exist, err := isUserInGroupSimple(groupName, userEmail)
@@ -614,9 +641,6 @@ func informConfirmor(groupName string, userEmail string, message string) error {
 				return err
 			}
 		}
-
-		openID, _, err := getOpenIDandUserIDSimple(userEmail)
-		msg = fmt.Sprintf("<at open_id=\"%v\"></at>%v", openID, message)
 	}
 
 	if err := sendLarkMessageToGroupSimple(groupName, msg); err != nil {
@@ -624,6 +648,55 @@ func informConfirmor(groupName string, userEmail string, message string) error {
 	}
 
 	return nil
+}
+
+func packMessage(detections *Confirmation) string {
+
+	var atMsg string
+
+	openID, _, err := getOpenIDandUserIDSimple(detections.RDEmail)
+	if err != nil {
+		atMsg = "未知"
+	} else {
+		atMsg = fmt.Sprintf("<at open_id=\"%v\"></at>", openID)
+	}
+
+	msg := " 本次编译出现新增未确认项，请前往预审平台查看确认。\n" +
+		"查看与确认地址: https://rocket.bytedance.net/rocket/itc/branchCheck?biz=" +
+		detections.APPID + "\n\n" +
+		"【编译信息】\n" +
+		"应用名称: " + detections.APPName + "\n" +
+		"研发同学: " + atMsg + "\n" +
+		"Branch: " + detections.Branch + "\n" +
+		"COMMIT_ID: " + detections.CommitID + "\n\n"
+
+	if len(detections.Permissions) > 0 {
+		msg += "【新增权限】\n"
+		for i := range detections.Permissions {
+			msg += fmt.Sprintf("%v. %v\n",
+				i+1, detections.Permissions[i].Key)
+		}
+		msg += "\n"
+	}
+
+	if len(detections.SensitiveMethods) > 0 {
+		msg += "【新增敏感方法】\n"
+		for i := range detections.SensitiveMethods {
+			msg += fmt.Sprintf("%v. %v\n",
+				i+1, detections.SensitiveMethods[i].Key)
+		}
+		msg += "\n"
+	}
+
+	if len(detections.SensitiveStrings) > 0 {
+		msg += "【新增敏感字符串】\n"
+		for i := range detections.SensitiveStrings {
+			msg += fmt.Sprintf("%v. %v\n",
+				i+1, detections.SensitiveStrings[i].Key)
+		}
+	}
+
+	return msg
 }
 
 func isUserInGroupSimple(groupName string, userEmail string) (bool, error) {
