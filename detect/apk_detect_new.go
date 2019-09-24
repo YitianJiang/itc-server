@@ -43,9 +43,6 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 
 	//遍历结果数组，并将每组检测结果信息插入数据库
 	for index, result := range fisrtResult.Result {
-		methodsInfo := result.MethodInfos
-		strsInfo := result.StrInfos
-
 		//检测基础信息解析
 		if err := AppInfoAnalysis_2(result.AppInfo,
 			&dal.DetectInfo{TaskId: taskID, ToolId: toolID},
@@ -65,7 +62,7 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 		//敏感method解析----先外层去重
 		mRepeat := make(map[string]int)
 		newMethods := make([]dal.MethodInfo, 0) //第一层去重后的敏感方法集
-		for _, method := range methodsInfo {
+		for _, method := range result.MethodInfos {
 			var keystr = method.MethodName + method.ClassName
 			if v, ok := mRepeat[keystr]; !ok || ok && v == 0 {
 				newMethods = append(newMethods, method)
@@ -106,7 +103,7 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 
 		//敏感方法解析
 		allStrs := make([]dal.DetectContentDetail, 0)
-		for _, strInfo := range strsInfo {
+		for _, strInfo := range result.StrInfos {
 			var detailContent dal.DetectContentDetail
 			detailContent.TaskId = taskID
 			detailContent.ToolId = toolID
