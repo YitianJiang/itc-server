@@ -96,7 +96,7 @@ func GetPermList() map[int]interface{} {
 /**
 获取权限引入历史
 */
-func GetImportedPermission(appID int) map[int]interface{} {
+func getAPPPermissionHistory(appID int) map[int]interface{} {
 
 	history, err := dal.QueryPermHistory(map[string]interface{}{"app_id": appID})
 	if err != nil || history == nil || len(*history) == 0 {

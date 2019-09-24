@@ -158,7 +158,6 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 	detectInfo.ApkName = info.ApkName
 	detectInfo.Version = info.ApkVersionName
 	detectInfo.Channel = info.Channel
-
 	//更新任务的权限信息
 	var permissionArr = info.PermsInAppInfo
 	permAppInfos, errP := permUpdate(&permissionArr, detectInfo, detect)
@@ -221,7 +220,7 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 	larkPerms := "" //lark消息通知的权限内容
 	var first_history []dal.PermHistory
 	//获取app的权限操作历史map
-	impMap := GetImportedPermission(appId)
+	impMap := getAPPPermissionHistory(appId)
 	//判断是否属于初次引入
 	var fhflag bool
 	//权限去重map
