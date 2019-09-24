@@ -227,16 +227,16 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 	permRepeatMap := make(map[string]int)
 	for _, pers := range *permissionArr {
 		//权限去重
-		if v, okp := permRepeatMap[pers]; okp && v == 1 {
+		if v, ok := permRepeatMap[pers]; ok && v == 1 {
+			// Continue the loop if the permission has been handled.
 			continue
 		}
 		permRepeatMap[pers] = 1
 		//写app和perm对应关系
 		queryResult := dal.QueryDetectConfig(map[string]interface{}{
 			"key_info":   pers,
-			"platform":   0,
-			"check_type": 0,
-		})
+			"platform":   Android,
+			"check_type": Permission})
 		fhflag = false
 		permInfo := make(map[string]interface{})
 		if queryResult == nil || len(*queryResult) == 0 {

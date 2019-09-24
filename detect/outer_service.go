@@ -257,6 +257,12 @@ const (
 	TypePermission = "权限"
 	TypeMethod     = "敏感方法"
 	TypeString     = "敏感词汇"
+	Permission     = 0
+	Method         = 1
+	String         = 2
+
+	Android = 0
+	iOS     = 1
 )
 
 func getExtraConfirmedDetection(db *gorm.DB, condition map[string]interface{}) (
