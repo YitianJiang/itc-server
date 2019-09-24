@@ -108,10 +108,9 @@ func getAPPPermissionHistory(appID int) map[int]interface{} {
 	for _, infoP := range *history {
 		_, ok := result[infoP.PermId]
 		if !ok {
-			info := make(map[string]interface{})
-			info["version"] = infoP.AppVersion
-			info["status"] = infoP.Status
-			result[infoP.PermId] = info
+			result[infoP.PermId] = map[string]interface{}{
+				"version": infoP.AppVersion,
+				"status":  infoP.Status}
 		} else if ok && infoP.Status == 0 {
 			v := result[infoP.PermId].(map[string]interface{})
 			v["version"] = infoP.AppVersion
