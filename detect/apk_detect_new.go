@@ -34,8 +34,6 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 		utils.LarkDingOneInner(informer, message)
 		return err, 0
 	}
-	fmt.Println(fisrtResult)
-	return fmt.Errorf("Test"), 0
 
 	//遍历结果数组，并将每组检测结果信息插入数据库
 	for index, result := range fisrtResult.Result {
@@ -47,8 +45,7 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 		detectInfo.TaskId = mapInfo["taskId"]
 		detectInfo.ToolId = mapInfo["toolId"]
 		//检测基础信息解析
-		errInfo := AppInfoAnalysis_2(appInfos, &detectInfo, index)
-		if errInfo != nil {
+		if errInfo := AppInfoAnalysis_2(appInfos, &detectInfo, index); errInfo != nil {
 			return errInfo, 0
 		}
 
