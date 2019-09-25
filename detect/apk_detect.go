@@ -361,9 +361,6 @@ func getExactDetectTask(db *gorm.DB, sieve map[string]interface{}) (
 }
 
 func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.DetectQueryStruct {
-	//一次查所有
-	allPermList := GetPermList()
-	//获取任务信息
 
 	db, err := database.GetDBConnection()
 	if err != nil {
@@ -465,6 +462,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	}
 	perIgs := GetIgnoredPermission(appID)
 	//任务检测结果组输出重组
+	allPermList := GetPermList()
 	for i := 0; i < len(finalResult); i++ {
 		details := detailMap[finalResult[i].Index]
 		permissions := make([]dal.Permissions, 0)
