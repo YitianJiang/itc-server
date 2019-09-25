@@ -403,7 +403,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	}
 
 	//查询基础信息和敏感信息
-	contents, err := QueryDetectInfo_2(db, map[string]interface{}{
+	contents, err := retrieveTaskAPP(db, map[string]interface{}{
 		"task_id": taskId,
 		"tool_id": toolId})
 	if err != nil {
@@ -530,11 +530,12 @@ func getPermAPPReltion(taskID string) (*[]dal.PermAppRelation, bool) {
 /**
 兼容.aab查询内容
 */
-func QueryDetectInfo_2(db *gorm.DB, sieve map[string]interface{}) (*[]dal.DetectInfo, error) {
+// retrieveTaskAPP returns the information of APP in the task.
+func retrieveTaskAPP(db *gorm.DB, sieve map[string]interface{}) (
+	*[]dal.DetectInfo, error) {
 
 	var detectInfo []dal.DetectInfo
-	if err := db.Debug().Where(sieve).
-		Find(&detectInfo).Error; err != nil {
+	if err := db.Debug().Where(sieve).Find(&detectInfo).Error; err != nil {
 		logs.Error("Database error: %v", err)
 		return nil, err
 	}
