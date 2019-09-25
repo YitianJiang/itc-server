@@ -305,7 +305,7 @@ func QueryPermAppRelation(sieve map[string]interface{}) (
 		return nil, err
 	}
 	defer db.Close()
-	// db := connection.Table(PermAppRelation{}.TableName()).LogMode(_const.DB_LOG_MODE)
+
 	var result []PermAppRelation
 	if err := db.Debug().Where(sieve).Find(&result).Error; err != nil {
 		logs.Error("Database error: %v", err)
