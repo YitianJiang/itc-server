@@ -402,7 +402,6 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		logs.Error("Task id: %v Failed to retrieve negligible information", taskId)
 	}
 
-	condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
 	//查询基础信息和敏感信息
 	contents, err := QueryDetectInfo_2(db, map[string]interface{}{
 		"task_id": taskId,
@@ -415,6 +414,8 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		logs.Error("Task id: %v Cannot find any matched APK information", taskId)
 		return nil
 	}
+
+	condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
 	details, err2 := dal.QueryDetectContentDetail(condition)
 	if err2 != nil {
 		logs.Error("Task id: %v Failed to retrieve detect content detail", taskId)
