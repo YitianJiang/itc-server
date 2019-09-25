@@ -686,23 +686,23 @@ func QueryDetectInfo_2(condition string) (*[]DetectInfo, error) {
 查询apk敏感信息----fj
 */
 func QueryDetectContentDetail(condition string) (*[]DetectContentDetail, error) {
-	connection, err := database.GetDBConnection()
+	db, err := database.GetDBConnection()
 	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
+		logs.Error("Connect to DB failed: %v", err)
 		return nil, err
 	}
-	defer connection.Close()
+	defer db.Close()
 
-	db := connection.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	// db := connection.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
 
 	var result []DetectContentDetail
-
-	if err1 := db.Where(condition).Order("status ASC").Find(&result).Error; err1 != nil {
-		logs.Error("query detectDetailInfos failed! %v", err)
-		return nil, err1
+	if err := db.Debug().Where(condition).Order("status ASC").
+		Find(&result).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
 	}
-	return &result, nil
 
+	return &result, nil
 }
 
 /**
