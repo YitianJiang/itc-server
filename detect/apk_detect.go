@@ -404,7 +404,9 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 
 	condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
 	//查询基础信息和敏感信息
-	contents, err := QueryDetectInfo_2(condition)
+	contents, err := QueryDetectInfo_2(db, map[string]interface{}{
+		"task_id": taskId,
+		"tool_id": toolId})
 	if err != nil {
 		logs.Error("Task id: %v Failed to retrieve APK information", taskId)
 		return nil
@@ -527,16 +529,10 @@ func getPermAPPReltion(taskID string) (*[]dal.PermAppRelation, bool) {
 /**
 兼容.aab查询内容
 */
-func QueryDetectInfo_2(condition string) (*[]dal.DetectInfo, error) {
-	db, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
-		return nil, err
-	}
-	defer db.Close()
+func QueryDetectInfo_2(db *gorm.DB, sieve map[string]interface{}) (*[]dal.DetectInfo, error) {
 
 	var detectInfo []dal.DetectInfo
-	if err := db.Debug().Where(condition).
+	if err := db.Debug().Where(sieve).
 		Find(&detectInfo).Error; err != nil {
 		logs.Error("Database error: %v", err)
 		return nil, err
