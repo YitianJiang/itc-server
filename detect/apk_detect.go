@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
@@ -404,7 +405,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 
 	condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
 	//查询基础信息和敏感信息
-	contents, err := dal.QueryDetectInfo_2(condition)
+	contents, err := QueryDetectInfo_2(condition)
 	if err != nil {
 		logs.Error("Task id: %v Failed to retrieve APK information", taskId)
 		return nil
@@ -522,6 +523,28 @@ func getPermAPPReltion(taskID string) (*[]dal.PermAppRelation, bool) {
 	}
 
 	return info, true
+}
+
+/**
+兼容.aab查询内容
+*/
+func QueryDetectInfo_2(condition string) (*[]dal.DetectInfo, error) {
+	connection, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return nil, err
+	}
+	defer connection.Close()
+
+	db := connection.Table(dal.DetectInfo{}.TableName()).LogMode(_const.DB_LOG_MODE)
+
+	var detectInfo []dal.DetectInfo
+	if err1 := db.Where(condition).Find(&detectInfo).Error; err1 != nil {
+		logs.Error("query detectInfo failed! %v", err)
+		return nil, err1
+	}
+
+	return &detectInfo, nil
 }
 
 /**

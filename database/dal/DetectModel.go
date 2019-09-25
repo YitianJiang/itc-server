@@ -661,28 +661,6 @@ func QueryDetectInfo(condition string) (*DetectInfo, error) {
 }
 
 /**
-兼容.aab查询内容
-*/
-func QueryDetectInfo_2(condition string) (*[]DetectInfo, error) {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
-		return nil, err
-	}
-	defer connection.Close()
-
-	db := connection.Table(DetectInfo{}.TableName()).LogMode(_const.DB_LOG_MODE)
-
-	var detectInfo []DetectInfo
-	if err1 := db.Where(condition).Find(&detectInfo).Error; err1 != nil {
-		logs.Error("query detectInfo failed! %v", err)
-		return nil, err1
-	}
-	return &detectInfo, nil
-
-}
-
-/**
 查询apk敏感信息----fj
 */
 func QueryDetectContentDetail(condition string) (*[]DetectContentDetail, error) {
