@@ -530,7 +530,7 @@ func getPermAPPReltion(taskID string) (*[]dal.PermAppRelation, bool) {
 /**
 兼容.aab查询内容
 */
-// retrieveTaskAPP returns the information of APP in the task.
+// retrieveTaskAPP returns the information of APP in the binary detect task.
 func retrieveTaskAPP(db *gorm.DB, sieve map[string]interface{}) (
 	*[]dal.DetectInfo, error) {
 
