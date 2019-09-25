@@ -376,11 +376,12 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	}
 
 	//查询增量信息
-	queryData := make(map[string]string)
-	queryData["appId"] = task.AppId
-	queryData["platform"] = strconv.Itoa((task.Platform))
-
-	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(queryData)
+	// queryData := make(map[string]string)
+	// queryData["appId"] = task.AppId
+	// queryData["platform"] = strconv.Itoa((task.Platform))
+	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(map[string]string{
+		"appId":    task.AppId,
+		"platform": strconv.Itoa(task.Platform)})
 	if errIg != nil {
 		logs.Error("可忽略信息数据库查询失败,%v", errIg) //如果可忽略信息没有的话,录入日志但不影响后续操作
 	}
