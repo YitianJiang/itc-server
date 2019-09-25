@@ -333,15 +333,14 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 
 	result := getDetectResult(c, taskID, toolID)
 	if result == nil {
-		logs.Error("Failed to get task ID %v binary detect result", taskID)
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to get binary detect result about task id: %v", taskID))
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
-		"errorCode": 0,
-		"data":      result,
-	})
+		"errorCode": SUCCESS,
+		"data":      result})
 
 	logs.Debug("Get task ID %v binary detect result success", taskID)
 	return
@@ -351,12 +350,9 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	//一次查所有
 	allPermList := GetPermList()
 	//获取任务信息
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": taskId,
-	})
+	detect := dal.QueryDetectModelsByMap(map[string]interface{}{"id": taskId})
 	if detect == nil || len(*detect) == 0 {
-		logs.Error("未查询到该taskid对应的检测任务，%v", taskId)
-		errorReturn(c, "未查询到该taskid对应的检测任务")
+		logs.Error("Invalid task id")
 		return nil
 	}
 	//查询增量信息
@@ -374,19 +370,31 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	//查询基础信息和敏感信息
 	contents, err := dal.QueryDetectInfo_2(condition)
 	if err != nil {
-		errorReturn(c, "查询检测结果信息数据库操作失败")
+		// errorReturn(c, "查询检测结果信息数据库操作失败")
+		logs.Error("Task id: %v Failed to retrieve APK information", taskId)
+		return nil
+	}
+	if len(*contents) <= 0 {
+		logs.Error("Task id: %v Cannot find any matched APK information", taskId)
 		return nil
 	}
 	details, err2 := dal.QueryDetectContentDetail(condition)
 	if err2 != nil {
-		errorReturn(c, "查询检测结果信息数据库操作失败")
+		// errorReturn(c, "查询检测结果信息数据库操作失败")
+		logs.Error("Task id: %v Failed to retrieve detect content detail", taskId)
 		return nil
 	}
-	if contents == nil || len(*contents) == 0 || details == nil || len(*details) == 0 {
-		logs.Info("未查询到该任务对应的检测内容,taskId:" + taskId)
-		errorReturn(c, "未查询到该任务对应的检测内容")
+	if len(*details) <= 0 {
+		logs.Error("Task id: %v Cannot find any matched detect content detail", taskId)
 		return nil
 	}
+	// if contents == nil || len(*contents) == 0 || details == nil || len(*details) == 0 {
+	// 	// logs.Info("未查询到该任务对应的检测内容,taskId:" + taskId)
+	// 	// errorReturn(c, "未查询到该任务对应的检测内容")
+	// 	fmt.Printf(">>> %v %v %v %v\n", contents == nil, len(*contents), details == nil, len(*details)) // TEST
+	// 	logs.Error("Cannot find any matched detect content detail about task id: %v", taskId)
+	// 	return nil
+	// }
 
 	info, hasPermListFlag := getPermAPPReltion(taskId)
 	fmt.Println(info, hasPermListFlag)
