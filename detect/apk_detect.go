@@ -415,10 +415,10 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		return nil
 	}
 
-	details, err2 := QueryDetectContentDetail(db, map[string]interface{}{
+	details, err := QueryDetectContentDetail(db, map[string]interface{}{
 		"task_id": taskId,
 		"tool_id": toolId})
-	if err2 != nil {
+	if err != nil {
 		logs.Error("Task id: %v Failed to retrieve detect content detail", taskId)
 		return nil
 	}
