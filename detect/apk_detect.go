@@ -378,16 +378,8 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		return nil
 	}
 
-	// detect := dal.QueryDetectModelsByMap(map[string]interface{}{"id": taskId})
-	// if detect == nil || len(*detect) == 0 {
-	// 	logs.Error("Invalid task id")
-	// 	return nil
-	// }
 	//查询增量信息
 	queryData := make(map[string]string)
-	// queryData["appId"] = (*detect)[0].AppId
-	// appId, _ := strconv.Atoi((*detect)[0].AppId)
-	// queryData["platform"] = strconv.Itoa((*detect)[0].Platform)
 	queryData["appId"] = task.AppId
 	appId, _ := strconv.Atoi(task.AppId)
 	queryData["platform"] = strconv.Itoa((task.Platform))
@@ -456,7 +448,6 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 			}
 			permsMap[num+1] = permInfo
 		}
-		// if queryResult.ApkName == (*detect)[0].AppName {
 		if queryResult.ApkName == task.AppName {
 			firstResult = queryResult
 		} else {
