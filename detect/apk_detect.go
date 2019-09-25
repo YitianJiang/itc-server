@@ -458,8 +458,12 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	finalResult = append(finalResult, firstResult)
 	finalResult = append(finalResult, midResult...)
 
-	appId, _ := strconv.Atoi(task.AppId)
-	perIgs := GetIgnoredPermission(appId)
+	appID, err := strconv.Atoi(task.AppId)
+	if err != nil {
+		logs.Error("Task id: %v atoi error: %v", taskId, err)
+		return nil
+	}
+	perIgs := GetIgnoredPermission(appID)
 	//任务检测结果组输出重组
 	for i := 0; i < len(finalResult); i++ {
 		details := detailMap[finalResult[i].Index]
