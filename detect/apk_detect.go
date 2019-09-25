@@ -415,7 +415,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		return nil
 	}
 
-	details, err2 := dal.QueryDetectContentDetail(db, map[string]interface{}{
+	details, err2 := QueryDetectContentDetail(db, map[string]interface{}{
 		"task_id": taskId,
 		"tool_id": toolId})
 	if err2 != nil {
@@ -542,6 +542,21 @@ func retrieveTaskAPP(db *gorm.DB, sieve map[string]interface{}) (
 	}
 
 	return &detectInfo, nil
+}
+
+/**
+查询apk敏感信息----fj
+*/
+func QueryDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (*[]dal.DetectContentDetail, error) {
+
+	var result []dal.DetectContentDetail
+	if err := db.Debug().Where(sieve).Order("status ASC").
+		Find(&result).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 /**
@@ -811,8 +826,8 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 	defer db.Close()
 
 	if t.Type == 0 { //敏感方法和字符串确认
-		detailInfo, err := dal.QueryDetectContentDetail(db, map[string]interface{}{
-			"id": t.Id})
+		detailInfo, err := QueryDetectContentDetail(db,
+			map[string]interface{}{"id": t.Id})
 		if err != nil || detailInfo == nil || len(*detailInfo) == 0 {
 			logs.Error("taskId:"+fmt.Sprint(t.TaskId)+",不存在该检测结果，ID：%d", t.Id)
 			errorReturn(c, "不存在该检测结果")

@@ -639,21 +639,6 @@ func QueryUnConfirmDetectContent(condition string) (int, int) {
 }
 
 /**
-查询apk敏感信息----fj
-*/
-func QueryDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (*[]DetectContentDetail, error) {
-
-	var result []DetectContentDetail
-	if err := db.Debug().Where(sieve).Order("status ASC").
-		Find(&result).Error; err != nil {
-		logs.Error("Database error: %v", err)
-		return nil, err
-	}
-
-	return &result, nil
-}
-
-/**
 可忽略信息insert------fj
 */
 func InsertIgnoredInfo(detail IgnoreInfoStruct) error {
