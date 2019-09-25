@@ -754,25 +754,23 @@ func InsertIgnoredInfoBatch(details *[]IgnoreInfoStruct) error {
 	return nil
 }
 
-/**
-查询可忽略信息----fj
-*/
-func QueryIgnoredInfo(queryInfo map[string]interface{}) (*[]IgnoreInfoStruct, error) {
-	connection, err := database.GetDBConnection()
+// QueryIgnoredInfo retrieves task information which can be ignored
+// from table tb_ignored_info.
+func QueryIgnoredInfo(sieve map[string]interface{}) (*[]IgnoreInfoStruct, error) {
+	db, err := database.GetDBConnection()
 	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
+		logs.Error("Connect to DB failed: %v", err)
 		return nil, err
 	}
-	defer connection.Close()
+	defer db.Close()
 
-	db := connection.Table(IgnoreInfoStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var result []IgnoreInfoStruct
-	// condition := queryInfo["condition"]
-	// if err1 := db.Where(condition).Order("updated_at DESC").Find(&result).Error; err1 != nil {
-	if err1 := db.Where(queryInfo).Order("updated_at DESC").Find(&result).Error; err1 != nil {
-		logs.Error("query ignoredInfos failed! %v", err1)
-		return nil, err1
+	if err := db.Debug().Where(sieve).Order("updated_at DESC").
+		Find(&result).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
 	}
+
 	return &result, nil
 }
 
