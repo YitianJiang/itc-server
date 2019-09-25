@@ -547,7 +547,8 @@ func retrieveTaskAPP(db *gorm.DB, sieve map[string]interface{}) (
 /**
 查询apk敏感信息----fj
 */
-func QueryDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (*[]dal.DetectContentDetail, error) {
+func QueryDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (
+	*[]dal.DetectContentDetail, error) {
 
 	var result []dal.DetectContentDetail
 	if err := db.Debug().Where(sieve).Order("status ASC").
