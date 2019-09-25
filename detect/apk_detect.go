@@ -127,14 +127,11 @@ func GetImportedPermission(appId int) map[int]interface{} {
 /**
  *获取可忽略内容
  */
-func getIgnoredInfo_2(data map[string]string) (map[string]interface{}, map[string]interface{}, map[string]interface{}, error) {
-	condition := "app_id ='" + data["appId"] + "' and platform = '" + data["platform"] + "'"
-	queryInfo := make(map[string]string)
-	queryInfo["condition"] = condition
-	// result, err := dal.QueryIgnoredInfo(queryInfo)
+func getIgnoredInfo_2(data map[string]string, appID interface{}, platform interface{}) (map[string]interface{}, map[string]interface{}, map[string]interface{}, error) {
+
 	result, err := QueryIgnoredInfo(map[string]interface{}{
-		"app_id":   data["appId"],
-		"platform": data["platform"]})
+		"app_id":   appID,
+		"platform": platform})
 
 	//此处如果条件1没有命中，但是23命中了，返回的err其实是nil
 	if err != nil || result == nil || len(*result) == 0 {
@@ -401,7 +398,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	//查询增量信息
 	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(map[string]string{
 		"appId":    task.AppId,
-		"platform": strconv.Itoa(task.Platform)})
+		"platform": strconv.Itoa(task.Platform)}, task.AppId, task.Platform)
 	if errIg != nil {
 		logs.Error("可忽略信息数据库查询失败,%v", errIg) //如果可忽略信息没有的话,录入日志但不影响后续操作
 	}

@@ -54,7 +54,7 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 		data := make(map[string]string)
 		data["appId"] = (*detect)[0].AppId
 		data["platform"] = strconv.Itoa((*detect)[0].Platform)
-		methodInfo, strInfos, _, err := getIgnoredInfo_2(data)
+		methodInfo, strInfos, _, err := getIgnoredInfo_2(data, (*detect)[0].AppId, (*detect)[0].Platform)
 		if err != nil {
 			logs.Error("未查询到该App的增量信息，app信息为：%v", data)
 		}
