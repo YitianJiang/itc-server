@@ -381,7 +381,6 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	//查询增量信息
 	queryData := make(map[string]string)
 	queryData["appId"] = task.AppId
-	appId, _ := strconv.Atoi(task.AppId)
 	queryData["platform"] = strconv.Itoa((task.Platform))
 
 	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(queryData)
@@ -459,6 +458,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	finalResult = append(finalResult, firstResult)
 	finalResult = append(finalResult, midResult...)
 
+	appId, _ := strconv.Atoi(task.AppId)
 	perIgs := GetIgnoredPermission(appId)
 	//任务检测结果组输出重组
 	for i := 0; i < len(finalResult); i++ {
