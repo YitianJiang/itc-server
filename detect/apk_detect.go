@@ -415,7 +415,6 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		return nil
 	}
 
-	// condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
 	details, err2 := dal.QueryDetectContentDetail(db, map[string]interface{}{
 		"task_id": taskId,
 		"tool_id": toolId})
@@ -812,7 +811,6 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 	defer db.Close()
 
 	if t.Type == 0 { //敏感方法和字符串确认
-		// condition1 := "id=" + strconv.Itoa(t.Id)
 		detailInfo, err := dal.QueryDetectContentDetail(db, map[string]interface{}{
 			"id": t.Id})
 		if err != nil || detailInfo == nil || len(*detailInfo) == 0 {

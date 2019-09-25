@@ -642,12 +642,6 @@ func QueryUnConfirmDetectContent(condition string) (int, int) {
 查询apk敏感信息----fj
 */
 func QueryDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (*[]DetectContentDetail, error) {
-	// db, err := database.GetDBConnection()
-	// if err != nil {
-	// 	logs.Error("Connect to DB failed: %v", err)
-	// 	return nil, err
-	// }
-	// defer db.Close()
 
 	var result []DetectContentDetail
 	if err := db.Debug().Where(sieve).Order("status ASC").
