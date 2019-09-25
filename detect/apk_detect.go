@@ -415,8 +415,10 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		return nil
 	}
 
-	condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
-	details, err2 := dal.QueryDetectContentDetail(condition)
+	// condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
+	details, err2 := dal.QueryDetectContentDetail(db, map[string]interface{}{
+		"task_id": taskId,
+		"tool_id": toolId})
 	if err2 != nil {
 		logs.Error("Task id: %v Failed to retrieve detect content detail", taskId)
 		return nil
@@ -802,9 +804,17 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 		notPassFlag = true
 	}
 
+	db, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return
+	}
+	defer db.Close()
+
 	if t.Type == 0 { //敏感方法和字符串确认
-		condition1 := "id=" + strconv.Itoa(t.Id)
-		detailInfo, err := dal.QueryDetectContentDetail(condition1)
+		// condition1 := "id=" + strconv.Itoa(t.Id)
+		detailInfo, err := dal.QueryDetectContentDetail(db, map[string]interface{}{
+			"id": t.Id})
 		if err != nil || detailInfo == nil || len(*detailInfo) == 0 {
 			logs.Error("taskId:"+fmt.Sprint(t.TaskId)+",不存在该检测结果，ID：%d", t.Id)
 			errorReturn(c, "不存在该检测结果")
