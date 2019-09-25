@@ -376,9 +376,6 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	}
 
 	//查询增量信息
-	// queryData := make(map[string]string)
-	// queryData["appId"] = task.AppId
-	// queryData["platform"] = strconv.Itoa((task.Platform))
 	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(map[string]string{
 		"appId":    task.AppId,
 		"platform": strconv.Itoa(task.Platform)})
