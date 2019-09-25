@@ -27,6 +27,7 @@ func InitRouter(r *ginex.Engine) {
 	r.POST("/detect/new/unconfirmedList", detect.UnconfirmedList)
 	r.GET("/detect/new/unconfirmedDetail", detect.UnconfirmedDetail)
 	r.GET("/detect/new/confirm", detect.Confirm)
+	r.GET("/open-apis/detect/task/detail", detect.GetDetectTaskResult)
 
 	//检测服务检测异常报警接口
 	api.POST("/check_server/alarm", detect.Alram)
