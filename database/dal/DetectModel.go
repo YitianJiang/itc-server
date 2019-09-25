@@ -757,7 +757,7 @@ func InsertIgnoredInfoBatch(details *[]IgnoreInfoStruct) error {
 /**
 查询可忽略信息----fj
 */
-func QueryIgnoredInfo(queryInfo map[string]string) (*[]IgnoreInfoStruct, error) {
+func QueryIgnoredInfo(queryInfo map[string]interface{}) (*[]IgnoreInfoStruct, error) {
 	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
@@ -767,8 +767,9 @@ func QueryIgnoredInfo(queryInfo map[string]string) (*[]IgnoreInfoStruct, error) 
 
 	db := connection.Table(IgnoreInfoStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var result []IgnoreInfoStruct
-	condition := queryInfo["condition"]
-	if err1 := db.Where(condition).Order("updated_at DESC").Find(&result).Error; err1 != nil {
+	// condition := queryInfo["condition"]
+	// if err1 := db.Where(condition).Order("updated_at DESC").Find(&result).Error; err1 != nil {
+	if err1 := db.Where(queryInfo).Order("updated_at DESC").Find(&result).Error; err1 != nil {
 		logs.Error("query ignoredInfos failed! %v", err1)
 		return nil, err1
 	}

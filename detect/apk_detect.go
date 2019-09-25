@@ -131,7 +131,10 @@ func getIgnoredInfo_2(data map[string]string) (map[string]interface{}, map[strin
 	condition := "app_id ='" + data["appId"] + "' and platform = '" + data["platform"] + "'"
 	queryInfo := make(map[string]string)
 	queryInfo["condition"] = condition
-	result, err := dal.QueryIgnoredInfo(queryInfo)
+	// result, err := dal.QueryIgnoredInfo(queryInfo)
+	result, err := dal.QueryIgnoredInfo(map[string]interface{}{
+		"app_id":   data["appId"],
+		"platform": data["platform"]})
 
 	//此处如果条件1没有命中，但是23命中了，返回的err其实是nil
 	if err != nil || result == nil || len(*result) == 0 {
@@ -191,7 +194,7 @@ func QueryIgnoredHistory_2(c *gin.Context) {
 		return
 	}
 	logs.Info(t.Key)
-	queryDatas := make(map[string]string)
+	queryDatas := make(map[string]interface{})
 	queryDatas["condition"] = "app_id='" + strconv.Itoa(t.AppId) + "' and platform='" + strconv.Itoa(t.Platform) + "' and keys_info='" + t.Key + "'"
 	result, err := dal.QueryIgnoredInfo(queryDatas)
 	if err != nil {
