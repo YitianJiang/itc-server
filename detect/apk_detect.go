@@ -9,8 +9,10 @@ import (
 	"strconv"
 	"strings"
 
+	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
 )
@@ -346,20 +348,49 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 	return
 }
 
+func getExactDetectTask(db *gorm.DB, sieve map[string]interface{}) (
+	*dal.DetectStruct, error) {
+
+	var task dal.DetectStruct
+	if err := db.Debug().Where(sieve).First(&task).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
+	}
+
+	return &task, nil
+}
+
 func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.DetectQueryStruct {
 	//一次查所有
 	allPermList := GetPermList()
 	//获取任务信息
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{"id": taskId})
-	if detect == nil || len(*detect) == 0 {
-		logs.Error("Invalid task id")
+
+	db, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
 		return nil
 	}
+	defer db.Close()
+
+	task, err := getExactDetectTask(db, map[string]interface{}{"id": taskId})
+	if err != nil {
+		logs.Error("Task id: %v Failed to get the task information", taskId)
+		return nil
+	}
+
+	// detect := dal.QueryDetectModelsByMap(map[string]interface{}{"id": taskId})
+	// if detect == nil || len(*detect) == 0 {
+	// 	logs.Error("Invalid task id")
+	// 	return nil
+	// }
 	//查询增量信息
 	queryData := make(map[string]string)
-	queryData["appId"] = (*detect)[0].AppId
-	appId, _ := strconv.Atoi((*detect)[0].AppId)
-	queryData["platform"] = strconv.Itoa((*detect)[0].Platform)
+	// queryData["appId"] = (*detect)[0].AppId
+	// appId, _ := strconv.Atoi((*detect)[0].AppId)
+	// queryData["platform"] = strconv.Itoa((*detect)[0].Platform)
+	queryData["appId"] = task.AppId
+	appId, _ := strconv.Atoi(task.AppId)
+	queryData["platform"] = strconv.Itoa((task.Platform))
 
 	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(queryData)
 	if errIg != nil {
@@ -425,7 +456,8 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 			}
 			permsMap[num+1] = permInfo
 		}
-		if queryResult.ApkName == (*detect)[0].AppName {
+		// if queryResult.ApkName == (*detect)[0].AppName {
+		if queryResult.ApkName == task.AppName {
 			firstResult = queryResult
 		} else {
 			midResult = append(midResult, queryResult)
