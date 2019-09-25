@@ -693,8 +693,6 @@ func QueryDetectContentDetail(condition string) (*[]DetectContentDetail, error) 
 	}
 	defer db.Close()
 
-	// db := connection.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
-
 	var result []DetectContentDetail
 	if err := db.Debug().Where(condition).Order("status ASC").
 		Find(&result).Error; err != nil {
