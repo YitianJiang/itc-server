@@ -132,7 +132,7 @@ func getIgnoredInfo_2(data map[string]string) (map[string]interface{}, map[strin
 	queryInfo := make(map[string]string)
 	queryInfo["condition"] = condition
 	// result, err := dal.QueryIgnoredInfo(queryInfo)
-	result, err := dal.QueryIgnoredInfo(map[string]interface{}{
+	result, err := QueryIgnoredInfo(map[string]interface{}{
 		"app_id":   data["appId"],
 		"platform": data["platform"]})
 
@@ -196,7 +196,7 @@ func QueryIgnoredHistory_2(c *gin.Context) {
 	logs.Info(t.Key)
 	queryDatas := make(map[string]interface{})
 	queryDatas["condition"] = "app_id='" + strconv.Itoa(t.AppId) + "' and platform='" + strconv.Itoa(t.Platform) + "' and keys_info='" + t.Key + "'"
-	result, err := dal.QueryIgnoredInfo(queryDatas)
+	result, err := QueryIgnoredInfo(queryDatas)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "查询确认历史失败",
@@ -226,6 +226,26 @@ func QueryIgnoredHistory_2(c *gin.Context) {
 	})
 	return
 
+}
+
+// QueryIgnoredInfo retrieves task information which can be ignored
+// from table tb_ignored_info.
+func QueryIgnoredInfo(sieve map[string]interface{}) (*[]dal.IgnoreInfoStruct, error) {
+	db, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return nil, err
+	}
+	defer db.Close()
+
+	var result []dal.IgnoreInfoStruct
+	if err := db.Debug().Where(sieve).Order("updated_at DESC").
+		Find(&result).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 /*

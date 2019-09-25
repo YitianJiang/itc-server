@@ -754,26 +754,6 @@ func InsertIgnoredInfoBatch(details *[]IgnoreInfoStruct) error {
 	return nil
 }
 
-// QueryIgnoredInfo retrieves task information which can be ignored
-// from table tb_ignored_info.
-func QueryIgnoredInfo(sieve map[string]interface{}) (*[]IgnoreInfoStruct, error) {
-	db, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return nil, err
-	}
-	defer db.Close()
-
-	var result []IgnoreInfoStruct
-	if err := db.Debug().Where(sieve).Order("updated_at DESC").
-		Find(&result).Error; err != nil {
-		logs.Error("Database error: %v", err)
-		return nil, err
-	}
-
-	return &result, nil
-}
-
 //query tb_ios_detect_content
 func QueryNewIOSDetectModel(condition map[string]interface{}) *[]IOSNewDetectContent {
 	connection, err := database.GetDBConnection()
