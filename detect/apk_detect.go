@@ -127,7 +127,7 @@ func GetImportedPermission(appId int) map[int]interface{} {
 /**
  *获取可忽略内容
  */
-func getIgnoredInfo_2(data map[string]string, appID interface{}, platform interface{}) (map[string]interface{}, map[string]interface{}, map[string]interface{}, error) {
+func getIgnoredInfo_2(appID interface{}, platform interface{}) (map[string]interface{}, map[string]interface{}, map[string]interface{}, error) {
 
 	result, err := QueryIgnoredInfo(map[string]interface{}{
 		"app_id":   appID,
@@ -396,9 +396,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	}
 
 	//查询增量信息
-	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(map[string]string{
-		"appId":    task.AppId,
-		"platform": strconv.Itoa(task.Platform)}, task.AppId, task.Platform)
+	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(task.AppId, task.Platform)
 	if errIg != nil {
 		logs.Error("可忽略信息数据库查询失败,%v", errIg) //如果可忽略信息没有的话,录入日志但不影响后续操作
 	}
