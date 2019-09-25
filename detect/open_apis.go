@@ -20,7 +20,7 @@ func GetDetectTaskResult(c *gin.Context) {
 
 	data := getDetectResult(c, taskID, "6")
 	if data == nil {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to get binary detect result about task id: %v", taskID))
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Task id: %v Failed to get binary detect result", taskID))
 		return
 	}
 
@@ -29,6 +29,6 @@ func GetDetectTaskResult(c *gin.Context) {
 		"message":   "success",
 		"data":      *data})
 
-	logs.Info("Success to get binary detect result about task id: %v", taskID)
+	logs.Info("Task id: %v Get binary detect result success", taskID)
 	return
 }
