@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
@@ -529,19 +528,18 @@ func getPermAPPReltion(taskID string) (*[]dal.PermAppRelation, bool) {
 兼容.aab查询内容
 */
 func QueryDetectInfo_2(condition string) (*[]dal.DetectInfo, error) {
-	connection, err := database.GetDBConnection()
+	db, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
 		return nil, err
 	}
-	defer connection.Close()
-
-	db := connection.Table(dal.DetectInfo{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	defer db.Close()
 
 	var detectInfo []dal.DetectInfo
-	if err1 := db.Where(condition).Find(&detectInfo).Error; err1 != nil {
-		logs.Error("query detectInfo failed! %v", err)
-		return nil, err1
+	if err := db.Debug().Where(condition).
+		Find(&detectInfo).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
 	}
 
 	return &detectInfo, nil
