@@ -184,7 +184,8 @@ func UploadFile(c *gin.Context) {
 	}
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
-		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
+		// callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
+		callBackUrl := "http://10.224.21.157:6789/updateDetectInfos" // TEST
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -213,7 +214,7 @@ func UploadFile(c *gin.Context) {
 		}
 		contentType := bodyWriter.FormDataContentType()
 		err = bodyWriter.Close()
-		logs.Info("url: ", url)
+		logs.Info("url: %v", url)
 		tr := http.Transport{
 			DisableKeepAlives:   true,
 			MaxIdleConnsPerHost: 0,
@@ -308,12 +309,13 @@ func getFilesFromRequest(c *gin.Context, fieldName string, emptyError bool) (str
  *更新检测包的检测信息_v2——----------fj
  */
 func UpdateDetectInfos(c *gin.Context) {
-	logs.Info("Binary detect tool start callback")
+
 	taskId := c.Request.FormValue("task_ID")
 	if taskId == "" {
 		ReturnMsg(c, FAILURE, "Miss task_ID")
 		return
 	}
+	logs.Info("Task id: %v Binary detect tool callback", taskId)
 	toolId := c.Request.FormValue("tool_ID")
 	jsonContent := c.Request.FormValue("jsonContent")
 	appName := c.Request.FormValue("appName")
@@ -322,7 +324,7 @@ func UpdateDetectInfos(c *gin.Context) {
 
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{"id": taskId})
 	if detect == nil || len(*detect) == 0 {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("Cannot find any matched task about id %v", taskId))
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Task id: %v Cannot find any matched task", taskId))
 		return
 	}
 	toolIdInt, _ := strconv.Atoi(toolId)
@@ -839,6 +841,10 @@ func QueryDetectTasks(c *gin.Context) {
 	var data dal.RetDetectTasks
 	var more uint
 	items, total := dal.QueryTasksByCondition(param)
+	if items == nil {
+		ReturnMsg(c, SUCCESS, "Cannot find any matched task")
+		return
+	}
 	if uint(page*size) >= total {
 		more = 0
 	} else {

@@ -52,6 +52,7 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 		if err := AppInfoAnalysis_2(result.AppInfo,
 			&dal.DetectInfo{TaskId: taskID, ToolId: toolID},
 			index); err != nil {
+			logs.Error("Task id: %v Failed to analysis package", taskID)
 			return err, 0
 		}
 
