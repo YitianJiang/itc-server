@@ -9,8 +9,10 @@ import (
 	"strconv"
 	"strings"
 
+	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
 )
@@ -125,11 +127,11 @@ func GetImportedPermission(appId int) map[int]interface{} {
 /**
  *获取可忽略内容
  */
-func getIgnoredInfo_2(data map[string]string) (map[string]interface{}, map[string]interface{}, map[string]interface{}, error) {
-	condition := "app_id ='" + data["appId"] + "' and platform = '" + data["platform"] + "'"
-	queryInfo := make(map[string]string)
-	queryInfo["condition"] = condition
-	result, err := dal.QueryIgnoredInfo(queryInfo)
+func getIgnoredInfo_2(appID interface{}, platform interface{}) (map[string]interface{}, map[string]interface{}, map[string]interface{}, error) {
+
+	result, err := QueryIgnoredInfo(map[string]interface{}{
+		"app_id":   appID,
+		"platform": platform})
 
 	//此处如果条件1没有命中，但是23命中了，返回的err其实是nil
 	if err != nil || result == nil || len(*result) == 0 {
@@ -189,9 +191,9 @@ func QueryIgnoredHistory_2(c *gin.Context) {
 		return
 	}
 	logs.Info(t.Key)
-	queryDatas := make(map[string]string)
+	queryDatas := make(map[string]interface{})
 	queryDatas["condition"] = "app_id='" + strconv.Itoa(t.AppId) + "' and platform='" + strconv.Itoa(t.Platform) + "' and keys_info='" + t.Key + "'"
-	result, err := dal.QueryIgnoredInfo(queryDatas)
+	result, err := QueryIgnoredInfo(queryDatas)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "查询确认历史失败",
@@ -221,6 +223,26 @@ func QueryIgnoredHistory_2(c *gin.Context) {
 	})
 	return
 
+}
+
+// QueryIgnoredInfo retrieves task information which can be ignored
+// from table tb_ignored_info.
+func QueryIgnoredInfo(sieve map[string]interface{}) (*[]dal.IgnoreInfoStruct, error) {
+	db, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return nil, err
+	}
+	defer db.Close()
+
+	var result []dal.IgnoreInfoStruct
+	if err := db.Debug().Where(sieve).Order("updated_at DESC").
+		Find(&result).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 /*
@@ -333,64 +355,79 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 
 	result := getDetectResult(c, taskID, toolID)
 	if result == nil {
-		logs.Error("Failed to get task ID %v binary detect result", taskID)
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to get binary detect result about task id: %v", taskID))
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "success",
-		"errorCode": 0,
-		"data":      result,
-	})
+		"errorCode": SUCCESS,
+		"data":      result})
 
 	logs.Debug("Get task ID %v binary detect result success", taskID)
 	return
 }
 
+func getExactDetectTask(db *gorm.DB, sieve map[string]interface{}) (
+	*dal.DetectStruct, error) {
+
+	var task dal.DetectStruct
+	if err := db.Debug().Where(sieve).First(&task).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
+	}
+
+	return &task, nil
+}
+
 func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.DetectQueryStruct {
-	//一次查所有
-	allPermList := GetPermList()
-	//获取任务信息
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": taskId,
-	})
-	if detect == nil || len(*detect) == 0 {
-		logs.Error("未查询到该taskid对应的检测任务，%v", taskId)
-		errorReturn(c, "未查询到该taskid对应的检测任务")
-		return nil
-	}
-	//查询增量信息
-	queryData := make(map[string]string)
-	queryData["appId"] = (*detect)[0].AppId
-	appId, _ := strconv.Atoi((*detect)[0].AppId)
-	queryData["platform"] = strconv.Itoa((*detect)[0].Platform)
 
-	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(queryData)
-	if errIg != nil {
-		logs.Error("可忽略信息数据库查询失败,%v", errIg) //如果可忽略信息没有的话,录入日志但不影响后续操作
-	}
-
-	condition := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
-	//查询基础信息和敏感信息
-	contents, err := dal.QueryDetectInfo_2(condition)
+	db, err := database.GetDBConnection()
 	if err != nil {
-		errorReturn(c, "查询检测结果信息数据库操作失败")
+		logs.Error("Connect to DB failed: %v", err)
 		return nil
 	}
-	details, err2 := dal.QueryDetectContentDetail(condition)
-	if err2 != nil {
-		errorReturn(c, "查询检测结果信息数据库操作失败")
+	defer db.Close()
+
+	task, err := getExactDetectTask(db, map[string]interface{}{"id": taskId})
+	if err != nil {
+		logs.Error("Task id: %v Failed to get the task information", taskId)
 		return nil
 	}
-	if contents == nil || len(*contents) == 0 || details == nil || len(*details) == 0 {
-		logs.Info("未查询到该任务对应的检测内容,taskId:" + taskId)
-		errorReturn(c, "未查询到该任务对应的检测内容")
+
+	//查询增量信息
+	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(task.AppId, task.Platform)
+	if errIg != nil {
+		// It's acceptable if failed to get the  negligible information.
+		logs.Error("Task id: %v Failed to retrieve negligible information", taskId)
+	}
+
+	//查询基础信息和敏感信息
+	contents, err := retrieveTaskAPP(db, map[string]interface{}{
+		"task_id": taskId,
+		"tool_id": toolId})
+	if err != nil {
+		logs.Error("Task id: %v Failed to retrieve APK information", taskId)
+		return nil
+	}
+	if len(*contents) <= 0 {
+		logs.Error("Task id: %v Cannot find any matched APK information", taskId)
+		return nil
+	}
+
+	details, err := queryDetectContentDetail(db, map[string]interface{}{
+		"task_id": taskId,
+		"tool_id": toolId})
+	if err != nil {
+		logs.Error("Task id: %v Failed to retrieve detect content detail", taskId)
+		return nil
+	}
+	if len(*details) <= 0 {
+		logs.Error("Task id: %v Cannot find any matched detect content detail", taskId)
 		return nil
 	}
 
 	info, hasPermListFlag := getPermAPPReltion(taskId)
-	fmt.Println(info, hasPermListFlag)
-
 	detailMap := make(map[int][]dal.DetectContentDetail)
 	permsMap := make(map[int]dal.PermAppRelation)
 	var midResult []dal.DetectQueryStruct
@@ -427,7 +464,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 			}
 			permsMap[num+1] = permInfo
 		}
-		if queryResult.ApkName == (*detect)[0].AppName {
+		if queryResult.ApkName == task.AppName {
 			firstResult = queryResult
 		} else {
 			midResult = append(midResult, queryResult)
@@ -438,8 +475,14 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	finalResult = append(finalResult, firstResult)
 	finalResult = append(finalResult, midResult...)
 
-	perIgs := GetIgnoredPermission(appId)
+	appID, err := strconv.Atoi(task.AppId)
+	if err != nil {
+		logs.Error("Task id: %v atoi error: %v", taskId, err)
+		return nil
+	}
+	perIgs := GetIgnoredPermission(appID)
 	//任务检测结果组输出重组
+	allPermList := GetPermList()
 	for i := 0; i < len(finalResult); i++ {
 		details := detailMap[finalResult[i].Index]
 		permissions := make([]dal.Permissions, 0)
@@ -483,6 +526,38 @@ func getPermAPPReltion(taskID string) (*[]dal.PermAppRelation, bool) {
 	}
 
 	return info, true
+}
+
+/**
+兼容.aab查询内容
+*/
+// retrieveTaskAPP returns the information of APP in the binary detect task.
+func retrieveTaskAPP(db *gorm.DB, sieve map[string]interface{}) (
+	*[]dal.DetectInfo, error) {
+
+	var detectInfo []dal.DetectInfo
+	if err := db.Debug().Where(sieve).Find(&detectInfo).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
+	}
+
+	return &detectInfo, nil
+}
+
+/**
+查询apk敏感信息----fj
+*/
+func queryDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (
+	*[]dal.DetectContentDetail, error) {
+
+	var result []dal.DetectContentDetail
+	if err := db.Debug().Where(sieve).Order("status ASC").
+		Find(&result).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 /**
@@ -744,9 +819,16 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 		notPassFlag = true
 	}
 
+	db, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return
+	}
+	defer db.Close()
+
 	if t.Type == 0 { //敏感方法和字符串确认
-		condition1 := "id=" + strconv.Itoa(t.Id)
-		detailInfo, err := dal.QueryDetectContentDetail(condition1)
+		detailInfo, err := queryDetectContentDetail(db,
+			map[string]interface{}{"id": t.Id})
 		if err != nil || detailInfo == nil || len(*detailInfo) == 0 {
 			logs.Error("taskId:"+fmt.Sprint(t.TaskId)+",不存在该检测结果，ID：%d", t.Id)
 			errorReturn(c, "不存在该检测结果")
