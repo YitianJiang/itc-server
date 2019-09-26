@@ -25,14 +25,6 @@ const (
 安卓json检测信息分析----兼容.aab格式检测结果---json到Struct
 */
 
-// TOOD
-func retrieveExactDetectTask(condition map[string]interface{}) (
-	*dal.DetectStruct, error) {
-
-	var result dal.DetectStruct
-	return &result, nil
-}
-
 func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 
 	task, err := getExactDetectTask(database.DB, map[string]interface{}{"id": taskID})
