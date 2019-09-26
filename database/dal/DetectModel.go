@@ -639,73 +639,6 @@ func QueryUnConfirmDetectContent(condition string) (int, int) {
 }
 
 /**
-查询apk检测info-----fj
-*/
-func QueryDetectInfo(condition string) (*DetectInfo, error) {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
-		return nil, err
-	}
-	defer connection.Close()
-
-	db := connection.Table(DetectInfo{}.TableName()).LogMode(_const.DB_LOG_MODE)
-
-	var detectInfo DetectInfo
-	if err1 := db.Where(condition).Find(&detectInfo).Error; err1 != nil {
-		logs.Error("query detectInfo failed! %v", err)
-		return nil, err1
-	}
-	return &detectInfo, nil
-
-}
-
-/**
-兼容.aab查询内容
-*/
-func QueryDetectInfo_2(condition string) (*[]DetectInfo, error) {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
-		return nil, err
-	}
-	defer connection.Close()
-
-	db := connection.Table(DetectInfo{}.TableName()).LogMode(_const.DB_LOG_MODE)
-
-	var detectInfo []DetectInfo
-	if err1 := db.Where(condition).Find(&detectInfo).Error; err1 != nil {
-		logs.Error("query detectInfo failed! %v", err)
-		return nil, err1
-	}
-	return &detectInfo, nil
-
-}
-
-/**
-查询apk敏感信息----fj
-*/
-func QueryDetectContentDetail(condition string) (*[]DetectContentDetail, error) {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
-		return nil, err
-	}
-	defer connection.Close()
-
-	db := connection.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
-
-	var result []DetectContentDetail
-
-	if err1 := db.Where(condition).Order("status ASC").Find(&result).Error; err1 != nil {
-		logs.Error("query detectDetailInfos failed! %v", err)
-		return nil, err1
-	}
-	return &result, nil
-
-}
-
-/**
 可忽略信息insert------fj
 */
 func InsertIgnoredInfo(detail IgnoreInfoStruct) error {
@@ -754,27 +687,6 @@ func InsertIgnoredInfoBatch(details *[]IgnoreInfoStruct) error {
 	}
 	db.Commit()
 	return nil
-}
-
-/**
-查询可忽略信息----fj
-*/
-func QueryIgnoredInfo(queryInfo map[string]string) (*[]IgnoreInfoStruct, error) {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
-		return nil, err
-	}
-	defer connection.Close()
-
-	db := connection.Table(IgnoreInfoStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	var result []IgnoreInfoStruct
-	condition := queryInfo["condition"]
-	if err1 := db.Where(condition).Order("updated_at DESC").Find(&result).Error; err1 != nil {
-		logs.Error("query ignoredInfos failed! %v", err1)
-		return nil, err1
-	}
-	return &result, nil
 }
 
 //query tb_ios_detect_content

@@ -17,6 +17,7 @@ import (
 	"time"
 
 	_const "code.byted.org/clientQA/itc-server/const"
+	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
@@ -914,7 +915,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 	condition := "task_id='" + taskId + "'"
 	toolsContent := dal.QueryTaskBinaryCheckContent(condition)
 	//scanner检测工具查询内容
-	toolsContent_2, _ := dal.QueryDetectInfo(condition)
+	toolsContent_2, _ := QueryDetectInfo(condition)
 	if (toolsContent == nil || len(*toolsContent) == 0) && (toolsContent_2 == nil) {
 		logs.Error("未查询到该检测任务对应的二进制检测结果")
 		var res [0]dal.DetectContent
@@ -950,6 +951,28 @@ func QueryTaskQueryTools(c *gin.Context) {
 		"appId":     (*task)[0].AppId,
 		"data":      *selected,
 	})
+}
+
+/**
+查询apk检测info-----fj
+*/
+func QueryDetectInfo(condition string) (*dal.DetectInfo, error) {
+	connection, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return nil, err
+	}
+	defer connection.Close()
+
+	db := connection.Table(dal.DetectInfo{}.TableName()).LogMode(_const.DB_LOG_MODE)
+
+	var detectInfo dal.DetectInfo
+	if err = db.Where(condition).Find(&detectInfo).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
+	}
+
+	return &detectInfo, nil
 }
 
 /**
