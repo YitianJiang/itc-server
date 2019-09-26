@@ -26,6 +26,11 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id": mapInfo["taskId"]})
+	if detect == nil {
+		msg := fmt.Sprintf("Task id: %v Cannot find the task", mapInfo["taskId"])
+		logs.Error(msg)
+		return fmt.Errorf(msg), 0
+	}
 	var fisrtResult dal.JSONResultStruct
 	if err := json.Unmarshal([]byte(info), &fisrtResult); err != nil {
 		logs.Error("Task id: %v Unmarshal error: %v", mapInfo["taskId"], err)
