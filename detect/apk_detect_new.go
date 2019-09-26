@@ -35,13 +35,6 @@ func retrieveExactDetectTask(condition map[string]interface{}) (
 
 func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 
-	// detect := dal.QueryDetectModelsByMap(map[string]interface{}{"id": taskID})
-	// if detect == nil {
-	// 	msg := fmt.Sprintf("Task id: %v Cannot find the task", taskID)
-	// 	logs.Error(msg)
-	// 	return fmt.Errorf(msg), 0
-	// }
-
 	task, err := getExactDetectTask(database.DB, map[string]interface{}{"id": taskID})
 	if err != nil {
 		logs.Error("Task id: %v Fail to get detect task", taskID)
@@ -51,7 +44,6 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 	var fisrtResult dal.JSONResultStruct
 	if err := json.Unmarshal([]byte(info), &fisrtResult); err != nil {
 		logs.Error("Task id: %v Unmarshal error: %v", taskID, err)
-		// handleDetectTaskError((*detect)[0], DetectServiceScriptError, info)
 		handleDetectTaskError(task, DetectServiceScriptError, info)
 		return err, 0
 	}
@@ -67,10 +59,8 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 		}
 
 		//获取敏感方法和字符串的确认信息methodInfo,strInfos，为信息初始化做准备
-		// methodInfo, strInfos, _, err := getIgnoredInfo_2((*detect)[0].AppId, (*detect)[0].AppId)
 		methodInfo, strInfos, _, err := getIgnoredInfo_2(task.AppId, task.AppId)
 		if err != nil {
-			// logs.Error("Failed to retrieve negligible information about APP ID: %v, Platform: %v", (*detect)[0].AppId, (*detect)[0].AppId)
 			logs.Error("Failed to retrieve negligible information about APP ID: %v, Platform: %v", task.AppId, task.AppId)
 		}
 
@@ -134,7 +124,6 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 	}
 
 	//任务状态更新----该app无需要特别确认的敏感方法、字符串或权限
-	// errTaskUpdate, unConfirms := taskStatusUpdate(taskID, taskID, &(*detect)[0], false, 0)
 	errTaskUpdate, unConfirms := taskStatusUpdate(taskID, taskID, task, false, 0)
 	if errTaskUpdate != "" {
 		return fmt.Errorf(errTaskUpdate), 0
