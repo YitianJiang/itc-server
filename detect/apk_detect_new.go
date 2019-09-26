@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"code.byted.org/clientQA/itc-server/database"
+
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
@@ -33,16 +35,24 @@ func retrieveExactDetectTask(condition map[string]interface{}) (
 
 func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{"id": taskID})
-	if detect == nil {
-		msg := fmt.Sprintf("Task id: %v Cannot find the task", taskID)
-		logs.Error(msg)
-		return fmt.Errorf(msg), 0
+	// detect := dal.QueryDetectModelsByMap(map[string]interface{}{"id": taskID})
+	// if detect == nil {
+	// 	msg := fmt.Sprintf("Task id: %v Cannot find the task", taskID)
+	// 	logs.Error(msg)
+	// 	return fmt.Errorf(msg), 0
+	// }
+
+	task, err := getExactDetectTask(database.DB, map[string]interface{}{"id": taskID})
+	if err != nil {
+		logs.Error("Task id: %v Fail to get detect task", taskID)
+		return err, 0
 	}
+
 	var fisrtResult dal.JSONResultStruct
 	if err := json.Unmarshal([]byte(info), &fisrtResult); err != nil {
 		logs.Error("Task id: %v Unmarshal error: %v", taskID, err)
-		handleDetectTaskError((*detect)[0], DetectServiceScriptError, info)
+		// handleDetectTaskError((*detect)[0], DetectServiceScriptError, info)
+		handleDetectTaskError(task, DetectServiceScriptError, info)
 		return err, 0
 	}
 
@@ -57,9 +67,11 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 		}
 
 		//获取敏感方法和字符串的确认信息methodInfo,strInfos，为信息初始化做准备
-		methodInfo, strInfos, _, err := getIgnoredInfo_2((*detect)[0].AppId, (*detect)[0].AppId)
+		// methodInfo, strInfos, _, err := getIgnoredInfo_2((*detect)[0].AppId, (*detect)[0].AppId)
+		methodInfo, strInfos, _, err := getIgnoredInfo_2(task.AppId, task.AppId)
 		if err != nil {
-			logs.Error("Failed to retrieve negligible information about APP ID: %v, Platform: %v", (*detect)[0].AppId, (*detect)[0].AppId)
+			// logs.Error("Failed to retrieve negligible information about APP ID: %v, Platform: %v", (*detect)[0].AppId, (*detect)[0].AppId)
+			logs.Error("Failed to retrieve negligible information about APP ID: %v, Platform: %v", task.AppId, task.AppId)
 		}
 
 		//敏感method解析----先外层去重
@@ -122,7 +134,8 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 	}
 
 	//任务状态更新----该app无需要特别确认的敏感方法、字符串或权限
-	errTaskUpdate, unConfirms := taskStatusUpdate(taskID, taskID, &(*detect)[0], false, 0)
+	// errTaskUpdate, unConfirms := taskStatusUpdate(taskID, taskID, &(*detect)[0], false, 0)
+	errTaskUpdate, unConfirms := taskStatusUpdate(taskID, taskID, task, false, 0)
 	if errTaskUpdate != "" {
 		return fmt.Errorf(errTaskUpdate), 0
 	}
@@ -465,7 +478,7 @@ func GetAllAPIConfigs() *map[string]interface{} {
 /**
 检测任务发生问题逻辑处理
 */
-func handleDetectTaskError(detect dal.DetectStruct,
+func handleDetectTaskError(detect *dal.DetectStruct,
 	errCode interface{}, errInfo interface{}) error {
 
 	errBytes, err := json.Marshal(map[string]interface{}{
@@ -478,5 +491,5 @@ func handleDetectTaskError(detect dal.DetectStruct,
 
 	var errString = string(errBytes)
 	detect.ErrInfo = &errString
-	return dal.UpdateDetectModelNew(detect)
+	return dal.UpdateDetectModelNew(*detect)
 }
