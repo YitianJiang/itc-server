@@ -954,7 +954,7 @@ func QueryTaskQueryTools(c *gin.Context) {
 func QueryDetectInfo(condition string) (*dal.DetectInfo, error) {
 	connection, err := database.GetDBConnection()
 	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
+		logs.Error("Connect to DB failed: %v", err)
 		return nil, err
 	}
 	defer connection.Close()
@@ -962,9 +962,9 @@ func QueryDetectInfo(condition string) (*dal.DetectInfo, error) {
 	db := connection.Table(dal.DetectInfo{}.TableName()).LogMode(_const.DB_LOG_MODE)
 
 	var detectInfo dal.DetectInfo
-	if err1 := db.Where(condition).Find(&detectInfo).Error; err1 != nil {
-		logs.Error("query detectInfo failed! %v", err)
-		return nil, err1
+	if err = db.Where(condition).Find(&detectInfo).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
 	}
 
 	return &detectInfo, nil
