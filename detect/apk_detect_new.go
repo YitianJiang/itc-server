@@ -166,9 +166,10 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 	detectInfo.Channel = info.Channel
 	//更新任务的权限信息
 	var permissionArr = info.PermsInAppInfo
-	permAppInfos, errP := permUpdate(&permissionArr, detectInfo, detect)
-	if errP != nil {
-		return errP
+	permAppInfos, err := permUpdate(&permissionArr, detectInfo, detect)
+	if err != nil {
+		logs.Error("Task id: %v Failed to update permission", detectInfo.TaskId)
+		return err
 	}
 
 	//更新权限-app-task关系表
@@ -185,7 +186,6 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 	relationship.PermInfos = permAppInfos
 	if err := dal.InsertPermAppRelation(relationship); err != nil {
 		logs.Error("Task id: %v Failed to insert permission app relation", detectInfo.TaskId)
-		utils.LarkDingOneInner(informer, "新增权限App关系失败！taskId:"+fmt.Sprint(detectInfo.TaskId)+",appID="+(*detect)[0].AppId)
 		return err
 	}
 
@@ -195,9 +195,6 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 	detectInfo.SubIndex = realIndex
 	if err := dal.InsertDetectInfo(*detectInfo); err != nil {
 		logs.Error("Task id: %v Failed to insert detect information", detectInfo.TaskId)
-		//及时报警
-		message := "taskId:" + fmt.Sprint(detectInfo.TaskId) + ",appInfo写入数据库失败，请解决;" + fmt.Sprint(err)
-		utils.LarkDingOneInner(informer, message)
 		return err
 	}
 
