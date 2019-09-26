@@ -322,11 +322,6 @@ func UpdateDetectInfos(c *gin.Context) {
 	appVersion := c.Request.FormValue("appVersion")
 	htmlContent := c.Request.FormValue("content")
 
-	// detect := dal.QueryDetectModelsByMap(map[string]interface{}{"id": taskId})
-	// if detect == nil || len(*detect) == 0 {
-	// 	ReturnMsg(c, FAILURE, fmt.Sprintf("Task id: %v Cannot find any matched task", taskId))
-	// 	return
-	// }
 	task, err := getExactDetectTask(database.DB, map[string]interface{}{"id": taskId})
 	if err != nil {
 		logs.Error("Task id: %v Failed to get detect task", taskId)
@@ -337,7 +332,6 @@ func UpdateDetectInfos(c *gin.Context) {
 	//消息通知条数--检测项+自查项
 	var unConfirms int
 	var unSelfCheck int
-	// if (*detect)[0].Platform == 0 {
 	if task.Platform == 0 {
 		if toolIdInt == 6 { //安卓兼容新版本
 			//安卓检测信息分析，并将检测信息写库-----fj
@@ -364,10 +358,6 @@ func UpdateDetectInfos(c *gin.Context) {
 			detectContent.JsonContent = jsonContent
 			detectContent.CreatedAt = time.Now()
 			detectContent.UpdatedAt = time.Now()
-			// (*detect)[0].AppName = appName
-			// (*detect)[0].AppVersion = appVersion
-			// (*detect)[0].UpdatedAt = time.Now()
-			// if err := dal.UpdateDetectModel((*detect)[0], detectContent); err != nil {
 			task.AppName = appName
 			task.AppVersion = appVersion
 			task.UpdatedAt = time.Now()
@@ -382,7 +372,6 @@ func UpdateDetectInfos(c *gin.Context) {
 		}
 	}
 	//ios新检测内容存储
-	// if (*detect)[0].Platform == 1 {
 	if task.Platform == 1 {
 		task_id, _ := strconv.Atoi(taskId)
 		tool_id, _ := strconv.Atoi(toolId)
@@ -394,10 +383,6 @@ func UpdateDetectInfos(c *gin.Context) {
 		detectContent.JsonContent = jsonContent
 		detectContent.CreatedAt = time.Now()
 		detectContent.UpdatedAt = time.Now()
-		// (*detect)[0].AppName = appName
-		// (*detect)[0].AppVersion = appVersion
-		// (*detect)[0].UpdatedAt = time.Now()
-		// if err := dal.UpdateDetectModel((*detect)[0], detectContent); err != nil {
 		task.AppName = appName
 		task.AppVersion = appVersion
 		task.UpdatedAt = time.Now()
@@ -412,7 +397,6 @@ func UpdateDetectInfos(c *gin.Context) {
 		//新表jsonContent分类存储
 		taskId, _ := strconv.Atoi(taskId)
 		toolId, _ := strconv.Atoi(toolId)
-		// appId, _ := strconv.Atoi((*detect)[0].AppId)
 		appId, _ := strconv.Atoi(task.AppId)
 		res, warnFlag, detectNo := iOSResultClassify(taskId, toolId, appId, jsonContent) //检测结果处理
 		unConfirms = detectNo
@@ -421,7 +405,6 @@ func UpdateDetectInfos(c *gin.Context) {
 		}
 		//iOS付费相关黑名单及时报警
 		if res && warnFlag {
-			// tips := "Notice: " + (*detect)[0].AppName + " " + (*detect)[0].AppVersion + " iOS包完成二进制检测，检测黑名单中itms-services不为空，请及时关注！！！！\n"
 			tips := "Notice: " + task.AppName + " " + task.AppVersion + " iOS包完成二进制检测，检测黑名单中itms-services不为空，请及时关注！！！！\n"
 			larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + strconv.Itoa(toolId) + "&showItcDetail=1&itcTaskId=" + strconv.Itoa(taskId)
 			//tips += "地址链接：" + larkUrl
@@ -433,7 +416,6 @@ func UpdateDetectInfos(c *gin.Context) {
 
 		//获取未确认自查项数目
 		var extra dal.ExtraStruct
-		// json.Unmarshal([]byte((*detect)[0].ExtraInfo), &extra)
 		json.Unmarshal([]byte(task.ExtraInfo), &extra)
 		skip := extra.SkipSelfFlag
 		if !skip {
@@ -444,20 +426,14 @@ func UpdateDetectInfos(c *gin.Context) {
 		}
 	}
 	//进行lark消息提醒
-	// detect = dal.QueryDetectModelsByMap(map[string]interface{}{
-	// 	"id": taskId,
-	// })
 	task, err = getExactDetectTask(database.DB, map[string]interface{}{"id": taskId})
 	if err != nil {
 		logs.Error("Task id: %v Failed to get detect task", taskId)
 		return
 	}
 	var message string
-	// creators := (*detect)[0].ToLarker
 	creators := task.ToLarker
 	larkList := strings.Split(creators, ",")
-	// message = "你好，" + (*detect)[0].AppName + " " + (*detect)[0].AppVersion
-	// platform := (*detect)[0].Platform
 	message = "你好，" + task.AppName + " " + task.AppVersion
 	platform := task.Platform
 	var os_code string
@@ -471,7 +447,6 @@ func UpdateDetectInfos(c *gin.Context) {
 
 	message += "  检测已经完成"
 
-	// appId := (*detect)[0].AppId
 	appId := task.AppId
 	appIdInt, _ := strconv.Atoi(appId)
 	var config *dal.LarkMsgTimer
@@ -516,7 +491,6 @@ func UpdateDetectInfos(c *gin.Context) {
 	rd_bm := ""
 	if p, ok := _const.AppVersionProject[appId]; ok {
 		project_id = p
-		// rd, qa := utils.GetVersionBMInfo(appId, project_id, (*detect)[0].AppVersion, os_code)
 		rd, qa := utils.GetVersionBMInfo(appId, project_id, task.AppVersion, os_code)
 		rd_id := utils.GetUserOpenId(rd + "@bytedance.com")
 		if rd_id != "" {
@@ -541,7 +515,6 @@ func UpdateDetectInfos(c *gin.Context) {
 		logs.Info("taskId: " + taskId + ", creator: " + creator + ", lark message result: " + fmt.Sprint(res))
 	}
 	//发给群消息沿用旧的机器人，给群ID对应群发送消息
-	// toGroupID := (*detect)[0].ToGroup
 	toGroupID := task.ToGroup
 	if toGroupID != "" {
 		group := strings.Replace(toGroupID, "，", ",", -1) //中文逗号切换成英文逗号
