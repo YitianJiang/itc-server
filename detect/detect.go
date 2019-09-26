@@ -835,6 +835,10 @@ func QueryDetectTasks(c *gin.Context) {
 	var data dal.RetDetectTasks
 	var more uint
 	items, total := dal.QueryTasksByCondition(param)
+	if items == nil {
+		ReturnMsg(c, SUCCESS, "Cannot find any matched task")
+		return
+	}
 	if uint(page*size) >= total {
 		more = 0
 	} else {
