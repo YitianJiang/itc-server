@@ -308,12 +308,13 @@ func getFilesFromRequest(c *gin.Context, fieldName string, emptyError bool) (str
  *更新检测包的检测信息_v2——----------fj
  */
 func UpdateDetectInfos(c *gin.Context) {
-	logs.Info("Binary detect tool start callback")
+
 	taskId := c.Request.FormValue("task_ID")
 	if taskId == "" {
 		ReturnMsg(c, FAILURE, "Miss task_ID")
 		return
 	}
+	logs.Info("Task id: %v Binary detect tool callback", taskId)
 	toolId := c.Request.FormValue("tool_ID")
 	jsonContent := c.Request.FormValue("jsonContent")
 	appName := c.Request.FormValue("appName")
@@ -322,7 +323,7 @@ func UpdateDetectInfos(c *gin.Context) {
 
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{"id": taskId})
 	if detect == nil || len(*detect) == 0 {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("Cannot find any matched task about id %v", taskId))
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Task id: %v Cannot find any matched task", taskId))
 		return
 	}
 	toolIdInt, _ := strconv.Atoi(toolId)
@@ -337,7 +338,7 @@ func UpdateDetectInfos(c *gin.Context) {
 			mapInfo["taskId"], _ = strconv.Atoi(taskId)
 			mapInfo["toolId"], _ = strconv.Atoi(toolId)
 			var errApk error
-			go logs.Debug("Task id: %v json content: %v", taskId, jsonContent)
+			go logs.Info("Task id: %v JSON content: %v", taskId, jsonContent)
 			errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, mapInfo)
 			if errApk != nil {
 				ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to update APK detect reuslt: %v", errApk))
