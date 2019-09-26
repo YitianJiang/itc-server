@@ -399,7 +399,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(task.AppId, task.Platform)
 	if errIg != nil {
 		// It's acceptable if failed to get the  negligible information.
-		logs.Error("Task id: %v Failed to retrieve negligible information", taskId)
+		logs.Warn("Task id: %v Failed to retrieve negligible information", taskId)
 	}
 
 	//查询基础信息和敏感信息
