@@ -944,8 +944,9 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 任务确认状态更新
 */
 func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassFlag bool, confirmLark int) (string, int) {
+
 	condition := "deleted_at IS NULL and task_id='" + strconv.Itoa(taskId) + "' and tool_id='" + strconv.Itoa(toolId) + "'"
-	counts, countsUn := dal.QueryUnConfirmDetectContent(condition)
+	counts, countsUn := QueryUnConfirmDetectContent(database.DB, condition)
 
 	perms, _ := dal.QueryPermAppRelation(map[string]interface{}{
 		"task_id": taskId,
@@ -996,14 +997,34 @@ func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassF
 			return err.Error(), 0
 		}
 	}
-	//if countsUn == 0 && permFlag {
-	//	if err := StatusDeal(*detect); err != nil {
-	//		return err.Error(), 0
-	//	}
-	//	//logs.Notice("回调了CI接口")
-	//}
-	return "", counts + permCounts
 
+	return "", counts + permCounts
+}
+
+/**
+未确认敏感信息数据量查询-----fj
+*/
+func QueryUnConfirmDetectContent(db *gorm.DB, condition string) (int, int) {
+
+	// connection, err := database.GetDBConnection()
+	// if err != nil {
+	// 	logs.Error("Connect to Db failed: %v", err)
+	// 	return -1, -1
+	// }
+	// defer connection.Close()
+
+	// db := connection.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	var total dal.RecordTotal
+	if err := db.Debug().Select("sum(case when status = '0' then 1 else 0 end) as total, sum(case when status <> '1' then 1 else 0 end) as total_un").Where(condition).Find(&total).Error; err != nil {
+		logs.Error("query sensitive infos total record failed! %v", err)
+		return -1, -1
+	}
+	//if err = db.Select("count(id) as total").Where(condition).Find(&total).Error; err != nil {
+	//	logs.Error("query sensitive infos total record failed! %v", err)
+	//	return -1,-1
+	//}
+
+	return int(total.Total), int(total.TotalUn)
 }
 
 /**
