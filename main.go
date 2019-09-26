@@ -1,14 +1,16 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
+	"strings"
+
 	"code.byted.org/clientQA/itc-server/conf"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/detect"
 	"code.byted.org/gin/ginex"
-	"fmt"
+	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
-	"net/http"
-	"strings"
 )
 
 func main() {
@@ -21,10 +23,19 @@ func main() {
 	//r.Use(casInitAndVerify())
 	r.Use(Cors())
 	database.InitDB()
+	db, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		panic(fmt.Sprintf("Failed to connet database: %v", err))
+	}
+	defer db.Close()
+	database.DB = db
+
 	InitRouter(r)
 	detect.InitCron()
 	r.Run()
 }
+
 // 跨域
 func Cors() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -52,7 +63,7 @@ func Cors() gin.HandlerFunc {
 			//header的类型
 			c.Header("Access-Control-Allow-Headers", " Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With,X-Nt-Engine")
 			//允许跨域设置，可以返回其他字段
-			c.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers,Cache-Control,Content-Language,Content-Type,Expires,Last-Modified,Pragma,FooBar")      // 跨域关键设置 让浏览器可以解析
+			c.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers,Cache-Control,Content-Language,Content-Type,Expires,Last-Modified,Pragma,FooBar") // 跨域关键设置 让浏览器可以解析
 			//缓存请求信息 单位为秒
 			c.Header("Access-Control-Max-Age", "172800")
 			//跨域请求是否需要带cookie信息 默认设置为true
@@ -67,5 +78,5 @@ func Cors() gin.HandlerFunc {
 		}
 		// 处理请求
 		c.Next()
-}
+	}
 }
