@@ -183,23 +183,24 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 	relationship.AppVersion = detectInfo.Version
 	relationship.SubIndex = realIndex //新增下标兼容.aab结果
 	relationship.PermInfos = permAppInfos
-	err1 := dal.InsertPermAppRelation(relationship)
-	if err1 != nil {
+	if err := dal.InsertPermAppRelation(relationship); err != nil {
+		logs.Error("Task id: %v Failed to insert permission app relation", detectInfo.TaskId)
 		utils.LarkDingOneInner(informer, "新增权限App关系失败！taskId:"+fmt.Sprint(detectInfo.TaskId)+",appID="+(*detect)[0].AppId)
-		return err1
+		return err
 	}
 
 	//插入appInfo信息到apk表
 	perStr := "" //旧版权限信息
 	detectInfo.Permissions = perStr
 	detectInfo.SubIndex = realIndex
-	err := dal.InsertDetectInfo(*detectInfo)
-	if err != nil {
+	if err := dal.InsertDetectInfo(*detectInfo); err != nil {
+		logs.Error("Task id: %v Failed to insert detect information", detectInfo.TaskId)
 		//及时报警
 		message := "taskId:" + fmt.Sprint(detectInfo.TaskId) + ",appInfo写入数据库失败，请解决;" + fmt.Sprint(err)
 		utils.LarkDingOneInner(informer, message)
 		return err
 	}
+
 	return nil
 }
 
