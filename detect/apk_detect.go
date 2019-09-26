@@ -470,7 +470,6 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 			midResult = append(midResult, queryResult)
 		}
 	}
-	fmt.Println(permsMap)
 	finalResult := make([]dal.DetectQueryStruct, 0)
 	finalResult = append(finalResult, firstResult)
 	finalResult = append(finalResult, midResult...)
@@ -742,7 +741,7 @@ func methodRiskLevelUpdate(ids *[]string, levels *[]string, configIds *[]dal.Det
 func GetTaskPermissions_2(info dal.PermAppRelation, perIgs map[int]interface{}, allPermList map[int]interface{}) (*PermSlice, error) {
 	var infos []interface{}
 	if err := json.Unmarshal([]byte(info.PermInfos), &infos); err != nil {
-		logs.Error("taskId:" + fmt.Sprint(info.TaskId) + ",该任务的权限信息存储格式出错")
+		logs.Error("Task id: %v Unmarshal error: %v content: %v", info.TaskId, err, info.PermInfos)
 		return nil, err
 	}
 
@@ -1006,23 +1005,13 @@ func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassF
 */
 func QueryUnConfirmDetectContent(db *gorm.DB, condition string) (int, int) {
 
-	// connection, err := database.GetDBConnection()
-	// if err != nil {
-	// 	logs.Error("Connect to Db failed: %v", err)
-	// 	return -1, -1
-	// }
-	// defer connection.Close()
-
-	// db := connection.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var total dal.RecordTotal
-	if err := db.Debug().Select("sum(case when status = '0' then 1 else 0 end) as total, sum(case when status <> '1' then 1 else 0 end) as total_un").Where(condition).Find(&total).Error; err != nil {
-		logs.Error("query sensitive infos total record failed! %v", err)
+	if err := db.Debug().Table(dal.DetectContentDetail{}.TableName()).Select("sum(case when status = '0' then 1 else 0 end) as total, sum(case when status <> '1' then 1 else 0 end) as total_un").Where(condition).Find(&total).Error; err != nil {
+		logs.Error("Database error: %v", err)
 		return -1, -1
 	}
-	//if err = db.Select("count(id) as total").Where(condition).Find(&total).Error; err != nil {
-	//	logs.Error("query sensitive infos total record failed! %v", err)
-	//	return -1,-1
-	//}
+
+	logs.Info(">>>>> %v %v", total.Total, total.TotalUn)
 
 	return int(total.Total), int(total.TotalUn)
 }
