@@ -8,8 +8,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetDetectTaskResult returns the result of binary detect task about
-// the given task id if the task id is valid.
+const latestDetectTool = "6"
+
+// GetDetectTaskResult returns the result of binary detect task for
+// the given task id if it is valid.
 func GetDetectTaskResult(c *gin.Context) {
 
 	taskID, exist := c.GetQuery("task_id")
@@ -18,7 +20,7 @@ func GetDetectTaskResult(c *gin.Context) {
 		return
 	}
 
-	data := getDetectResult(c, taskID, "6")
+	data := getDetectResult(c, taskID, latestDetectTool)
 	if data == nil {
 		ReturnMsg(c, FAILURE, fmt.Sprintf("Task id: %v Failed to get binary detect result", taskID))
 		return
