@@ -143,7 +143,11 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id": detectInfo.TaskId})
-	appId, _ := strconv.Atoi((*detect)[0].AppId)
+	appID, err := strconv.Atoi((*detect)[0].AppId)
+	if err != nil {
+		logs.Error("Task id: %v Atoi error: %v", detectInfo.TaskId, err)
+		return err
+	}
 
 	//判断appInfo信息是否为主要信息，只有主要信息--primary为1才会修改任务的appName和Version,或者primary为nil---只有一个信息
 	var taskUpdateFlag = false
@@ -170,7 +174,7 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 	//更新权限-app-task关系表
 	var relationship dal.PermAppRelation
 	relationship.TaskId = detectInfo.TaskId
-	relationship.AppId = appId
+	relationship.AppId = appID
 	if taskUpdateFlag {
 		relationship.AppVersion = (*detect)[0].AppVersion
 	} else {
