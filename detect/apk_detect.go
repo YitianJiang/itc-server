@@ -947,14 +947,12 @@ func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassF
 	condition := "deleted_at IS NULL and task_id='" + strconv.Itoa(taskId) + "' and tool_id='" + strconv.Itoa(toolId) + "'"
 	counts, countsUn := QueryUnConfirmDetectContent(database.DB, condition)
 
-	perms, _ := dal.QueryPermAppRelation(map[string]interface{}{
-		"task_id": taskId,
-	})
+	perms, _ := dal.QueryPermAppRelation(map[string]interface{}{"task_id": taskId})
 	var permFlag = true
 	var updateFlag = false
 	var permCounts = 0
 	if perms == nil || len(*perms) == 0 {
-		logs.Error("taskId:" + fmt.Sprint(taskId) + ",该任务无权限检测信息！")
+		logs.Warn("taskId:" + fmt.Sprint(taskId) + ",该任务无权限检测信息！")
 	} else {
 		for i := 0; i < len(*perms); i++ {
 			permsInfoDB := (*perms)[i].PermInfos
@@ -966,7 +964,7 @@ func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassF
 				permInfo := m.(map[string]interface{})
 				if permInfo["status"].(float64) == 0 {
 					permFlag = false
-					permCounts += 1
+					permCounts++
 				}
 			}
 		}
@@ -1010,8 +1008,6 @@ func QueryUnConfirmDetectContent(db *gorm.DB, condition string) (int, int) {
 		logs.Error("Database error: %v", err)
 		return -1, -1
 	}
-
-	logs.Info(">>>>> %v %v", total.Total, total.TotalUn)
 
 	return int(total.Total), int(total.TotalUn)
 }
