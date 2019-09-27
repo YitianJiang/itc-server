@@ -53,7 +53,7 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 		//获取敏感方法和字符串的确认信息methodInfo,strInfos，为信息初始化做准备
 		methodInfo, strInfos, _, err := getIgnoredInfo_2(task.AppId, task.Platform)
 		if err != nil {
-			logs.Warn("Failed to retrieve negligible information about APP ID: %v, Platform: %v", task.AppId, task.AppId)
+			logs.Warn("Failed to retrieve negligible information about APP ID: %v, Platform: %v", task.AppId, task.Platform)
 		}
 
 		//敏感method解析----先外层去重
