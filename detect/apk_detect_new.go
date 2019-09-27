@@ -55,6 +55,12 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 		if err != nil {
 			logs.Warn("Task id: %v Failed to retrieve negligible information about APP ID: %v, Platform: %v", taskID, task.AppId, task.Platform)
 		}
+		if methodInfo == nil {
+			logs.Warn("Task id: %v There are no negligible methods", taskID)
+		}
+		if strInfos == nil {
+			logs.Warn("Task id: %v There are no negligible strings", taskID)
+		}
 
 		//敏感method解析----先外层去重
 		mRepeat := make(map[string]int)
