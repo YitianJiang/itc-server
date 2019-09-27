@@ -228,4 +228,10 @@ func InitRouter(r *ginex.Engine) {
 	{
 		binaryCheckApi.POST("/checkIsBinary", developerconnmanager.CheckIsBinary)
 	}
+
+	testflightapi := r.Group("/v1/testflightserver")
+	{
+		testflightapi.GET("/getRecentVersionReviewInfo",developerconnmanager.GetRecentVersionReviewInfo)
+		testflightapi.POST("/createGroupAddVesion",developerconnmanager.CreateGroupAddVesion)
+	}
 }
