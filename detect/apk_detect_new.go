@@ -26,6 +26,11 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id": mapInfo["taskId"]})
+	if detect == nil {
+		msg := fmt.Sprintf("Task id: %v Cannot find the task", mapInfo["taskId"])
+		logs.Error(msg)
+		return fmt.Errorf(msg), 0
+	}
 	var fisrtResult dal.JSONResultStruct
 	if err := json.Unmarshal([]byte(info), &fisrtResult); err != nil {
 		logs.Error("Task id: %v Unmarshal error: %v", mapInfo["taskId"], err)
@@ -51,12 +56,9 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 		}
 
 		//获取敏感方法和字符串的确认信息methodInfo,strInfos，为信息初始化做准备
-		data := make(map[string]string)
-		data["appId"] = (*detect)[0].AppId
-		data["platform"] = strconv.Itoa((*detect)[0].Platform)
-		methodInfo, strInfos, _, err := getIgnoredInfo_2(data)
+		methodInfo, strInfos, _, err := getIgnoredInfo_2((*detect)[0].AppId, (*detect)[0].AppId)
 		if err != nil {
-			logs.Error("未查询到该App的增量信息，app信息为：%v", data)
+			logs.Error("Failed to retrieve negligible information about APP ID: %v, Platform: %v", (*detect)[0].AppId, (*detect)[0].AppId)
 		}
 
 		//敏感method解析----先外层去重

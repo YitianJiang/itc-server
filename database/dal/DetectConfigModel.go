@@ -296,19 +296,22 @@ func UpdataPermAppRelation(data *PermAppRelation) error {
 /**
 查询权限app关系
 */
-func QueryPermAppRelation(data map[string]interface{}) (*[]PermAppRelation, error) {
-	connection, err := database.GetDBConnection()
+func QueryPermAppRelation(sieve map[string]interface{}) (
+	*[]PermAppRelation, error) {
+
+	db, err := database.GetDBConnection()
 	if err != nil {
-		logs.Error("connect to db failed,%v", err)
+		logs.Error("connect to db failed: %v", err)
 		return nil, err
 	}
-	defer connection.Close()
-	db := connection.Table(PermAppRelation{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	defer db.Close()
+
 	var result []PermAppRelation
-	if err := db.Where(data).Find(&result).Error; err != nil {
-		logs.Error("query permission-app relationship failed,%v", err)
+	if err := db.Debug().Where(sieve).Find(&result).Error; err != nil {
+		logs.Error("Database error: %v", err)
 		return nil, err
 	}
+
 	return &result, nil
 }
 
