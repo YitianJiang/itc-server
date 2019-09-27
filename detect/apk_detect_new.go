@@ -92,6 +92,7 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 			allMethods = append(allMethods, *MethodAnalysis(newMethod, &detailContent, extraInfo)) //内层去重，并放入写库信息数组
 		}
 		if err := dal.InsertDetectDetailBatch(&allMethods); err != nil {
+			logs.Error("Task id: %v Failed to insert detect detail", taskID)
 			//及时报警
 			message := "taskId:" + fmt.Sprint(taskID) + ",敏感method写入数据库失败，请解决;" + fmt.Sprint(err)
 			utils.LarkDingOneInner(informer, message)
@@ -108,6 +109,7 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 			allStrs = append(allStrs, *StrAnalysis(strInfo, &detailContent, strInfos))
 		}
 		if err := dal.InsertDetectDetailBatch(&allStrs); err != nil {
+			logs.Error("Task id: %v Failed to insert detect detail", taskID)
 			//及时报警
 			message := "taskId:" + fmt.Sprint(taskID) + ",敏感str写入数据库失败，请解决;" + fmt.Sprint(err)
 			utils.LarkDingOneInner(informer, message)
@@ -116,8 +118,9 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 	}
 
 	//任务状态更新----该app无需要特别确认的敏感方法、字符串或权限
-	errTaskUpdate, unConfirms := taskStatusUpdate(taskID, taskID, task, false, 0)
+	errTaskUpdate, unConfirms := taskStatusUpdate(taskID, toolID, task, false, 0)
 	if errTaskUpdate != "" {
+		logs.Error("Task id: %v Failed to update task status", taskID)
 		return fmt.Errorf(errTaskUpdate), 0
 	}
 	return nil, unConfirms
