@@ -213,7 +213,7 @@ func UploadFile(c *gin.Context) {
 		}
 		contentType := bodyWriter.FormDataContentType()
 		err = bodyWriter.Close()
-		logs.Info("url: ", url)
+		logs.Info("url: %v", url)
 		tr := http.Transport{
 			DisableKeepAlives:   true,
 			MaxIdleConnsPerHost: 0,
@@ -227,7 +227,7 @@ func UploadFile(c *gin.Context) {
 		if err != nil {
 			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",上传二进制包出错,", err.Error())
 			dbDetectModel.ID = dbDetectModelId
-			handleDetectTaskError(dbDetectModel, DetectServiceInfrastructureError, "上传二进制包出错")
+			handleDetectTaskError(&dbDetectModel, DetectServiceInfrastructureError, "上传二进制包出错")
 			//及时报警
 			for _, lark_people := range _const.LowLarkPeople {
 				utils.LarkDingOneInner(lark_people, "上传二进制包出错，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
@@ -308,21 +308,22 @@ func getFilesFromRequest(c *gin.Context, fieldName string, emptyError bool) (str
  *更新检测包的检测信息_v2——----------fj
  */
 func UpdateDetectInfos(c *gin.Context) {
-	logs.Info("Binary detect tool start callback")
+
 	taskId := c.Request.FormValue("task_ID")
 	if taskId == "" {
 		ReturnMsg(c, FAILURE, "Miss task_ID")
 		return
 	}
+	logs.Info("Task id: %v Binary detect tool callback", taskId)
 	toolId := c.Request.FormValue("tool_ID")
 	jsonContent := c.Request.FormValue("jsonContent")
 	appName := c.Request.FormValue("appName")
 	appVersion := c.Request.FormValue("appVersion")
 	htmlContent := c.Request.FormValue("content")
 
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{"id": taskId})
-	if detect == nil || len(*detect) == 0 {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("Cannot find any matched task about id %v", taskId))
+	task, err := getExactDetectTask(database.DB, map[string]interface{}{"id": taskId})
+	if err != nil {
+		logs.Error("Task id: %v Failed to get detect task", taskId)
 		return
 	}
 	toolIdInt, _ := strconv.Atoi(toolId)
@@ -330,15 +331,20 @@ func UpdateDetectInfos(c *gin.Context) {
 	//消息通知条数--检测项+自查项
 	var unConfirms int
 	var unSelfCheck int
-	if (*detect)[0].Platform == 0 {
+	if task.Platform == 0 {
 		if toolIdInt == 6 { //安卓兼容新版本
 			//安卓检测信息分析，并将检测信息写库-----fj
-			mapInfo := make(map[string]int)
-			mapInfo["taskId"], _ = strconv.Atoi(taskId)
-			mapInfo["toolId"], _ = strconv.Atoi(toolId)
+			taskID, err := strconv.Atoi(taskId)
+			if err != nil {
+				logs.Error("String convert error: %v", taskId)
+			}
+			toolID, err := strconv.Atoi(toolId)
+			if err != nil {
+				logs.Error("String convert error: %v", toolId)
+			}
 			var errApk error
 			go logs.Debug("Task id: %v json content: %v", taskId, jsonContent)
-			errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, mapInfo)
+			errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, taskID, toolID)
 			if errApk != nil {
 				ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to update APK detect reuslt: %v", errApk))
 				return
@@ -351,10 +357,10 @@ func UpdateDetectInfos(c *gin.Context) {
 			detectContent.JsonContent = jsonContent
 			detectContent.CreatedAt = time.Now()
 			detectContent.UpdatedAt = time.Now()
-			(*detect)[0].AppName = appName
-			(*detect)[0].AppVersion = appVersion
-			(*detect)[0].UpdatedAt = time.Now()
-			if err := dal.UpdateDetectModel((*detect)[0], detectContent); err != nil {
+			task.AppName = appName
+			task.AppVersion = appVersion
+			task.UpdatedAt = time.Now()
+			if err := dal.UpdateDetectModel(*task, detectContent); err != nil {
 				c.JSON(http.StatusOK, gin.H{
 					"message":   "数据库更新检测信息失败",
 					"errorCode": -3,
@@ -365,7 +371,7 @@ func UpdateDetectInfos(c *gin.Context) {
 		}
 	}
 	//ios新检测内容存储
-	if (*detect)[0].Platform == 1 {
+	if task.Platform == 1 {
 		task_id, _ := strconv.Atoi(taskId)
 		tool_id, _ := strconv.Atoi(toolId)
 		//旧表更新
@@ -376,10 +382,10 @@ func UpdateDetectInfos(c *gin.Context) {
 		detectContent.JsonContent = jsonContent
 		detectContent.CreatedAt = time.Now()
 		detectContent.UpdatedAt = time.Now()
-		(*detect)[0].AppName = appName
-		(*detect)[0].AppVersion = appVersion
-		(*detect)[0].UpdatedAt = time.Now()
-		if err := dal.UpdateDetectModel((*detect)[0], detectContent); err != nil {
+		task.AppName = appName
+		task.AppVersion = appVersion
+		task.UpdatedAt = time.Now()
+		if err := dal.UpdateDetectModel(*task, detectContent); err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"message":   "数据库更新检测信息失败",
 				"errorCode": -3,
@@ -390,7 +396,7 @@ func UpdateDetectInfos(c *gin.Context) {
 		//新表jsonContent分类存储
 		taskId, _ := strconv.Atoi(taskId)
 		toolId, _ := strconv.Atoi(toolId)
-		appId, _ := strconv.Atoi((*detect)[0].AppId)
+		appId, _ := strconv.Atoi(task.AppId)
 		res, warnFlag, detectNo := iOSResultClassify(taskId, toolId, appId, jsonContent) //检测结果处理
 		unConfirms = detectNo
 		if res == false {
@@ -398,7 +404,7 @@ func UpdateDetectInfos(c *gin.Context) {
 		}
 		//iOS付费相关黑名单及时报警
 		if res && warnFlag {
-			tips := "Notice: " + (*detect)[0].AppName + " " + (*detect)[0].AppVersion + " iOS包完成二进制检测，检测黑名单中itms-services不为空，请及时关注！！！！\n"
+			tips := "Notice: " + task.AppName + " " + task.AppVersion + " iOS包完成二进制检测，检测黑名单中itms-services不为空，请及时关注！！！！\n"
 			larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + strconv.Itoa(toolId) + "&showItcDetail=1&itcTaskId=" + strconv.Itoa(taskId)
 			//tips += "地址链接：" + larkUrl
 			for _, lark_people := range _const.MiddleLarkPeople {
@@ -409,7 +415,7 @@ func UpdateDetectInfos(c *gin.Context) {
 
 		//获取未确认自查项数目
 		var extra dal.ExtraStruct
-		json.Unmarshal([]byte((*detect)[0].ExtraInfo), &extra)
+		json.Unmarshal([]byte(task.ExtraInfo), &extra)
 		skip := extra.SkipSelfFlag
 		if !skip {
 			isRight, selfNum := GetIOSSelfNum(appId, taskId)
@@ -419,14 +425,16 @@ func UpdateDetectInfos(c *gin.Context) {
 		}
 	}
 	//进行lark消息提醒
-	detect = dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": taskId,
-	})
+	task, err = getExactDetectTask(database.DB, map[string]interface{}{"id": taskId})
+	if err != nil {
+		logs.Error("Task id: %v Failed to get detect task", taskId)
+		return
+	}
 	var message string
-	creators := (*detect)[0].ToLarker
+	creators := task.ToLarker
 	larkList := strings.Split(creators, ",")
-	message = "你好，" + (*detect)[0].AppName + " " + (*detect)[0].AppVersion
-	platform := (*detect)[0].Platform
+	message = "你好，" + task.AppName + " " + task.AppVersion
+	platform := task.Platform
 	var os_code string
 	if platform == 0 {
 		message += " Android包"
@@ -438,7 +446,7 @@ func UpdateDetectInfos(c *gin.Context) {
 
 	message += "  检测已经完成"
 
-	appId := (*detect)[0].AppId
+	appId := task.AppId
 	appIdInt, _ := strconv.Atoi(appId)
 	var config *dal.LarkMsgTimer
 	config = dal.QueryLarkMsgTimerByAppId(appIdInt)
@@ -482,7 +490,7 @@ func UpdateDetectInfos(c *gin.Context) {
 	rd_bm := ""
 	if p, ok := _const.AppVersionProject[appId]; ok {
 		project_id = p
-		rd, qa := utils.GetVersionBMInfo(appId, project_id, (*detect)[0].AppVersion, os_code)
+		rd, qa := utils.GetVersionBMInfo(appId, project_id, task.AppVersion, os_code)
 		rd_id := utils.GetUserOpenId(rd + "@bytedance.com")
 		if rd_id != "" {
 			rd_info := utils.GetUserAllInfo(rd_id)
@@ -506,7 +514,7 @@ func UpdateDetectInfos(c *gin.Context) {
 		logs.Info("taskId: " + taskId + ", creator: " + creator + ", lark message result: " + fmt.Sprint(res))
 	}
 	//发给群消息沿用旧的机器人，给群ID对应群发送消息
-	toGroupID := (*detect)[0].ToGroup
+	toGroupID := task.ToGroup
 	if toGroupID != "" {
 		group := strings.Replace(toGroupID, "，", ",", -1) //中文逗号切换成英文逗号
 		groupArr := strings.Split(group, ",")
@@ -834,6 +842,10 @@ func QueryDetectTasks(c *gin.Context) {
 	var data dal.RetDetectTasks
 	var more uint
 	items, total := dal.QueryTasksByCondition(param)
+	if items == nil {
+		ReturnMsg(c, SUCCESS, "Cannot find any matched task")
+		return
+	}
 	if uint(page*size) >= total {
 		more = 0
 	} else {

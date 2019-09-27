@@ -98,30 +98,30 @@ func GetPermList() map[int]interface{} {
 /**
 获取权限引入历史
 */
-func GetImportedPermission(appId int) map[int]interface{} {
+func getAPPPermissionHistory(appID int) map[int]interface{} {
+
+	history, err := dal.QueryPermHistory(map[string]interface{}{"app_id": appID})
+	if err != nil || history == nil || len(*history) == 0 {
+		logs.Error("Cannot find any permission about app id: %v", appID)
+		return nil
+	}
+
 	result := make(map[int]interface{})
-	queryResult, err := dal.QueryPermHistory(map[string]interface{}{
-		"app_id": appId,
-	})
-	if err != nil || queryResult == nil || len(*queryResult) == 0 {
-		logs.Error("该app暂时没有确认信息")
-	} else {
-		for _, infoP := range *queryResult {
-			_, ok := result[infoP.PermId]
-			if !ok {
-				info := make(map[string]interface{})
-				info["version"] = infoP.AppVersion
-				info["status"] = infoP.Status
-				result[infoP.PermId] = info
-			} else if ok && infoP.Status == 0 {
-				v := result[infoP.PermId].(map[string]interface{})
-				v["version"] = infoP.AppVersion
-				result[infoP.PermId] = v
-			}
+	for _, infoP := range *history {
+		_, ok := result[infoP.PermId]
+		if !ok {
+			result[infoP.PermId] = map[string]interface{}{
+				"version": infoP.AppVersion,
+				"status":  infoP.Status}
+		} else if ok && infoP.Status == 0 {
+			// TODO
+			v := result[infoP.PermId].(map[string]interface{})
+			v["version"] = infoP.AppVersion
+			result[infoP.PermId] = v
 		}
 	}
-	return result
 
+	return result
 }
 
 /**
@@ -470,7 +470,6 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 			midResult = append(midResult, queryResult)
 		}
 	}
-	fmt.Println(permsMap)
 	finalResult := make([]dal.DetectQueryStruct, 0)
 	finalResult = append(finalResult, firstResult)
 	finalResult = append(finalResult, midResult...)
@@ -742,7 +741,7 @@ func methodRiskLevelUpdate(ids *[]string, levels *[]string, configIds *[]dal.Det
 func GetTaskPermissions_2(info dal.PermAppRelation, perIgs map[int]interface{}, allPermList map[int]interface{}) (*PermSlice, error) {
 	var infos []interface{}
 	if err := json.Unmarshal([]byte(info.PermInfos), &infos); err != nil {
-		logs.Error("taskId:" + fmt.Sprint(info.TaskId) + ",该任务的权限信息存储格式出错")
+		logs.Error("Task id: %v Unmarshal error: %v content: %v", info.TaskId, err, info.PermInfos)
 		return nil, err
 	}
 
@@ -944,17 +943,16 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 任务确认状态更新
 */
 func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassFlag bool, confirmLark int) (string, int) {
-	condition := "deleted_at IS NULL and task_id='" + strconv.Itoa(taskId) + "' and tool_id='" + strconv.Itoa(toolId) + "'"
-	counts, countsUn := dal.QueryUnConfirmDetectContent(condition)
 
-	perms, _ := dal.QueryPermAppRelation(map[string]interface{}{
-		"task_id": taskId,
-	})
+	condition := "deleted_at IS NULL and task_id='" + strconv.Itoa(taskId) + "' and tool_id='" + strconv.Itoa(toolId) + "'"
+	counts, countsUn := QueryUnConfirmDetectContent(database.DB, condition)
+
+	perms, _ := dal.QueryPermAppRelation(map[string]interface{}{"task_id": taskId})
 	var permFlag = true
 	var updateFlag = false
 	var permCounts = 0
 	if perms == nil || len(*perms) == 0 {
-		logs.Error("taskId:" + fmt.Sprint(taskId) + ",该任务无权限检测信息！")
+		logs.Warn("taskId:" + fmt.Sprint(taskId) + ",该任务无权限检测信息！")
 	} else {
 		for i := 0; i < len(*perms); i++ {
 			permsInfoDB := (*perms)[i].PermInfos
@@ -966,7 +964,7 @@ func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassF
 				permInfo := m.(map[string]interface{})
 				if permInfo["status"].(float64) == 0 {
 					permFlag = false
-					permCounts += 1
+					permCounts++
 				}
 			}
 		}
@@ -996,14 +994,22 @@ func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassF
 			return err.Error(), 0
 		}
 	}
-	//if countsUn == 0 && permFlag {
-	//	if err := StatusDeal(*detect); err != nil {
-	//		return err.Error(), 0
-	//	}
-	//	//logs.Notice("回调了CI接口")
-	//}
-	return "", counts + permCounts
 
+	return "", counts + permCounts
+}
+
+/**
+未确认敏感信息数据量查询-----fj
+*/
+func QueryUnConfirmDetectContent(db *gorm.DB, condition string) (int, int) {
+
+	var total dal.RecordTotal
+	if err := db.Debug().Table(dal.DetectContentDetail{}.TableName()).Select("sum(case when status = '0' then 1 else 0 end) as total, sum(case when status <> '1' then 1 else 0 end) as total_un").Where(condition).Find(&total).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return -1, -1
+	}
+
+	return int(total.Total), int(total.TotalUn)
 }
 
 /**

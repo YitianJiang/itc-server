@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"code.byted.org/clientQA/itc-server/conf"
-	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/golf/ssconf"
 	dbconf "code.byted.org/gopkg/dbutil/conf"
@@ -16,6 +15,8 @@ import (
 
 var (
 	dboptional dbconf.DBOptional
+	// DB is the handler of database.
+	DB *gorm.DB
 )
 
 func InitDB() {

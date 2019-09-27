@@ -145,7 +145,7 @@ func InsertDetectConfig(data DetectConfigStruct) (uint, error) {
 /**
 查询权限信息
 */
-func QueryDetectConfig(queryData map[string]interface{}) *[]DetectConfigStruct {
+func QueryDetectConfig(condition map[string]interface{}) *[]DetectConfigStruct {
 	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db error,%v", err)
@@ -155,7 +155,7 @@ func QueryDetectConfig(queryData map[string]interface{}) *[]DetectConfigStruct {
 	db := connection.Table(DetectConfigStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	var result []DetectConfigStruct
 
-	if err := db.Where(queryData).Find(&result).Error; err != nil {
+	if err := db.Where(condition).Find(&result).Error; err != nil {
 		logs.Error("query detectConfig failed,%v", err)
 		return nil
 	}
@@ -382,7 +382,7 @@ func BatchInsertPermHistory(infos *[]PermHistory) error {
 /**
 查询权限操作历史
 */
-func QueryPermHistory(queryData map[string]interface{}) (*[]PermHistory, error) {
+func QueryPermHistory(condition map[string]interface{}) (*[]PermHistory, error) {
 	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db failed,%v", err)
@@ -392,7 +392,7 @@ func QueryPermHistory(queryData map[string]interface{}) (*[]PermHistory, error) 
 	db := connection.Table(PermHistory{}.TableName()).LogMode(_const.DB_LOG_MODE)
 
 	var result []PermHistory
-	if err := db.Where(queryData).Order("updated_at DESC").Find(&result).Error; err != nil {
+	if err := db.Where(condition).Order("updated_at DESC").Find(&result).Error; err != nil {
 		logs.Error("query perm history failed,%v", err)
 		return nil, err
 	}

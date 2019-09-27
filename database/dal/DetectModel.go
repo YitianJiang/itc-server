@@ -614,31 +614,6 @@ func InsertDetectDetailBatch(details *[]DetectContentDetail) error {
 }
 
 /**
-未确认敏感信息数据量查询-----fj
-*/
-func QueryUnConfirmDetectContent(condition string) (int, int) {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
-		return -1, -1
-	}
-	defer connection.Close()
-
-	db := connection.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	var total RecordTotal
-	if err = db.Select("sum(case when status = '0' then 1 else 0 end) as total, sum(case when status <> '1' then 1 else 0 end) as total_un").Where(condition).Find(&total).Error; err != nil {
-		logs.Error("query sensitive infos total record failed! %v", err)
-		return -1, -1
-	}
-	//if err = db.Select("count(id) as total").Where(condition).Find(&total).Error; err != nil {
-	//	logs.Error("query sensitive infos total record failed! %v", err)
-	//	return -1,-1
-	//}
-	return int(total.Total), int(total.TotalUn)
-
-}
-
-/**
 可忽略信息insert------fj
 */
 func InsertIgnoredInfo(detail IgnoreInfoStruct) error {

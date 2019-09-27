@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"code.byted.org/clientQA/itc-server/database"
+
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
@@ -22,49 +24,48 @@ const (
 /**
 安卓json检测信息分析----兼容.aab格式检测结果---json到Struct
 */
-func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": mapInfo["taskId"]})
-	if detect == nil {
-		msg := fmt.Sprintf("Task id: %v Cannot find the task", mapInfo["taskId"])
-		logs.Error(msg)
-		return fmt.Errorf(msg), 0
+func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
+
+	task, err := getExactDetectTask(database.DB, map[string]interface{}{"id": taskID})
+	if err != nil {
+		logs.Error("Task id: %v Fail to get detect task", taskID)
+		return err, 0
 	}
+
 	var fisrtResult dal.JSONResultStruct
 	if err := json.Unmarshal([]byte(info), &fisrtResult); err != nil {
-		logs.Error("Task id: %v Unmarshal error: %v", mapInfo["taskId"], err)
-		message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",二进制静态包检测返回信息格式错误，请解决;" + fmt.Sprint(err)
-		handleDetectTaskError((*detect)[0], DetectServiceScriptError, info)
-		utils.LarkDingOneInner(informer, message)
+		logs.Error("Task id: %v Unmarshal error: %v", taskID, err)
+		handleDetectTaskError(task, DetectServiceScriptError, info)
 		return err, 0
 	}
 
 	//遍历结果数组，并将每组检测结果信息插入数据库
 	for index, result := range fisrtResult.Result {
-		appInfos := result.AppInfo
-		methodsInfo := result.MethodInfos
-		strsInfo := result.StrInfos
-
-		var detectInfo dal.DetectInfo
-		detectInfo.TaskId = mapInfo["taskId"]
-		detectInfo.ToolId = mapInfo["toolId"]
 		//检测基础信息解析
-		errInfo := AppInfoAnalysis_2(appInfos, &detectInfo, index)
-		if errInfo != nil {
-			return errInfo, 0
+		if err := AppInfoAnalysis_2(result.AppInfo,
+			&dal.DetectInfo{TaskId: taskID, ToolId: toolID},
+			index); err != nil {
+			logs.Error("Task id: %v Failed to analysis package", taskID)
+			return err, 0
 		}
 
 		//获取敏感方法和字符串的确认信息methodInfo,strInfos，为信息初始化做准备
-		methodInfo, strInfos, _, err := getIgnoredInfo_2((*detect)[0].AppId, (*detect)[0].AppId)
+		methodInfo, strInfos, _, err := getIgnoredInfo_2(task.AppId, task.Platform)
 		if err != nil {
-			logs.Error("Failed to retrieve negligible information about APP ID: %v, Platform: %v", (*detect)[0].AppId, (*detect)[0].AppId)
+			logs.Warn("Task id: %v Failed to retrieve negligible information about APP ID: %v, Platform: %v", taskID, task.AppId, task.Platform)
+		}
+		if methodInfo == nil {
+			logs.Warn("Task id: %v There are no negligible methods", taskID)
+		}
+		if strInfos == nil {
+			logs.Warn("Task id: %v There are no negligible strings", taskID)
 		}
 
 		//敏感method解析----先外层去重
 		mRepeat := make(map[string]int)
 		newMethods := make([]dal.MethodInfo, 0) //第一层去重后的敏感方法集
-		for _, method := range methodsInfo {
+		for _, method := range result.MethodInfos {
 			var keystr = method.MethodName + method.ClassName
 			if v, ok := mRepeat[keystr]; !ok || ok && v == 0 {
 				newMethods = append(newMethods, method)
@@ -90,39 +91,42 @@ func ApkJsonAnalysis_2(info string, mapInfo map[string]int) (error, int) {
 			} else {
 				detailContent.RiskLevel = "3"
 			}
-			detailContent.TaskId = mapInfo["taskId"]
-			detailContent.ToolId = mapInfo["toolId"]
+			detailContent.TaskId = taskID
+			detailContent.ToolId = toolID
 			//新增兼容下标
 			detailContent.SubIndex = index
 			allMethods = append(allMethods, *MethodAnalysis(newMethod, &detailContent, extraInfo)) //内层去重，并放入写库信息数组
 		}
 		if err := dal.InsertDetectDetailBatch(&allMethods); err != nil {
+			logs.Error("Task id: %v Failed to insert detect detail", taskID)
 			//及时报警
-			message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",敏感method写入数据库失败，请解决;" + fmt.Sprint(err)
+			message := "taskId:" + fmt.Sprint(taskID) + ",敏感method写入数据库失败，请解决;" + fmt.Sprint(err)
 			utils.LarkDingOneInner(informer, message)
 			return err, 0
 		}
 
 		//敏感方法解析
 		allStrs := make([]dal.DetectContentDetail, 0)
-		for _, strInfo := range strsInfo {
+		for _, strInfo := range result.StrInfos {
 			var detailContent dal.DetectContentDetail
-			detailContent.TaskId = mapInfo["taskId"]
-			detailContent.ToolId = mapInfo["toolId"]
+			detailContent.TaskId = taskID
+			detailContent.ToolId = toolID
 			detailContent.SubIndex = index
 			allStrs = append(allStrs, *StrAnalysis(strInfo, &detailContent, strInfos))
 		}
 		if err := dal.InsertDetectDetailBatch(&allStrs); err != nil {
+			logs.Error("Task id: %v Failed to insert detect detail", taskID)
 			//及时报警
-			message := "taskId:" + fmt.Sprint(mapInfo["taskId"]) + ",敏感str写入数据库失败，请解决;" + fmt.Sprint(err)
+			message := "taskId:" + fmt.Sprint(taskID) + ",敏感str写入数据库失败，请解决;" + fmt.Sprint(err)
 			utils.LarkDingOneInner(informer, message)
 			return err, 0
 		}
 	}
 
 	//任务状态更新----该app无需要特别确认的敏感方法、字符串或权限
-	errTaskUpdate, unConfirms := taskStatusUpdate(mapInfo["taskId"], mapInfo["toolId"], &(*detect)[0], false, 0)
+	errTaskUpdate, unConfirms := taskStatusUpdate(taskID, toolID, task, false, 0)
 	if errTaskUpdate != "" {
+		logs.Error("Task id: %v Failed to update task status", taskID)
 		return fmt.Errorf(errTaskUpdate), 0
 	}
 	return nil, unConfirms
@@ -141,43 +145,41 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 		realIndex = index[0]
 	}
 
-	taskId := detectInfo.TaskId
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": taskId,
-	})
-	appId, _ := strconv.Atoi((*detect)[0].AppId)
+		"id": detectInfo.TaskId})
+	appID, err := strconv.Atoi((*detect)[0].AppId)
+	if err != nil {
+		logs.Error("Task id: %v Atoi error: %v", detectInfo.TaskId, err)
+		return err
+	}
 
 	//判断appInfo信息是否为主要信息，只有主要信息--primary为1才会修改任务的appName和Version,或者primary为nil---只有一个信息
 	var taskUpdateFlag = false
 	if info.Primary == nil || info.Primary.(float64) == 1 {
 		taskUpdateFlag = true
-	}
-	detectInfo.ApkName = info.ApkName
-	detectInfo.Version = info.ApkVersionName
-	detectInfo.Channel = info.Channel
-
-	if taskUpdateFlag {
 		(*detect)[0].AppName = info.ApkName
 		(*detect)[0].AppVersion = info.ApkVersionName
 		if err := dal.UpdateDetectModelNew((*detect)[0]); err != nil {
-			message := "任务ID：" + fmt.Sprint(taskId) + "，appName和Version信息更新失败，失败原因：" + fmt.Sprint(err)
-			logs.Error(message)
-			utils.LarkDingOneInner(informer, message)
+			logs.Error("Task id: %v Failed to update detect task: %v", detectInfo.TaskId, err)
 			return err
 		}
 	}
 
+	detectInfo.ApkName = info.ApkName
+	detectInfo.Version = info.ApkVersionName
+	detectInfo.Channel = info.Channel
 	//更新任务的权限信息
 	var permissionArr = info.PermsInAppInfo
-	permAppInfos, errP := permUpdate(&permissionArr, detectInfo, detect)
-	if errP != nil {
-		return errP
+	permAppInfos, err := permUpdate(&permissionArr, detectInfo, detect)
+	if err != nil {
+		logs.Error("Task id: %v Failed to update permission", detectInfo.TaskId)
+		return err
 	}
 
 	//更新权限-app-task关系表
 	var relationship dal.PermAppRelation
-	relationship.TaskId = taskId
-	relationship.AppId = appId
+	relationship.TaskId = detectInfo.TaskId
+	relationship.AppId = appID
 	if taskUpdateFlag {
 		relationship.AppVersion = (*detect)[0].AppVersion
 	} else {
@@ -186,23 +188,20 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 	relationship.AppVersion = detectInfo.Version
 	relationship.SubIndex = realIndex //新增下标兼容.aab结果
 	relationship.PermInfos = permAppInfos
-	err1 := dal.InsertPermAppRelation(relationship)
-	if err1 != nil {
-		utils.LarkDingOneInner(informer, "新增权限App关系失败！taskId:"+fmt.Sprint(taskId)+",appID="+(*detect)[0].AppId)
-		return err1
+	if err := dal.InsertPermAppRelation(relationship); err != nil {
+		logs.Error("Task id: %v Failed to insert permission app relation", detectInfo.TaskId)
+		return err
 	}
 
 	//插入appInfo信息到apk表
 	perStr := "" //旧版权限信息
 	detectInfo.Permissions = perStr
 	detectInfo.SubIndex = realIndex
-	err := dal.InsertDetectInfo(*detectInfo)
-	if err != nil {
-		//及时报警
-		message := "taskId:" + fmt.Sprint(taskId) + ",appInfo写入数据库失败，请解决;" + fmt.Sprint(err)
-		utils.LarkDingOneInner(informer, message)
+	if err := dal.InsertDetectInfo(*detectInfo); err != nil {
+		logs.Error("Task id: %v Failed to insert detect information", detectInfo.TaskId)
 		return err
 	}
+
 	return nil
 }
 
@@ -229,33 +228,36 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 	larkPerms := "" //lark消息通知的权限内容
 	var first_history []dal.PermHistory
 	//获取app的权限操作历史map
-	impMap := GetImportedPermission(appId)
+	impMap := getAPPPermissionHistory(appId)
 	//判断是否属于初次引入
 	var fhflag bool
 	//权限去重map
 	permRepeatMap := make(map[string]int)
 	for _, pers := range *permissionArr {
 		//权限去重
-		if v, okp := permRepeatMap[pers]; okp && v == 1 {
+		if v, ok := permRepeatMap[pers]; ok && v == 1 {
+			// Continue the loop if the permission has been handled.
 			continue
 		}
 		permRepeatMap[pers] = 1
+
 		//写app和perm对应关系
 		queryResult := dal.QueryDetectConfig(map[string]interface{}{
 			"key_info":   pers,
-			"platform":   0,
-			"check_type": 0,
-		})
+			"platform":   Android,
+			"check_type": Permission})
 		fhflag = false
 		permInfo := make(map[string]interface{})
 		if queryResult == nil || len(*queryResult) == 0 {
+			// Cannot find any matched pemisstion in the safe
+			// permission list which means this is a new permission.
 			var conf dal.DetectConfigStruct
 			conf.KeyInfo = pers
 			//将该权限的优先级定为--3高危
-			conf.Priority = 3
+			conf.Priority = RiskLevelHigh
 			//暂时定为固定---标识itc检测新增
 			conf.Creator = "itc"
-			conf.Platform = 0
+			conf.Platform = Android
 			perm_id, err := dal.InsertDetectConfig(conf)
 
 			if err != nil {
@@ -466,7 +468,7 @@ func GetAllAPIConfigs() *map[string]interface{} {
 /**
 检测任务发生问题逻辑处理
 */
-func handleDetectTaskError(detect dal.DetectStruct,
+func handleDetectTaskError(detect *dal.DetectStruct,
 	errCode interface{}, errInfo interface{}) error {
 
 	errBytes, err := json.Marshal(map[string]interface{}{
@@ -479,5 +481,5 @@ func handleDetectTaskError(detect dal.DetectStruct,
 
 	var errString = string(errBytes)
 	detect.ErrInfo = &errString
-	return dal.UpdateDetectModelNew(detect)
+	return dal.UpdateDetectModelNew(*detect)
 }
