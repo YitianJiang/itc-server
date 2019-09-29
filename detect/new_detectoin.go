@@ -169,10 +169,9 @@ func storeNewDetections(detections *Confirmation) error {
 	}
 	defer db.Close()
 
-	keyMap, err := getUncnofirmedDetectionKeys(db, map[string]interface{}{
-		"app_id":    detections.APPID,
-		"platform":  detections.Platform,
-		"confirmed": false})
+	keyMap, err := getExraDetectionKeys(db, map[string]interface{}{
+		"app_id":   detections.APPID,
+		"platform": detections.Platform})
 	if err != nil {
 		logs.Error("Failed to get unconfirmed detection keys")
 		return err
@@ -229,7 +228,7 @@ func removeDuplicateSensitiveString(
 	detections.SensitiveStrings = r
 }
 
-func getUncnofirmedDetectionKeys(
+func getExraDetectionKeys(
 	db *gorm.DB, condition map[string]interface{}) (map[string]bool, error) {
 
 	var keys []struct {

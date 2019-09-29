@@ -195,9 +195,8 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 	}
 
 	extra, err := getExtraConfirmedDetection(db, map[string]interface{}{
-		"app_id":      appID,
-		"app_version": appVersion,
-		"platform":    0})
+		"app_id":   appID,
+		"platform": 0})
 	if err != nil {
 		ReturnMsg(c, FAILURE, "Failed to get extra confirmed detections")
 		return
