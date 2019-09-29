@@ -354,9 +354,9 @@ func getGGItem(condition map[string]interface{}) []interface{} {
  *完成自查
  */
 func ConfirmCheck(c *gin.Context) {
-	name, exist := c.Get("username")
+	userName, exist := c.Get("username")
 	if !exist {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("Invalid user: %v", name))
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Invalid user: %v", userName))
 		return
 	}
 
@@ -372,18 +372,17 @@ func ConfirmCheck(c *gin.Context) {
 		return
 	}
 
-	var realData = make([]dal.Self, 0)
-	for _, da := range t.Data {
-		if da.Status != 0 {
-			realData = append(realData, da)
+	var passItems []dal.Self
+	for i := range t.Data {
+		if t.Data[i].Status != 0 {
+			passItems = append(passItems, t.Data[i])
 		}
 	}
-	var param map[string]interface{}
-	param = make(map[string]interface{})
-	param["taskId"] = t.TaskId
-	param["data"] = realData
-	param["operator"] = name
-	success, detect := dal.ConfirmSelfCheck(param)
+
+	success, detect := dal.ConfirmSelfCheck(map[string]interface{}{
+		"taskId":   t.TaskId,
+		"data":     passItems,
+		"operator": userName})
 	if !success {
 		ReturnMsg(c, FAILURE, "Self-check failed")
 		return
