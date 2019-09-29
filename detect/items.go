@@ -353,7 +353,8 @@ func getGGItem(condition map[string]interface{}) []interface{} {
 /*
  *完成自查
  */
-func ConfirmCheck(c *gin.Context) {
+func ConfirmSelfCheckItems(c *gin.Context) {
+
 	userName, exist := c.Get("username")
 	if !exist {
 		ReturnMsg(c, FAILURE, fmt.Sprintf("Invalid user: %v", userName))
