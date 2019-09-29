@@ -49,7 +49,7 @@ func InitRouter(r *ginex.Engine) {
 		//删除检查项
 		api.POST("/deleteDetectItem", detect.DropDetectItem)
 		//完成自查
-		api.POST("/confirmCheck", detect.ConfirmCheck)
+		api.POST("/confirmCheck", detect.ConfirmSelfCheckItems)
 		//获取检测列表
 		api.GET("/queryDetectTools", detect.QueryDetectTools)
 		//获取当前任务已选择的检测工具列表
@@ -231,7 +231,7 @@ func InitRouter(r *ginex.Engine) {
 
 	testflightapi := r.Group("/v1/testflightserver")
 	{
-		testflightapi.GET("/getRecentVersionReviewInfo",developerconnmanager.GetRecentVersionReviewInfo)
-		testflightapi.POST("/createGroupAddVesion",developerconnmanager.CreateGroupAddVesion)
+		testflightapi.GET("/getRecentVersionReviewInfo", developerconnmanager.GetRecentVersionReviewInfo)
+		testflightapi.POST("/createGroupAddVesion", developerconnmanager.CreateGroupAddVesion)
 	}
 }
