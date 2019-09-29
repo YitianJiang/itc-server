@@ -354,17 +354,24 @@ func getGGItem(condition map[string]interface{}) []interface{} {
  *完成自查
  */
 func ConfirmCheck(c *gin.Context) {
-	p, _ := ioutil.ReadAll(c.Request.Body)
-	var t dal.Confirm
-	if err := json.Unmarshal(p, &t); err != nil {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("Unmarshal error: %v", err))
-		return
-	}
 	name, exist := c.Get("username")
 	if !exist {
 		ReturnMsg(c, FAILURE, fmt.Sprintf("Invalid user: %v", name))
 		return
 	}
+
+	body, err := ioutil.ReadAll(c.Request.Body)
+	if err != nil {
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to read request body: %v", err))
+		return
+	}
+
+	var t dal.Confirm
+	if err := json.Unmarshal(body, &t); err != nil {
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Unmarshal error: %v", err))
+		return
+	}
+
 	var realData = make([]dal.Self, 0)
 	for _, da := range t.Data {
 		if da.Status != 0 {
