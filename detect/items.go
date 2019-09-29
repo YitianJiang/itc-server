@@ -357,23 +357,12 @@ func ConfirmCheck(c *gin.Context) {
 	p, _ := ioutil.ReadAll(c.Request.Body)
 	var t dal.Confirm
 	if err := json.Unmarshal(p, &t); err != nil {
-		// logs.Error("参数不合法!, ", err)
-		// c.JSON(http.StatusOK, gin.H{
-		// 	"message":   "参数不合法",
-		// 	"errorCode": -2,
-		// 	"data":      "参数不合法",
-		// })
 		ReturnMsg(c, FAILURE, fmt.Sprintf("Unmarshal error: %v", err))
 		return
 	}
 	name, exist := c.Get("username")
 	if !exist {
 		ReturnMsg(c, FAILURE, fmt.Sprintf("Invalid user: %v", name))
-		// c.JSON(http.StatusOK, gin.H{
-		// 	"message":   "未获取到用户信息！",
-		// 	"errorCode": -1,
-		// 	"data":      "未获取到用户信息！",
-		// })
 		return
 	}
 	var realData = make([]dal.Self, 0)
@@ -389,11 +378,6 @@ func ConfirmCheck(c *gin.Context) {
 	param["operator"] = name
 	success, detect := dal.ConfirmSelfCheck(param)
 	if !success {
-		// c.JSON(http.StatusOK, gin.H{
-		// 	"message":   "自查确认失败，请联系相关人员！",
-		// 	"errorCode": -1,
-		// 	"data":      "自查确认失败，请联系相关人员！",
-		// })
 		ReturnMsg(c, FAILURE, "Self-check failed")
 		return
 	}
@@ -401,11 +385,6 @@ func ConfirmCheck(c *gin.Context) {
 		StatusDeal(*detect, 2)
 		sameConfirm(*detect) //相同包检测结果确认
 	}
-	// c.JSON(http.StatusOK, gin.H{
-	// 	"message":   "success",
-	// 	"errorCode": 0,
-	// 	"data":      "success",
-	// })
 
 	ReturnMsg(c, SUCCESS, "Self-check success")
 	return
