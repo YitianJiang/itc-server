@@ -792,10 +792,8 @@ func GetTaskPermissions_2(info dal.PermAppRelation, perIgs map[int]interface{}, 
 func ConfirmApkBinaryResultv_5(c *gin.Context) {
 	param, _ := ioutil.ReadAll(c.Request.Body)
 	var t dal.PostConfirm
-	err := json.Unmarshal(param, &t)
-	if err != nil {
-		logs.Error("参数不合法 ，%v", err)
-		errorReturn(c, "参数不合法")
+	if err := json.Unmarshal(param, &t); err != nil {
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Unmarshal error: %v", err))
 		return
 	}
 	//获取确认人信息
