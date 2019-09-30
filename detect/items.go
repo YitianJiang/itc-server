@@ -2,6 +2,7 @@ package detect
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -352,57 +353,48 @@ func getGGItem(condition map[string]interface{}) []interface{} {
 /*
  *完成自查
  */
-func ConfirmCheck(c *gin.Context) {
-	p, _ := ioutil.ReadAll(c.Request.Body)
-	var t dal.Confirm
-	err := json.Unmarshal(p, &t)
+func ConfirmSelfCheckItems(c *gin.Context) {
+
+	userName, exist := c.Get("username")
+	if !exist {
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Invalid user: %v", userName))
+		return
+	}
+
+	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		logs.Error("参数不合法!, ", err)
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "参数不合法",
-			"errorCode": -2,
-			"data":      "参数不合法",
-		})
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to read request body: %v", err))
 		return
 	}
-	name, flag := c.Get("username")
-	if !flag {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "未获取到用户信息！",
-			"errorCode": -1,
-			"data":      "未获取到用户信息！",
-		})
+
+	var t dal.Confirm
+	if err := json.Unmarshal(body, &t); err != nil {
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Unmarshal error: %v", err))
 		return
 	}
-	var realData = make([]dal.Self, 0)
-	for _, da := range t.Data {
-		if da.Status != 0 {
-			realData = append(realData, da)
+
+	var passItems []dal.Self
+	for i := range t.Data {
+		if t.Data[i].Status != 0 {
+			passItems = append(passItems, t.Data[i])
 		}
 	}
-	var param map[string]interface{}
-	param = make(map[string]interface{})
-	param["taskId"] = t.TaskId
-	param["data"] = realData
-	param["operator"] = name
-	bool, detect := dal.ConfirmSelfCheck(param)
-	if !bool {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "自查确认失败，请联系相关人员！",
-			"errorCode": -1,
-			"data":      "自查确认失败，请联系相关人员！",
-		})
+
+	success, detect := dal.ConfirmSelfCheck(map[string]interface{}{
+		"taskId":   t.TaskId,
+		"data":     passItems,
+		"operator": userName})
+	if !success {
+		ReturnMsg(c, FAILURE, "Self-check failed")
 		return
 	}
 	if detect != nil && detect.Status != 0 && detect.SelfCheckStatus != 0 {
 		StatusDeal(*detect, 2)
 		sameConfirm(*detect) //相同包检测结果确认
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"message":   "success",
-		"errorCode": 0,
-		"data":      "success",
-	})
+
+	ReturnMsg(c, SUCCESS, "Self-check success")
+	return
 }
 
 /*
