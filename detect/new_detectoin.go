@@ -385,14 +385,13 @@ func UnconfirmedList(c *gin.Context) {
 }
 
 type detectionOutline struct {
-	CreatedAt   time.Time `gorm:"column:created_at"  json:"created_at"`
-	ID          uint64    `gorm:"column:id"          json:"id"`
-	RDName      string    `gorm:"column:rd_name"     json:"rd_name"`
-	Key         string    `gorm:"column:key_name"    json:"key_name"`
-	Description string    `gorm:"column:description" json:"description"`
-	Type        string    `gorm:"column:type"        json:"type"`
-	RiskLevel   int       `gorm:"column:risk_level"  json:"risk_level"`
-	Creator     string    `gorm:"column:creator"     json:"creator"`
+	ID          uint64 `gorm:"column:id"          json:"id"`
+	RDName      string `gorm:"column:rd_name"     json:"rd_name"`
+	Key         string `gorm:"column:key_name"    json:"key_name"`
+	Description string `gorm:"column:description" json:"description"`
+	Type        string `gorm:"column:type"        json:"type"`
+	RiskLevel   int    `gorm:"column:risk_level"  json:"risk_level"`
+	Creator     string `gorm:"column:creator"     json:"creator"`
 }
 
 func getDetectionList(
