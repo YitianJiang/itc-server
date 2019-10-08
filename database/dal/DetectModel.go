@@ -142,7 +142,7 @@ type SMethod struct {
 	OtherVersion string           `json:"otherVersion"`
 	GPFlag       int              `json:"gpFlag"`
 	RiskLevel    string           `json:"riskLevel"`
-	ConfigId     int              `json:"configId"`
+	ConfigId     int              `json:"configid"`
 }
 type MethodCallJson struct {
 	MethodName string      `json:"method_name"`
