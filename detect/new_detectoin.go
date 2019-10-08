@@ -525,6 +525,7 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 	}
 
 	result := map[string]interface{}{
+		"created_at":     data.CreatedAt,
 		"id":             data.ID,
 		"key":            data.Key,
 		"risk_level":     data.RiskLevel,
