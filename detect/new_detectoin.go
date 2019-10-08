@@ -385,13 +385,14 @@ func UnconfirmedList(c *gin.Context) {
 }
 
 type detectionOutline struct {
-	ID          uint64 `gorm:"column:id"          json:"id"`
-	RDName      string `gorm:"column:rd_name"     json:"rd_name"`
-	Key         string `gorm:"column:key_name"    json:"key_name"`
-	Description string `gorm:"column:description" json:"description"`
-	Type        string `gorm:"column:type"        json:"type"`
-	RiskLevel   int    `gorm:"column:risk_level"  json:"risk_level"`
-	Creator     string `gorm:"column:creator"     json:"creator"`
+	CreatedAt   time.Time `gorm:"column:created_at"  json:"created_at"`
+	ID          uint64    `gorm:"column:id"          json:"id"`
+	RDName      string    `gorm:"column:rd_name"     json:"rd_name"`
+	Key         string    `gorm:"column:key_name"    json:"key_name"`
+	Description string    `gorm:"column:description" json:"description"`
+	Type        string    `gorm:"column:type"        json:"type"`
+	RiskLevel   int       `gorm:"column:risk_level"  json:"risk_level"`
+	Creator     string    `gorm:"column:creator"     json:"creator"`
 }
 
 func getDetectionList(
@@ -451,7 +452,6 @@ func getDetectionOutline(db *gorm.DB, sieve map[string]interface{}) (
 
 	var result []detectionOutline
 	if err := db.Debug().Table("new_detection").
-		Select("id, rd_name, key_name, description, type, risk_level, creator").
 		Where(sieve).Find(&result).Error; err != nil {
 		logs.Error("Failed to retrieve detection outline: %v", err)
 		return nil, err
