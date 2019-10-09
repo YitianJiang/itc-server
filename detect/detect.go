@@ -40,6 +40,15 @@ const (
 	//DETECT_URL_PRO = "10.2.196.119:9527"
 )
 
+// Status of Detect Task
+const (
+	TaskStatusError       = -2
+	TaskStatusRunning     = -1
+	TaskStatusUnconfirm   = 0
+	TaskStatusConfirmPass = 1
+	TaskStatusConfirmFail = 2
+)
+
 var LARK_MSG_CALL_MAP = make(map[string]interface{})
 
 /**
@@ -241,6 +250,13 @@ func UploadFile(c *gin.Context) {
 			data = make(map[string]interface{})
 			json.Unmarshal(resBody.Bytes(), &data)
 			logs.Info("upload detect url's response: %+v", data)
+			if data["success"] != 1 {
+				if err := updateDetectTaskStatus(database.DB,
+					dbDetectModel.ID,
+					TaskStatusUnconfirm); err != nil {
+					logs.Warn("Task id: %v Failed to update detect task", dbDetectModel.ID)
+				}
+			}
 			//删掉临时文件
 			os.Remove(filepath)
 			if mFilepath != "" {
@@ -316,7 +332,8 @@ func UpdateDetectInfos(c *gin.Context) {
 	}
 	logs.Info("Task id: %v Binary detect tool callback", taskId)
 
-	if err := updateDetectTaskStatus(database.DB, taskId); err != nil {
+	if err := updateDetectTaskStatus(database.DB,
+		taskId, TaskStatusUnconfirm); err != nil {
 		logs.Error("Task id: %v Failed to update detect task", taskId)
 		return
 	}
@@ -551,10 +568,10 @@ func UpdateDetectInfos(c *gin.Context) {
 	//go alertLarkMsgCronNew(*ticker, creator, message, taskId, toolId)
 }
 
-func updateDetectTaskStatus(db *gorm.DB, id interface{}) error {
+func updateDetectTaskStatus(db *gorm.DB, id interface{}, status int) error {
 
 	if err := db.Debug().Table("tb_binary_detect").Where("id=?", id).
-		Update("status", 0).Error; err != nil {
+		Update("status", status).Error; err != nil {
 		logs.Error("Database error: %v", err)
 		return err
 	}
