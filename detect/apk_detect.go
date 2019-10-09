@@ -681,6 +681,13 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, m
 			str.Confirmer = detail.Confirmer
 			str.Desc = detail.DescInfo
 			str.Id = detail.ID
+			str.RiskLevel = detail.RiskLevel
+			if detection, err := retrieveDetection(database.DB,
+				map[string]interface{}{"key_info": strings.Split(str.Keys, ";")[0]}); err != nil {
+				str.RiskLevel = "unknown"
+			} else {
+				str.RiskLevel = fmt.Sprint(detection.Priority)
+			}
 			if detail.ExtraInfo != "" {
 				var t dal.DetailExtraInfo
 				json.Unmarshal([]byte(detail.ExtraInfo), &t)
@@ -725,6 +732,19 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, m
 	return methods_un, strs_un
 }
 
+func retrieveDetection(db *gorm.DB, sieve map[string]interface{}) (
+	*dal.DetectConfigStruct, error) {
+
+	var detection dal.DetectConfigStruct
+	if err := db.Debug().Where(sieve).
+		First(&detection).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
+	}
+
+	return &detection, nil
+}
+
 //旧版本信息更新
 func methodRiskLevelUpdate(ids *[]string, levels *[]string, configIds *[]dal.DetailExtraInfo) {
 	err := dal.UpdateOldApkDetectDetailLevel(ids, levels, configIds)
@@ -759,6 +779,7 @@ func GetTaskPermissions_2(info dal.PermAppRelation, perIgs map[int]interface{}, 
 		}
 		permOut.Id = uint(v) + 1
 		permOut.Priority = permMap["priority"].(int)
+		permOut.RiskLevel = fmt.Sprint(permMap["priority"])
 		permOut.Status = int(permMap["status"].(float64))
 		permOut.Key = permMap["key"].(string)
 		permOut.PermId = int(permMap["perm_id"].(float64))

@@ -160,6 +160,7 @@ type SStr struct {
 	CallLoc      []StrCallJson `json:"callLoc"`
 	ConfirmInfos []ConfirmInfo `json:"confirmerInfos"`
 	GPFlag       int           `json:"gpFlag"`
+	RiskLevel    string        `json:"riskLevel"`
 }
 
 type StrCallJson struct {
@@ -186,6 +187,7 @@ type Permissions struct {
 	Confirmer    string `json:"confirmer"`
 	OtherVersion string `json:"otherVersion"`
 	Priority     int    `json:"priority"`
+	RiskLevel    string `json:"riskLevel"`
 	Desc         string `json:"desc"`
 }
 
