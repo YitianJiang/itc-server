@@ -20,6 +20,7 @@ import (
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"code.byted.org/gopkg/tos"
 	"github.com/dgrijalva/jwt-go"
@@ -158,8 +159,7 @@ func UploadFile(c *gin.Context) {
 	dbDetectModel.UpdatedAt = time.Now()
 	dbDetectModel.Platform, _ = strconv.Atoi(platform)
 	dbDetectModel.AppId = appId
-	//增加状态字段，0---未完全确认；1---已完全确认
-	dbDetectModel.Status = 0
+	dbDetectModel.Status = -1
 	if callBackAddr != "" || skip != "" {
 		byteExtraInfo, _ := json.Marshal(extraInfo)
 		dbDetectModel.ExtraInfo = string(byteExtraInfo)
@@ -184,7 +184,9 @@ func UploadFile(c *gin.Context) {
 	}
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
-		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
+		// callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
+		callBackUrl := "http://10.224.21.157:6789/updateDetectInfos" // TEST
+		// callBackUrl := "http://10.224.24.80:6789/updateDetectInfos" // TEST
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -315,6 +317,12 @@ func UpdateDetectInfos(c *gin.Context) {
 		return
 	}
 	logs.Info("Task id: %v Binary detect tool callback", taskId)
+
+	if err := updateDetectTaskStatus(database.DB, taskId); err != nil {
+		logs.Error("Task id: %v Failed to update detect task", taskId)
+		return
+	}
+
 	toolId := c.Request.FormValue("tool_ID")
 	jsonContent := c.Request.FormValue("jsonContent")
 	appName := c.Request.FormValue("appName")
@@ -424,6 +432,7 @@ func UpdateDetectInfos(c *gin.Context) {
 			}
 		}
 	}
+
 	//进行lark消息提醒
 	task, err = getExactDetectTask(database.DB, map[string]interface{}{"id": taskId})
 	if err != nil {
@@ -542,6 +551,17 @@ func UpdateDetectInfos(c *gin.Context) {
 	}
 
 	//go alertLarkMsgCronNew(*ticker, creator, message, taskId, toolId)
+}
+
+func updateDetectTaskStatus(db *gorm.DB, id interface{}) error {
+
+	if err := db.Debug().Table("tb_binary_detect").Where("id=?", id).
+		Update("status", 0).Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return err
+	}
+
+	return nil
 }
 
 /**
