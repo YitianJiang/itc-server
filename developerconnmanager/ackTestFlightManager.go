@@ -249,8 +249,8 @@ func GetRecentVersionReviewInfo(c *gin.Context)  {
 				buildReviewObj.VersionStatus = reviewStatus
 			}else {
 				c.JSON(http.StatusInternalServerError, gin.H{
-					"message":   "访问苹果服务出错",
-					"error_code": "2",
+					"message":   "访问苹果提审服务出错",
+					"error_code": "3",
 					"data": map[string]interface{}{},
 				})
 				return
