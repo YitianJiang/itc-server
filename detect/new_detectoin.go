@@ -17,6 +17,7 @@ import (
 )
 
 type detectionBasic struct {
+	// Requester  string
 	APPID      string `json:"appid"`
 	APPName    string `json:"appName"`
 	APPVersion string `json:"appVersion"`
@@ -85,6 +86,12 @@ type NewDetection struct {
 // in order to inform him/her to comfirm the new detections.
 func UploadUnconfirmedDetections(c *gin.Context) {
 
+	// userName, exist := c.Get("username")
+	// if !exist {
+	// 	ReturnMsg(c, FAILURE, fmt.Sprintf("Invalid user: %v", userName))
+	// 	return
+	// }
+
 	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
 		msg := "Failed to read request body: " + err.Error()
@@ -98,6 +105,7 @@ func UploadUnconfirmedDetections(c *gin.Context) {
 		ReturnMsg(c, FAILURE, msg)
 		return
 	}
+	// detections.Requester = userName.(string)
 
 	go handleNewDetections(&detections)
 
@@ -417,7 +425,7 @@ func getDetectionList(
 	}
 
 	if len(data) <= 0 {
-		logs.Warn("Cannot find any matched detection, condition error: %v", sieve)
+		logs.Warn("Cannot find any matched detection, sieve: %v", sieve)
 		return nil, len(data), nil
 	}
 
