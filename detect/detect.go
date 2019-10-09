@@ -222,8 +222,8 @@ func UploadFile(c *gin.Context) {
 			Timeout:   600 * time.Second,
 			Transport: &tr,
 		}
+		logs.Notice("Task id: %v Length of buffer: %vB", dbDetectModel.ID, bodyBuffer.Len())
 		response, err := toolHttp.Post(url, contentType, bodyBuffer)
-		logs.Notice("taskId:"+fmt.Sprint(dbDetectModelId)+",传输后的bodyBuffer：%v", bodyBuffer)
 		if err != nil {
 			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",上传二进制包出错,", err.Error())
 			dbDetectModel.ID = dbDetectModelId

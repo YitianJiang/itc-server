@@ -77,6 +77,7 @@ type NewDetection struct {
 	Creator        string    `gorm:"column:creator"`
 	CallLocations  string    `gorm:"column:call_locations"`
 	Confirmed      bool      `gorm:"column:confirmed"`
+	Confirmer      string    `gorm:"column:confirmer"`
 }
 
 // UploadUnconfirmedDetections writes the new detections to tables in
@@ -416,7 +417,7 @@ func getDetectionList(
 	}
 
 	if len(data) <= 0 {
-		logs.Warn("Cannot find any matched detection, condition error: %v", sieve)
+		logs.Warn("Cannot find any matched detection, sieve: %v", sieve)
 		return nil, len(data), nil
 	}
 
@@ -451,7 +452,6 @@ func getDetectionOutline(db *gorm.DB, sieve map[string]interface{}) (
 
 	var result []detectionOutline
 	if err := db.Debug().Table("new_detection").
-		Select("id, rd_name, key_name, description, type, risk_level, creator").
 		Where(sieve).Find(&result).Error; err != nil {
 		logs.Error("Failed to retrieve detection outline: %v", err)
 		return nil, err
@@ -525,6 +525,7 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 	}
 
 	result := map[string]interface{}{
+		"created_at":     data.CreatedAt,
 		"id":             data.ID,
 		"key":            data.Key,
 		"risk_level":     data.RiskLevel,
@@ -544,13 +545,19 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 // Confirm set the specific detection's the value of confirmed TRUE.
 func Confirm(c *gin.Context) {
 
+	userName, exist := c.Get("username")
+	if !exist {
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Invalid user: %v", userName))
+		return
+	}
+
 	id, err := getID(c)
 	if err != nil {
 		ReturnMsg(c, FAILURE, err.Error())
 		return
 	}
 
-	if err := confirmDetection(id); err != nil {
+	if err := confirmDetection(id, userName.(string)); err != nil {
 		ReturnMsg(c, FAILURE, "Confirm failed: "+err.Error())
 		return
 	}
@@ -559,7 +566,7 @@ func Confirm(c *gin.Context) {
 	return
 }
 
-func confirmDetection(id uint64) error {
+func confirmDetection(id uint64, userName string) error {
 
 	db, err := database.GetDBConnection()
 	if err != nil {
@@ -574,7 +581,8 @@ func confirmDetection(id uint64) error {
 		return err
 	}
 
-	if err := updateDetection(db, &NewDetection{ID: id}); err != nil {
+	if err := updateDetection(db, &NewDetection{
+		ID: id, Confirmer: userName}); err != nil {
 		return err
 	}
 
@@ -615,8 +623,11 @@ func RetrieveDetection(db *gorm.DB, condition map[string]interface{}) (
 func updateDetection(db *gorm.DB, detection *NewDetection) error {
 
 	if err := db.Debug().Model(detection).
-		Update("confirmed", true).Error; err != nil {
-		logs.Error("Failed to update detection in table new_detection: %v", err)
+		Updates(map[string]interface{}{
+			"confirmed": true,
+			"confirmer": detection.Confirmer,
+		}).Error; err != nil {
+		logs.Error("Database error: %v", err)
 		return err
 	}
 
