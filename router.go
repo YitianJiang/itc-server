@@ -23,11 +23,16 @@ func InitRouter(r *ginex.Engine) {
 	r.GET("/api/detectConfig/getItcDetectConfig", detect.GetDetectConfig)
 	// 获取检测任务结果
 	r.GET("/api/detect/getTaskDetailNotItc", detect.GetSpecificAppVersionDetectResults)
-	r.POST("/detect/new/uploadUnconfirmedDetections", detect.UploadUnconfirmedDetections)
-	r.POST("/detect/new/unconfirmedList", detect.UnconfirmedList)
-	r.GET("/detect/new/unconfirmedDetail", detect.UnconfirmedDetail)
-	r.GET("/detect/new/confirm", detect.Confirm)
+
 	r.GET("/open-apis/detect/task/result", detect.GetDetectTaskResult)
+	detectapi := r.GroupEX("/detect")
+	detectapi.POST("/new/uploadUnconfirmedDetections", detect.UploadUnconfirmedDetections)
+	detectapi.Use(middleware.JWTCheck())
+	{
+		detectapi.POST("/new/unconfirmedList", detect.UnconfirmedList)
+		detectapi.GET("/new/unconfirmedDetail", detect.UnconfirmedDetail)
+		detectapi.GET("/new/confirm", detect.Confirm)
+	}
 
 	//检测服务检测异常报警接口
 	api.POST("/check_server/alarm", detect.Alram)
