@@ -231,7 +231,7 @@ func UploadFile(c *gin.Context) {
 			Timeout:   600 * time.Second,
 			Transport: &tr,
 		}
-		logs.Notice("Task id: %v Length of buffer: %vB", dbDetectModel.ID, bodyBuffer.Len())
+		logs.Notice("Task id: %v Length of buffer: %vB", dbDetectModelId, bodyBuffer.Len())
 		response, err := toolHttp.Post(url, contentType, bodyBuffer)
 		if err != nil {
 			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",上传二进制包出错,", err.Error())
@@ -250,11 +250,11 @@ func UploadFile(c *gin.Context) {
 			data = make(map[string]interface{})
 			json.Unmarshal(resBody.Bytes(), &data)
 			logs.Info("upload detect url's response: %+v", data)
-			if data["success"] != 1 {
+			if data["success"].(int) != 1 {
 				if err := updateDetectTaskStatus(database.DB,
 					dbDetectModel.ID,
-					TaskStatusUnconfirm); err != nil {
-					logs.Warn("Task id: %v Failed to update detect task", dbDetectModel.ID)
+					TaskStatusError); err != nil {
+					logs.Warn("Task id: %v Failed to update detect task", dbDetectModelId)
 				}
 			}
 			//删掉临时文件
