@@ -193,6 +193,7 @@ func UploadFile(c *gin.Context) {
 	}
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
+		logs.Info("Task id: %v start to call detect tool", dbDetectModelId)
 		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
@@ -202,7 +203,7 @@ func UploadFile(c *gin.Context) {
 		bodyWriter.WriteField("toolIds", checkItem)
 		fileWriter, err := bodyWriter.CreateFormFile("file", filepath)
 		if err != nil {
-			logs.Error("%s", "error writing to buffer: "+err.Error())
+			logs.Error("Task id: %v create form file error: %v", dbDetectModelId, err)
 			errorReturn(c, "二进制包处理错误，请联系相关人员！")
 			return
 		}
