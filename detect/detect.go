@@ -253,7 +253,7 @@ func UploadFile(c *gin.Context) {
 			if data["success"] != 1 {
 				if err := updateDetectTaskStatus(database.DB,
 					dbDetectModel.ID,
-					TaskStatusUnconfirm); err != nil {
+					TaskStatusError); err != nil {
 					logs.Warn("Task id: %v Failed to update detect task", dbDetectModel.ID)
 				}
 			}
