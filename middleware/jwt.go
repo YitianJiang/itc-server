@@ -77,21 +77,7 @@ func JWTCheck() gin.HandlerFunc {
 		}
 
 		go uploadlog.UploadViaHTTP(c)
-		// //日志上报
-		// uploadMap := map[string]string{
-		// 	"time":     strconv.FormatInt(time.Now().Unix(), 10),
-		// 	"action":   "enter",
-		// 	"ip":       c.ClientIP(),
-		// 	"username": username,
-		// 	"domain":   header.Get("Origin"),
-		// 	"ua":       header.Get("User-Agent"),
-		// 	"path":     strings.Trim(header.Get("Referer"), header.Get("Origin")),
-		// 	"title":    "预审平台",
-		// 	"psm":      "toutiao.clientqa.itcserver",
-		// }
-		// if err := uploaduserdata.UploadLog(uploadMap); err != nil {
-		// 	logs.Error("日志上报出错！", err.Error())
-		// }
+
 		c.Next()
 	}
 }
