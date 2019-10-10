@@ -664,7 +664,7 @@ func packMessage(detections *Confirmation) string {
 
 	var atMsg string
 
-	openID, _, err := getOpenIDandUserIDSimple(detections.RDEmail)
+	openID, _, err := GetOpenIDandUserIDSimple(detections.RDEmail)
 	if err != nil {
 		atMsg = "未知"
 	} else {
@@ -966,7 +966,9 @@ func getGroupList(token string) ([]interface{}, error) {
 	return response["data"].(map[string]interface{})["groups"].([]interface{}), nil
 }
 
-func getOpenIDandUserIDSimple(userEmail string) (string, string, error) {
+// GetOpenIDandUserIDSimple uses the default ITC robot to retrieve
+// the information of specific user.
+func GetOpenIDandUserIDSimple(userEmail string) (string, string, error) {
 
 	token, err := getTenantAccessToken(appID, appSecret)
 	if err != nil {

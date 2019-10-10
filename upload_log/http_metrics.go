@@ -1,4 +1,4 @@
-package uploaduserdata
+package uploadlog
 
 import (
 	"code.byted.org/gopkg/metrics"
@@ -25,4 +25,6 @@ func emitCounter(name string, count int64, tags map[string]string) {
 
 func emitError(errType, domain string) {
 	emitCounter("sdk_err_go", 1, map[string]string{"err_type": errType, "err_domain": domain})
+	//emitCounter("error_domain", 1, map[string]string{"err_domain": domain})
+	//mClient.EmitStore("error_content", err, metrics.T{"err_domain", domain})
 }

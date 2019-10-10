@@ -2,11 +2,8 @@ package middleware
 
 import (
 	"net/http"
-	"strconv"
-	"strings"
-	"time"
 
-	"code.byted.org/yinzhihong/uploaduserdata"
+	uploadlog "code.byted.org/clientQA/itc-server/upload_log"
 
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/gopkg/logs"
@@ -57,7 +54,6 @@ func JWTCheck() gin.HandlerFunc {
 			return
 		}
 		token := header.Get("Authorization")
-		var username string
 		if token == "" {
 			code = _const.ERROR_AUTH_CHECK_TOKEN_FAIL
 		} else {
@@ -65,8 +61,7 @@ func JWTCheck() gin.HandlerFunc {
 			if !flag {
 				code = _const.ERROR_AUTH_CHECK_TOKEN_FAIL
 			} else {
-				username = claim["name"].(string)
-				c.Set("username", username)
+				c.Set("username", claim["name"])
 			}
 		}
 		if code != _const.SUCCESS {
@@ -78,21 +73,9 @@ func JWTCheck() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		//日志上报
-		uploadMap := map[string]string{
-			"time":     strconv.FormatInt(time.Now().Unix(), 10),
-			"action":   "enter",
-			"ip":       c.ClientIP(),
-			"username": username,
-			"domain":   header.Get("Origin"),
-			"ua":       header.Get("User-Agent"),
-			"path":     strings.Trim(header.Get("Referer"), header.Get("Origin")),
-			"title":    "预审平台",
-			"psm":      "toutiao.clientqa.itcserver",
-		}
-		if err := uploaduserdata.UploadLog(uploadMap); err != nil {
-			logs.Error("日志上报出错！", err.Error())
-		}
+
+		go uploadlog.UploadViaHTTP(c)
+
 		c.Next()
 	}
 }
