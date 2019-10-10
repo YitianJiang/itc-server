@@ -466,12 +466,6 @@
 			"revisionTime": "2019-02-20T07:51:40Z"
 		},
 		{
-			"checksumSHA1": "3SVcuqMM6E4AkRmzrcGSVsXOleM=",
-			"path": "code.byted.org/yinzhihong/uploaduserdata",
-			"revision": "2ca0af0fc76931b2073a5a019b64c7f17d6978cb",
-			"revisionTime": "2019-07-09T08:03:38Z"
-		},
-		{
 			"checksumSHA1": "rSAYS8fffH0LcwG8dxRmvoDMElM=",
 			"path": "code.byted.org/yuyilei/bot-api/form",
 			"revision": "e919552623b3e0326def94b20c91b695947a6c35",
