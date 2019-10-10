@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 
 	uploadlog "code.byted.org/clientQA/itc-server/upload_log"
@@ -62,7 +61,6 @@ func JWTCheck() gin.HandlerFunc {
 			if !flag {
 				code = _const.ERROR_AUTH_CHECK_TOKEN_FAIL
 			} else {
-				fmt.Println(claim)
 				c.Set("username", claim["name"])
 			}
 		}

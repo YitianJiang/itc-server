@@ -1,7 +1,6 @@
 package uploadlog
 
 import (
-	"fmt"
 	"time"
 
 	"code.byted.org/gopkg/logs"
@@ -35,7 +34,7 @@ func UploadViaHTTP(c *gin.Context) {
 		"action_desc": c.Request.Method,                        // 动作描述
 		"extra":       "",                                      // 备用字段
 	}
-	fmt.Println(msgInfo)
+	logs.Debug("Log: %v", msgInfo)
 	if err := Publish(msgInfo, 2*time.Second); err != nil {
 		logs.Warn("failed to upload log: %v", err)
 	}
