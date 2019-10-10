@@ -207,8 +207,15 @@ func UploadFile(c *gin.Context) {
 			return
 		}
 		fileHandler, err := os.Open(filepath)
+		if err != nil {
+			logs.Error("Task id: %v os open error: %v", dbDetectModelId, err)
+			return
+		}
 		defer fileHandler.Close()
-		_, err = io.Copy(fileWriter, fileHandler)
+		if written, err := io.Copy(fileWriter, fileHandler); err != nil {
+			logs.Error("Task id: %v io copy error: %v (written: %v)", dbDetectModelId, err, written)
+			return
+		}
 		if mFilepath != "" {
 			fileWriterM, errM := bodyWriter.CreateFormFile("mFile", mFilepath)
 			if errM != nil {
@@ -221,8 +228,12 @@ func UploadFile(c *gin.Context) {
 			io.Copy(fileWriterM, mFileHeader)
 		}
 		contentType := bodyWriter.FormDataContentType()
-		err = bodyWriter.Close()
-		logs.Info("url: %v", url)
+		if err := bodyWriter.Close(); err != nil {
+			logs.Error("Task id: %v Writer close error: %v", dbDetectModelId, err)
+			return
+		}
+
+		logs.Info("Task id: %v URL: %v", dbDetectModelId, url)
 		tr := http.Transport{
 			DisableKeepAlives:   true,
 			MaxIdleConnsPerHost: 0,
@@ -249,7 +260,7 @@ func UploadFile(c *gin.Context) {
 			var data map[string]interface{}
 			data = make(map[string]interface{})
 			json.Unmarshal(resBody.Bytes(), &data)
-			logs.Info("upload detect url's response: %+v", data)
+			logs.Info("Task id: %v upload detect url's response: %+v", dbDetectModelId, data)
 			if data["success"].(int) != 1 {
 				if err := updateDetectTaskStatus(database.DB,
 					dbDetectModel.ID,
