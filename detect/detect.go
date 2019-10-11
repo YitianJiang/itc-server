@@ -262,7 +262,7 @@ func UploadFile(c *gin.Context) {
 			data = make(map[string]interface{})
 			json.Unmarshal(resBody.Bytes(), &data)
 			logs.Info("Task id: %v upload detect url's response: %+v", dbDetectModelId, data)
-			if data["success"].(int) != 1 {
+			if fmt.Sprint(data["success"]) != "1" {
 				if err := updateDetectTaskStatus(database.DB,
 					dbDetectModel.ID,
 					TaskStatusError); err != nil {
