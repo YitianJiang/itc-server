@@ -194,8 +194,7 @@ func UploadFile(c *gin.Context) {
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
 		logs.Info("Task id: %v start to call detect tool", dbDetectModelId)
-		// callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
-		callBackUrl := "http://10.224.21.157:6789/updateDetectInfos" // TEST
+		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
