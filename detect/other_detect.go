@@ -933,7 +933,7 @@ func otherPermAna(perms *[]string, mapInfo map[string]int, index int) (dal.Other
 	if larkPerms != "" {
 		message := "你好，aar包检测出未知权限，请去权限配置页面完善权限信息,需要完善的权限信息有：\n"
 		message += larkPerms
-		message += "修改链接：http://cloud.bytedance.net/rocket/itc/permission?biz=13"
+		message += "修改链接：http://rocket.bytedance.net/rocket/itc/permission?biz=13"
 		utils.LarkDingOneInner("kanghuaisong", message)
 		//测试时使用
 		//utils.LarkDingOneInner("fanjuan.xqp",message)
