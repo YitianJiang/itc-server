@@ -200,6 +200,7 @@ const (
 const GetBuildAndReviewInfoFromApple = "https://api.appstoreconnect.apple.com/v1/builds?filter[expired]=false&sort=-uploadedDate&include=app,betaAppReviewSubmission&limit=30&filter[app]="
 const PutToTFReviewUrl = "https://api.appstoreconnect.apple.com/v1/betaAppReviewSubmissions"
 const CreateTFGroupUrl = "https://api.appstoreconnect.apple.com/v1/betaGroups"
+const TFTesterManagerUrl = "https://api.appstoreconnect.apple.com/v1/betaTesters"
 var TestFlightAppIdAnd = map[string]map[string]string{
 	"13":{"TeamId":"U9JEY66N6A","AppAppleId":"529092160"},
 }
