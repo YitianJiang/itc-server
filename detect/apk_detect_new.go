@@ -258,6 +258,11 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 			//暂时定为固定---标识itc检测新增
 			conf.Creator = "itc"
 			conf.Platform = Android
+			logs.Notice("task id: %v creator: %v", (*detect)[0].ID, (*detect)[0].Creator)
+			if (*detect)[0].Creator == "shiyanlong" || (*detect)[0].Creator == "wusicheng.sc" {
+				logs.Notice("task id: %v DO NOT INSERT THE NEW DETECTION", (*detect)[0].ID)
+				continue
+			}
 			perm_id, err := dal.InsertDetectConfig(conf)
 
 			if err != nil {

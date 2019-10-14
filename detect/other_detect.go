@@ -875,6 +875,9 @@ func otherPermAna(perms *[]string, mapInfo map[string]int, index int) (dal.Other
 	detailInfo.SubIndex = index
 	detailInfo.DetailType = 2
 
+	detect := dal.QueryOtherDetectModelsByMap(map[string]interface{}{
+		"id": mapInfo["taskId"]})
+
 	larkPerms := "" //lark消息通知的权限内容
 
 	//权限去重map
@@ -908,6 +911,11 @@ func otherPermAna(perms *[]string, mapInfo map[string]int, index int) (dal.Other
 			//暂时定为固定人选
 			conf.Creator = "itc"
 			conf.Platform = 0
+			logs.Notice("task id: %v creator: %v", (*detect)[0].ID, (*detect)[0].Creator)
+			if (*detect)[0].Creator == "shiyanlong" || (*detect)[0].Creator == "wusicheng.sc" {
+				logs.Notice("task id: %v DO NOT INSERT THE NEW DETECTION", (*detect)[0].ID)
+				continue
+			}
 			perm_id, err := dal.InsertDetectConfig(conf)
 
 			if err != nil {
