@@ -906,7 +906,7 @@ func otherPermAna(perms *[]string, mapInfo map[string]int, index int) (dal.Other
 			//将该权限的优先级定为--3高危
 			conf.Priority = 3
 			//暂时定为固定人选
-			conf.Creator = "kanghuaisong"
+			conf.Creator = "itc"
 			conf.Platform = 0
 			perm_id, err := dal.InsertDetectConfig(conf)
 
