@@ -247,6 +247,11 @@ func UploadFile(c *gin.Context) {
 		response, err := toolHttp.Post(url, contentType, bodyBuffer)
 		if err != nil {
 			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",上传二进制包出错,", err.Error())
+			if err := updateDetectTaskStatus(database.DB,
+				dbDetectModelId,
+				TaskStatusError); err != nil {
+				logs.Warn("Task id: %v Failed to update detect task", dbDetectModelId)
+			}
 			dbDetectModel.ID = dbDetectModelId
 			handleDetectTaskError(&dbDetectModel, DetectServiceInfrastructureError, "上传二进制包出错")
 			//及时报警
@@ -262,9 +267,9 @@ func UploadFile(c *gin.Context) {
 			data = make(map[string]interface{})
 			json.Unmarshal(resBody.Bytes(), &data)
 			logs.Info("Task id: %v upload detect url's response: %+v", dbDetectModelId, data)
-			if data["success"].(int) != 1 {
+			if fmt.Sprint(data["success"]) != "1" {
 				if err := updateDetectTaskStatus(database.DB,
-					dbDetectModel.ID,
+					dbDetectModelId,
 					TaskStatusError); err != nil {
 					logs.Warn("Task id: %v Failed to update detect task", dbDetectModelId)
 				}
