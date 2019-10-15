@@ -911,23 +911,21 @@ func otherPermAna(perms *[]string, mapInfo map[string]int, index int) (dal.Other
 			//暂时定为固定人选
 			conf.Creator = "itc"
 			conf.Platform = 0
-			logs.Notice("task id: %v creator: %v", (*detect)[0].ID, (*detect)[0].Creator)
-			if (*detect)[0].Creator == "shiyanlong" || (*detect)[0].Creator == "wusicheng.sc" {
-				logs.Notice("task id: %v DO NOT INSERT THE NEW DETECTION", (*detect)[0].ID)
-				continue
-			}
-			perm_id, err := dal.InsertDetectConfig(conf)
-
-			if err != nil {
-				logs.Error("taskId:"+fmt.Sprint(mapInfo["taskId"])+",aar检测update回调时新增权限失败，%v", err)
-				//及时报警
-				utils.LarkDingOneInner("fanjuan.xqp", "taskId:"+fmt.Sprint(mapInfo["taskId"])+",update回调新增权限失败")
-				return detailInfo, err
+			if _, ok := _const.DetectBlackList[(*detect)[0].Creator]; !ok {
+				if err := dal.InsertDetectConfig(&conf); err != nil {
+					logs.Error("taskId:"+fmt.Sprint(mapInfo["taskId"])+",aar检测update回调时新增权限失败，%v", err)
+					//及时报警
+					utils.LarkDingOneInner("fanjuan.xqp", "taskId:"+fmt.Sprint(mapInfo["taskId"])+",update回调新增权限失败")
+					return detailInfo, err
+				}
+				t.PermId = int(conf.ID)
 			} else {
-				larkPerms += "权限名为：" + pers + "\n"
-				t.PermId = int(perm_id)
-				t.Priority = 3
+				logs.Notice("task id: %v creator: %v DO NOT INSERT THE NEW DETECTION", (*detect)[0].ID, (*detect)[0].Creator)
+				// The permission will not be inserted into the official ITC configures.
+				t.PermId = -1
 			}
+			larkPerms += "权限名为：" + pers + "\n"
+			t.Priority = 3
 		} else {
 			t.PermId = int((*queryResult)[0].ID)
 			t.Desc = (*queryResult)[0].Ability
