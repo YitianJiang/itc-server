@@ -258,26 +258,29 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 			//暂时定为固定---标识itc检测新增
 			conf.Creator = "itc"
 			conf.Platform = Android
-			perm_id, err := dal.InsertDetectConfig(conf)
-
-			if err != nil {
-				logs.Error("taskId:"+fmt.Sprint(taskId)+",update回调时新增权限失败，%v", err)
-				//及时报警
-				utils.LarkDingOneInner(informer, "taskId:"+fmt.Sprint(taskId)+",update回调新增权限失败")
-				return "", err
+			if _, ok := _const.DetectBlackList[(*detect)[0].Creator]; !ok {
+				if err := dal.InsertDetectConfig(&conf); err != nil {
+					logs.Error("taskId:"+fmt.Sprint(taskId)+",update回调时新增权限失败，%v", err)
+					//及时报警
+					utils.LarkDingOneInner(informer, "taskId:"+fmt.Sprint(taskId)+",update回调新增权限失败")
+					return "", err
+				}
+				permInfo["perm_id"] = conf.ID
 			} else {
-				fhflag = true
-				larkPerms += "权限名为：" + pers + "\n"
-				permInfo["perm_id"] = perm_id
-				permInfo["key"] = pers
-				permInfo["ability"] = ""
-				//优先级默认为3---高危
-				permInfo["priority"] = 3
-				//此处state表明该权限是自动添加，信息不全，后面query时需要重新读取相关信息
-				permInfo["state"] = 0
-				permInfo["status"] = 0
-				permInfo["first_version"] = detectInfo.Version
+				logs.Notice("task id: %v creator: %v DO NOT INSERT THE NEW DETECTION", (*detect)[0].ID, (*detect)[0].Creator)
+				// The permission will not be inserted into the official ITC configures.
+				permInfo["perm_id"] = -1
 			}
+			fhflag = true
+			larkPerms += "权限名为：" + pers + "\n"
+			permInfo["key"] = pers
+			permInfo["ability"] = ""
+			//优先级默认为3---高危
+			permInfo["priority"] = 3
+			//此处state表明该权限是自动添加，信息不全，后面query时需要重新读取相关信息
+			permInfo["state"] = 0
+			permInfo["status"] = 0
+			permInfo["first_version"] = detectInfo.Version
 		} else {
 			permInfo["perm_id"] = (*queryResult)[0].ID
 			permInfo["key"] = pers
