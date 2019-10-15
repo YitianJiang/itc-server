@@ -239,5 +239,6 @@ func InitRouter(r *ginex.Engine) {
 	{
 		testflightapi.GET("/getRecentVersionReviewInfo", developerconnmanager.GetRecentVersionReviewInfo)
 		testflightapi.POST("/createGroupAddVesion", developerconnmanager.CreateGroupAddVesion)
+		testflightapi.POST("/deleteGroupTester",developerconnmanager.DeleteGroupTester)
 	}
 }

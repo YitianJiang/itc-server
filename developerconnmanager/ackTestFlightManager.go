@@ -3,13 +3,14 @@ package developerconnmanager
 import (
 	"bytes"
 	_const "code.byted.org/clientQA/itc-server/const"
+	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/logs"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
-	"code.byted.org/gopkg/logs"
 	"strings"
-	"code.byted.org/clientQA/itc-server/utils"
+	"time"
 )
 
 type ReqTFReviewInfoFromClient struct {
@@ -20,7 +21,7 @@ type ReqTFReviewInfoFromClient struct {
 
 //苹果后台build信息和review信息返回值解析model *************Start*************
 type AttributeItemInfo struct {
-	LongVersion              string            		    `json:"version"                 binding:"required"`
+	LongVersion               string            		`json:"version"                 binding:"required"`
 	ProcessingState   		  string					`json:"processingState"         binding:"required"`
 }
 
@@ -147,12 +148,30 @@ type PatchGroupAttrItem struct {
 type PatchResCreateGroupDataItem struct {
 	Type                      string                    `json:"type"                    binding:"required"`
 	Id						  string                    `json:"id"                      binding:"required"`
-	Attributes				  PatchGroupAttrItem             `json:"attributes"              binding:"required"`
+	Attributes				  PatchGroupAttrItem        `json:"attributes"              binding:"required"`
 }
 type PatchResCreateGroupData struct {
 	Data                      PatchResCreateGroupDataItem    `json:"data"                    binding:"required"`
 }
 //patch请求，打开apple公链   *************End*************
+
+//请求咱们的itc服务的body，要清理指定Group中的Tester *************Start*************
+type ReqDeleteTesterFromClient struct {
+	AppId                     string					`json:"app_id"                  binding:"required"`
+	GroupId                   string					`json:"group_id"                binding:"required"`
+	NumClear				  int						`json:"num_clear"`
+}
+//请求咱们的itc服务的body，要清理指定Group中的Tester *************End*************
+
+//苹果TF服务，返回Group中Tester信息 *************Start*************
+type ResTesterInfoDataItem struct {
+	Type                      string                    `json:"type"                    binding:"required"`
+	Id						  string                    `json:"id"                      binding:"required"`
+}
+type ResTesterInfoData struct {
+	Data                      []ResTesterInfoDataItem   `json:"data"                    binding:"required"`
+}
+//苹果TF服务，返回Group中Tester信息 *************End*************
 
 func ReqToAppleTFHasObjMethod(method, url, tokenString string, objReq, objRes interface{}) bool {
 	var rbodyByte *bytes.Reader
@@ -193,7 +212,6 @@ func ReqToAppleTFHasObjMethod(method, url, tokenString string, objReq, objRes in
 	} else {
 		responseByte, err := ioutil.ReadAll(response.Body)
 		logs.Info("查看苹果的返回值")
-		logs.Info(string(responseByte))
 		if err != nil {
 			logs.Info("读取respose的body内容失败")
 			return false
@@ -206,6 +224,61 @@ func ReqToAppleTFHasObjMethod(method, url, tokenString string, objReq, objRes in
 	}
 }
 
+func ReqToAppleTFHasObjMethodRoutine(method, url, tokenString string, objReq, objRes interface{},ch chan int) bool {
+	var rbodyByte *bytes.Reader
+	if objReq != nil {
+		bodyByte, _ := json.Marshal(objReq)
+		logs.Info(string(bodyByte))
+		rbodyByte = bytes.NewReader(bodyByte)
+	} else {
+		rbodyByte = nil
+	}
+	client := &http.Client{}
+	var err error
+	var request *http.Request
+	if rbodyByte != nil {
+		request, err = http.NewRequest(method, url, rbodyByte)
+	} else {
+		request, err = http.NewRequest(method, url, nil)
+	}
+	if err != nil {
+		logs.Info("新建request对象失败")
+		ch <- 2
+		return false
+	}
+	request.Header.Set("Authorization", tokenString)
+	request.Header.Set("Content-Type", "application/json")
+	response, err := client.Do(request)
+	if err != nil {
+		logs.Info("发送请求失败")
+		ch <- 2
+		return false
+	}
+	defer response.Body.Close()
+	logs.Info("状态码：%d", response.StatusCode)
+	if !AssertResStatusCodeOK(response.StatusCode) {
+		logs.Info("查看返回状态码")
+		logs.Info(string(response.StatusCode))
+		responseByte, _ := ioutil.ReadAll(response.Body)
+		logs.Info("苹果失败返回response\n：%s", string(responseByte))
+		ch <- 2
+		return false
+	} else {
+		responseByte, err := ioutil.ReadAll(response.Body)
+		logs.Info("查看苹果的返回值")
+		if err != nil {
+			logs.Info("读取respose的body内容失败")
+			ch <- 2
+			return false
+		}
+		logs.Info("苹果成功返回response\n：%s", string(responseByte))
+		if objRes != nil{
+			json.Unmarshal(responseByte, objRes)
+		}
+		ch <- 1
+		return true
+	}
+}
 // NO_UPLOAD、（PROCESSING, FAILED, INVALID）、（WAITING_FOR_REVIEW, IN_REVIEW, REJECTED, APPROVED）、（READY_FOR_REVIEW、WAITING_FOR_OTHER_REVIEW、READY_FOR_TEST）
 // NO_UPLOAD、PROCESSING、FAILED、INVALID、WAITING_FOR_REVIEW、IN_REVIEW、REJECTED、WAITING_FOR_OTHER_REVIEW 就不要走下一步了，时刻监控此接口
 
@@ -414,4 +487,102 @@ func CreateGroupAddVesion(c *gin.Context) {
 		})
 		return
 	}
+}
+
+func TimeOutFunc(timeout chan bool){
+	time.Sleep(3 * time.Second)
+	timeout <- true
+}
+
+//清除指定Group中的Tester
+func DeleteGroupTester(c *gin.Context){
+	logs.Info("删除指定的TestFlight Group中Tester")
+	var body ReqDeleteTesterFromClient
+	err := c.ShouldBindJSON(&body)
+	utils.RecordError("参数绑定失败", err)
+	if err != nil {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
+		return
+	}
+	tokenString := ""
+	//appAppleId := ""
+	successNum := 0
+	failNum := 0
+	loopNum := 1
+	LOOP: for i := 0; true; i++ {
+		loopNum ++
+		var resTestInfo ResTesterInfoData
+		if _, ok := _const.TestFlightAppIdAnd[body.AppId]; ok {
+			tokenString = GetTokenStringByTeamId(_const.TestFlightAppIdAnd[body.AppId]["TeamId"])
+			//appAppleId = _const.TestFlightAppIdAnd[body.AppId]["AppAppleId"]
+		} else {
+			logs.Info("客户端发送了未知的app id，不在后段维护的const map中")
+			c.JSON(http.StatusNotFound, gin.H{
+				"message":    "客户端发送了未知的app id",
+				"error_code": "1",
+				"data":       map[string]interface{}{},
+			})
+			return
+		}
+		urlReq := _const.CreateTFGroupUrl + "/" + body.GroupId + "/betaTesters?limit=100"
+		//urlReq := _const.TFTesterManagerUrl + "?filter[apps]=" + appAppleId + "&filter[inviteType]=PUBLIC_LINK&limit=100"
+		reqResult := ReqToAppleTFHasObjMethod("GET",urlReq,tokenString,nil,&resTestInfo)
+		if !reqResult{
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message":    "访问Tester列表时，苹果服务出错",
+				"delete_num": successNum,
+				"error_code": "2",
+				"data":       map[string]interface{}{},
+			})
+			return
+		}
+		topLev := ( i + 1 ) * 100
+		botLev := i * 100
+		brokenSign := false
+		if body.NumClear > 0 && (body.NumClear - topLev) < 0 && len(resTestInfo.Data) > (body.NumClear - botLev) {
+			resTestInfo.Data = resTestInfo.Data[0:body.NumClear-botLev]
+			brokenSign = true
+		}
+		timeout := make(chan bool, len(resTestInfo.Data))
+		ch := make(chan int,len(resTestInfo.Data))
+		for _,item := range resTestInfo.Data {
+			go TimeOutFunc(timeout)
+			delUrl := _const.TFTesterManagerUrl + "/" + item.Id
+			go ReqToAppleTFHasObjMethodRoutine("DELETE",delUrl,tokenString,&resTestInfo,nil,ch)
+		}
+		for routineNum:=0;routineNum<len(resTestInfo.Data);routineNum++ {
+			select {
+			case sign := <- ch:
+				if sign == 1{
+					successNum = successNum + 1
+				}else {
+					failNum = failNum + 1
+				}
+			case <- timeout:
+				logs.Warn("访问苹果超时")
+				failNum = failNum + 1
+				break
+			}
+		}
+		if len(resTestInfo.Data) < 100 || brokenSign {
+			if failNum > 0 {
+				body.NumClear = failNum
+				logs.Info("删除收尾时，出现了%d次删除失败的情况",failNum)
+				failNum = 0
+				logs.Info("进行第%d次获取Tester循环，现在等待60秒",loopNum)
+				time.Sleep(61 * time.Second)
+				goto LOOP
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"message":    "success",
+				"error_code": "0",
+				"delete_num": successNum,
+				"data":       map[string]interface{}{},
+			})
+			return
+		}
+		logs.Info("进行第%d次获取Tester循环，现在等待60秒",loopNum)
+		time.Sleep(61 * time.Second)
+	}
+
 }
