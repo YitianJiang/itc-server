@@ -33,6 +33,11 @@ var PermToModify = map[string]int{
 	"zhuqingying":   1,
 }
 
+var DetectBlackList = map[string]int{
+	"shiyanlong":   1,
+	"wusicheng.sc": 1,
+}
+
 const (
 	ITC_SIGN_SYSTEM_ADDRESS       = "https://rocket.bytedance.net/rocket/itc/iossignature?biz="
 	ITC_CERT_SYSTEM_ADDRESS       = "https://rocket.bytedance.net/rocket/itc/ioscertification"
@@ -201,6 +206,7 @@ const GetBuildAndReviewInfoFromApple = "https://api.appstoreconnect.apple.com/v1
 const PutToTFReviewUrl = "https://api.appstoreconnect.apple.com/v1/betaAppReviewSubmissions"
 const CreateTFGroupUrl = "https://api.appstoreconnect.apple.com/v1/betaGroups"
 const TFTesterManagerUrl = "https://api.appstoreconnect.apple.com/v1/betaTesters"
+
 var TestFlightAppIdAnd = map[string]map[string]string{
-	"13":{"TeamId":"U9JEY66N6A","AppAppleId":"529092160"},
+	"13": {"TeamId": "U9JEY66N6A", "AppAppleId": "529092160"},
 }
