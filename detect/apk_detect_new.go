@@ -265,7 +265,7 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 					utils.LarkDingOneInner(informer, "taskId:"+fmt.Sprint(taskId)+",update回调新增权限失败")
 					return "", err
 				}
-				permInfo["perm_id"] = conf.ID
+				permInfo["perm_id"] = int(conf.ID)
 			} else {
 				logs.Notice("task id: %v creator: %v DO NOT INSERT THE NEW DETECTION", (*detect)[0].ID, (*detect)[0].Creator)
 				// The permission will not be inserted into the official ITC configures.
@@ -282,7 +282,7 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 			permInfo["status"] = 0
 			permInfo["first_version"] = detectInfo.Version
 		} else {
-			permInfo["perm_id"] = (*queryResult)[0].ID
+			permInfo["perm_id"] = int((*queryResult)[0].ID)
 			permInfo["key"] = pers
 			permInfo["ability"] = (*queryResult)[0].Ability
 			permInfo["priority"] = (*queryResult)[0].Priority
