@@ -125,21 +125,24 @@ func (PermAppRelation) TableName() string {
 /**
 新增权限
 */
-func InsertDetectConfig(data DetectConfigStruct) (uint, error) {
+func InsertDetectConfig(data *DetectConfigStruct) error {
+
 	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to db err,%v", err)
-		return 0, err
+		return err
 	}
 	defer connection.Close()
+
 	data.CreatedAt = time.Now()
 	data.UpdatedAt = time.Now()
 	db := connection.Table(DetectConfigStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	if err := db.Create(&data).Error; err != nil {
 		logs.Error("insert detectConfig err,%v", err)
-		return 0, err
+		return err
 	}
-	return data.ID, nil
+
+	return nil
 }
 
 /**

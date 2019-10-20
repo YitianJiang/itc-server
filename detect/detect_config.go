@@ -81,7 +81,7 @@ func AddDetectConfig(c *gin.Context) {
 		})
 		return
 	}
-	if _, err := dal.InsertDetectConfig(data); err != nil {
+	if err := dal.InsertDetectConfig(&data); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "新增权限设置失败！",
 			"errorCode": -1,
