@@ -5,12 +5,14 @@ import (
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
+	"code.byted.org/gopkg/tos"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
+	"code.byted.org/gopkg/context"
 )
 
 type ReqTFReviewInfoFromClient struct {
@@ -172,6 +174,12 @@ type ResTesterInfoData struct {
 	Data                      []ResTesterInfoDataItem   `json:"data"                    binding:"required"`
 }
 //苹果TF服务，返回Group中Tester信息 *************End*************
+
+//上传任意文件到tos上req *************Start*************
+type ReqUploadTosFile struct {
+	Path  					  string  					`form:"pathName"                binding:"required"`
+}
+//上传任意文件到tos上req *************End*************
 
 func ReqToAppleTFHasObjMethod(method, url, tokenString string, objReq, objRes interface{}) bool {
 	var rbodyByte *bytes.Reader
@@ -583,6 +591,41 @@ func DeleteGroupTester(c *gin.Context){
 		}
 		logs.Info("进行第%d次获取Tester循环，现在等待60秒",loopNum)
 		time.Sleep(61 * time.Second)
+	}
+
+}
+
+func UploadFileToTos(c *gin.Context)  {
+	logs.Info("单独上传文件接口")
+	var requestData ReqUploadTosFile
+	bindError := c.ShouldBind(&requestData)
+	utils.RecordError("绑定post请求body出错：%v", bindError)
+	if bindError != nil {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败，查看是否缺少参数", "failed")
+		return
+	}
+	FileByteInfo, FileFullName := getFileFromRequest(c, "objectFile")
+	pathTos := "appleConnectFile/" + requestData.Path + "/" + FileFullName
+	logs.Info("路径：%s",pathTos)
+	logs.Info("文件内容：%s",string(FileByteInfo))
+	var tosBucket = tos.WithAuth(_const.TOS_BUCKET_NAME_JYT, _const.TOS_BUCKET_TOKEN_JYT)
+	context, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	tosPutClient, err := tos.NewTos(tosBucket)
+	err = tosPutClient.PutObject(context, pathTos, int64(len(FileByteInfo)), bytes.NewBuffer(FileByteInfo))
+	if err != nil {
+		logs.Error("tos上传错误的收录:%s",err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message":    "error",
+			"error_code": "1",
+		})
+		return
+	}else {
+		c.JSON(http.StatusOK, gin.H{
+			"message":    "success",
+			"error_code": "0",
+		})
+		return
 	}
 
 }
