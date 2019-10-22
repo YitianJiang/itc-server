@@ -518,6 +518,7 @@ func DeleteGroupTester(c *gin.Context){
 	failNum := 0
 	loopNum := 1
 	LOOP: for i := 0; true; i++ {
+		logs.Info("正在执行第%d次删除任务,请等待",loopNum)
 		loopNum ++
 		var resTestInfo ResTesterInfoData
 		if _, ok := _const.TestFlightAppIdAnd[body.AppId]; ok {
@@ -536,6 +537,7 @@ func DeleteGroupTester(c *gin.Context){
 		//urlReq := _const.TFTesterManagerUrl + "?filter[apps]=" + appAppleId + "&filter[inviteType]=PUBLIC_LINK&limit=100"
 		reqResult := ReqToAppleTFHasObjMethod("GET",urlReq,tokenString,nil,&resTestInfo)
 		if !reqResult{
+			logs.Error("访问苹果的人员列表失败")
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"message":    "访问Tester列表时，苹果服务出错",
 				"delete_num": successNum,
@@ -547,7 +549,7 @@ func DeleteGroupTester(c *gin.Context){
 		topLev := ( i + 1 ) * 100
 		botLev := i * 100
 		brokenSign := false
-		if body.NumClear > 0 && (body.NumClear - topLev) < 0 && len(resTestInfo.Data) > (body.NumClear - botLev) {
+		if body.NumClear > 0 && (body.NumClear - topLev) < 0 && len(resTestInfo.Data) >= (body.NumClear - botLev) {
 			resTestInfo.Data = resTestInfo.Data[0:body.NumClear-botLev]
 			brokenSign = true
 		}
@@ -577,19 +579,20 @@ func DeleteGroupTester(c *gin.Context){
 				body.NumClear = failNum
 				logs.Info("删除收尾时，出现了%d次删除失败的情况",failNum)
 				failNum = 0
-				logs.Info("进行第%d次获取Tester循环，现在等待60秒",loopNum)
+				logs.Info("即将进行第%d次获取Tester循环，现在等待60秒",loopNum)
 				time.Sleep(61 * time.Second)
 				goto LOOP
+			}else {
+				c.JSON(http.StatusOK, gin.H{
+					"message":    "success",
+					"error_code": "0",
+					"delete_num": successNum,
+					"data":       map[string]interface{}{},
+				})
+				return
 			}
-			c.JSON(http.StatusOK, gin.H{
-				"message":    "success",
-				"error_code": "0",
-				"delete_num": successNum,
-				"data":       map[string]interface{}{},
-			})
-			return
 		}
-		logs.Info("进行第%d次获取Tester循环，现在等待60秒",loopNum)
+		logs.Info("即将进行第%d次获取Tester循环，现在等待60秒",loopNum)
 		time.Sleep(61 * time.Second)
 	}
 
