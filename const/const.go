@@ -210,3 +210,5 @@ const TFTesterManagerUrl = "https://api.appstoreconnect.apple.com/v1/betaTesters
 var TestFlightAppIdAnd = map[string]map[string]string{
 	"13": {"TeamId": "U9JEY66N6A", "AppAppleId": "529092160"},
 }
+
+const DATE_FORMAT = "2006-01-02"
