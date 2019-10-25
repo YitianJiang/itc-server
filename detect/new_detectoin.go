@@ -545,25 +545,26 @@ func Confirm(c *gin.Context) {
 		return
 	}
 
-	// body, err := ioutil.ReadAll(c.Request.Body)
-	// if err != nil {
-	// 	ReturnMsg(c, FAILURE, "Failed to read request body: "+err.Error())
-	// 	return
-	// }
-
-	// sieve := make(map[string]interface{})
-	// if err := json.Unmarshal(body, &sieve); err != nil {
-	// 	ReturnMsg(c, FAILURE, "Failed to unmarshal request body: "+err.Error())
-	// 	return
-	// }
-
-	id, err := getID(c)
+	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		ReturnMsg(c, FAILURE, err.Error())
+		ReturnMsg(c, FAILURE, "Failed to read request body: "+err.Error())
 		return
 	}
 
-	if err := confirmDetection(id, userName.(string)); err != nil {
+	data := make(map[string]interface{})
+	if err := json.Unmarshal(body, &data); err != nil {
+		ReturnMsg(c, FAILURE, "Failed to unmarshal request body: "+err.Error())
+		return
+	}
+
+	// id, err := getID(c)
+	// if err != nil {
+	// 	ReturnMsg(c, FAILURE, err.Error())
+	// 	return
+	// }
+
+	if err := confirmDetection(uint64(data["id"].(float64)),
+		userName.(string), data["remark"].(string)); err != nil {
 		ReturnMsg(c, FAILURE, "Confirm failed: "+err.Error())
 		return
 	}
@@ -572,10 +573,10 @@ func Confirm(c *gin.Context) {
 	return
 }
 
-func confirmDetection(id uint64, userName string) error {
+func confirmDetection(id uint64, userName string, remark string) error {
 
 	if err := updateDetection(database.DB(), &NewDetection{
-		ID: id, Confirmer: userName}); err != nil {
+		ID: id, Confirmer: userName, Remark: remark}); err != nil {
 		return err
 	}
 
@@ -619,6 +620,7 @@ func updateDetection(db *gorm.DB, detection *NewDetection) error {
 		Updates(map[string]interface{}{
 			"confirmed": true,
 			"confirmer": detection.Confirmer,
+			"remark":    detection.Remark,
 		}).Error; err != nil {
 		logs.Error("Database error: %v", err)
 		return err

@@ -32,7 +32,7 @@ func InitRouter(r *ginex.Engine) {
 	{
 		detectapi.POST("/new/list", detect.List)
 		detectapi.GET("/new/detail", detect.Detail)
-		detectapi.GET("/new/confirm", detect.Confirm)
+		detectapi.PUT("/new/confirm", detect.Confirm)
 	}
 
 	//检测服务检测异常报警接口
