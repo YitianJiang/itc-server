@@ -545,6 +545,18 @@ func Confirm(c *gin.Context) {
 		return
 	}
 
+	// body, err := ioutil.ReadAll(c.Request.Body)
+	// if err != nil {
+	// 	ReturnMsg(c, FAILURE, "Failed to read request body: "+err.Error())
+	// 	return
+	// }
+
+	// sieve := make(map[string]interface{})
+	// if err := json.Unmarshal(body, &sieve); err != nil {
+	// 	ReturnMsg(c, FAILURE, "Failed to unmarshal request body: "+err.Error())
+	// 	return
+	// }
+
 	id, err := getID(c)
 	if err != nil {
 		ReturnMsg(c, FAILURE, err.Error())
@@ -562,20 +574,7 @@ func Confirm(c *gin.Context) {
 
 func confirmDetection(id uint64, userName string) error {
 
-	db, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return err
-	}
-	defer db.Close()
-
-	if _, err := retrieveSingleDetection(db, map[string]interface{}{
-		"id": id,
-	}); err != nil {
-		return err
-	}
-
-	if err := updateDetection(db, &NewDetection{
+	if err := updateDetection(database.DB(), &NewDetection{
 		ID: id, Confirmer: userName}); err != nil {
 		return err
 	}
