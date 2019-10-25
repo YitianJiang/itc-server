@@ -567,6 +567,31 @@ func Confirm(c *gin.Context) {
 	return
 }
 
+// Delete remove the specified record from the table new_detection.
+func Delete(c *gin.Context) {
+
+	userName, exist := c.Get("username")
+	if !exist {
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Invalid user: %v", userName))
+		return
+	}
+
+	id, err := getID(c)
+	if err != nil {
+		ReturnMsg(c, FAILURE, err.Error())
+		return
+	}
+
+	if err := database.DeleteDBRecord(database.DB(),
+		&NewDetection{}, map[string]interface{}{"id": id}); err != nil {
+		ReturnMsg(c, FAILURE, fmt.Sprintf("delete failed: %v", err))
+		return
+	}
+
+	ReturnMsg(c, SUCCESS, "success")
+	return
+}
+
 func confirmDetection(id uint64, userName string, remark string) error {
 
 	if err := updateDetection(database.DB(), &NewDetection{
