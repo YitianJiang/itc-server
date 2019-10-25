@@ -557,12 +557,6 @@ func Confirm(c *gin.Context) {
 		return
 	}
 
-	// id, err := getID(c)
-	// if err != nil {
-	// 	ReturnMsg(c, FAILURE, err.Error())
-	// 	return
-	// }
-
 	if err := confirmDetection(uint64(data["id"].(float64)),
 		userName.(string), data["remark"].(string)); err != nil {
 		ReturnMsg(c, FAILURE, "Confirm failed: "+err.Error())
