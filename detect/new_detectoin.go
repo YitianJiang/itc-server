@@ -60,6 +60,7 @@ type Confirmation struct {
 type NewDetection struct {
 	ID             uint64    `gorm:"column:id"`
 	CreatedAt      time.Time `gorm:"column:created_at"`
+	UpdatedAt      time.Time `gorm:"column:updated_at"`
 	APPID          string    `gorm:"column:app_id"`
 	APPName        string    `gorm:"column:app_name"`
 	APPVersion     string    `gorm:"column:app_version"`
@@ -78,6 +79,7 @@ type NewDetection struct {
 	CallLocations  string    `gorm:"column:call_locations"`
 	Confirmed      bool      `gorm:"column:confirmed"`
 	Confirmer      string    `gorm:"column:confirmer"`
+	Remark         string    `gorm:"column:remark"`
 }
 
 // UploadUnconfirmedDetections writes the new detections to tables in
@@ -393,6 +395,7 @@ type detectionOutline struct {
 	Type        string `gorm:"column:type"        json:"type"`
 	RiskLevel   int    `gorm:"column:risk_level"  json:"risk_level"`
 	Creator     string `gorm:"column:creator"     json:"creator"`
+	Confirmed   bool   `gorm:"column:confirmed"   json:"confirmed"`
 }
 
 func getDetectionList(sieve map[string]interface{}) (
@@ -452,9 +455,9 @@ func getDetectionOutline(db *gorm.DB, sieve map[string]interface{}) (
 	return result, nil
 }
 
-// UnconfirmedDetail returns the detail of the specific detection
+// Detail returns the detail of the specific detection
 // from table new_detection.
-func UnconfirmedDetail(c *gin.Context) {
+func Detail(c *gin.Context) {
 
 	id, err := getID(c)
 	if err != nil {
@@ -493,15 +496,15 @@ func getID(c *gin.Context) (uint64, error) {
 
 func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 
-	db, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return nil, err
-	}
-	defer db.Close()
+	// db, err := database.GetDBConnection()
+	// if err != nil {
+	// 	logs.Error("Connect to DB failed: %v", err)
+	// 	return nil, err
+	// }
+	// defer db.Close()
 
-	data, err := retrieveSingleDetection(db, map[string]interface{}{
-		"id": id})
+	data, err := retrieveSingleDetection(database.DB(),
+		map[string]interface{}{"id": id})
 	if err != nil {
 		logs.Error("Failed to retrieve detection")
 		return nil, err
@@ -529,6 +532,12 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 		"creator":        data.Creator,
 		"call_locations": location,
 		"app_version":    data.APPVersion,
+	}
+
+	if data.Confirmed {
+		result["updated_at"] = data.UpdatedAt
+		result["confirmer"] = data.Confirmer
+		result["remark"] = data.Remark
 	}
 
 	return result, nil

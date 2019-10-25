@@ -31,7 +31,7 @@ func InitRouter(r *ginex.Engine) {
 	detectapi.Use(middleware.JWTCheck())
 	{
 		detectapi.POST("/new/list", detect.List)
-		detectapi.GET("/new/unconfirmedDetail", detect.UnconfirmedDetail)
+		detectapi.GET("/new/detail", detect.Detail)
 		detectapi.GET("/new/confirm", detect.Confirm)
 	}
 
