@@ -194,7 +194,8 @@ func UploadFile(c *gin.Context) {
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
 		logs.Info("Task id: %v start to call detect tool", dbDetectModelId)
-		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
+		// callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
+		callBackUrl := "http://10.224.21.157:6789/updateDetectInfos" // TEST
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -348,6 +349,15 @@ func UpdateDetectInfos(c *gin.Context) {
 		return
 	}
 	logs.Info("Task id: %v Binary detect tool callback", taskId)
+
+	// if c.Request.FormValue("code") != "0" {
+	// 	if err := updateDetectTaskStatus(database.DB,
+	// 		taskId,
+	// 		TaskStatusError); err != nil {
+	// 		logs.Warn("Task id: %v Failed to update detect task", taskId)
+	// 	}
+	// 	return
+	// }
 
 	if err := updateDetectTaskStatus(database.DB,
 		taskId, TaskStatusUnconfirm); err != nil {
@@ -550,9 +560,9 @@ func UpdateDetectInfos(c *gin.Context) {
 	// 此处测试时注释掉
 	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
 	for _, creator := range larkList {
-		utils.UserInGroup(creator)                                                                             //将用户拉入预审平台群
-		res := utils.LarkDetectResult(creator, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, false) //new lark卡片通知形式
-		logs.Info("taskId: " + taskId + ", creator: " + creator + ", lark message result: " + fmt.Sprint(res))
+		utils.UserInGroup(creator)                                                                                     //将用户拉入预审平台群
+		res := utils.LarkDetectResult(taskId, creator, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, false) //new lark卡片通知形式
+		logs.Info("task id: " + taskId + ", creator: " + creator + ", lark message result: " + fmt.Sprint(res))
 	}
 	//发给群消息沿用旧的机器人，给群ID对应群发送消息
 	toGroupID := task.ToGroup
@@ -562,7 +572,7 @@ func UpdateDetectInfos(c *gin.Context) {
 		for _, group_id := range groupArr {
 			to_lark_group := strings.Trim(group_id, " ")
 			// 新样式
-			if utils.LarkDetectResult(to_lark_group, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, true) == false {
+			if utils.LarkDetectResult(taskId, to_lark_group, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, true) == false {
 				message += message + larkUrl
 				utils.LarkGroup(message, to_lark_group)
 			}
