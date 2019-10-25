@@ -13,9 +13,7 @@ import (
 
 var (
 	dboptional dbconf.DBOptional
-	// DB is the handler of database.
-	// DB        *gorm.DB
-	dbhandler *gorm.DB
+	dbhandler  *gorm.DB
 )
 
 // InitDB initialize the dboptional
