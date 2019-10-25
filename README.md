@@ -25,7 +25,7 @@ git clone git@code.byted.org:clientQA/itc-server.git
 
 - 数据库句柄限制为包级可见，可避免不知情的修改，提高代码的健壮性。
 
-如果想在数据库中`插入/删除`记录，请考虑使用下面的函数：
+如果想在数据库中`插入/删除`记录，请考虑使用下面这两个函数，目前可以在`database`包中找到它们：
 
 ```Go
 // DeleteDBRecord deletes all eligbile record in the given database table.
@@ -57,5 +57,4 @@ func InsertDBRecord(db *gorm.DB, record interface{}) error {
 
 	return nil
 }
-
 ```
