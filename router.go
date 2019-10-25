@@ -30,7 +30,7 @@ func InitRouter(r *ginex.Engine) {
 	detectapi.POST("/new/uploadUnconfirmedDetections", detect.UploadUnconfirmedDetections)
 	detectapi.Use(middleware.JWTCheck())
 	{
-		detectapi.POST("/new/unconfirmedList", detect.UnconfirmedList)
+		detectapi.POST("/new/list", detect.List)
 		detectapi.GET("/new/unconfirmedDetail", detect.UnconfirmedDetail)
 		detectapi.GET("/new/confirm", detect.Confirm)
 	}
@@ -239,7 +239,7 @@ func InitRouter(r *ginex.Engine) {
 	{
 		testflightapi.GET("/getRecentVersionReviewInfo", developerconnmanager.GetRecentVersionReviewInfo)
 		testflightapi.POST("/createGroupAddVesion", developerconnmanager.CreateGroupAddVesion)
-		testflightapi.POST("/deleteGroupTester",developerconnmanager.DeleteGroupTester)
-		testflightapi.POST("/uploadFileToTos",developerconnmanager.UploadFileToTos)
+		testflightapi.POST("/deleteGroupTester", developerconnmanager.DeleteGroupTester)
+		testflightapi.POST("/uploadFileToTos", developerconnmanager.UploadFileToTos)
 	}
 }

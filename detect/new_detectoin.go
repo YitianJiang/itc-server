@@ -349,8 +349,8 @@ func insertDetection(db *gorm.DB, detection *NewDetection) error {
 	return nil
 }
 
-// UnconfirmedList returns all unconfirmed detections from table new_detection.
-func UnconfirmedList(c *gin.Context) {
+// List returns all eligible detections from table new_detection.
+func List(c *gin.Context) {
 
 	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
@@ -402,7 +402,6 @@ func getDetectionList(sieve map[string]interface{}) (
 	pageSize := int(sieve["pageSize"].(float64))
 	delete(sieve, "page")
 	delete(sieve, "pageSize")
-	sieve["confirmed"] = false // Only retrieve unconfirmed detections.
 
 	data, err := getDetectionOutline(database.DB(), sieve)
 	if err != nil {
