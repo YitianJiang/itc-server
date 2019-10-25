@@ -395,15 +395,8 @@ type detectionOutline struct {
 	Creator     string `gorm:"column:creator"     json:"creator"`
 }
 
-func getDetectionList(
-	sieve map[string]interface{}) ([]detectionOutline, int, error) {
-
-	// db, err := database.GetDBConnection()
-	// if err != nil {
-	// 	logs.Error("Connect to DB failed: %v", err)
-	// 	return nil, 0, err
-	// }
-	// defer db.Close()
+func getDetectionList(sieve map[string]interface{}) (
+	[]detectionOutline, int, error) {
 
 	page := int(sieve["page"].(float64))
 	pageSize := int(sieve["pageSize"].(float64))
