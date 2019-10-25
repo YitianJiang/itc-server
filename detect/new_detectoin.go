@@ -496,13 +496,6 @@ func getID(c *gin.Context) (uint64, error) {
 
 func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 
-	// db, err := database.GetDBConnection()
-	// if err != nil {
-	// 	logs.Error("Connect to DB failed: %v", err)
-	// 	return nil, err
-	// }
-	// defer db.Close()
-
 	data, err := retrieveSingleDetection(database.DB(),
 		map[string]interface{}{"id": id})
 	if err != nil {
