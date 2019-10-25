@@ -31,7 +31,7 @@ func GetDetectTaskResult(c *gin.Context) {
 		return
 	}
 
-	task, err := getExactDetectTask(database.DB, map[string]interface{}{"id": taskID})
+	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskID})
 	if err != nil {
 		ReturnMsg(c, ErrTaskNotFound, fmt.Sprintf("Task id: %v Failed to get the task information", taskID))
 		return

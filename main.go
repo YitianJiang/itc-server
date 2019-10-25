@@ -9,7 +9,6 @@ import (
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/detect"
 	"code.byted.org/gin/ginex"
-	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,13 +22,17 @@ func main() {
 	//r.Use(casInitAndVerify())
 	r.Use(Cors())
 	database.InitDB()
-	db, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		panic(fmt.Sprintf("Failed to connet database: %v", err))
+	// db, err := database.GetDBConnection()
+	// if err != nil {
+	// 	logs.Error("Connect to DB failed: %v", err)
+	// 	panic(fmt.Sprintf("Failed to connet database: %v", err))
+	// }
+	// defer db.Close()
+	// database.DB() = db
+
+	if err := database.InitDBHandler(); err != nil {
+		panic(fmt.Sprintf("failed to initialize the global database handler: %v", err))
 	}
-	defer db.Close()
-	database.DB = db
 
 	InitRouter(r)
 	detect.InitCron()

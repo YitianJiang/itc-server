@@ -398,12 +398,12 @@ type detectionOutline struct {
 func getDetectionList(
 	sieve map[string]interface{}) ([]detectionOutline, int, error) {
 
-	db, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return nil, 0, err
-	}
-	defer db.Close()
+	// db, err := database.GetDBConnection()
+	// if err != nil {
+	// 	logs.Error("Connect to DB failed: %v", err)
+	// 	return nil, 0, err
+	// }
+	// defer db.Close()
 
 	page := int(sieve["page"].(float64))
 	pageSize := int(sieve["pageSize"].(float64))
@@ -411,7 +411,7 @@ func getDetectionList(
 	delete(sieve, "pageSize")
 	sieve["confirmed"] = false // Only retrieve unconfirmed detections.
 
-	data, err := getDetectionOutline(db, sieve)
+	data, err := getDetectionOutline(database.DB(), sieve)
 	if err != nil {
 		return nil, 0, err
 	}
