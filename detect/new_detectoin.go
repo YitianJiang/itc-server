@@ -165,13 +165,6 @@ func getUploadNewDetectionsSettings(
 
 func storeNewDetections(detections *Confirmation) error {
 
-	// db, err := database.GetDBConnection()
-	// if err != nil {
-	// 	logs.Error("Connect to DB failed: %v", err)
-	// 	return err
-	// }
-	// defer db.Close()
-
 	keyMap, err := getExraDetectionKeys(database.DB(),
 		map[string]interface{}{"app_id": detections.APPID,
 			"platform": detections.Platform})
