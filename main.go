@@ -22,14 +22,6 @@ func main() {
 	//r.Use(casInitAndVerify())
 	r.Use(Cors())
 	database.InitDB()
-	// db, err := database.GetDBConnection()
-	// if err != nil {
-	// 	logs.Error("Connect to DB failed: %v", err)
-	// 	panic(fmt.Sprintf("Failed to connet database: %v", err))
-	// }
-	// defer db.Close()
-	// database.DB() = db
-
 	if err := database.InitDBHandler(); err != nil {
 		panic(fmt.Sprintf("failed to initialize the global database handler: %v", err))
 	}
