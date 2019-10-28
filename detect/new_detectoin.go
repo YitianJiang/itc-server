@@ -89,20 +89,7 @@ type NewDetection struct {
 // in order to inform him/her to comfirm the new detections.
 func UploadUnconfirmedDetections(c *gin.Context) {
 
-	// body, err := ioutil.ReadAll(c.Request.Body)
-	// if err != nil {
-	// 	msg := "Failed to read request body: " + err.Error()
-	// 	ReturnMsg(c, FAILURE, msg)
-	// 	return
-	// }
-
 	var detections Confirmation
-	// if err := json.Unmarshal(body, &detections); err != nil {
-	// 	msg := "Failed to unmarshal new detections: %v"
-	// 	ReturnMsg(c, FAILURE, msg)
-	// 	return
-	// }
-
 	if err := c.ShouldBindJSON(&detections); err != nil {
 		ReturnMsg(c, SUCCESS, fmt.Sprintf("Invalid parameter: %v", err))
 		return
