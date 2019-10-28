@@ -116,13 +116,6 @@ func handleNewDetections(detections *Confirmation) {
 		return
 	}
 
-	// settings, err := getUploadNewDetectionsSettings("settings.json")
-	// if err != nil {
-	// 	logs.Error("Failed to get settings")
-	// 	return
-	// }
-	// appID = settings["app_id"].(string)
-	// appSecret = settings["app_secret"].(string)
 	appID = conf.GetSettings().UploadNewDetection.APPID
 	appSecret = conf.GetSettings().UploadNewDetection.APPSecret
 
@@ -142,24 +135,6 @@ func handleNewDetections(detections *Confirmation) {
 
 	return
 }
-
-// func getUploadNewDetectionsSettings(fileName string) (
-// 	map[string]interface{}, error) {
-
-// 	data, err := ioutil.ReadFile(fileName)
-// 	if err != nil {
-// 		logs.Error("IO ReadFile failed: %v", err)
-// 		return nil, err
-// 	}
-
-// 	result := make(map[string]interface{})
-// 	if err := json.Unmarshal(data, &result); err != nil {
-// 		logs.Error("Unmarshal failed: %v", err)
-// 		return nil, err
-// 	}
-
-// 	return result["upload_new_detections"].(map[string]interface{}), nil
-// }
 
 func storeNewDetections(detections *Confirmation) error {
 
