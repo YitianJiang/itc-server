@@ -19,13 +19,13 @@ import (
 const clearRule = "DELETE FROM new_detection WHERE confirmed=FALSE and updated_at < SUBDATE(now(),INTERVAL 7 DAY)"
 
 type detectionBasic struct {
-	APPID      string `json:"appid"`
-	APPName    string `json:"appName"`
-	APPVersion string `json:"appVersion"`
-	Platform   string `json:"platform"`
-	RDName     string `json:"rd_username"`
-	RDEmail    string `json:"rd_email"`
-	CommitID   string `json:"commitId"`
+	APPID      string `json:"appid"       binding:"required"`
+	APPName    string `json:"appName"     binding:"required"`
+	APPVersion string `json:"appVersion"  binding:"required"`
+	Platform   string `json:"platform"    binding:"required"`
+	RDName     string `json:"rd_username" binding:"required"`
+	RDEmail    string `json:"rd_email"    binding:"email"`
+	CommitID   string `json:"commitId"    binding:"required"`
 	Branch     string `json:"branch"`
 }
 
@@ -89,17 +89,22 @@ type NewDetection struct {
 // in order to inform him/her to comfirm the new detections.
 func UploadUnconfirmedDetections(c *gin.Context) {
 
-	body, err := ioutil.ReadAll(c.Request.Body)
-	if err != nil {
-		msg := "Failed to read request body: " + err.Error()
-		ReturnMsg(c, FAILURE, msg)
-		return
-	}
+	// body, err := ioutil.ReadAll(c.Request.Body)
+	// if err != nil {
+	// 	msg := "Failed to read request body: " + err.Error()
+	// 	ReturnMsg(c, FAILURE, msg)
+	// 	return
+	// }
 
 	var detections Confirmation
-	if err := json.Unmarshal(body, &detections); err != nil {
-		msg := "Failed to unmarshal new detections: %v"
-		ReturnMsg(c, FAILURE, msg)
+	// if err := json.Unmarshal(body, &detections); err != nil {
+	// 	msg := "Failed to unmarshal new detections: %v"
+	// 	ReturnMsg(c, FAILURE, msg)
+	// 	return
+	// }
+
+	if err := c.ShouldBindJSON(&detections); err != nil {
+		ReturnMsg(c, SUCCESS, fmt.Sprintf("Invalid parameter: %v", err))
 		return
 	}
 
