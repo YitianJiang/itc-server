@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"code.byted.org/clientQA/itc-server/conf"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
@@ -115,18 +116,21 @@ func handleNewDetections(detections *Confirmation) {
 		return
 	}
 
-	settings, err := getUploadNewDetectionsSettings("settings.json")
-	if err != nil {
-		logs.Error("Failed to get settings")
-		return
-	}
-	appID = settings["app_id"].(string)
-	appSecret = settings["app_secret"].(string)
+	// settings, err := getUploadNewDetectionsSettings("settings.json")
+	// if err != nil {
+	// 	logs.Error("Failed to get settings")
+	// 	return
+	// }
+	// appID = settings["app_id"].(string)
+	// appSecret = settings["app_secret"].(string)
+	appID = conf.GetSettings().UploadNewDetection.APPID
+	appSecret = conf.GetSettings().UploadNewDetection.APPSecret
 
 	if len(detections.Permissions) > 0 ||
 		len(detections.SensitiveMethods) > 0 ||
 		len(detections.SensitiveStrings) > 0 {
-		if err := informConfirmor(settings["group_name"].(string),
+		// if err := informConfirmor(settings["group_name"].(string),
+		if err := informConfirmor(conf.GetSettings().UploadNewDetection.GroupName,
 			detections.RDEmail,
 			packMessage(detections)); err != nil {
 			logs.Error("Failed to inform the confirmor %v", detections.RDEmail)
@@ -139,23 +143,23 @@ func handleNewDetections(detections *Confirmation) {
 	return
 }
 
-func getUploadNewDetectionsSettings(
-	fileName string) (map[string]interface{}, error) {
+// func getUploadNewDetectionsSettings(fileName string) (
+// 	map[string]interface{}, error) {
 
-	data, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		logs.Error("IO ReadFile failed: %v", err)
-		return nil, err
-	}
+// 	data, err := ioutil.ReadFile(fileName)
+// 	if err != nil {
+// 		logs.Error("IO ReadFile failed: %v", err)
+// 		return nil, err
+// 	}
 
-	result := make(map[string]interface{})
-	if err := json.Unmarshal(data, &result); err != nil {
-		logs.Error("Unmarshal failed: %v", err)
-		return nil, err
-	}
+// 	result := make(map[string]interface{})
+// 	if err := json.Unmarshal(data, &result); err != nil {
+// 		logs.Error("Unmarshal failed: %v", err)
+// 		return nil, err
+// 	}
 
-	return result["upload_new_detections"].(map[string]interface{}), nil
-}
+// 	return result["upload_new_detections"].(map[string]interface{}), nil
+// }
 
 func storeNewDetections(detections *Confirmation) error {
 
