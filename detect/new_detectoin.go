@@ -224,8 +224,17 @@ func removeDuplicateSensitiveString(
 	detections.SensitiveStrings = r
 }
 
-func getExtraDetectionKeys(
-	db *gorm.DB, condition map[string]interface{}) (map[string]bool, error) {
+func getExtraDetectionKeys(db *gorm.DB, condition map[string]interface{}) (
+	map[string]bool, error) {
+
+	// Delete expired record from database which was unconfirmed and
+	// inserted one week ago.
+	if err := db.Debug().Exec(`DELETE FROM new_detection
+	WHERE confirmed=FALSE and updated_at < SUBDATE(now(),INTERVAL 7 DAY)`).
+		Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
+	}
 
 	var keys []struct {
 		Key string `gorm:"column:key_name"`
