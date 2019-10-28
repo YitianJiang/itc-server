@@ -165,7 +165,7 @@ func getUploadNewDetectionsSettings(
 
 func storeNewDetections(detections *Confirmation) error {
 
-	keyMap, err := getExraDetectionKeys(database.DB(),
+	keyMap, err := getExtraDetectionKeys(database.DB(),
 		map[string]interface{}{"app_id": detections.APPID,
 			"platform": detections.Platform})
 	if err != nil {
@@ -224,7 +224,7 @@ func removeDuplicateSensitiveString(
 	detections.SensitiveStrings = r
 }
 
-func getExraDetectionKeys(
+func getExtraDetectionKeys(
 	db *gorm.DB, condition map[string]interface{}) (map[string]bool, error) {
 
 	var keys []struct {
