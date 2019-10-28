@@ -17,8 +17,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const clearRule = "DELETE FROM new_detection WHERE confirmed=FALSE and updated_at < SUBDATE(now(),INTERVAL 7 DAY)"
-
 type detectionBasic struct {
 	APPID      string `json:"appid"       binding:"required"`
 	APPName    string `json:"appName"     binding:"required"`
@@ -92,11 +90,14 @@ func UploadUnconfirmedDetections(c *gin.Context) {
 
 	var detections Confirmation
 	if err := c.ShouldBindJSON(&detections); err != nil {
-		ReturnMsg(c, SUCCESS, fmt.Sprintf("Invalid parameter: %v", err))
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Invalid parameter: %v", err))
 		return
 	}
 
-	go handleNewDetections(&detections)
+	if err := handleNewDetections(&detections); err != nil {
+		ReturnMsg(c, FAILURE, fmt.Sprintf("handle detections error: %v", err))
+		return
+	}
 
 	ReturnMsg(c, SUCCESS, "Receive new detections success")
 	return
@@ -109,11 +110,11 @@ var (
 	message   string
 )
 
-func handleNewDetections(detections *Confirmation) {
+func handleNewDetections(detections *Confirmation) error {
 
 	if err := storeNewDetections(detections); err != nil {
 		logs.Error("Failed to store new detections")
-		return
+		return err
 	}
 
 	appID = conf.GetSettings().UploadNewDetection.APPID
@@ -122,18 +123,36 @@ func handleNewDetections(detections *Confirmation) {
 	if len(detections.Permissions) > 0 ||
 		len(detections.SensitiveMethods) > 0 ||
 		len(detections.SensitiveStrings) > 0 {
-		// if err := informConfirmor(settings["group_name"].(string),
-		if err := informConfirmor(conf.GetSettings().UploadNewDetection.GroupName,
+		if _, ok := conf.GetSettings().UploadNewDetection.Groups[detections.APPID]; !ok {
+			if err := conf.BackupSettings(); err != nil {
+				logs.Error("backup settings error: %v", err)
+				return err
+			}
+			name := fmt.Sprintf(conf.GetSettings().UploadNewDetection.GroupNameTemplate,
+				detections.APPName)
+			if err := createLarkGroupSimple(name, conf.GetSettings().
+				UploadNewDetection.DefaultPeople); err != nil {
+				logs.Error("create lark group error: %v", err)
+				return err
+			}
+			conf.GetSettings().UploadNewDetection.Groups[detections.APPID] = name
+			if err := conf.WriteSettings(); err != nil {
+				logs.Error("write settings error: %v", err)
+				return err
+			}
+		}
+
+		if err := informConfirmor(conf.GetSettings().UploadNewDetection.Groups[detections.APPID],
 			detections.RDEmail,
 			packMessage(detections)); err != nil {
 			logs.Error("Failed to inform the confirmor %v", detections.RDEmail)
-			return
+			return err
 		}
 	} else {
 		logs.Info("There are no new detections")
 	}
 
-	return
+	return nil
 }
 
 func storeNewDetections(detections *Confirmation) error {
@@ -202,7 +221,8 @@ func getExtraDetectionKeys(db *gorm.DB, condition map[string]interface{}) (
 
 	// Delete expired record from database which was unconfirmed and
 	// inserted one week ago.
-	if err := db.Debug().Exec(clearRule).Error; err != nil {
+	if err := db.Debug().Exec(conf.GetSettings().UploadNewDetection.ClearRule).
+		Error; err != nil {
 		logs.Error("Database error: %v", err)
 		return nil, err
 	}
@@ -280,7 +300,6 @@ func storeNewSensiMethods(db *gorm.DB, detections *Confirmation) {
 			Confirmed:      false,
 		})
 	}
-
 }
 
 func storeNewSensiStrings(db *gorm.DB, detections *Confirmation) {
@@ -696,7 +715,56 @@ func packMessage(detections *Confirmation) string {
 	return msg
 }
 
+func createLarkGroupSimple(groupName string, openIDs []string) error {
+
+	token, err := getTenantAccessToken(appID, appSecret)
+	if err != nil {
+		logs.Error("Failed to get tenant access token: %v", err)
+		return err
+	}
+
+	return createLarkGroup(token, groupName, openIDs)
+}
+
+func createLarkGroup(token string, groupName string, openIDs []string) error {
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + token,
+		"Content-Type":  "application/json"}
+
+	data, err := json.Marshal(map[string]interface{}{
+		"name":        groupName,
+		"description": conf.GetSettings().UploadNewDetection.GroupDescription,
+		"open_ids":    openIDs,
+	})
+	if err != nil {
+		logs.Error("marshal error: %v", err)
+		return err
+	}
+
+	// The URL was fixed and only used here, so hard code is ok.
+	body, err := SendHTTPRequest("POST",
+		"https://open.feishu.cn/open-apis/chat/v4/create/",
+		headers, data)
+	if err != nil {
+		logs.Error("Failed to send http request for addUserToGroup: %v", err)
+		return err
+	}
+
+	response := make(map[string]interface{})
+	if err := json.Unmarshal(body, &response); err != nil {
+		logs.Error("unmarshal error: %v", err)
+		return err
+	}
+	if int(response["code"].(float64)) != 0 {
+		return fmt.Errorf("code: %v, message:%v", response["code"], response["msg"])
+	}
+
+	return nil
+}
+
 func isUserInGroupSimple(groupName string, userEmail string) (bool, error) {
+
 	token, err := getTenantAccessToken(appID, appSecret)
 	if err != nil {
 		logs.Error("Failed to get tenant access token: %v", err)
