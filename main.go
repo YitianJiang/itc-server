@@ -19,6 +19,10 @@ func main() {
 	// add your handlers here
 	//init
 	conf.InitConfiguration()
+	if err := conf.LoadSettings(); err != nil {
+		panic(fmt.Sprintf("failed to load settings: %v", err))
+	}
+
 	//r.Use(casInitAndVerify())
 	r.Use(Cors())
 	database.InitDB()
