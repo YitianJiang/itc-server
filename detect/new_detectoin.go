@@ -165,16 +165,16 @@ func getUploadNewDetectionsSettings(
 
 func storeNewDetections(detections *Confirmation) error {
 
-	db, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return err
-	}
-	defer db.Close()
+	// db, err := database.GetDBConnection()
+	// if err != nil {
+	// 	logs.Error("Connect to DB failed: %v", err)
+	// 	return err
+	// }
+	// defer db.Close()
 
-	keyMap, err := getExraDetectionKeys(db, map[string]interface{}{
-		"app_id":   detections.APPID,
-		"platform": detections.Platform})
+	keyMap, err := getExraDetectionKeys(database.DB(),
+		map[string]interface{}{"app_id": detections.APPID,
+			"platform": detections.Platform})
 	if err != nil {
 		logs.Error("Failed to get unconfirmed detection keys")
 		return err
@@ -185,9 +185,9 @@ func storeNewDetections(detections *Confirmation) error {
 	removeDuplicateSensitiveMethod(detections, keyMap)
 	removeDuplicateSensitiveString(detections, keyMap)
 
-	storeNewPermissions(db, detections)
-	storeNewSensiMethods(db, detections)
-	storeNewSensiStrings(db, detections)
+	storeNewPermissions(database.DB(), detections)
+	storeNewSensiMethods(database.DB(), detections)
+	storeNewSensiStrings(database.DB(), detections)
 
 	return nil
 }
@@ -685,7 +685,7 @@ func packMessage(detections *Confirmation) string {
 		atMsg = fmt.Sprintf("<at open_id=\"%v\"></at>", openID)
 	}
 
-	msg := " 本次编译出现新增未确认项，请前往预审平台查看确认。\n" +
+	msg := "本次编译出现新增未确认项，请前往预审平台查看确认。\n" +
 		"查看与确认地址: https://rocket.bytedance.net/rocket/itc/branchCheck?biz=" +
 		detections.APPID + "\n\n" +
 		"【编译信息】\n" +
