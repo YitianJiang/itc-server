@@ -254,17 +254,17 @@ var ProfileExpiredTimeToNow = "现在离描述文件过期还有: "
 var TypeProfile = "描述文件"
 
 //更新设备工单卡片基本信息
-var UpdateDeviceMessage="请登录Apple后台,并到TeamId对应的账号下更新UDID对应设备的名称和状态为如下，更新完毕后请点击\"已更新\""
-var DeviceIdHeader="UDID: "
-var DeviceStatusHeader="请更新设备状态为: "
-var DeviceNameUpdateHeader="请更新设备名称为: "
-var UpdateDeviceButtonText="已更新"
+var UpdateDeviceMessage = "请登录Apple后台,并到TeamId对应的账号下更新UDID对应设备的名称和状态为如下，更新完毕后请点击\"已更新\""
+var DeviceIdHeader = "UDID: "
+var DeviceStatusHeader = "请更新设备状态为: "
+var DeviceNameUpdateHeader = "请更新设备名称为: "
+var UpdateDeviceButtonText = "已更新"
 
 //新增设备工单卡片基本信息
-var AddDeviceMessage="请登录Apple后台,并到TeamId对应的账号下根据以下信息添加设备，并将设备信息上传至itc证书管理后台"
-var DeviceNameAddHeader="要添加设备的名称: "
-var UDIDHeader="要添加设备的UDID: "
-var PlatformHeader="要添加设备的平台: "
+var AddDeviceMessage = "请登录Apple后台,并到TeamId对应的账号下根据以下信息添加设备，并将设备信息上传至itc证书管理后台"
+var DeviceNameAddHeader = "要添加设备的名称: "
+var UDIDHeader = "要添加设备的UDID: "
+var PlatformHeader = "要添加设备的平台: "
 
 //新建证书工单卡片基本信息
 var CreateCertMessage = "请根据配置信息登录Apple后台手动生成证书并上传至rocket证书管理后台"
@@ -603,27 +603,51 @@ func initLarkStruct(lark_people, rd_bm, qa_bm, lark_message, detect_num, self_it
 	return message
 }
 
-func LarkDetectResult(lark_people, rd_bm, qa_bm, lark_message, url string, detect_num, self_item_num int, groupFlag bool) bool {
-	detect := strconv.Itoa(detect_num)
-	self := strconv.Itoa(self_item_num)
-	larkStruct := initLarkStruct(lark_people, rd_bm, qa_bm, lark_message, detect, self, url, groupFlag)
+func LarkDetectResult(taskID interface{}, person, rd_bm, qa_bm,
+	message, url string, detect_num, self_item_num int, groupFlag bool) bool {
+
+	larkStruct := initLarkStruct(person, rd_bm, qa_bm, message,
+		strconv.Itoa(detect_num), strconv.Itoa(self_item_num), url, groupFlag)
 	larkBody, err := json.Marshal(larkStruct)
 	if err != nil {
-		logs.Error(err.Error())
+		logs.Error("task id: %v marshal error: %v", taskID, err)
 		return false
 	}
+
 	if groupFlag {
 		m := make(map[string]interface{})
-		json.Unmarshal(larkBody, &m)
+		if err := json.Unmarshal(larkBody, &m); err != nil {
+			logs.Error("task id: %v unmarshal error: %v", taskID, err)
+			return false
+		}
 		delete(m, "email")
 		larkBody, err = json.Marshal(m)
 		if err != nil {
-			logs.Error(err.Error())
+			logs.Error("task id: %v marshal error: %v", taskID, err)
+			return false
 		}
 	}
-	token := GetLarkToken()
-	res, _ := PostJsonHttp3(larkBody, token, _const.OFFICE_LARK_URL)
-	return res
+
+	success, body := PostJsonHttp3(larkBody, GetLarkToken(), _const.OFFICE_LARK_URL)
+	logs.Info("task id: %v lark response: %v", taskID, body)
+
+	if !success {
+		logs.Error("task id: %v send http request error", taskID)
+		return false
+	}
+	result := make(map[string]interface{})
+	if err := json.Unmarshal([]byte(body), &result); err != nil {
+		logs.Error("task id: %v unmarshal error: %v", taskID, err)
+		return false
+	}
+
+	if fmt.Sprint(result["code"]) != "0" {
+		logs.Error("task id: %v lark error: %v", taskID, result["msg"])
+		return false
+	}
+
+	logs.Info("task id: %v send lark message success", taskID)
+	return true
 }
 
 func GetUserOpenId(email string) string {

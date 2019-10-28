@@ -560,9 +560,9 @@ func UpdateDetectInfos(c *gin.Context) {
 	// 此处测试时注释掉
 	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
 	for _, creator := range larkList {
-		utils.UserInGroup(creator)                                                                             //将用户拉入预审平台群
-		res := utils.LarkDetectResult(creator, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, false) //new lark卡片通知形式
-		logs.Info("taskId: " + taskId + ", creator: " + creator + ", lark message result: " + fmt.Sprint(res))
+		utils.UserInGroup(creator)                                                                                     //将用户拉入预审平台群
+		res := utils.LarkDetectResult(taskId, creator, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, false) //new lark卡片通知形式
+		logs.Info("task id: " + taskId + ", creator: " + creator + ", lark message result: " + fmt.Sprint(res))
 	}
 	//发给群消息沿用旧的机器人，给群ID对应群发送消息
 	toGroupID := task.ToGroup
@@ -572,7 +572,7 @@ func UpdateDetectInfos(c *gin.Context) {
 		for _, group_id := range groupArr {
 			to_lark_group := strings.Trim(group_id, " ")
 			// 新样式
-			if utils.LarkDetectResult(to_lark_group, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, true) == false {
+			if utils.LarkDetectResult(taskId, to_lark_group, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, true) == false {
 				message += message + larkUrl
 				utils.LarkGroup(message, to_lark_group)
 			}
