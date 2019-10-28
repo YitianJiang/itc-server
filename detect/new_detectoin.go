@@ -16,6 +16,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const clearRule = "DELETE FROM new_detection WHERE confirmed=FALSE and updated_at < SUBDATE(now(),INTERVAL 7 DAY)"
+
 type detectionBasic struct {
 	APPID      string `json:"appid"`
 	APPName    string `json:"appName"`
@@ -229,9 +231,7 @@ func getExtraDetectionKeys(db *gorm.DB, condition map[string]interface{}) (
 
 	// Delete expired record from database which was unconfirmed and
 	// inserted one week ago.
-	if err := db.Debug().Exec(`DELETE FROM new_detection
-	WHERE confirmed=FALSE and updated_at < SUBDATE(now(),INTERVAL 7 DAY)`).
-		Error; err != nil {
+	if err := db.Debug().Exec(clearRule).Error; err != nil {
 		logs.Error("Database error: %v", err)
 		return nil, err
 	}
