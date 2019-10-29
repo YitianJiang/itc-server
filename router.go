@@ -34,7 +34,7 @@ func InitRouter(r *ginex.Engine) {
 	{
 		detectapi.POST("/new/list", detect.List)
 		detectapi.GET("/new/detail", detect.Detail)
-		detectapi.PUT("/new/confirm", detect.Confirm)
+		detectapi.PUT("/new/confirmation", detect.Confirm)
 		detectapi.DELETE("/new", detect.Delete)
 	}
 
