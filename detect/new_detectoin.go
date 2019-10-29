@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	"code.byted.org/clientQA/itc-server/conf"
 	"code.byted.org/clientQA/itc-server/database"
+	"code.byted.org/clientQA/itc-server/settings"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
@@ -117,28 +117,28 @@ func handleNewDetections(detections *Confirmation) error {
 		return err
 	}
 
-	appID = conf.GetSettings().UploadNewDetection.APPID
-	appSecret = conf.GetSettings().UploadNewDetection.APPSecret
+	appID = settings.Get().UploadNewDetection.APPID
+	appSecret = settings.Get().UploadNewDetection.APPSecret
 
 	if len(detections.Permissions) > 0 ||
 		len(detections.SensitiveMethods) > 0 ||
 		len(detections.SensitiveStrings) > 0 {
-		if _, ok := conf.GetSettings().UploadNewDetection.Groups[detections.APPID]; !ok {
-			name := fmt.Sprintf(conf.GetSettings().UploadNewDetection.GroupNameTemplate,
+		if _, ok := settings.Get().UploadNewDetection.Groups[detections.APPID]; !ok {
+			name := fmt.Sprintf(settings.Get().UploadNewDetection.GroupNameTemplate,
 				detections.APPName)
-			if err := createLarkGroupSimple(name, conf.GetSettings().
+			if err := createLarkGroupSimple(name, settings.Get().
 				UploadNewDetection.DefaultPeople); err != nil {
 				logs.Error("create lark group error: %v", err)
 				return err
 			}
-			conf.GetSettings().UploadNewDetection.Groups[detections.APPID] = name
-			if err := conf.StoreSettings(database.DB()); err != nil {
+			settings.Get().UploadNewDetection.Groups[detections.APPID] = name
+			if err := settings.Store(database.DB()); err != nil {
 				logs.Error("write settings error: %v", err)
 				return err
 			}
 		}
 
-		if err := informConfirmor(conf.GetSettings().UploadNewDetection.Groups[detections.APPID],
+		if err := informConfirmor(settings.Get().UploadNewDetection.Groups[detections.APPID],
 			detections.RDEmail,
 			packMessage(detections)); err != nil {
 			logs.Error("Failed to inform the confirmor %v", detections.RDEmail)
@@ -217,7 +217,7 @@ func getExtraDetectionKeys(db *gorm.DB, condition map[string]interface{}) (
 
 	// Delete expired record from database which was unconfirmed and
 	// inserted one week ago.
-	if err := db.Debug().Exec(conf.GetSettings().UploadNewDetection.ClearRule).
+	if err := db.Debug().Exec(settings.Get().UploadNewDetection.ClearRule).
 		Error; err != nil {
 		logs.Error("Database error: %v", err)
 		return nil, err
@@ -730,7 +730,7 @@ func createLarkGroup(token string, groupName string, openIDs []string) error {
 
 	data, err := json.Marshal(map[string]interface{}{
 		"name":        groupName,
-		"description": conf.GetSettings().UploadNewDetection.GroupDescription,
+		"description": settings.Get().UploadNewDetection.GroupDescription,
 		"open_ids":    openIDs,
 	})
 	if err != nil {

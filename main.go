@@ -8,6 +8,7 @@ import (
 	"code.byted.org/clientQA/itc-server/conf"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/detect"
+	"code.byted.org/clientQA/itc-server/settings"
 	"code.byted.org/gin/ginex"
 	"github.com/gin-gonic/gin"
 )
@@ -19,15 +20,15 @@ func main() {
 	// add your handlers here
 	//init
 	conf.InitConfiguration()
-	if err := conf.LoadSettings(); err != nil {
-		panic(fmt.Sprintf("failed to load settings: %v", err))
-	}
 
 	//r.Use(casInitAndVerify())
 	r.Use(Cors())
 	database.InitDB()
 	if err := database.InitDBHandler(); err != nil {
 		panic(fmt.Sprintf("failed to initialize the global database handler: %v", err))
+	}
+	if err := settings.Load(database.DB()); err != nil {
+		panic(fmt.Sprintf("failed to load settings: %v", err))
 	}
 
 	InitRouter(r)

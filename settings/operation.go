@@ -1,4 +1,4 @@
-package conf
+package settings
 
 import (
 	"encoding/json"
@@ -34,8 +34,8 @@ func (t settingsTable) TableName() string {
 	return "settings_history"
 }
 
-// LoadSettings reads settings from table settings_history.
-func LoadSettings(db *gorm.DB) error {
+// Load reads settings from table settings_history.
+func Load(db *gorm.DB) error {
 
 	var t settingsTable
 	if err := db.Debug().Last(&t).Error; err != nil {
@@ -54,8 +54,8 @@ func LoadSettings(db *gorm.DB) error {
 	return nil
 }
 
-// StoreSettings writes data into table settings_history.
-func StoreSettings(db *gorm.DB) (err error) {
+// Store writes data into table settings_history.
+func Store(db *gorm.DB) (err error) {
 
 	var t settingsTable
 	if t.Content, err = json.Marshal(settings); err != nil {
@@ -71,8 +71,8 @@ func StoreSettings(db *gorm.DB) (err error) {
 	return nil
 }
 
-// GetSettings returns the global settings pointer.
-func GetSettings() *Settings {
+// Get returns the global handler of settings.
+func Get() *Settings {
 
 	return settings
 }
