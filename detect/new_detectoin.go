@@ -12,6 +12,7 @@ import (
 
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/settings"
+	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
@@ -344,34 +345,34 @@ func List(c *gin.Context) {
 
 	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		ReturnMsg(c, FAILURE, "Failed to read request body: "+err.Error())
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("read request body failed: %v", err))
 		return
 	}
 
 	sieve := make(map[string]interface{})
 	if err := json.Unmarshal(body, &sieve); err != nil {
-		ReturnMsg(c, FAILURE, "Failed to unmarshal request body: "+err.Error())
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("unmarshal error: %v", err))
 		return
 	}
 
 	if int(sieve["page"].(float64)) <= 0 ||
 		int(sieve["pageSize"].(float64)) <= 0 {
-		ReturnMsg(c, FAILURE, "Invalid page or pageSize")
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid page (%v) or pageSize (%v)", sieve["page"], sieve["pageSize"]))
 		return
 	}
 
 	data, total, err := getDetectionList(sieve)
 	if err != nil {
-		ReturnMsg(c, FAILURE, "Failed to get detection list: "+err.Error())
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("get detection list failed: %v", err))
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"errorCode": SUCCESS,
-		"message":   "success",
-		"total":     total,
-		"data":      data})
-	logs.Info("Get unconfirmed detection list success")
+		"code":    SUCCESS,
+		"message": "success",
+		"total":   total,
+		"data":    data})
+	logs.Info("success")
 	return
 }
 
@@ -449,20 +450,17 @@ func Detail(c *gin.Context) {
 
 	id, err := getID(c)
 	if err != nil {
-		ReturnMsg(c, FAILURE, err.Error())
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, err.Error())
 		return
 	}
 
 	result, err := getDetectionDetail(id)
 	if err != nil {
-		ReturnMsg(c, FAILURE, err.Error())
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"errorCode": SUCCESS,
-		"message":   "success",
-		"data":      result})
+	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success", result)
 	return
 }
 
@@ -471,12 +469,12 @@ func getID(c *gin.Context) (uint64, error) {
 
 	id, exist := c.GetQuery("id")
 	if !exist {
-		return 0, errors.New("Miss id")
+		return 0, errors.New("miss id")
 	}
 
 	detectionID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		return 0, errors.New("Parse id error: " + err.Error())
+		return 0, errors.New("parse id error: " + err.Error())
 	}
 
 	return detectionID, nil
@@ -524,59 +522,57 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 	return result, nil
 }
 
-// Confirm set the specific detection's the value of confirmed TRUE.
+// Confirm sets the specific detection's confirmed filed as TRUE.
 func Confirm(c *gin.Context) {
 
 	userName, exist := c.Get("username")
 	if !exist {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("Invalid user: %v", userName))
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("Invalid user: %v", userName))
 		return
 	}
 
-	body, err := ioutil.ReadAll(c.Request.Body)
-	if err != nil {
-		ReturnMsg(c, FAILURE, "Failed to read request body: "+err.Error())
+	type info struct {
+		ID     uint64 `json:"id"     binding:"required"`
+		Remark string `json:"remark" binding:"required"`
+	}
+	var data info
+	if err := c.ShouldBindJSON(&data); err != nil {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid parameter: %v", err))
 		return
 	}
 
-	data := make(map[string]interface{})
-	if err := json.Unmarshal(body, &data); err != nil {
-		ReturnMsg(c, FAILURE, "Failed to unmarshal request body: "+err.Error())
+	if err := confirmDetection(data.ID, userName.(string),
+		data.Remark); err != nil {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm failed: %v", err))
 		return
 	}
 
-	if err := confirmDetection(uint64(data["id"].(float64)),
-		userName.(string), data["remark"].(string)); err != nil {
-		ReturnMsg(c, FAILURE, "Confirm failed: "+err.Error())
-		return
-	}
-
-	ReturnMsg(c, SUCCESS, "success")
+	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
 	return
 }
 
-// Delete remove the specified record from the table new_detection.
+// Delete removes the specified record from the table new_detection.
 func Delete(c *gin.Context) {
 
 	userName, exist := c.Get("username")
 	if !exist {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("Invalid user: %v", userName))
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid user: %v", userName))
 		return
 	}
 
 	id, err := getID(c)
 	if err != nil {
-		ReturnMsg(c, FAILURE, err.Error())
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, err.Error())
 		return
 	}
 
 	if err := database.DeleteDBRecord(database.DB(),
 		&NewDetection{}, map[string]interface{}{"id": id}); err != nil {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("delete failed: %v", err))
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("delete failed: %v", err))
 		return
 	}
 
-	ReturnMsg(c, SUCCESS, "success")
+	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
 	return
 }
 

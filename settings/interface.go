@@ -14,8 +14,8 @@ import (
 func Refresh(c *gin.Context) {
 
 	if err := Load(database.DB()); err != nil {
-		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("failed to refresh settings: %v", err))
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("refresh settings failed: %v", err))
 	}
 
-	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "refresh settings success")
+	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
 }
