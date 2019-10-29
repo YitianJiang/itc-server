@@ -1,8 +1,6 @@
 package utils
 
 import (
-	"net/http"
-
 	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
 )
@@ -13,8 +11,11 @@ const (
 	SUCCESS = 0
 )
 
-// ReturnMsg shows necessary information for requestor.
-func ReturnMsg(c *gin.Context, code int, msg string) {
+// ReturnMsg return the response to requester.
+// If the data is not empty, only the first data will be accept while the rest
+// will be abandoned.
+func ReturnMsg(c *gin.Context, httpCode int, code int, msg string,
+	data ...interface{}) {
 
 	switch code {
 	case FAILURE:
@@ -23,10 +24,12 @@ func ReturnMsg(c *gin.Context, code int, msg string) {
 		logs.Debug(msg)
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code":    code,
-		"message": msg,
-	})
+	obj := gin.H{"code": code, "message": msg}
+	if len(data) > 0 {
+		obj["data"] = data[0]
+	}
+
+	c.JSON(httpCode, obj)
 
 	return
 }
