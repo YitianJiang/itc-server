@@ -124,10 +124,10 @@ func handleNewDetections(detections *Confirmation) error {
 		len(detections.SensitiveMethods) > 0 ||
 		len(detections.SensitiveStrings) > 0 {
 		if _, ok := conf.GetSettings().UploadNewDetection.Groups[detections.APPID]; !ok {
-			if err := conf.BackupSettings(); err != nil {
-				logs.Error("backup settings error: %v", err)
-				return err
-			}
+			// if err := conf.BackupSettings(); err != nil {
+			// 	logs.Error("backup settings error: %v", err)
+			// 	return err
+			// }
 			name := fmt.Sprintf(conf.GetSettings().UploadNewDetection.GroupNameTemplate,
 				detections.APPName)
 			if err := createLarkGroupSimple(name, conf.GetSettings().
@@ -136,7 +136,11 @@ func handleNewDetections(detections *Confirmation) error {
 				return err
 			}
 			conf.GetSettings().UploadNewDetection.Groups[detections.APPID] = name
-			if err := conf.WriteSettings(); err != nil {
+			// if err := conf.WriteSettings(); err != nil {
+			// 	logs.Error("write settings error: %v", err)
+			// 	return err
+			// }
+			if err := conf.StoreSettings(database.DB()); err != nil {
 				logs.Error("write settings error: %v", err)
 				return err
 			}

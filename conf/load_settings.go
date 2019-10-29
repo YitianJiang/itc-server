@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
+	"time"
 
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 )
 
@@ -30,47 +31,75 @@ const backupSettingsFile = settingsFile + ".bak"
 
 var settings *Settings
 
-// LoadSettings reads settings from the specific file.
-func LoadSettings() error {
+type settingsTable struct {
+	CreatedAt time.Time `gorm:"created_at"`
+	ID        int       `gorm:"id"`
+	Content   []byte    `gorm:"content"`
+}
 
-	data, err := ioutil.ReadFile(settingsFile)
-	if err != nil {
-		logs.Error("IO ReadFile failed: %v", err)
+func (t settingsTable) TableName() string {
+
+	return "settings_history"
+}
+
+// LoadSettings reads settings from table settings_history.
+func LoadSettings(db *gorm.DB) error {
+
+	// data, err := ioutil.ReadFile(settingsFile)
+	// if err != nil {
+	// 	logs.Error("IO ReadFile failed: %v", err)
+	// 	return err
+	// }
+
+	var t settingsTable
+	if err := db.Debug().Last(&t).Error; err != nil {
+		logs.Error("database error: %v", err)
 		return err
 	}
 
-	var s Settings
+	s := new(Settings)
 	s.UploadNewDetection.Groups = make(map[string]string)
-	if err := json.Unmarshal(data, &s); err != nil {
+	if err := json.Unmarshal(t.Content, s); err != nil {
 		logs.Error("Unmarshal failed: %v", err)
 		return err
 	}
-	settings = &s
+	settings = s
 
 	return nil
 }
 
-// WriteSettings writes data into the specific file.
-func WriteSettings() error {
+// StoreSettings writes data into table settings_history.
+func StoreSettings(db *gorm.DB) (err error) {
 
-	data, err := json.MarshalIndent(settings, "", "    ")
-	if err != nil {
-		logs.Error("marshalindent error: %v", err)
-		return err
+	var t settingsTable
+	if t.Content, err = json.Marshal(settings); err != nil {
+		logs.Error("marshal error: %v", err)
+		return
 	}
 
-	fp, err := os.OpenFile(settingsFile, os.O_RDWR, 0755)
-	if err != nil {
-		logs.Error("open file error: %v", err)
-		return err
+	if err = db.Debug().Create(&t).Error; err != nil {
+		logs.Error("database error: %v", err)
+		return
 	}
-	defer fp.Close()
 
-	_, err = fp.Write(data)
-	if err != nil {
-		logs.Error("write file error: %v", err)
-		return err
-	}
+	// data, err := json.MarshalIndent(settings, "", "    ")
+	// if err != nil {
+	// 	logs.Error("marshalindent error: %v", err)
+	// 	return err
+	// }
+
+	// fp, err := os.OpenFile(settingsFile, os.O_RDWR, 0755)
+	// if err != nil {
+	// 	logs.Error("open file error: %v", err)
+	// 	return err
+	// }
+	// defer fp.Close()
+
+	// _, err = fp.Write(data)
+	// if err != nil {
+	// 	logs.Error("write file error: %v", err)
+	// 	return err
+	// }
 
 	return nil
 }
