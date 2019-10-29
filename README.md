@@ -61,7 +61,7 @@ func InsertDBRecord(db *gorm.DB, record interface{}) error {
 
 对于网络请求的响应，请考虑使用下面这个函数，目前可以在`utils`包中找到它：
 
-（**注意**：对于新增的接口，尤其建议使用该函数，目的是规范返回参数，统一使用`code`、`message`、`data`。）
+**注意：**对于新增的接口，尤其建议使用该函数，目的是规范返回参数，统一使用`code`、`message`、`data`。）
 
 ```Go
 // ReturnMsg return the response to requester.
