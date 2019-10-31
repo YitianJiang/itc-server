@@ -366,48 +366,27 @@ func UpdateDetectInfos(c *gin.Context) {
 		logs.Error("Task id: %v Failed to get detect task", taskId)
 		return
 	}
-	toolIdInt, _ := strconv.Atoi(toolId)
 
 	//消息通知条数--检测项+自查项
 	var unConfirms int
 	var unSelfCheck int
 	if task.Platform == 0 {
-		if toolIdInt == 6 { //安卓兼容新版本
-			//安卓检测信息分析，并将检测信息写库-----fj
-			taskID, err := strconv.Atoi(taskId)
-			if err != nil {
-				logs.Error("String convert error: %v", taskId)
-			}
-			toolID, err := strconv.Atoi(toolId)
-			if err != nil {
-				logs.Error("String convert error: %v", toolId)
-			}
-			var errApk error
-			go logs.Debug("Task id: %v json content: %v", taskId, jsonContent)
-			errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, taskID, toolID)
-			if errApk != nil {
-				ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to update APK detect reuslt: %v", errApk))
-				return
-			}
-		} else {
-			var detectContent dal.DetectContent
-			detectContent.TaskId, _ = strconv.Atoi(taskId)
-			detectContent.ToolId, _ = strconv.Atoi(toolId)
-			detectContent.HtmlContent = htmlContent
-			detectContent.JsonContent = jsonContent
-			detectContent.CreatedAt = time.Now()
-			detectContent.UpdatedAt = time.Now()
-			task.AppName = appName
-			task.AppVersion = appVersion
-			task.UpdatedAt = time.Now()
-			if err := dal.UpdateDetectModel(*task, detectContent); err != nil {
-				c.JSON(http.StatusOK, gin.H{
-					"message":   "数据库更新检测信息失败",
-					"errorCode": -3,
-					"data":      "数据库更新检测信息失败",
-				})
-				return
-			}
+		taskID, err := strconv.Atoi(taskId)
+		if err != nil {
+			ReturnMsg(c, FAILURE, fmt.Sprintf("invalid task id: %v(%v)", err, taskId))
+			return
+
+		}
+		toolID, err := strconv.Atoi(toolId)
+		if err != nil {
+			ReturnMsg(c, FAILURE, fmt.Sprintf("invalid tool id: %v(%v)", err, toolId))
+		}
+		var errApk error
+		go logs.Debug("Task id: %v json content: %v", taskId, jsonContent)
+		errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, taskID, toolID)
+		if errApk != nil {
+			ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to update APK detect reuslt: %v", errApk))
+			return
 		}
 	}
 	//ios新检测内容存储
