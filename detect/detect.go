@@ -379,7 +379,8 @@ func UpdateDetectInfos(c *gin.Context) {
 		}
 		toolID, err := strconv.Atoi(toolId)
 		if err != nil {
-			ReturnMsg(c, FAILURE, fmt.Sprintf("invalid tool id: %v(%v)", err, toolId))
+			ReturnMsg(c, FAILURE, fmt.Sprintf("Task id: %v invalid tool id: %v(%v)", taskId, err, toolId))
+			return
 		}
 		var errApk error
 		go logs.Debug("Task id: %v json content: %v", taskId, jsonContent)
