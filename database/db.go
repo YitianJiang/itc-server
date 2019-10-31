@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"code.byted.org/clientQA/itc-server/conf"
-	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/golf/ssconf"
 	dbconf "code.byted.org/gopkg/dbutil/conf"
@@ -16,10 +15,10 @@ import (
 
 var (
 	dboptional dbconf.DBOptional
-	// DB is the handler of database.
-	DB *gorm.DB
+	dbhandler  *gorm.DB
 )
 
+// InitDB initialize the dboptional
 func InitDB() {
 
 	if env.IsBoe() {
@@ -53,4 +52,22 @@ func GetDBConnection() (*gorm.DB, error) {
 	}
 
 	return handler.GetConnection()
+}
+
+// InitDBHandler initialize a global database handler.
+func InitDBHandler() error {
+
+	var err error
+	if dbhandler, err = GetDBConnection(); err != nil {
+		logs.Error("failed to get database handler: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+// DB returns the handler of database.
+func DB() *gorm.DB {
+
+	return dbhandler
 }

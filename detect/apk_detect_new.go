@@ -27,7 +27,7 @@ const (
 
 func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 
-	task, err := getExactDetectTask(database.DB, map[string]interface{}{"id": taskID})
+	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskID})
 	if err != nil {
 		logs.Error("Task id: %v Fail to get detect task", taskID)
 		return err, 0

@@ -247,7 +247,7 @@ func UploadFile(c *gin.Context) {
 		response, err := toolHttp.Post(url, contentType, bodyBuffer)
 		if err != nil {
 			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",上传二进制包出错,", err.Error())
-			if err := updateDetectTaskStatus(database.DB,
+			if err := updateDetectTaskStatus(database.DB(),
 				dbDetectModelId,
 				TaskStatusError); err != nil {
 				logs.Warn("Task id: %v Failed to update detect task", dbDetectModelId)
@@ -268,7 +268,7 @@ func UploadFile(c *gin.Context) {
 			json.Unmarshal(resBody.Bytes(), &data)
 			logs.Info("Task id: %v upload detect url's response: %+v", dbDetectModelId, data)
 			if fmt.Sprint(data["success"]) != "1" {
-				if err := updateDetectTaskStatus(database.DB,
+				if err := updateDetectTaskStatus(database.DB(),
 					dbDetectModelId,
 					TaskStatusError); err != nil {
 					logs.Warn("Task id: %v Failed to update detect task", dbDetectModelId)
@@ -349,7 +349,7 @@ func UpdateDetectInfos(c *gin.Context) {
 	}
 	logs.Info("Task id: %v Binary detect tool callback", taskId)
 
-	if err := updateDetectTaskStatus(database.DB,
+	if err := updateDetectTaskStatus(database.DB(),
 		taskId, TaskStatusUnconfirm); err != nil {
 		logs.Error("Task id: %v Failed to update detect task", taskId)
 		return
@@ -361,7 +361,7 @@ func UpdateDetectInfos(c *gin.Context) {
 	appVersion := c.Request.FormValue("appVersion")
 	htmlContent := c.Request.FormValue("content")
 
-	task, err := getExactDetectTask(database.DB, map[string]interface{}{"id": taskId})
+	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
 	if err != nil {
 		logs.Error("Task id: %v Failed to get detect task", taskId)
 		return
@@ -466,7 +466,7 @@ func UpdateDetectInfos(c *gin.Context) {
 	}
 
 	//进行lark消息提醒
-	task, err = getExactDetectTask(database.DB, map[string]interface{}{"id": taskId})
+	task, err = getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
 	if err != nil {
 		logs.Error("Task id: %v Failed to get detect task", taskId)
 		return
