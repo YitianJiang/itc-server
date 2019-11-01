@@ -435,7 +435,7 @@ func getDetectionOutline(db *gorm.DB, sieve map[string]interface{}) (
 	[]detectionOutline, error) {
 
 	var result []detectionOutline
-	if err := db.Debug().Table("new_detection").
+	if err := db.Debug().Table("new_detection").Order("created_at desc").
 		Where(sieve).Find(&result).Error; err != nil {
 		logs.Error("Failed to retrieve detection outline: %v", err)
 		return nil, err
