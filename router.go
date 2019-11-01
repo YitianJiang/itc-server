@@ -13,6 +13,7 @@ import (
 func InitRouter(r *ginex.Engine) {
 
 	r.POST("/settings", settings.Refresh)
+	r.GET("/settings", settings.Show)
 	api := r.GroupEX("/api")
 	//二进制包检测回调接口
 	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
