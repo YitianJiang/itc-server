@@ -323,17 +323,16 @@ func getFilesFromRequest(c *gin.Context, fieldName string, emptyError bool) (str
 	filepath := _tmpDir + "/" + filename
 	out, err := os.Create(filepath)
 	if err != nil {
-		errorReturn(c, fieldName+":安装包文件处理失败，请联系相关人员！", -6)
-		logs.Fatal("临时文件保存失败")
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("os create failed: %v", err))
 		return "", "", false
 	}
 	defer out.Close()
 	_, err = io.Copy(out, file)
 	if err != nil {
-		errorReturn(c, fieldName+":安装包文件处理失败，请联系相关人员！", -6)
-		logs.Fatal("临时文件保存失败")
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("io copy failed: %v", err))
 		return "", "", false
 	}
+
 	return filepath, filename, true
 }
 
