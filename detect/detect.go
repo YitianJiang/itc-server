@@ -108,11 +108,6 @@ func UploadFile(c *gin.Context) {
 		return
 	}
 
-	//调试，暂时注释
-	recipients := name
-	//1、上传至tos,测试暂时注释
-	//tosUrl, err := upload2Tos(filepath)
-	//2、将相关信息保存至数据库
 	var dbDetectModel dal.DetectStruct
 	dbDetectModel.Creator = nameI.(string)
 	dbDetectModel.ToLarker = name
@@ -132,12 +127,12 @@ func UploadFile(c *gin.Context) {
 		return
 	}
 	dbDetectModelId := dbDetectModel.ID
-	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
+
 	go func() {
 		logs.Info("Task id: %v start to call detect tool", dbDetectModelId)
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
-		bodyWriter.WriteField("recipients", recipients)
+		bodyWriter.WriteField("recipients", name)
 		bodyWriter.WriteField("callback", settings.Get().Detect.ToolCallbackURL)
 		bodyWriter.WriteField("taskID", fmt.Sprint(dbDetectModelId))
 		bodyWriter.WriteField("toolIds", checkItem)
