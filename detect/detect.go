@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	platformAndorid = "0"
-	platformiOS     = "1"
+	platformAndorid = 0
+	platformiOS     = 1
 )
 
 // Status of Detect Task
@@ -49,11 +49,11 @@ var LARK_MSG_CALL_MAP = make(map[string]interface{})
  */
 func UploadFile(c *gin.Context) {
 
-	userName, exist := c.Get("username")
-	if !exist {
-		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("unauthorized user: %v", userName))
-		return
-	}
+	// userName, exist := c.Get("username")
+	// if !exist {
+	// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("unauthorized user: %v", userName))
+	// 	return
+	// }
 	//解析上传文件
 	filepath, filename, ok := getFilesFromRequest(c, "uploadFile", true)
 	if !ok {
@@ -69,14 +69,14 @@ func UploadFile(c *gin.Context) {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid mapping file: %v", mFilename))
 		return
 	}
-	toLarker := c.DefaultPostForm("toLarker", "")     // Send lark message to person
-	toGroup := c.DefaultPostForm("toLarkGroupId", "") // Send lark message to group
-	platform := c.DefaultPostForm("platform", "")
-	appID := c.DefaultPostForm("appId", "")
-	if appID == "" {
-		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid app id(%v)", appID))
-		return
-	}
+	// toLarker := c.DefaultPostForm("toLarker", "")     // Send lark message to person
+	// toGroup := c.DefaultPostForm("toLarkGroupId", "") // Send lark message to group
+	// platform := c.DefaultPostForm("platform", "")
+	// appID := c.DefaultPostForm("appId", "")
+	// if appID == "" {
+	// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid app id(%v)", appID))
+	// 	return
+	// }
 	checkItem := c.DefaultPostForm("checkItem", "")
 	if checkItem == "" {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid detect tool type(%v)", checkItem))
@@ -84,38 +84,41 @@ func UploadFile(c *gin.Context) {
 	}
 
 	//增加回调地址
-	callBackAddr := c.DefaultPostForm("callBackAddr", "")
-	skip := c.DefaultPostForm("skipSelfFlag", "")
-	var extraInfo dal.ExtraStruct
-	extraInfo.CallBackAddr = callBackAddr
-	extraInfo.SkipSelfFlag = skip != ""
+	// callBackAddr := c.DefaultPostForm("callBackAddr", "")
+	// skip := c.DefaultPostForm("skipSelfFlag", "")
+	// var extraInfo dal.ExtraStruct
+	// extraInfo.CallBackAddr = callBackAddr
+	// extraInfo.SkipSelfFlag = skip != ""
 
-	var url string
-	if (platform == platformAndorid) && (strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".aab")) {
-		url = settings.Get().Detect.ToolURL + "/apk_post/v2"
-	} else if (platform == platformiOS) && strings.HasSuffix(filename, ".ipa") {
-		url = settings.Get().Detect.ToolURL + "/ipa_post/v2"
-	} else {
-		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("platform(%v) not match with file(%v)", platform, filename))
-		return
-	}
+	// var url string
+	// if (platform == "0") && (strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".aab")) {
+	// 	url = settings.Get().Detect.ToolURL + "/apk_post/v2"
+	// } else if (platform == "1") && strings.HasSuffix(filename, ".ipa") {
+	// 	url = settings.Get().Detect.ToolURL + "/ipa_post/v2"
+	// } else {
+	// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("platform(%v) not match with file(%v)", platform, filename))
+	// 	return
+	// }
 
 	var task dal.DetectStruct
-	task.Creator = userName.(string)
-	if toLarker == "" {
-		task.ToLarker = userName.(string)
-	} else {
-		task.ToLarker = userName.(string) + "," + toLarker
+	if err := checkUploadParameter(&task, c, filename, mFilename); err != nil {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid parameter: %v", err))
+		return
 	}
-	task.ToGroup = toGroup
-	task.SelfCheckStatus = 0
-	task.Platform, _ = strconv.Atoi(platform)
-	task.AppId = appID
+	// task.Creator = userName.(string)
+	// if toLarker == "" {
+	// 	task.ToLarker = userName.(string)
+	// } else {
+	// 	task.ToLarker = userName.(string) + "," + toLarker
+	// }
+	// task.ToGroup = toGroup
+	// task.Platform, _ = strconv.Atoi(platform)
+	// task.AppId = appID
 	task.Status = TaskStatusRunning
-	if callBackAddr != "" || skip != "" {
-		byteExtraInfo, _ := json.Marshal(extraInfo)
-		task.ExtraInfo = string(byteExtraInfo)
-	}
+	// if callBackAddr != "" || skip != "" {
+	// 	byteExtraInfo, _ := json.Marshal(extraInfo)
+	// 	task.ExtraInfo = string(byteExtraInfo)
+	// }
 	if err := database.InsertDBRecord(database.DB(), &task); err != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("create detect task failed: %v", err))
 		return
@@ -125,7 +128,7 @@ func UploadFile(c *gin.Context) {
 		logs.Info("%s start to call detect tool", msgHeader)
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
-		bodyWriter.WriteField("recipients", userName.(string))
+		bodyWriter.WriteField("recipients", task.Creator)
 		bodyWriter.WriteField("callback", settings.Get().Detect.ToolCallbackURL)
 		bodyWriter.WriteField("taskID", fmt.Sprint(task.ID))
 		bodyWriter.WriteField("toolIds", checkItem)
@@ -167,7 +170,6 @@ func UploadFile(c *gin.Context) {
 			return
 		}
 
-		logs.Info("%s URL: %v", msgHeader, url)
 		tr := http.Transport{
 			DisableKeepAlives:   true,
 			MaxIdleConnsPerHost: 0,
@@ -177,6 +179,16 @@ func UploadFile(c *gin.Context) {
 			Transport: &tr,
 		}
 		logs.Notice("%s Length of buffer: %vB", msgHeader, bodyBuffer.Len())
+		var url string
+		switch task.Platform {
+		case platformAndorid:
+			url = settings.Get().Detect.ToolURL + "/apk_post/v2"
+		case platformiOS:
+			url = settings.Get().Detect.ToolURL + "/ipa_post/v2"
+		default:
+			logs.Error("%s invalid platform (%v)", msgHeader, task.Platform)
+			return
+		}
 		response, err := toolHttp.Post(url, contentType, bodyBuffer)
 		if err != nil {
 			logs.Error("%s upload file to detect tool failed: %v", msgHeader, err)
@@ -199,7 +211,7 @@ func UploadFile(c *gin.Context) {
 				logs.Error("%s read form (read: %v) failed: %v", msgHeader, n, err)
 				return
 			}
-			logs.Info("%s response of detect tool when uploading file: %s", msgHeader, resBody.Bytes())
+			logs.Info("%s response of detect tool when uploading file: %s", msgHeader, string(resBody.Bytes()))
 
 			data := make(map[string]interface{})
 			if err := json.Unmarshal(resBody.Bytes(), &data); err != nil {
@@ -226,6 +238,54 @@ func UploadFile(c *gin.Context) {
 	}()
 
 	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "create detect task success", map[string]interface{}{"taskId": task.ID})
+}
+
+func checkUploadParameter(task *dal.DetectStruct, c *gin.Context, packageFile string, mappingFile string) error {
+
+	userName, exist := c.Get("username")
+	if !exist {
+		return fmt.Errorf("unauthorized user: %v", userName)
+	}
+	task.Creator = userName.(string)
+
+	toLarker := c.DefaultPostForm("toLarker", "") // Send lark message to person
+	if toLarker == "" {
+		task.ToLarker = userName.(string)
+	} else {
+		task.ToLarker = userName.(string) + "," + toLarker
+	}
+	task.ToGroup = c.DefaultPostForm("toLarkGroupId", "") // Send lark message to group
+
+	platform := c.DefaultPostForm("platform", "")
+	var err error
+	task.Platform, err = strconv.Atoi(platform)
+	if err != nil {
+		return fmt.Errorf("invalid platform (%s): %v", platform, err)
+	}
+	if !((task.Platform == platformAndorid) && (strings.HasSuffix(packageFile, ".apk") || strings.HasSuffix(packageFile, ".aab"))) &&
+		!((task.Platform == platformiOS) && strings.HasSuffix(packageFile, ".ipa")) {
+		return fmt.Errorf("platform (%v) not match with file (%v)", task.Platform, packageFile)
+	}
+
+	task.AppId = c.DefaultPostForm("appId", "")
+	if task.AppId == "" {
+		return fmt.Errorf("invalid app id (%v)", task.AppId)
+	}
+
+	callbackURL := c.DefaultPostForm("callBackAddr", "")
+	skip := c.DefaultPostForm("skipSelfFlag", "")
+	if callbackURL != "" || skip != "" {
+		var extraInfo dal.ExtraStruct
+		extraInfo.CallBackAddr = callbackURL
+		extraInfo.SkipSelfFlag = skip != ""
+		byteExtraInfo, err := json.Marshal(extraInfo)
+		if err != nil {
+			return fmt.Errorf("unmarshal error: %v (callbackURL: %s skipSelfFlag: %s)", err, callbackURL, skip)
+		}
+		task.ExtraInfo = string(byteExtraInfo)
+	}
+
+	return nil
 }
 
 //emptyError标识该文件必须上传，且对文件大小有要求（大于1M）
