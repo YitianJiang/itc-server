@@ -75,7 +75,7 @@ func NewOtherDetect(c *gin.Context) {
 	//检验文件格式是否是aar
 	flag := strings.HasSuffix(filename, ".aar")
 	if !flag {
-		errorFormatFile(c)
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid aar file: %v", filename))
 		return
 	}
 	url = settings.Get().Detect.ToolURL + "/apk_post/v2"
