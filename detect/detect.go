@@ -123,25 +123,33 @@ func UploadFile(c *gin.Context) {
 		response, err := client.Post(url, bodyWriter.FormDataContentType(), bodyBuffer)
 		if err != nil {
 			logs.Error("%s upload file to detect tool failed: %v", msgHeader, err)
-			if err := updateDetectTaskStatus(database.DB(),
-				task.ID,
-				TaskStatusError); err != nil {
-				logs.Warn("%s Failed to update detect task", msgHeader)
-			}
-			handleDetectTaskError(&task, DetectServiceInfrastructureError, "上传二进制包出错")
-			//及时报警
-			for i := range _const.LowLarkPeople {
-				utils.LarkDingOneInner(_const.LowLarkPeople[i], fmt.Sprintf("%s (created by %v) upload file to detect tool failed: %v", msgHeader, task.Creator, err))
-			}
+			go func() {
+				if err := updateDetectTaskStatus(database.DB(), task.ID, TaskStatusError); err != nil {
+					logs.Warn("%s update detect task failed: %v", msgHeader, err)
+				}
+			}()
+			go func() {
+				if err := handleDetectTaskError(&task, DetectServiceInfrastructureError, "上传二进制包出错"); err != nil {
+					logs.Warn("update error information failed: %v", err)
+				}
+			}()
+			go func() {
+				for i := range _const.LowLarkPeople {
+					utils.LarkDingOneInner(_const.LowLarkPeople[i],
+						fmt.Sprintf("%s (created by %v) upload file to detect tool failed: %v", msgHeader, task.Creator, err))
+				}
+			}()
+
 			return
 		}
 		defer response.Body.Close()
+
 		resBody := &bytes.Buffer{}
 		if n, err := resBody.ReadFrom(response.Body); err != nil {
 			logs.Error("%s read form (read: %v) failed: %v", msgHeader, n, err)
 			return
 		}
-		logs.Info("%s response of detect tool when uploading file: %s", msgHeader, string(resBody.Bytes()))
+		logs.Info("%s response of detect tool when uploading file: %s", msgHeader, resBody.Bytes())
 
 		data := make(map[string]interface{})
 		if err := json.Unmarshal(resBody.Bytes(), &data); err != nil {
@@ -149,11 +157,11 @@ func UploadFile(c *gin.Context) {
 			return
 		}
 		if fmt.Sprint(data["success"]) != "1" {
-			if err := updateDetectTaskStatus(database.DB(),
-				task.ID,
-				TaskStatusError); err != nil {
-				logs.Warn("%s update detect task failed: %v", msgHeader, err)
-			}
+			go func() {
+				if err := updateDetectTaskStatus(database.DB(), task.ID, TaskStatusError); err != nil {
+					logs.Warn("%s update detect task failed: %v", msgHeader, err)
+				}
+			}()
 		}
 	}()
 
