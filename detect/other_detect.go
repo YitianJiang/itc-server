@@ -16,6 +16,7 @@ import (
 
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/settings"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
@@ -77,7 +78,7 @@ func NewOtherDetect(c *gin.Context) {
 		errorFormatFile(c)
 		return
 	}
-	url = "http://" + DETECT_URL_PRO + "/apk_post/v2"
+	url = settings.Get().Detect.ToolURL + "/apk_post/v2"
 	//url  = "http://" + Local_URL_PRO + "/apk_post/v2"
 	_tmpDir := "./tmp"
 	exist, err := PathExists(_tmpDir)

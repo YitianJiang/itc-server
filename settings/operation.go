@@ -11,6 +11,7 @@ import (
 // Settings contains all customize settings.
 type Settings struct {
 	Detect struct {
+		ToolURL         string `json:"tool_url"`
 		ToolCallbackURL string `json:"tool_callback_url"`
 	} `json:"detect"`
 	UploadNewDetection struct {

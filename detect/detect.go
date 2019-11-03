@@ -16,30 +16,16 @@ import (
 	"strings"
 	"time"
 
-	"code.byted.org/clientQA/itc-server/settings"
-
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/settings"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"code.byted.org/gopkg/tos"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-)
-
-const (
-	DETECT_URL_DEV = "10.2.209.202:9527"
-	//DETECT_URL_PRO = "10.2.9.226:9527"
-	DETECT_URL_PRO = "10.1.221.188:9527"
-	//test----fj
-	Local_URL_PRO = "10.1.220.99:9527"
-
-	//目前apk检测接口
-	//TEST_DETECT_URL = "http://10.2.9.226:9527/apk_post/v2"
-	//调试，暂时换成本机的ip地址和端口
-	//DETECT_URL_PRO = "10.2.196.119:9527"
 )
 
 // Status of Detect Task
@@ -129,24 +115,15 @@ func UploadFile(c *gin.Context) {
 			errorFormatFile(c)
 			return
 		}
-		if checkItem != "6" {
-			//旧服务url
-			url = "http://" + DETECT_URL_PRO + "/apk_post"
-		} else {
-			//新服务url
-			//url = "http://"+Local_URL_PRO +"/apk_post/v2"
-			url = "http://" + DETECT_URL_PRO + "/apk_post/v2"
-		}
-		//url = "http://" + DETECT_URL_PRO + "/apk_post"
 
+		url = settings.Get().Detect.ToolURL + "/apk_post/v2"
 	} else if platform == "1" {
 		flag := strings.HasSuffix(filename, ".ipa")
 		if !flag {
 			errorFormatFile(c)
 			return
 		}
-		//url = "http://"+Local_URL_PRO+"/ipa_post/v2"
-		url = "http://" + DETECT_URL_PRO + "/ipa_post/v2"
+		url = settings.Get().Detect.ToolURL + "/ipa_post/v2"
 	} else {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "platform参数不合法！",
