@@ -49,9 +49,9 @@ var LARK_MSG_CALL_MAP = make(map[string]interface{})
  */
 func UploadFile(c *gin.Context) {
 
-	nameI, exist := c.Get("username")
+	userName, exist := c.Get("username")
 	if !exist {
-		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("unauthorized user: %v", nameI))
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("unauthorized user: %v", userName))
 		return
 	}
 	//解析上传文件
@@ -72,11 +72,11 @@ func UploadFile(c *gin.Context) {
 	//发送lark消息到个人
 	toLarker := c.DefaultPostForm("toLarker", "")
 	var name string
-	if toLarker == "" {
-		name = nameI.(string)
-	} else {
-		name = nameI.(string) + "," + toLarker
-	}
+	// if toLarker == "" {
+	// 	name = userName.(string)
+	// } else {
+	// 	name = userName.(string) + "," + toLarker
+	// }
 	//发送lark消息到群
 	toGroup := c.DefaultPostForm("toLarkGroupId", "")
 	platform := c.DefaultPostForm("platform", "")
@@ -109,8 +109,13 @@ func UploadFile(c *gin.Context) {
 	}
 
 	var dbDetectModel dal.DetectStruct
-	dbDetectModel.Creator = nameI.(string)
-	dbDetectModel.ToLarker = name
+	dbDetectModel.Creator = userName.(string)
+	// dbDetectModel.ToLarker = name
+	if toLarker == "" {
+		dbDetectModel.ToLarker = userName.(string)
+	} else {
+		dbDetectModel.ToLarker = userName.(string) + "," + toLarker
+	}
 	dbDetectModel.ToGroup = toGroup
 	dbDetectModel.SelfCheckStatus = 0
 	dbDetectModel.Platform, _ = strconv.Atoi(platform)
@@ -129,7 +134,7 @@ func UploadFile(c *gin.Context) {
 		logs.Info("%s start to call detect tool", msgHeader)
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
-		bodyWriter.WriteField("recipients", name)
+		bodyWriter.WriteField("recipients", userName.(string))
 		bodyWriter.WriteField("callback", settings.Get().Detect.ToolCallbackURL)
 		bodyWriter.WriteField("taskID", fmt.Sprint(dbDetectModel.ID))
 		bodyWriter.WriteField("toolIds", checkItem)
