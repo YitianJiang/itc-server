@@ -44,16 +44,8 @@ const (
 
 var LARK_MSG_CALL_MAP = make(map[string]interface{})
 
-/**
- *新建检测任务更新---------fj
- */
 func UploadFile(c *gin.Context) {
 
-	// userName, exist := c.Get("username")
-	// if !exist {
-	// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("unauthorized user: %v", userName))
-	// 	return
-	// }
 	//解析上传文件
 	filepath, filename, ok := getFilesFromRequest(c, "uploadFile", true)
 	if !ok {
@@ -69,56 +61,19 @@ func UploadFile(c *gin.Context) {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid mapping file: %v", mFilename))
 		return
 	}
-	// toLarker := c.DefaultPostForm("toLarker", "")     // Send lark message to person
-	// toGroup := c.DefaultPostForm("toLarkGroupId", "") // Send lark message to group
-	// platform := c.DefaultPostForm("platform", "")
-	// appID := c.DefaultPostForm("appId", "")
-	// if appID == "" {
-	// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid app id(%v)", appID))
-	// 	return
-	// }
+
 	checkItem := c.DefaultPostForm("checkItem", "")
 	if checkItem == "" {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid detect tool type(%v)", checkItem))
 		return
 	}
 
-	//增加回调地址
-	// callBackAddr := c.DefaultPostForm("callBackAddr", "")
-	// skip := c.DefaultPostForm("skipSelfFlag", "")
-	// var extraInfo dal.ExtraStruct
-	// extraInfo.CallBackAddr = callBackAddr
-	// extraInfo.SkipSelfFlag = skip != ""
-
-	// var url string
-	// if (platform == "0") && (strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".aab")) {
-	// 	url = settings.Get().Detect.ToolURL + "/apk_post/v2"
-	// } else if (platform == "1") && strings.HasSuffix(filename, ".ipa") {
-	// 	url = settings.Get().Detect.ToolURL + "/ipa_post/v2"
-	// } else {
-	// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("platform(%v) not match with file(%v)", platform, filename))
-	// 	return
-	// }
-
 	var task dal.DetectStruct
 	if err := checkUploadParameter(&task, c, filename, mFilename); err != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid parameter: %v", err))
 		return
 	}
-	// task.Creator = userName.(string)
-	// if toLarker == "" {
-	// 	task.ToLarker = userName.(string)
-	// } else {
-	// 	task.ToLarker = userName.(string) + "," + toLarker
-	// }
-	// task.ToGroup = toGroup
-	// task.Platform, _ = strconv.Atoi(platform)
-	// task.AppId = appID
 	task.Status = TaskStatusRunning
-	// if callBackAddr != "" || skip != "" {
-	// 	byteExtraInfo, _ := json.Marshal(extraInfo)
-	// 	task.ExtraInfo = string(byteExtraInfo)
-	// }
 	if err := database.InsertDBRecord(database.DB(), &task); err != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("create detect task failed: %v", err))
 		return
