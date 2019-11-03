@@ -49,9 +49,9 @@ var LARK_MSG_CALL_MAP = make(map[string]interface{})
  */
 func UploadFile(c *gin.Context) {
 
-	nameI, f := c.Get("username")
-	if !f {
-		errorReturn(c, "未获取到用户信息！", -1)
+	nameI, exist := c.Get("username")
+	if !exist {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("unauthorized user: %v", nameI))
 		return
 	}
 	//解析上传文件
@@ -79,20 +79,24 @@ func UploadFile(c *gin.Context) {
 	}
 	//发送lark消息到群
 	toGroup := c.DefaultPostForm("toLarkGroupId", "")
-
 	platform := c.DefaultPostForm("platform", "")
-	if platform == "" {
-		logs.Error("缺少platform参数！")
-		errorReturn(c, "缺少platform参数！", -3)
-		return
-	}
 	appId := c.DefaultPostForm("appId", "")
 	if appId == "" {
-		logs.Error("缺少appId参数！")
-		errorReturn(c, "缺少appId参数！", -3)
+		// logs.Error("缺少appId参数！")
+		// errorReturn(c, "缺少appId参数！", -3)
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid app id(%v)", appId))
 		return
 	}
 	checkItem := c.DefaultPostForm("checkItem", "")
+	if checkItem == "" {
+		// c.JSON(http.StatusOK, gin.H{
+		// 	"message":   "未选择二进制检测工具，请直接进行自查",
+		// 	"errorCode": -1,
+		// 	"data":      "未选择二进制检测工具，请直接进行自查",
+		// })
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid detect tool type(%v)", checkItem))
+		return
+	}
 
 	//增加回调地址
 	callBackAddr := c.DefaultPostForm("callBackAddr", "")
@@ -107,7 +111,7 @@ func UploadFile(c *gin.Context) {
 	} else if (platform == platformiOS) && strings.HasSuffix(filename, ".ipa") {
 		url = settings.Get().Detect.ToolURL + "/ipa_post/v2"
 	} else {
-		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid platform: %v", platform))
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("platform(%v) not match with file(%v)", platform, filename))
 		return
 	}
 
@@ -132,14 +136,6 @@ func UploadFile(c *gin.Context) {
 	}
 	dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
-	if checkItem == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "未选择二进制检测工具，请直接进行自查",
-			"errorCode": -1,
-			"data":      "未选择二进制检测工具，请直接进行自查",
-		})
-		return
-	}
 	if dbDetectModelId == 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "数据库插入记录失败，请确认数据库字段与结构体定义一致",
