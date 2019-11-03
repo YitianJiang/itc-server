@@ -113,8 +113,6 @@ func UploadFile(c *gin.Context) {
 	dbDetectModel.ToLarker = name
 	dbDetectModel.ToGroup = toGroup
 	dbDetectModel.SelfCheckStatus = 0
-	dbDetectModel.CreatedAt = time.Now()
-	dbDetectModel.UpdatedAt = time.Now()
 	dbDetectModel.Platform, _ = strconv.Atoi(platform)
 	dbDetectModel.AppId = appID
 	dbDetectModel.Status = -1
