@@ -69,10 +69,8 @@ func UploadFile(c *gin.Context) {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid mapping file: %v", mFilename))
 		return
 	}
-	//发送lark消息到个人
-	toLarker := c.DefaultPostForm("toLarker", "")
-	//发送lark消息到群
-	toGroup := c.DefaultPostForm("toLarkGroupId", "")
+	toLarker := c.DefaultPostForm("toLarker", "")     // Send lark message to person
+	toGroup := c.DefaultPostForm("toLarkGroupId", "") // Send lark message to group
 	platform := c.DefaultPostForm("platform", "")
 	appID := c.DefaultPostForm("appId", "")
 	if appID == "" {
@@ -102,34 +100,34 @@ func UploadFile(c *gin.Context) {
 		return
 	}
 
-	var dbDetectModel dal.DetectStruct
-	dbDetectModel.Creator = userName.(string)
+	var task dal.DetectStruct
+	task.Creator = userName.(string)
 	if toLarker == "" {
-		dbDetectModel.ToLarker = userName.(string)
+		task.ToLarker = userName.(string)
 	} else {
-		dbDetectModel.ToLarker = userName.(string) + "," + toLarker
+		task.ToLarker = userName.(string) + "," + toLarker
 	}
-	dbDetectModel.ToGroup = toGroup
-	dbDetectModel.SelfCheckStatus = 0
-	dbDetectModel.Platform, _ = strconv.Atoi(platform)
-	dbDetectModel.AppId = appID
-	dbDetectModel.Status = TaskStatusRunning
+	task.ToGroup = toGroup
+	task.SelfCheckStatus = 0
+	task.Platform, _ = strconv.Atoi(platform)
+	task.AppId = appID
+	task.Status = TaskStatusRunning
 	if callBackAddr != "" || skip != "" {
 		byteExtraInfo, _ := json.Marshal(extraInfo)
-		dbDetectModel.ExtraInfo = string(byteExtraInfo)
+		task.ExtraInfo = string(byteExtraInfo)
 	}
-	if err := database.InsertDBRecord(database.DB(), &dbDetectModel); err != nil {
+	if err := database.InsertDBRecord(database.DB(), &task); err != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("create detect task failed: %v", err))
 		return
 	}
 	go func() {
-		msgHeader := fmt.Sprintf("task id: %v", dbDetectModel.ID)
+		msgHeader := fmt.Sprintf("task id: %v", task.ID)
 		logs.Info("%s start to call detect tool", msgHeader)
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", userName.(string))
 		bodyWriter.WriteField("callback", settings.Get().Detect.ToolCallbackURL)
-		bodyWriter.WriteField("taskID", fmt.Sprint(dbDetectModel.ID))
+		bodyWriter.WriteField("taskID", fmt.Sprint(task.ID))
 		bodyWriter.WriteField("toolIds", checkItem)
 		fileWriter, err := bodyWriter.CreateFormFile("file", filepath)
 		if err != nil {
@@ -183,14 +181,14 @@ func UploadFile(c *gin.Context) {
 		if err != nil {
 			logs.Error("%s upload file to detect tool failed: %v", msgHeader, err)
 			if err := updateDetectTaskStatus(database.DB(),
-				dbDetectModel.ID,
+				task.ID,
 				TaskStatusError); err != nil {
 				logs.Warn("%s Failed to update detect task", msgHeader)
 			}
-			handleDetectTaskError(&dbDetectModel, DetectServiceInfrastructureError, "上传二进制包出错")
+			handleDetectTaskError(&task, DetectServiceInfrastructureError, "上传二进制包出错")
 			//及时报警
 			for i := range _const.LowLarkPeople {
-				utils.LarkDingOneInner(_const.LowLarkPeople[i], fmt.Sprintf("%s (created by %v) upload file to detect tool failed: %v", msgHeader, dbDetectModel.Creator, err))
+				utils.LarkDingOneInner(_const.LowLarkPeople[i], fmt.Sprintf("%s (created by %v) upload file to detect tool failed: %v", msgHeader, task.Creator, err))
 			}
 			return
 		}
@@ -210,7 +208,7 @@ func UploadFile(c *gin.Context) {
 			}
 			if fmt.Sprint(data["success"]) != "1" {
 				if err := updateDetectTaskStatus(database.DB(),
-					dbDetectModel.ID,
+					task.ID,
 					TaskStatusError); err != nil {
 					logs.Warn("%s update detect task failed: %v", msgHeader, err)
 				}
@@ -227,7 +225,7 @@ func UploadFile(c *gin.Context) {
 		}
 	}()
 
-	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "create detect task success", map[string]interface{}{"taskId": dbDetectModel.ID})
+	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "create detect task success", map[string]interface{}{"taskId": task.ID})
 }
 
 //emptyError标识该文件必须上传，且对文件大小有要求（大于1M）
