@@ -66,10 +66,6 @@ func UploadFile(c *gin.Context) {
 		return
 	}
 	if mFilepath != "" && !strings.HasSuffix(mFilename, ".txt") {
-		// if !strings.HasSuffix(mFilename, ".txt") {
-		// 	errorFormatFile(c)
-		// 	return
-		// }
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid mapping file: %v", mFilename))
 		return
 	}
@@ -775,18 +771,6 @@ func PathExists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, nil
-}
-
-/*
- *错误格式化信息
- */
-func errorFormatFile(c *gin.Context) {
-	logs.Infof("文件格式不正确，请上传正确的文件！")
-	c.JSON(http.StatusOK, gin.H{
-		"message":   "文件格式不正确，请上传正确的文件！",
-		"errorCode": -4,
-		"data":      "文件格式不正确，请上传正确的文件！",
-	})
 }
 
 /*
