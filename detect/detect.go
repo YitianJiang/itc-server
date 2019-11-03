@@ -28,6 +28,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	platformAndorid = "0"
+	platformiOS     = "1"
+)
+
 // Status of Detect Task
 const (
 	TaskStatusError       = -2
@@ -44,7 +49,6 @@ var LARK_MSG_CALL_MAP = make(map[string]interface{})
  */
 func UploadFile(c *gin.Context) {
 
-	url := ""
 	nameI, f := c.Get("username")
 	if !f {
 		errorReturn(c, "未获取到用户信息！", -1)
@@ -94,44 +98,57 @@ func UploadFile(c *gin.Context) {
 	extraInfo.CallBackAddr = callBackAddr
 	extraInfo.SkipSelfFlag = skip != ""
 
-	//检验文件格式是否是apk或者ipa,校验mapping文件格式
-	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".ipa") ||
-		strings.HasSuffix(filename, ".aab")
-	if !flag {
-		errorFormatFile(c)
-		return
-	}
+	// //检验文件格式是否是apk或者ipa,校验mapping文件格式
+	// if !strings.HasSuffix(filename, ".apk") ||
+	// 	!strings.HasSuffix(filename, ".ipa") ||
+	// 	!strings.HasSuffix(filename, ".aab") {
+	// 	errorFormatFile(c)
+	// 	return
+	// }
 	if mFilepath != "" {
-		flagM := strings.HasSuffix(mFilename, ".txt")
-		if !flagM {
+		if !strings.HasSuffix(mFilename, ".txt") {
 			errorFormatFile(c)
 			return
 		}
 	}
-	//检验文件与platform是否匹配，0-安卓apk，1-iOS ipa
-	if platform == "0" {
-		flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".aab")
-		if !flag {
-			errorFormatFile(c)
-			return
-		}
-
+	var url string
+	if (platform == platformAndorid) && (strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".aab")) {
+		// 	errorFormatFile(c)
+		// 	return
+		// }
 		url = settings.Get().Detect.ToolURL + "/apk_post/v2"
-	} else if platform == "1" {
-		flag := strings.HasSuffix(filename, ".ipa")
-		if !flag {
-			errorFormatFile(c)
-			return
-		}
+	} else if (platform == platformiOS) && strings.HasSuffix(filename, ".ipa") {
+		// errorFormatFile(c)
+		// return
+		// }
 		url = settings.Get().Detect.ToolURL + "/ipa_post/v2"
 	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "platform参数不合法！",
-			"errorCode": -5,
-		})
-		logs.Error("platform参数不合法！")
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid platform: %v", platform))
 		return
 	}
+	//检验文件与platform是否匹配，0-安卓apk，1-iOS ipa
+	// if platform == "0" {
+	// 	flag := strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".aab")
+	// 	if !flag {
+	// 		errorFormatFile(c)
+	// 		return
+	// 	}
+	// 	url = settings.Get().Detect.ToolURL + "/apk_post/v2"
+	// } else if platform == "1" {
+	// 	flag := strings.HasSuffix(filename, ".ipa")
+	// 	if !flag {
+	// 		errorFormatFile(c)
+	// 		return
+	// 	}
+	// 	url = settings.Get().Detect.ToolURL + "/ipa_post/v2"
+	// } else {
+	// 	c.JSON(http.StatusOK, gin.H{
+	// 		"message":   "platform参数不合法！",
+	// 		"errorCode": -5,
+	// 	})
+	// 	logs.Error("platform参数不合法！")
+	// 	return
+	// }
 
 	//调试，暂时注释
 	recipients := name
