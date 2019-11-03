@@ -88,41 +88,11 @@ func UploadFile(c *gin.Context) {
 		bodyWriter.WriteField("callback", settings.Get().Detect.ToolCallbackURL)
 		bodyWriter.WriteField("taskID", fmt.Sprint(task.ID))
 		bodyWriter.WriteField("toolIds", checkItem)
-		// fileWriter, err := bodyWriter.CreateFormFile("file", filepath)
-		// if err != nil {
-		// 	logs.Error("%s create form file error: %v", msgHeader, err)
-		// 	return
-		// }
-		// fileHandler, err := os.Open(filepath)
-		// if err != nil {
-		// 	logs.Error("%s os open error: %v", msgHeader, err)
-		// 	return
-		// }
-		// defer fileHandler.Close()
-		// if written, err := io.Copy(fileWriter, fileHandler); err != nil {
-		// 	logs.Error("%s io copy error: %v (written: %v)", msgHeader, err, written)
-		// 	return
-		// }
 		if err := createFormFile(bodyWriter, "file", filepath, &msgHeader); err != nil {
 			logs.Error("%s create form file failed: %v", msgHeader, err)
 			return
 		}
 		if mFilepath != "" {
-			// fileWriterM, errM := bodyWriter.CreateFormFile("mFile", mFilepath)
-			// if errM != nil {
-			// 	logs.Error("%s create form file error: %v", msgHeader, errM)
-			// 	return
-			// }
-			// mFileHeader, err := os.Open(mFilepath)
-			// if err != nil {
-			// 	logs.Error("%s io open failed: %v", msgHeader, err)
-			// 	return
-			// }
-			// defer mFileHeader.Close()
-			// if written, err := io.Copy(fileWriterM, mFileHeader); err != nil {
-			// 	logs.Error("%s io copy error: %v (written: %v)", msgHeader, err, written)
-			// 	return
-			// }
 			if err := createFormFile(bodyWriter, "mFile", mFilepath, &msgHeader); err != nil {
 				logs.Error("%s create form file failed: %v", msgHeader, err)
 				return
@@ -185,17 +155,6 @@ func UploadFile(c *gin.Context) {
 				logs.Warn("%s update detect task failed: %v", msgHeader, err)
 			}
 		}
-		// go func() {
-		// 	// Remove temporary file
-		// 	if err := os.Remove(filepath); err != nil {
-		// 		logs.Warn("%s os remove file(%s) failed: %v", msgHeader, filepath, err)
-		// 	}
-		// 	if mFilepath != "" {
-		// 		if err := os.Remove(mFilepath); err != nil {
-		// 			logs.Warn("%s os remove file(%s) failed: %v", msgHeader, filepath, err)
-		// 		}
-		// 	}
-		// }()
 	}()
 
 	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "create detect task success", map[string]interface{}{"taskId": task.ID})
