@@ -129,7 +129,8 @@ func UploadFile(c *gin.Context) {
 	dbDetectModelId := dbDetectModel.ID
 
 	go func() {
-		logs.Info("Task id: %v start to call detect tool", dbDetectModelId)
+		msgHeader := fmt.Sprintf("task id: %v", dbDetectModel.ID)
+		logs.Info("%s start to call detect tool", msgHeader)
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", name)
@@ -138,38 +139,43 @@ func UploadFile(c *gin.Context) {
 		bodyWriter.WriteField("toolIds", checkItem)
 		fileWriter, err := bodyWriter.CreateFormFile("file", filepath)
 		if err != nil {
-			logs.Error("Task id: %v create form file error: %v", dbDetectModelId, err)
-			errorReturn(c, "二进制包处理错误，请联系相关人员！")
+			logs.Error("%s create form file error: %v", msgHeader, err)
 			return
 		}
 		fileHandler, err := os.Open(filepath)
 		if err != nil {
-			logs.Error("Task id: %v os open error: %v", dbDetectModelId, err)
+			logs.Error("%s os open error: %v", msgHeader, err)
 			return
 		}
 		defer fileHandler.Close()
 		if written, err := io.Copy(fileWriter, fileHandler); err != nil {
-			logs.Error("Task id: %v io copy error: %v (written: %v)", dbDetectModelId, err, written)
+			logs.Error("%s io copy error: %v (written: %v)", msgHeader, err, written)
 			return
 		}
 		if mFilepath != "" {
 			fileWriterM, errM := bodyWriter.CreateFormFile("mFile", mFilepath)
 			if errM != nil {
-				logs.Error("%s", "error writing to buffer: "+errM.Error())
-				errorReturn(c, "mapping文件处理错误，请联系相关人员！")
+				logs.Error("%s create form file error: %v", msgHeader, errM)
 				return
 			}
-			mFileHeader, _ := os.Open(mFilepath)
+			mFileHeader, err := os.Open(mFilepath)
+			if err != nil {
+				logs.Error("%s io open failed: %v", msgHeader, err)
+				return
+			}
 			defer mFileHeader.Close()
-			io.Copy(fileWriterM, mFileHeader)
+			if written, err := io.Copy(fileWriterM, mFileHeader); err != nil {
+				logs.Error("%s io copy error: %v (written: %v)", msgHeader, err, written)
+				return
+			}
 		}
 		contentType := bodyWriter.FormDataContentType()
 		if err := bodyWriter.Close(); err != nil {
-			logs.Error("Task id: %v Writer close error: %v", dbDetectModelId, err)
+			logs.Error("%s Writer close error: %v", msgHeader, err)
 			return
 		}
 
-		logs.Info("Task id: %v URL: %v", dbDetectModelId, url)
+		logs.Info("%s URL: %v", msgHeader, url)
 		tr := http.Transport{
 			DisableKeepAlives:   true,
 			MaxIdleConnsPerHost: 0,
@@ -178,51 +184,57 @@ func UploadFile(c *gin.Context) {
 			Timeout:   600 * time.Second,
 			Transport: &tr,
 		}
-		logs.Notice("Task id: %v Length of buffer: %vB", dbDetectModelId, bodyBuffer.Len())
+		logs.Notice("%s Length of buffer: %vB", msgHeader, bodyBuffer.Len())
 		response, err := toolHttp.Post(url, contentType, bodyBuffer)
 		if err != nil {
-			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",上传二进制包出错,", err.Error())
+			logs.Error("%s upload file to detect tool failed: %v", msgHeader, err)
 			if err := updateDetectTaskStatus(database.DB(),
 				dbDetectModelId,
 				TaskStatusError); err != nil {
-				logs.Warn("Task id: %v Failed to update detect task", dbDetectModelId)
+				logs.Warn("%s Failed to update detect task", msgHeader)
 			}
 			dbDetectModel.ID = dbDetectModelId
 			handleDetectTaskError(&dbDetectModel, DetectServiceInfrastructureError, "上传二进制包出错")
 			//及时报警
-			for _, lark_people := range _const.LowLarkPeople {
-				utils.LarkDingOneInner(lark_people, "上传二进制包出错，请及时进行检查！任务ID："+fmt.Sprint(dbDetectModelId)+",创建人："+dbDetectModel.Creator)
+			for i := range _const.LowLarkPeople {
+				utils.LarkDingOneInner(_const.LowLarkPeople[i], fmt.Sprintf("%s (created by %v) upload file to detect tool failed: %v", msgHeader, dbDetectModel.Creator, err))
 			}
+			return
 		}
 		resBody := &bytes.Buffer{}
 		if response != nil {
 			defer response.Body.Close()
-			_, err = resBody.ReadFrom(response.Body)
-			var data map[string]interface{}
-			data = make(map[string]interface{})
-			json.Unmarshal(resBody.Bytes(), &data)
-			logs.Info("Task id: %v upload detect url's response: %+v", dbDetectModelId, data)
+			if n, err := resBody.ReadFrom(response.Body); err != nil {
+				logs.Error("%s read form (read: %v) failed: %v", msgHeader, n, err)
+				return
+			}
+			logs.Info("%s response of detect tool when uploading file: %s", msgHeader, resBody.Bytes())
+
+			data := make(map[string]interface{})
+			if err := json.Unmarshal(resBody.Bytes(), &data); err != nil {
+				logs.Error("%s unmarshal error: %v", msgHeader, err)
+				return
+			}
 			if fmt.Sprint(data["success"]) != "1" {
 				if err := updateDetectTaskStatus(database.DB(),
 					dbDetectModelId,
 					TaskStatusError); err != nil {
-					logs.Warn("Task id: %v Failed to update detect task", dbDetectModelId)
+					logs.Warn("%s update detect task failed: %v", msgHeader, err)
 				}
 			}
 			//删掉临时文件
-			os.Remove(filepath)
+			if err := os.Remove(filepath); err != nil {
+				logs.Warn("%s os remove file(%s) failed: %v", msgHeader, filepath, err)
+			}
 			if mFilepath != "" {
-				os.Remove(mFilepath)
+				if err := os.Remove(mFilepath); err != nil {
+					logs.Warn("%s os remove file(%s) failed: %v", msgHeader, filepath, err)
+				}
 			}
 		}
 	}()
-	c.JSON(http.StatusOK, gin.H{
-		"message":   "文件上传成功，请等待检测结果通知",
-		"errorCode": 0,
-		"data": map[string]interface{}{
-			"taskId": dbDetectModelId,
-		},
-	})
+
+	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "create detect task success", map[string]interface{}{"taskId": dbDetectModelId})
 }
 
 //emptyError标识该文件必须上传，且对文件大小有要求（大于1M）
