@@ -16,6 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"code.byted.org/clientQA/itc-server/settings"
+
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
@@ -194,11 +196,10 @@ func UploadFile(c *gin.Context) {
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
 		logs.Info("Task id: %v start to call detect tool", dbDetectModelId)
-		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
-		bodyWriter.WriteField("callback", callBackUrl)
+		bodyWriter.WriteField("callback", settings.Get().Detect.ToolCallbackURL)
 		bodyWriter.WriteField("taskID", fmt.Sprint(dbDetectModelId))
 		bodyWriter.WriteField("toolIds", checkItem)
 		fileWriter, err := bodyWriter.CreateFormFile("file", filepath)
@@ -347,6 +348,15 @@ func UpdateDetectInfos(c *gin.Context) {
 		return
 	}
 	logs.Info("Task id: %v Binary detect tool callback", taskId)
+
+	// if c.Request.FormValue("code") != "0" {
+	// 	if err := updateDetectTaskStatus(database.DB(),
+	// 		taskId,
+	// 		TaskStatusError); err != nil {
+	// 		logs.Warn("Task id: %v Failed to update detect task", taskId)
+	// 	}
+	// 	return
+	// }
 
 	if err := updateDetectTaskStatus(database.DB(),
 		taskId, TaskStatusUnconfirm); err != nil {
