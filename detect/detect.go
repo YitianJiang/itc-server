@@ -71,12 +71,6 @@ func UploadFile(c *gin.Context) {
 	}
 	//发送lark消息到个人
 	toLarker := c.DefaultPostForm("toLarker", "")
-	var name string
-	// if toLarker == "" {
-	// 	name = userName.(string)
-	// } else {
-	// 	name = userName.(string) + "," + toLarker
-	// }
 	//发送lark消息到群
 	toGroup := c.DefaultPostForm("toLarkGroupId", "")
 	platform := c.DefaultPostForm("platform", "")
@@ -110,7 +104,6 @@ func UploadFile(c *gin.Context) {
 
 	var dbDetectModel dal.DetectStruct
 	dbDetectModel.Creator = userName.(string)
-	// dbDetectModel.ToLarker = name
 	if toLarker == "" {
 		dbDetectModel.ToLarker = userName.(string)
 	} else {
@@ -120,7 +113,7 @@ func UploadFile(c *gin.Context) {
 	dbDetectModel.SelfCheckStatus = 0
 	dbDetectModel.Platform, _ = strconv.Atoi(platform)
 	dbDetectModel.AppId = appID
-	dbDetectModel.Status = -1
+	dbDetectModel.Status = TaskStatusRunning
 	if callBackAddr != "" || skip != "" {
 		byteExtraInfo, _ := json.Marshal(extraInfo)
 		dbDetectModel.ExtraInfo = string(byteExtraInfo)
