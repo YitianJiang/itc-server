@@ -82,18 +82,11 @@ func UploadFile(c *gin.Context) {
 	platform := c.DefaultPostForm("platform", "")
 	appId := c.DefaultPostForm("appId", "")
 	if appId == "" {
-		// logs.Error("缺少appId参数！")
-		// errorReturn(c, "缺少appId参数！", -3)
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid app id(%v)", appId))
 		return
 	}
 	checkItem := c.DefaultPostForm("checkItem", "")
 	if checkItem == "" {
-		// c.JSON(http.StatusOK, gin.H{
-		// 	"message":   "未选择二进制检测工具，请直接进行自查",
-		// 	"errorCode": -1,
-		// 	"data":      "未选择二进制检测工具，请直接进行自查",
-		// })
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid detect tool type(%v)", checkItem))
 		return
 	}
