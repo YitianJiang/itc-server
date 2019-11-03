@@ -44,6 +44,7 @@ const (
 
 var LARK_MSG_CALL_MAP = make(map[string]interface{})
 
+// UploadFile new only supports apk/ipa/aab format.
 func UploadFile(c *gin.Context) {
 
 	//解析上传文件
@@ -87,51 +88,49 @@ func UploadFile(c *gin.Context) {
 		bodyWriter.WriteField("callback", settings.Get().Detect.ToolCallbackURL)
 		bodyWriter.WriteField("taskID", fmt.Sprint(task.ID))
 		bodyWriter.WriteField("toolIds", checkItem)
-		fileWriter, err := bodyWriter.CreateFormFile("file", filepath)
-		if err != nil {
-			logs.Error("%s create form file error: %v", msgHeader, err)
-			return
-		}
-		fileHandler, err := os.Open(filepath)
-		if err != nil {
-			logs.Error("%s os open error: %v", msgHeader, err)
-			return
-		}
-		defer fileHandler.Close()
-		if written, err := io.Copy(fileWriter, fileHandler); err != nil {
-			logs.Error("%s io copy error: %v (written: %v)", msgHeader, err, written)
+		// fileWriter, err := bodyWriter.CreateFormFile("file", filepath)
+		// if err != nil {
+		// 	logs.Error("%s create form file error: %v", msgHeader, err)
+		// 	return
+		// }
+		// fileHandler, err := os.Open(filepath)
+		// if err != nil {
+		// 	logs.Error("%s os open error: %v", msgHeader, err)
+		// 	return
+		// }
+		// defer fileHandler.Close()
+		// if written, err := io.Copy(fileWriter, fileHandler); err != nil {
+		// 	logs.Error("%s io copy error: %v (written: %v)", msgHeader, err, written)
+		// 	return
+		// }
+		if err := createFormFile(bodyWriter, "file", filepath, &msgHeader); err != nil {
+			logs.Error("%s create form file failed: %v", msgHeader, err)
 			return
 		}
 		if mFilepath != "" {
-			fileWriterM, errM := bodyWriter.CreateFormFile("mFile", mFilepath)
-			if errM != nil {
-				logs.Error("%s create form file error: %v", msgHeader, errM)
-				return
-			}
-			mFileHeader, err := os.Open(mFilepath)
-			if err != nil {
-				logs.Error("%s io open failed: %v", msgHeader, err)
-				return
-			}
-			defer mFileHeader.Close()
-			if written, err := io.Copy(fileWriterM, mFileHeader); err != nil {
-				logs.Error("%s io copy error: %v (written: %v)", msgHeader, err, written)
+			// fileWriterM, errM := bodyWriter.CreateFormFile("mFile", mFilepath)
+			// if errM != nil {
+			// 	logs.Error("%s create form file error: %v", msgHeader, errM)
+			// 	return
+			// }
+			// mFileHeader, err := os.Open(mFilepath)
+			// if err != nil {
+			// 	logs.Error("%s io open failed: %v", msgHeader, err)
+			// 	return
+			// }
+			// defer mFileHeader.Close()
+			// if written, err := io.Copy(fileWriterM, mFileHeader); err != nil {
+			// 	logs.Error("%s io copy error: %v (written: %v)", msgHeader, err, written)
+			// 	return
+			// }
+			if err := createFormFile(bodyWriter, "mFile", mFilepath, &msgHeader); err != nil {
+				logs.Error("%s create form file failed: %v", msgHeader, err)
 				return
 			}
 		}
-		contentType := bodyWriter.FormDataContentType()
 		if err := bodyWriter.Close(); err != nil {
 			logs.Error("%s Writer close error: %v", msgHeader, err)
 			return
-		}
-
-		tr := http.Transport{
-			DisableKeepAlives:   true,
-			MaxIdleConnsPerHost: 0,
-		}
-		toolHttp := &http.Client{
-			Timeout:   600 * time.Second,
-			Transport: &tr,
 		}
 		logs.Notice("%s Length of buffer: %vB", msgHeader, bodyBuffer.Len())
 		var url string
@@ -144,7 +143,14 @@ func UploadFile(c *gin.Context) {
 			logs.Error("%s invalid platform (%v)", msgHeader, task.Platform)
 			return
 		}
-		response, err := toolHttp.Post(url, contentType, bodyBuffer)
+
+		client := &http.Client{
+			Timeout: 600 * time.Second,
+			Transport: &http.Transport{
+				DisableKeepAlives:   true,
+				MaxIdleConnsPerHost: 0},
+		}
+		response, err := client.Post(url, bodyWriter.FormDataContentType(), bodyBuffer)
 		if err != nil {
 			logs.Error("%s upload file to detect tool failed: %v", msgHeader, err)
 			if err := updateDetectTaskStatus(database.DB(),
@@ -159,37 +165,37 @@ func UploadFile(c *gin.Context) {
 			}
 			return
 		}
+		defer response.Body.Close()
 		resBody := &bytes.Buffer{}
-		if response != nil {
-			defer response.Body.Close()
-			if n, err := resBody.ReadFrom(response.Body); err != nil {
-				logs.Error("%s read form (read: %v) failed: %v", msgHeader, n, err)
-				return
-			}
-			logs.Info("%s response of detect tool when uploading file: %s", msgHeader, string(resBody.Bytes()))
+		if n, err := resBody.ReadFrom(response.Body); err != nil {
+			logs.Error("%s read form (read: %v) failed: %v", msgHeader, n, err)
+			return
+		}
+		logs.Info("%s response of detect tool when uploading file: %s", msgHeader, string(resBody.Bytes()))
 
-			data := make(map[string]interface{})
-			if err := json.Unmarshal(resBody.Bytes(), &data); err != nil {
-				logs.Error("%s unmarshal error: %v", msgHeader, err)
-				return
-			}
-			if fmt.Sprint(data["success"]) != "1" {
-				if err := updateDetectTaskStatus(database.DB(),
-					task.ID,
-					TaskStatusError); err != nil {
-					logs.Warn("%s update detect task failed: %v", msgHeader, err)
-				}
-			}
-			//删掉临时文件
-			if err := os.Remove(filepath); err != nil {
-				logs.Warn("%s os remove file(%s) failed: %v", msgHeader, filepath, err)
-			}
-			if mFilepath != "" {
-				if err := os.Remove(mFilepath); err != nil {
-					logs.Warn("%s os remove file(%s) failed: %v", msgHeader, filepath, err)
-				}
+		data := make(map[string]interface{})
+		if err := json.Unmarshal(resBody.Bytes(), &data); err != nil {
+			logs.Error("%s unmarshal error: %v", msgHeader, err)
+			return
+		}
+		if fmt.Sprint(data["success"]) != "1" {
+			if err := updateDetectTaskStatus(database.DB(),
+				task.ID,
+				TaskStatusError); err != nil {
+				logs.Warn("%s update detect task failed: %v", msgHeader, err)
 			}
 		}
+		// go func() {
+		// 	// Remove temporary file
+		// 	if err := os.Remove(filepath); err != nil {
+		// 		logs.Warn("%s os remove file(%s) failed: %v", msgHeader, filepath, err)
+		// 	}
+		// 	if mFilepath != "" {
+		// 		if err := os.Remove(mFilepath); err != nil {
+		// 			logs.Warn("%s os remove file(%s) failed: %v", msgHeader, filepath, err)
+		// 		}
+		// 	}
+		// }()
 	}()
 
 	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "create detect task success", map[string]interface{}{"taskId": task.ID})
@@ -239,6 +245,36 @@ func checkUploadParameter(task *dal.DetectStruct, c *gin.Context, packageFile st
 		}
 		task.ExtraInfo = string(byteExtraInfo)
 	}
+
+	return nil
+}
+
+func createFormFile(w *multipart.Writer, fieldname string, filename string, msgHeader *string) error {
+
+	fileWriterM, err := w.CreateFormFile(fieldname, filename)
+	if err != nil {
+		logs.Error("%s create form file error: %v", *msgHeader, err)
+		return err
+	}
+
+	mFileHeader, err := os.Open(filename)
+	if err != nil {
+		logs.Error("%s io open failed: %v", *msgHeader, err)
+		return err
+	}
+	defer mFileHeader.Close()
+
+	if written, err := io.Copy(fileWriterM, mFileHeader); err != nil {
+		logs.Error("%s io copy error: %v (written: %v)", *msgHeader, err, written)
+		return err
+	}
+
+	// Remove temporary file
+	go func() {
+		if err := os.Remove(filename); err != nil {
+			logs.Warn("%s os remove file(%s) failed: %v", *msgHeader, filename, err)
+		}
+	}()
 
 	return nil
 }
