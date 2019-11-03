@@ -80,9 +80,9 @@ func UploadFile(c *gin.Context) {
 	//发送lark消息到群
 	toGroup := c.DefaultPostForm("toLarkGroupId", "")
 	platform := c.DefaultPostForm("platform", "")
-	appId := c.DefaultPostForm("appId", "")
-	if appId == "" {
-		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid app id(%v)", appId))
+	appID := c.DefaultPostForm("appId", "")
+	if appID == "" {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid app id(%v)", appID))
 		return
 	}
 	checkItem := c.DefaultPostForm("checkItem", "")
@@ -121,7 +121,7 @@ func UploadFile(c *gin.Context) {
 	dbDetectModel.CreatedAt = time.Now()
 	dbDetectModel.UpdatedAt = time.Now()
 	dbDetectModel.Platform, _ = strconv.Atoi(platform)
-	dbDetectModel.AppId = appId
+	dbDetectModel.AppId = appID
 	dbDetectModel.Status = -1
 	if callBackAddr != "" || skip != "" {
 		byteExtraInfo, _ := json.Marshal(extraInfo)
