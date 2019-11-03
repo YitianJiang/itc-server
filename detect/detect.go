@@ -65,6 +65,14 @@ func UploadFile(c *gin.Context) {
 		logs.Error("Failed to parse file %v", filename)
 		return
 	}
+	if mFilepath != "" && !strings.HasSuffix(mFilename, ".txt") {
+		// if !strings.HasSuffix(mFilename, ".txt") {
+		// 	errorFormatFile(c)
+		// 	return
+		// }
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid mapping file: %v", mFilename))
+		return
+	}
 	//发送lark消息到个人
 	toLarker := c.DefaultPostForm("toLarker", "")
 	var name string
@@ -97,12 +105,6 @@ func UploadFile(c *gin.Context) {
 	extraInfo.CallBackAddr = callBackAddr
 	extraInfo.SkipSelfFlag = skip != ""
 
-	if mFilepath != "" {
-		if !strings.HasSuffix(mFilename, ".txt") {
-			errorFormatFile(c)
-			return
-		}
-	}
 	var url string
 	if (platform == platformAndorid) && (strings.HasSuffix(filename, ".apk") || strings.HasSuffix(filename, ".aab")) {
 		url = settings.Get().Detect.ToolURL + "/apk_post/v2"
