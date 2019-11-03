@@ -126,8 +126,6 @@ func UploadFile(c *gin.Context) {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("create detect task failed: %v", err))
 		return
 	}
-	dbDetectModelId := dbDetectModel.ID
-
 	go func() {
 		msgHeader := fmt.Sprintf("task id: %v", dbDetectModel.ID)
 		logs.Info("%s start to call detect tool", msgHeader)
@@ -135,7 +133,7 @@ func UploadFile(c *gin.Context) {
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", name)
 		bodyWriter.WriteField("callback", settings.Get().Detect.ToolCallbackURL)
-		bodyWriter.WriteField("taskID", fmt.Sprint(dbDetectModelId))
+		bodyWriter.WriteField("taskID", fmt.Sprint(dbDetectModel.ID))
 		bodyWriter.WriteField("toolIds", checkItem)
 		fileWriter, err := bodyWriter.CreateFormFile("file", filepath)
 		if err != nil {
@@ -189,11 +187,10 @@ func UploadFile(c *gin.Context) {
 		if err != nil {
 			logs.Error("%s upload file to detect tool failed: %v", msgHeader, err)
 			if err := updateDetectTaskStatus(database.DB(),
-				dbDetectModelId,
+				dbDetectModel.ID,
 				TaskStatusError); err != nil {
 				logs.Warn("%s Failed to update detect task", msgHeader)
 			}
-			dbDetectModel.ID = dbDetectModelId
 			handleDetectTaskError(&dbDetectModel, DetectServiceInfrastructureError, "上传二进制包出错")
 			//及时报警
 			for i := range _const.LowLarkPeople {
@@ -217,7 +214,7 @@ func UploadFile(c *gin.Context) {
 			}
 			if fmt.Sprint(data["success"]) != "1" {
 				if err := updateDetectTaskStatus(database.DB(),
-					dbDetectModelId,
+					dbDetectModel.ID,
 					TaskStatusError); err != nil {
 					logs.Warn("%s update detect task failed: %v", msgHeader, err)
 				}
@@ -234,7 +231,7 @@ func UploadFile(c *gin.Context) {
 		}
 	}()
 
-	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "create detect task success", map[string]interface{}{"taskId": dbDetectModelId})
+	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "create detect task success", map[string]interface{}{"taskId": dbDetectModel.ID})
 }
 
 //emptyError标识该文件必须上传，且对文件大小有要求（大于1M）
@@ -524,7 +521,7 @@ func updateDetectTaskStatus(db *gorm.DB, id interface{}, status int) error {
 
 	if err := db.Debug().Table("tb_binary_detect").Where("id=?", id).
 		Update("status", status).Error; err != nil {
-		logs.Error("Database error: %v", err)
+		logs.Error("database error: %v", err)
 		return err
 	}
 
