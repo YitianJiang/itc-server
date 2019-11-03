@@ -123,24 +123,6 @@ func UploadFile(c *gin.Context) {
 		response, err := client.Post(url, bodyWriter.FormDataContentType(), bodyBuffer)
 		if err != nil {
 			go detectTaskFail(&task, fmt.Sprintf("upload file to detect tool failed: %v", err))
-			// logs.Error("%s upload file to detect tool failed: %v", msgHeader, err)
-			// go func() {
-			// 	if err := updateDetectTaskStatus(database.DB(), task.ID, TaskStatusError); err != nil {
-			// 		logs.Warn("%s update detect task failed: %v", msgHeader, err)
-			// 	}
-			// }()
-			// go func() {
-			// 	if err := handleDetectTaskError(&task, DetectServiceInfrastructureError, "上传二进制包出错"); err != nil {
-			// 		logs.Warn("update error information failed: %v", err)
-			// 	}
-			// }()
-			// go func() {
-			// 	for i := range _const.LowLarkPeople {
-			// 		utils.LarkDingOneInner(_const.LowLarkPeople[i],
-			// 			fmt.Sprintf("%s (created by %v) upload file to detect tool failed: %v", msgHeader, task.Creator, err))
-			// 	}
-			// }()
-
 			return
 		}
 		defer response.Body.Close()
@@ -158,11 +140,6 @@ func UploadFile(c *gin.Context) {
 			return
 		}
 		if fmt.Sprint(data["success"]) != "1" {
-			// go func() {
-			// 	if err := updateDetectTaskStatus(database.DB(), task.ID, TaskStatusError); err != nil {
-			// 		logs.Warn("%s update detect task failed: %v", msgHeader, err)
-			// 	}
-			// }()
 			go detectTaskFail(&task, fmt.Sprintf("detect tool error: %v", err))
 		}
 	}()
