@@ -273,21 +273,6 @@ func (PrivacyHistory) TableName() string {
 	return "tb_privacy_history"
 }
 
-//insert data
-func InsertDetectModel(detectModel DetectStruct) uint {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return 0
-	}
-	defer connection.Close()
-	db := connection.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	if err := db.Create(&detectModel).Error; err != nil {
-		return 0
-	}
-	return detectModel.ID
-}
-
 //update data
 func UpdateDetectModel(detectModel DetectStruct, content DetectContent) error {
 	connection, err := database.GetDBConnection()

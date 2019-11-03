@@ -132,18 +132,7 @@ func UploadFile(c *gin.Context) {
 		return
 	}
 	dbDetectModelId := dbDetectModel.ID
-	// dbDetectModelId := dal.InsertDetectModel(dbDetectModel)
 	//3、调用检测接口，进行二进制检测 && 删掉本地临时文件
-	// if dbDetectModelId == 0 {
-	// c.JSON(http.StatusOK, gin.H{
-	// 	"message":   "数据库插入记录失败，请确认数据库字段与结构体定义一致",
-	// 	"errorCode": -1,
-	// 	"data":      "数据库插入记录失败，请确认数据库字段与结构体定义一致",
-	// })
-	// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf(""))
-	// 	return
-	// }
-	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
 		logs.Info("Task id: %v start to call detect tool", dbDetectModelId)
 		bodyBuffer := &bytes.Buffer{}
