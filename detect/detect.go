@@ -313,8 +313,7 @@ func UpdateDetectTask(c *gin.Context) {
 		return
 	}
 
-	toolId := c.Request.FormValue("tool_ID")
-	toolID, err := strconv.Atoi(toolId)
+	toolID, err := strconv.Atoi(c.Request.FormValue("tool_ID"))
 	if err != nil {
 		logs.Error("%s tool id atoi error: %v", msgHeader, err)
 		return
