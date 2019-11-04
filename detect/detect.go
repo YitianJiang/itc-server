@@ -44,7 +44,7 @@ const (
 
 var LARK_MSG_CALL_MAP = make(map[string]interface{})
 
-// UploadFile new only supports apk/ipa/aab format.
+// UploadFile now only supports apk/ipa/aab format.
 func UploadFile(c *gin.Context) {
 
 	//解析上传文件
