@@ -140,7 +140,7 @@ func UploadFile(c *gin.Context) {
 			return
 		}
 		if fmt.Sprint(data["success"]) != "1" {
-			go detectTaskFail(&task, fmt.Sprintf("detect tool error: %v", err))
+			go detectTaskFail(&task, fmt.Sprintf("detect tool error: %v", data["msg"]))
 		}
 	}()
 
