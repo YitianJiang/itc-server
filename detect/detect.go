@@ -161,8 +161,8 @@ func UploadFile(c *gin.Context) {
 	//2、将相关信息保存至数据库
 	var dbDetectModel dal.DetectStruct
 	dbDetectModel.Creator = nameI.(string)
-	dbDetectModel.ToLarker = name
-	dbDetectModel.ToGroup = toGroup
+	dbDetectModel.ToLarker = removeDuplicate(strings.Split(toLarker, ","))
+	dbDetectModel.ToGroup = removeDuplicate(strings.Split(toGroup, ","))
 	dbDetectModel.SelfCheckStatus = 0
 	dbDetectModel.CreatedAt = time.Now()
 	dbDetectModel.UpdatedAt = time.Now()
@@ -288,6 +288,22 @@ func UploadFile(c *gin.Context) {
 			"taskId": dbDetectModelId,
 		},
 	})
+}
+
+func removeDuplicate(s []string) string {
+
+	m := make(map[string]bool)
+	for i := range s {
+		if _, ok := m[s[i]]; !ok {
+			m[s[i]] = false
+		}
+	}
+
+	var result string
+	for k := range m {
+		result += k + ","
+	}
+	return result[:len(result)-1]
 }
 
 //emptyError标识该文件必须上传，且对文件大小有要求（大于1M）
