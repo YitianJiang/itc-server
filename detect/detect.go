@@ -161,7 +161,7 @@ func UploadFile(c *gin.Context) {
 	//2、将相关信息保存至数据库
 	var dbDetectModel dal.DetectStruct
 	dbDetectModel.Creator = nameI.(string)
-	dbDetectModel.ToLarker = removeDuplicate(strings.Split(toLarker, ","))
+	dbDetectModel.ToLarker = removeDuplicate(strings.Split(name, ","))
 	dbDetectModel.ToGroup = removeDuplicate(strings.Split(toGroup, ","))
 	dbDetectModel.SelfCheckStatus = 0
 	dbDetectModel.CreatedAt = time.Now()
