@@ -325,7 +325,7 @@ func UpdateDetectInfos(c *gin.Context) {
 	//消息通知条数--检测项+自查项
 	var unConfirms int
 	var unSelfCheck int
-	if task.Platform == 0 {
+	if task.Platform == platformAndorid {
 		taskID, err := strconv.Atoi(taskId)
 		if err != nil {
 			ReturnMsg(c, FAILURE, fmt.Sprintf("invalid task id: %v(%v)", err, taskId))
@@ -346,7 +346,7 @@ func UpdateDetectInfos(c *gin.Context) {
 		}
 	}
 	//ios新检测内容存储
-	if task.Platform == 1 {
+	if task.Platform == platformiOS {
 		task_id, _ := strconv.Atoi(taskId)
 		tool_id, _ := strconv.Atoi(toolId)
 		//旧表更新
