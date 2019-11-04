@@ -159,9 +159,9 @@ func checkUploadParameter(task *dal.DetectStruct, c *gin.Context, packageFile st
 	if toLarker == "" {
 		task.ToLarker = userName.(string)
 	} else {
-		task.ToLarker = userName.(string) + "," + toLarker
+		task.ToLarker = removeDuplicate(strings.Split(userName.(string)+","+toLarker, ","))
 	}
-	task.ToGroup = c.DefaultPostForm("toLarkGroupId", "") // Send lark message to group
+	task.ToGroup = removeDuplicate(strings.Split(c.DefaultPostForm("toLarkGroupId", ""), ",")) // Send lark message to group
 
 	platform := c.DefaultPostForm("platform", "")
 	var err error
@@ -244,6 +244,22 @@ func detectTaskFail(task *dal.DetectStruct, detail string) {
 			utils.LarkDingOneInner(_const.LowLarkPeople[i], msgHeader+detail)
 		}
 	}()
+}
+
+func removeDuplicate(s []string) string {
+
+	m := make(map[string]bool)
+	for i := range s {
+		if _, ok := m[s[i]]; !ok {
+			m[s[i]] = false
+		}
+	}
+
+	var result string
+	for k := range m {
+		result += k + ","
+	}
+	return result[:len(result)-1]
 }
 
 //emptyError标识该文件必须上传，且对文件大小有要求（大于1M）
