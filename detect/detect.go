@@ -299,7 +299,6 @@ func getFilesFromRequest(c *gin.Context, fieldName string, emptyError bool) (str
 func UpdateDetectTask(c *gin.Context) {
 
 	msgHeader := "update detect task"
-	// taskId := c.Request.FormValue("task_ID")
 	task, err := getExactDetectTask(database.DB(),
 		map[string]interface{}{"id": c.Request.FormValue("task_ID")})
 	if err != nil {
@@ -460,12 +459,10 @@ func UpdateDetectTask(c *gin.Context) {
 	}
 	// 此处测试时注释掉
 	larkUrl := fmt.Sprintf(settings.Get().Detect.TaskURL, task.AppId, task.ID)
-	// larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
 	for _, creator := range larkList {
 		utils.UserInGroup(creator)                                                                                      //将用户拉入预审平台群
 		res := utils.LarkDetectResult(task.ID, creator, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, false) //new lark卡片通知形式
 		logs.Info("%s creator: %s lark message result: %v", msgHeader, creator, res)
-		// logs.Info("task id: " + taskId + ", creator: " + creator + ", lark message result: " + fmt.Sprint(res))
 	}
 	//发给群消息沿用旧的机器人，给群ID对应群发送消息
 	toGroupID := task.ToGroup
