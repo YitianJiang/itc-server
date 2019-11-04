@@ -16,7 +16,7 @@ func InitRouter(r *ginex.Engine) {
 	r.GET("/settings", settings.Show)
 	api := r.GroupEX("/api")
 	//二进制包检测回调接口
-	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
+	r.POST("/updateDetectInfos", detect.UpdateDetectTask)
 	r.POST("/updateOtherDetectInfos", detect.UpdateOtherDetectInfos)
 
 	//获取鉴权接口

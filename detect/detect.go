@@ -292,10 +292,11 @@ func getFilesFromRequest(c *gin.Context, fieldName string, emptyError bool) (str
 	return filepath, filename, true
 }
 
-/**
- *更新检测包的检测信息_v2——----------fj
- */
-func UpdateDetectInfos(c *gin.Context) {
+// UpdateDetectTask parses the response from the detect tool and stores it
+// into database, then notifies the person or group who cares about the task.
+// It makes no sense to send response to the detect tool
+// because the detect tool doesn't care about the it at all.
+func UpdateDetectTask(c *gin.Context) {
 
 	taskId := c.Request.FormValue("task_ID")
 	if taskId == "" {
