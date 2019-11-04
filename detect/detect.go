@@ -298,16 +298,18 @@ func getFilesFromRequest(c *gin.Context, fieldName string, emptyError bool) (str
 // because the detect tool doesn't care about the it at all.
 func UpdateDetectTask(c *gin.Context) {
 
+	msgHeader := "update detect task"
 	taskId := c.Request.FormValue("task_ID")
 	if taskId == "" {
-		ReturnMsg(c, FAILURE, "Miss task_ID")
+		logs.Error("%s miss task id", msgHeader)
 		return
 	}
-	logs.Info("Task id: %v Binary detect tool callback", taskId)
+	msgHeader += fmt.Sprintf(" (task id: %v)", taskId)
+	logs.Info("%s detect tool callback...", msgHeader)
 
 	if err := updateDetectTaskStatus(database.DB(),
 		taskId, TaskStatusUnconfirm); err != nil {
-		logs.Error("Task id: %v Failed to update detect task", taskId)
+		logs.Error("%s update status failed: %v", msgHeader, err)
 		return
 	}
 
@@ -319,41 +321,56 @@ func UpdateDetectTask(c *gin.Context) {
 
 	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
 	if err != nil {
-		logs.Error("Task id: %v Failed to get detect task", taskId)
+		logs.Error("%s get detect task failed: %v", msgHeader, err)
 		return
 	}
 
+	taskID, err := strconv.Atoi(taskId)
+	if err != nil {
+		// ReturnMsg(c, FAILURE, fmt.Sprintf("invalid task id: %v(%v)", err, taskId))
+		logs.Error("%s task id atoi error: %v", msgHeader, err)
+		return
+	}
+	toolID, err := strconv.Atoi(toolId)
+	if err != nil {
+		// ReturnMsg(c, FAILURE, fmt.Sprintf("Task id: %v invalid tool id: %v(%v)", taskId, err, toolId))
+		logs.Error("%s tool id atoi error: %v", msgHeader, err)
+		return
+	}
 	//消息通知条数--检测项+自查项
 	var unConfirms int
 	var unSelfCheck int
 	if task.Platform == platformAndorid {
-		taskID, err := strconv.Atoi(taskId)
-		if err != nil {
-			ReturnMsg(c, FAILURE, fmt.Sprintf("invalid task id: %v(%v)", err, taskId))
-			return
+		// taskID, err := strconv.Atoi(taskId)
+		// if err != nil {
+		// 	ReturnMsg(c, FAILURE, fmt.Sprintf("invalid task id: %v(%v)", err, taskId))
+		// 	return
 
-		}
-		toolID, err := strconv.Atoi(toolId)
-		if err != nil {
-			ReturnMsg(c, FAILURE, fmt.Sprintf("Task id: %v invalid tool id: %v(%v)", taskId, err, toolId))
-			return
-		}
+		// }
+		// toolID, err := strconv.Atoi(toolId)
+		// if err != nil {
+		// 	ReturnMsg(c, FAILURE, fmt.Sprintf("Task id: %v invalid tool id: %v(%v)", taskId, err, toolId))
+		// 	return
+		// }
 		var errApk error
-		go logs.Debug("Task id: %v json content: %v", taskId, jsonContent)
+		// go logs.Debug("Task id: %v json content: %v", taskId, jsonContent)
 		errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, taskID, toolID)
 		if errApk != nil {
-			ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to update APK detect reuslt: %v", errApk))
+			// ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to update APK detect reuslt: %v", errApk))
+			logs.Error("%s update apk detect result failed: %v", msgHeader, err)
 			return
 		}
 	}
 	//ios新检测内容存储
 	if task.Platform == platformiOS {
-		task_id, _ := strconv.Atoi(taskId)
-		tool_id, _ := strconv.Atoi(toolId)
+		// task_id, _ := strconv.Atoi(taskId)
+		// tool_id, _ := strconv.Atoi(toolId)
 		//旧表更新
 		var detectContent dal.DetectContent
-		detectContent.TaskId = task_id
-		detectContent.ToolId = tool_id
+		// detectContent.TaskId = task_id
+		// detectContent.ToolId = tool_id
+		detectContent.TaskId = taskID
+		detectContent.ToolId = toolID
 		detectContent.HtmlContent = htmlContent
 		detectContent.JsonContent = jsonContent
 		detectContent.CreatedAt = time.Now()
@@ -362,18 +379,20 @@ func UpdateDetectTask(c *gin.Context) {
 		task.AppVersion = appVersion
 		task.UpdatedAt = time.Now()
 		if err := dal.UpdateDetectModel(*task, detectContent); err != nil {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "数据库更新检测信息失败",
-				"errorCode": -3,
-				"data":      "数据库更新检测信息失败",
-			})
+			// c.JSON(http.StatusOK, gin.H{
+			// 	"message":   "数据库更新检测信息失败",
+			// 	"errorCode": -3,
+			// 	"data":      "数据库更新检测信息失败",
+			// })
+			logs.Error("%s update error: %v", msgHeader, err)
 			return
 		}
 		//新表jsonContent分类存储
-		taskId, _ := strconv.Atoi(taskId)
-		toolId, _ := strconv.Atoi(toolId)
+		// taskId, _ := strconv.Atoi(taskId)
+		// toolId, _ := strconv.Atoi(toolId)
 		appId, _ := strconv.Atoi(task.AppId)
-		res, warnFlag, detectNo := iOSResultClassify(taskId, toolId, appId, jsonContent) //检测结果处理
+		// res, warnFlag, detectNo := iOSResultClassify(taskId, toolId, appId, jsonContent) //检测结果处理
+		res, warnFlag, detectNo := iOSResultClassify(taskID, toolID, appId, jsonContent) //检测结果处理
 		unConfirms = detectNo
 		if res == false {
 			logs.Error("iOS 新增new detect content失败！！！") //防止影响现有用户，出错后暂不return
@@ -381,11 +400,12 @@ func UpdateDetectTask(c *gin.Context) {
 		//iOS付费相关黑名单及时报警
 		if res && warnFlag {
 			tips := "Notice: " + task.AppName + " " + task.AppVersion + " iOS包完成二进制检测，检测黑名单中itms-services不为空，请及时关注！！！！\n"
-			larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + strconv.Itoa(toolId) + "&showItcDetail=1&itcTaskId=" + strconv.Itoa(taskId)
+			// larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + strconv.Itoa(toolId) + "&showItcDetail=1&itcTaskId=" + strconv.Itoa(taskId)
 			//tips += "地址链接：" + larkUrl
 			for _, lark_people := range _const.MiddleLarkPeople {
 				//utils.LarkDingOneInner(lark_people, tips)
-				utils.LarkDingOneInnerWithUrl(lark_people, tips, "点击跳转检测详情", larkUrl)
+				// utils.LarkDingOneInnerWithUrl(lark_people, tips, "点击跳转检测详情", larkUrl)
+				utils.LarkDingOneInnerWithUrl(lark_people, tips, "点击跳转检测详情", fmt.Sprintf(settings.Get().Detect.TaskURL, task.AppId, taskID))
 			}
 		}
 
@@ -394,7 +414,8 @@ func UpdateDetectTask(c *gin.Context) {
 		json.Unmarshal([]byte(task.ExtraInfo), &extra)
 		skip := extra.SkipSelfFlag
 		if !skip {
-			isRight, selfNum := GetIOSSelfNum(appId, taskId)
+			// isRight, selfNum := GetIOSSelfNum(appId, taskId)
+			isRight, selfNum := GetIOSSelfNum(appId, taskID)
 			if isRight {
 				unSelfCheck = selfNum
 			}
