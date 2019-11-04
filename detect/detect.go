@@ -300,10 +300,6 @@ func UpdateDetectTask(c *gin.Context) {
 
 	msgHeader := "update detect task"
 	taskId := c.Request.FormValue("task_ID")
-	// if taskId == "" {
-	// 	logs.Error("%s miss task id", msgHeader)
-	// 	return
-	// }
 	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
 	if err != nil {
 		logs.Error("%s get detect task failed: %v", msgHeader, err)
@@ -319,11 +315,6 @@ func UpdateDetectTask(c *gin.Context) {
 	}
 
 	toolId := c.Request.FormValue("tool_ID")
-	// taskID, err := strconv.Atoi(taskId)
-	// if err != nil {
-	// 	logs.Error("%s task id atoi error: %v", msgHeader, err)
-	// 	return
-	// }
 	toolID, err := strconv.Atoi(toolId)
 	if err != nil {
 		logs.Error("%s tool id atoi error: %v", msgHeader, err)
@@ -340,7 +331,6 @@ func UpdateDetectTask(c *gin.Context) {
 	var unSelfCheck int
 	if task.Platform == platformAndorid {
 		var errApk error
-		// errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, taskID, toolID)
 		errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, int(task.ID), toolID)
 		if errApk != nil {
 			logs.Error("%s update apk detect result failed: %v", msgHeader, err)
@@ -351,7 +341,6 @@ func UpdateDetectTask(c *gin.Context) {
 	if task.Platform == platformiOS {
 		//旧表更新
 		var detectContent dal.DetectContent
-		// detectContent.TaskId = taskID
 		detectContent.TaskId = int(task.ID)
 		detectContent.ToolId = toolID
 		detectContent.HtmlContent = htmlContent
@@ -364,7 +353,6 @@ func UpdateDetectTask(c *gin.Context) {
 		}
 		//新表jsonContent分类存储
 		appId, _ := strconv.Atoi(task.AppId)
-		// res, warnFlag, detectNo := iOSResultClassify(taskID, toolID, appId, jsonContent) //检测结果处理
 		res, warnFlag, detectNo := iOSResultClassify(int(task.ID), toolID, appId, jsonContent) //检测结果处理
 		unConfirms = detectNo
 		if res == false {
@@ -383,7 +371,6 @@ func UpdateDetectTask(c *gin.Context) {
 		json.Unmarshal([]byte(task.ExtraInfo), &extra)
 		skip := extra.SkipSelfFlag
 		if !skip {
-			// isRight, selfNum := GetIOSSelfNum(appId, taskID)
 			isRight, selfNum := GetIOSSelfNum(appId, int(task.ID))
 			if isRight {
 				unSelfCheck = selfNum
@@ -448,9 +435,6 @@ func UpdateDetectTask(c *gin.Context) {
 		duration = 10 * time.Minute
 	}
 	ticker = time.NewTicker(duration)
-	// var key string
-	// key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
-	// LARK_MSG_CALL_MAP[key] = ticker
 	LARK_MSG_CALL_MAP[fmt.Sprintf("%v_%v_%v_%v", task.ID, task.AppId, task.AppVersion, toolID)] = ticker
 	//获取BM负责人
 	project_id := ""
@@ -508,8 +492,6 @@ func UpdateDetectTask(c *gin.Context) {
 			}
 		}
 	}
-
-	//go alertLarkMsgCronNew(*ticker, creator, message, taskId, toolId)
 }
 
 func updateDetectTaskStatus(db *gorm.DB, id interface{}, status int) error {
