@@ -403,32 +403,30 @@ func updateDetectTaskStatus(db *gorm.DB, id interface{}, status int) error {
 }
 
 func notifyDeteckTaskResult(task *dal.DetectStruct, msgHeader *string, unConfirms int, unSelfCheck int) {
-	logs.Notice("%s nofify the result of detect task", msgHeader)
 
-	//进行lark消息提醒
 	var err error
 	task, err = getExactDetectTask(database.DB(), map[string]interface{}{"id": task.ID})
 	if err != nil {
-		logs.Error("%s get detect task failed: %v", msgHeader, err)
+		logs.Error("%s get detect task failed: %v", *msgHeader, err)
 		return
 	}
-	var message string
-	creators := task.ToLarker
-	larkList := strings.Split(creators, ",")
-	message = "你好，" + task.AppName + " " + task.AppVersion
-	platform := task.Platform
-	var os_code string
-	if platform == 0 {
-		message += " Android包"
-		os_code = "1"
-	} else {
-		message += " iOS包"
-		os_code = "2"
+
+	message := "你好，包检测完成。\n应用名称：%s\n版本号：%s\n操作系统：%s"
+	var os string
+	switch task.Platform {
+	case platformAndorid:
+		// message += " Android包"
+		message = fmt.Sprintf(message, task.AppName, task.AppVersion, "Android")
+		os = "1"
+	case platformiOS:
+		// message += " iOS包"
+		message = fmt.Sprintf(message, task.AppName, task.AppVersion, "iOS")
+		os = "2"
+	default:
+		// message += " unknow"
+		message = fmt.Sprintf(message, task.AppName, task.AppVersion, "unknow")
 	}
 
-	message += "  检测已经完成"
-
-	appId := task.AppId
 	// appIdInt, _ := strconv.Atoi(appId)
 	// var config *dal.LarkMsgTimer
 	// config = dal.QueryLarkMsgTimerByAppId(appIdInt)
@@ -465,12 +463,12 @@ func notifyDeteckTaskResult(task *dal.DetectStruct, msgHeader *string, unConfirm
 	// ticker = time.NewTicker(duration)
 	// LARK_MSG_CALL_MAP[fmt.Sprintf("%v_%v_%v_%v", task.ID, task.AppId, task.AppVersion, toolID)] = ticker
 	//获取BM负责人
-	project_id := ""
-	qa_bm := ""
-	rd_bm := ""
-	if p, ok := _const.AppVersionProject[appId]; ok {
+	var project_id string
+	var qa_bm string
+	var rd_bm string
+	if p, ok := _const.AppVersionProject[task.AppId]; ok {
 		project_id = p
-		rd, qa := utils.GetVersionBMInfo(appId, project_id, task.AppVersion, os_code)
+		rd, qa := utils.GetVersionBMInfo(task.AppId, project_id, task.AppVersion, os)
 		rd_id := utils.GetUserOpenId(rd + "@bytedance.com")
 		if rd_id != "" {
 			rd_info := utils.GetUserAllInfo(rd_id)
@@ -487,10 +485,10 @@ func notifyDeteckTaskResult(task *dal.DetectStruct, msgHeader *string, unConfirm
 		}
 	}
 	larkUrl := fmt.Sprintf(settings.Get().Detect.TaskURL, task.AppId, task.ID)
-	for _, creator := range larkList {
+	for _, creator := range strings.Split(task.ToLarker, ",") {
 		utils.UserInGroup(creator)                                                                                      //将用户拉入预审平台群
 		res := utils.LarkDetectResult(task.ID, creator, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, false) //new lark卡片通知形式
-		logs.Info("%s creator: %s lark message result: %v", msgHeader, creator, res)
+		logs.Info("%s creator: %s lark message result: %v", *msgHeader, creator, res)
 	}
 	//发给群消息沿用旧的机器人，给群ID对应群发送消息
 	toGroupID := task.ToGroup
@@ -499,12 +497,10 @@ func notifyDeteckTaskResult(task *dal.DetectStruct, msgHeader *string, unConfirm
 		groupArr := strings.Split(group, ",")
 		for _, group_id := range groupArr {
 			to_lark_group := strings.Trim(group_id, " ")
-			// 新样式
 			if utils.LarkDetectResult(task.ID, to_lark_group, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, true) == false {
 				message += message + larkUrl
 				utils.LarkGroup(message, to_lark_group)
 			}
-
 		}
 	}
 
