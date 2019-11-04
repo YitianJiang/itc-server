@@ -304,15 +304,6 @@ func UpdateDetectInfos(c *gin.Context) {
 	}
 	logs.Info("Task id: %v Binary detect tool callback", taskId)
 
-	// if c.Request.FormValue("code") != "0" {
-	// 	if err := updateDetectTaskStatus(database.DB(),
-	// 		taskId,
-	// 		TaskStatusError); err != nil {
-	// 		logs.Warn("Task id: %v Failed to update detect task", taskId)
-	// 	}
-	// 	return
-	// }
-
 	if err := updateDetectTaskStatus(database.DB(),
 		taskId, TaskStatusUnconfirm); err != nil {
 		logs.Error("Task id: %v Failed to update detect task", taskId)
