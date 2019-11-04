@@ -299,8 +299,9 @@ func getFilesFromRequest(c *gin.Context, fieldName string, emptyError bool) (str
 func UpdateDetectTask(c *gin.Context) {
 
 	msgHeader := "update detect task"
-	taskId := c.Request.FormValue("task_ID")
-	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
+	// taskId := c.Request.FormValue("task_ID")
+	task, err := getExactDetectTask(database.DB(),
+		map[string]interface{}{"id": c.Request.FormValue("task_ID")})
 	if err != nil {
 		logs.Error("%s get detect task failed: %v", msgHeader, err)
 		return
@@ -308,8 +309,7 @@ func UpdateDetectTask(c *gin.Context) {
 	msgHeader += fmt.Sprintf(" (task id: %v)", task.ID)
 	logs.Info("%s detect tool callback...", msgHeader)
 
-	if err := updateDetectTaskStatus(database.DB(),
-		taskId, TaskStatusUnconfirm); err != nil {
+	if err := updateDetectTaskStatus(database.DB(), task.ID, TaskStatusUnconfirm); err != nil {
 		logs.Error("%s update status failed: %v", msgHeader, err)
 		return
 	}
@@ -459,11 +459,13 @@ func UpdateDetectTask(c *gin.Context) {
 		}
 	}
 	// 此处测试时注释掉
-	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
+	larkUrl := fmt.Sprintf(settings.Get().Detect.TaskURL, task.AppId, task.ID)
+	// larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
 	for _, creator := range larkList {
-		utils.UserInGroup(creator)                                                                                     //将用户拉入预审平台群
-		res := utils.LarkDetectResult(taskId, creator, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, false) //new lark卡片通知形式
-		logs.Info("task id: " + taskId + ", creator: " + creator + ", lark message result: " + fmt.Sprint(res))
+		utils.UserInGroup(creator)                                                                                      //将用户拉入预审平台群
+		res := utils.LarkDetectResult(task.ID, creator, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, false) //new lark卡片通知形式
+		logs.Info("%s creator: %s lark message result: %v", msgHeader, creator, res)
+		// logs.Info("task id: " + taskId + ", creator: " + creator + ", lark message result: " + fmt.Sprint(res))
 	}
 	//发给群消息沿用旧的机器人，给群ID对应群发送消息
 	toGroupID := task.ToGroup
@@ -473,7 +475,7 @@ func UpdateDetectTask(c *gin.Context) {
 		for _, group_id := range groupArr {
 			to_lark_group := strings.Trim(group_id, " ")
 			// 新样式
-			if utils.LarkDetectResult(taskId, to_lark_group, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, true) == false {
+			if utils.LarkDetectResult(task.ID, to_lark_group, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, true) == false {
 				message += message + larkUrl
 				utils.LarkGroup(message, to_lark_group)
 			}
