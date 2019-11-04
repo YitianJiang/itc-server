@@ -31,7 +31,7 @@ type detectionBasic struct {
 
 // If the type is "敏感方法", the key is equal to className.methodName
 type detectionDetail struct {
-	DetectConfigID uint64         `json:"configid"`
+	DetectConfigID int64          `json:"configid"`
 	ClassName      string         `json:"className"`
 	MethodName     string         `json:"methodName"`
 	Key            string         `json:"key"`
@@ -71,7 +71,7 @@ type NewDetection struct {
 	RDEmail        string    `gorm:"column:rd_email"`
 	CommitID       string    `gorm:"column:commit_id"`
 	Branch         string    `gorm:"column:branch"`
-	DetectConfigID uint64    `gorm:"column:detect_config_id"`
+	DetectConfigID int64     `gorm:"column:detect_config_id"`
 	Key            string    `gorm:"column:key_name"`
 	Description    string    `gorm:"column:description"`
 	Type           string    `gorm:"column:type"`
