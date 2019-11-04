@@ -235,7 +235,7 @@ func detectTaskFail(task *dal.DetectStruct, detail string) {
 		}
 	}()
 	go func() {
-		if err := handleDetectTaskError(task, DetectServiceInfrastructureError, "上传二进制包出错"); err != nil {
+		if err := handleDetectTaskError(task, DetectServiceInfrastructureError, detail); err != nil {
 			logs.Warn("%s update error information failed: %v", msgHeader, err)
 		}
 	}()
