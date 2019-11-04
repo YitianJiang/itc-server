@@ -298,16 +298,13 @@ func getFilesFromRequest(c *gin.Context, fieldName string, emptyError bool) (str
 // because the detect tool doesn't care about the it at all.
 func UpdateDetectTask(c *gin.Context) {
 
-	msgHeader := "update detect task"
+	msgHeader := fmt.Sprintf("update detect task (task id: %v)", c.Request.FormValue("task_ID"))
 	task, err := getExactDetectTask(database.DB(),
 		map[string]interface{}{"id": c.Request.FormValue("task_ID")})
 	if err != nil {
 		logs.Error("%s get detect task failed: %v", msgHeader, err)
 		return
 	}
-	msgHeader += fmt.Sprintf(" (task id: %v)", task.ID)
-	logs.Info("%s detect tool callback...", msgHeader)
-
 	if err := updateDetectTaskStatus(database.DB(), task.ID, TaskStatusUnconfirm); err != nil {
 		logs.Error("%s update status failed: %v", msgHeader, err)
 		return
@@ -323,7 +320,6 @@ func UpdateDetectTask(c *gin.Context) {
 	appName := c.Request.FormValue("appName")
 	appVersion := c.Request.FormValue("appVersion")
 	htmlContent := c.Request.FormValue("content")
-
 	//消息通知条数--检测项+自查项
 	var unConfirms int
 	var unSelfCheck int
@@ -376,7 +372,25 @@ func UpdateDetectTask(c *gin.Context) {
 		}
 	}
 
+	go notifyDeteckTaskResult(task, &msgHeader, unConfirms, unSelfCheck)
+}
+
+func updateDetectTaskStatus(db *gorm.DB, id interface{}, status int) error {
+
+	if err := db.Debug().Table("tb_binary_detect").Where("id=?", id).
+		Update("status", status).Error; err != nil {
+		logs.Error("database error: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func notifyDeteckTaskResult(task *dal.DetectStruct, msgHeader *string, unConfirms int, unSelfCheck int) {
+	logs.Notice("%s nofify the result of detect task", msgHeader)
+
 	//进行lark消息提醒
+	var err error
 	task, err = getExactDetectTask(database.DB(), map[string]interface{}{"id": task.ID})
 	if err != nil {
 		logs.Error("%s get detect task failed: %v", msgHeader, err)
@@ -399,41 +413,41 @@ func UpdateDetectTask(c *gin.Context) {
 	message += "  检测已经完成"
 
 	appId := task.AppId
-	appIdInt, _ := strconv.Atoi(appId)
-	var config *dal.LarkMsgTimer
-	config = dal.QueryLarkMsgTimerByAppId(appIdInt)
-	alterType := 0
-	var interval int
-	if config == nil { //如果未进行消息提醒设置，则默认10分钟提醒一次
-		logs.Info("采用默认10分钟频率进行提醒")
-		alterType = 1
-		interval = 10
-	} else {
-		logs.Info("采用设置的频率进行提醒")
-		alterType = config.Type
-		interval = config.MsgInterval
-	}
-	var ticker *time.Ticker
-	var duration time.Duration
-	switch alterType {
-	case 0:
-		logs.Info("提醒方式为秒")
-		duration = time.Duration(interval) * time.Second
-	case 1:
-		logs.Info("提醒方式为分钟")
-		duration = time.Duration(interval) * time.Minute
-	case 2:
-		logs.Info("提醒方式为小时")
-		duration = time.Duration(interval) * time.Hour
-	case 3:
-		logs.Info("提醒方式为天")
-		duration = time.Duration(interval) * time.Duration(24) * time.Hour
-	default:
-		logs.Info("提醒方式为分钟")
-		duration = 10 * time.Minute
-	}
-	ticker = time.NewTicker(duration)
-	LARK_MSG_CALL_MAP[fmt.Sprintf("%v_%v_%v_%v", task.ID, task.AppId, task.AppVersion, toolID)] = ticker
+	// appIdInt, _ := strconv.Atoi(appId)
+	// var config *dal.LarkMsgTimer
+	// config = dal.QueryLarkMsgTimerByAppId(appIdInt)
+	// alterType := 0
+	// var interval int
+	// if config == nil { //如果未进行消息提醒设置，则默认10分钟提醒一次
+	// 	logs.Info("采用默认10分钟频率进行提醒")
+	// 	alterType = 1
+	// 	interval = 10
+	// } else {
+	// 	logs.Info("采用设置的频率进行提醒")
+	// 	alterType = config.Type
+	// 	interval = config.MsgInterval
+	// }
+	// var ticker *time.Ticker
+	// var duration time.Duration
+	// switch alterType {
+	// case 0:
+	// 	logs.Info("提醒方式为秒")
+	// 	duration = time.Duration(interval) * time.Second
+	// case 1:
+	// 	logs.Info("提醒方式为分钟")
+	// 	duration = time.Duration(interval) * time.Minute
+	// case 2:
+	// 	logs.Info("提醒方式为小时")
+	// 	duration = time.Duration(interval) * time.Hour
+	// case 3:
+	// 	logs.Info("提醒方式为天")
+	// 	duration = time.Duration(interval) * time.Duration(24) * time.Hour
+	// default:
+	// 	logs.Info("提醒方式为分钟")
+	// 	duration = 10 * time.Minute
+	// }
+	// ticker = time.NewTicker(duration)
+	// LARK_MSG_CALL_MAP[fmt.Sprintf("%v_%v_%v_%v", task.ID, task.AppId, task.AppVersion, toolID)] = ticker
 	//获取BM负责人
 	project_id := ""
 	qa_bm := ""
@@ -456,7 +470,6 @@ func UpdateDetectTask(c *gin.Context) {
 			qa_bm = qa_map["name"].(string)
 		}
 	}
-	// 此处测试时注释掉
 	larkUrl := fmt.Sprintf(settings.Get().Detect.TaskURL, task.AppId, task.ID)
 	for _, creator := range larkList {
 		utils.UserInGroup(creator)                                                                                      //将用户拉入预审平台群
@@ -479,28 +492,17 @@ func UpdateDetectTask(c *gin.Context) {
 		}
 	}
 
-	if config != nil {
-		timerId := config.ID
-		condition := "timer_id='" + fmt.Sprint(timerId) + "' and platform='" + strconv.Itoa(platform) + "'"
-		groups := dal.QueryLarkGroupByCondition(condition)
-		if groups != nil && len(*groups) > 0 {
-			for i := 0; i < len(*groups); i++ {
-				g := (*groups)[i]
-				utils.LarkGroup(message, g.GroupId)
-			}
-		}
-	}
-}
-
-func updateDetectTaskStatus(db *gorm.DB, id interface{}, status int) error {
-
-	if err := db.Debug().Table("tb_binary_detect").Where("id=?", id).
-		Update("status", status).Error; err != nil {
-		logs.Error("database error: %v", err)
-		return err
-	}
-
-	return nil
+	// if config != nil {
+	// 	timerId := config.ID
+	// 	condition := "timer_id='" + fmt.Sprint(timerId) + "' and platform='" + strconv.Itoa(platform) + "'"
+	// 	groups := dal.QueryLarkGroupByCondition(condition)
+	// 	if groups != nil && len(*groups) > 0 {
+	// 		for i := 0; i < len(*groups); i++ {
+	// 			g := (*groups)[i]
+	// 			utils.LarkGroup(message, g.GroupId)
+	// 		}
+	// 	}
+	// }
 }
 
 /**
