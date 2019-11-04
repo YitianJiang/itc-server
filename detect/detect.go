@@ -30,7 +30,7 @@ import (
 const (
 	DETECT_URL_DEV = "10.2.209.202:9527"
 	//DETECT_URL_PRO = "10.2.9.226:9527"
-	DETECT_URL_PRO = "10.1.221.188:9527"
+	DETECT_URL_PRO = "10.95.15.163:9527"
 	//test----fj
 	Local_URL_PRO = "10.1.220.99:9527"
 
