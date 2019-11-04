@@ -300,11 +300,16 @@ func UpdateDetectTask(c *gin.Context) {
 
 	msgHeader := "update detect task"
 	taskId := c.Request.FormValue("task_ID")
-	if taskId == "" {
-		logs.Error("%s miss task id", msgHeader)
+	// if taskId == "" {
+	// 	logs.Error("%s miss task id", msgHeader)
+	// 	return
+	// }
+	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
+	if err != nil {
+		logs.Error("%s get detect task failed: %v", msgHeader, err)
 		return
 	}
-	msgHeader += fmt.Sprintf(" (task id: %v)", taskId)
+	msgHeader += fmt.Sprintf(" (task id: %v)", task.ID)
 	logs.Info("%s detect tool callback...", msgHeader)
 
 	if err := updateDetectTaskStatus(database.DB(),
@@ -314,33 +319,29 @@ func UpdateDetectTask(c *gin.Context) {
 	}
 
 	toolId := c.Request.FormValue("tool_ID")
-	jsonContent := c.Request.FormValue("jsonContent")
-	appName := c.Request.FormValue("appName")
-	appVersion := c.Request.FormValue("appVersion")
-	htmlContent := c.Request.FormValue("content")
-
-	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
-	if err != nil {
-		logs.Error("%s get detect task failed: %v", msgHeader, err)
-		return
-	}
-
-	taskID, err := strconv.Atoi(taskId)
-	if err != nil {
-		logs.Error("%s task id atoi error: %v", msgHeader, err)
-		return
-	}
+	// taskID, err := strconv.Atoi(taskId)
+	// if err != nil {
+	// 	logs.Error("%s task id atoi error: %v", msgHeader, err)
+	// 	return
+	// }
 	toolID, err := strconv.Atoi(toolId)
 	if err != nil {
 		logs.Error("%s tool id atoi error: %v", msgHeader, err)
 		return
 	}
+
+	jsonContent := c.Request.FormValue("jsonContent")
+	appName := c.Request.FormValue("appName")
+	appVersion := c.Request.FormValue("appVersion")
+	htmlContent := c.Request.FormValue("content")
+
 	//消息通知条数--检测项+自查项
 	var unConfirms int
 	var unSelfCheck int
 	if task.Platform == platformAndorid {
 		var errApk error
-		errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, taskID, toolID)
+		// errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, taskID, toolID)
+		errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, int(task.ID), toolID)
 		if errApk != nil {
 			logs.Error("%s update apk detect result failed: %v", msgHeader, err)
 			return
@@ -350,7 +351,8 @@ func UpdateDetectTask(c *gin.Context) {
 	if task.Platform == platformiOS {
 		//旧表更新
 		var detectContent dal.DetectContent
-		detectContent.TaskId = taskID
+		// detectContent.TaskId = taskID
+		detectContent.TaskId = int(task.ID)
 		detectContent.ToolId = toolID
 		detectContent.HtmlContent = htmlContent
 		detectContent.JsonContent = jsonContent
@@ -362,7 +364,8 @@ func UpdateDetectTask(c *gin.Context) {
 		}
 		//新表jsonContent分类存储
 		appId, _ := strconv.Atoi(task.AppId)
-		res, warnFlag, detectNo := iOSResultClassify(taskID, toolID, appId, jsonContent) //检测结果处理
+		// res, warnFlag, detectNo := iOSResultClassify(taskID, toolID, appId, jsonContent) //检测结果处理
+		res, warnFlag, detectNo := iOSResultClassify(int(task.ID), toolID, appId, jsonContent) //检测结果处理
 		unConfirms = detectNo
 		if res == false {
 			logs.Error("iOS 新增new detect content失败！！！") //防止影响现有用户，出错后暂不return
@@ -371,7 +374,7 @@ func UpdateDetectTask(c *gin.Context) {
 		if res && warnFlag {
 			tips := "Notice: " + task.AppName + " " + task.AppVersion + " iOS包完成二进制检测，检测黑名单中itms-services不为空，请及时关注！！！！\n"
 			for _, lark_people := range _const.MiddleLarkPeople {
-				utils.LarkDingOneInnerWithUrl(lark_people, tips, "点击跳转检测详情", fmt.Sprintf(settings.Get().Detect.TaskURL, task.AppId, taskID))
+				utils.LarkDingOneInnerWithUrl(lark_people, tips, "点击跳转检测详情", fmt.Sprintf(settings.Get().Detect.TaskURL, task.AppId, task.ID))
 			}
 		}
 
@@ -380,7 +383,8 @@ func UpdateDetectTask(c *gin.Context) {
 		json.Unmarshal([]byte(task.ExtraInfo), &extra)
 		skip := extra.SkipSelfFlag
 		if !skip {
-			isRight, selfNum := GetIOSSelfNum(appId, taskID)
+			// isRight, selfNum := GetIOSSelfNum(appId, taskID)
+			isRight, selfNum := GetIOSSelfNum(appId, int(task.ID))
 			if isRight {
 				unSelfCheck = selfNum
 			}
@@ -388,9 +392,9 @@ func UpdateDetectTask(c *gin.Context) {
 	}
 
 	//进行lark消息提醒
-	task, err = getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
+	task, err = getExactDetectTask(database.DB(), map[string]interface{}{"id": task.ID})
 	if err != nil {
-		logs.Error("Task id: %v Failed to get detect task", taskId)
+		logs.Error("%s get detect task failed: %v", msgHeader, err)
 		return
 	}
 	var message string
@@ -444,9 +448,10 @@ func UpdateDetectTask(c *gin.Context) {
 		duration = 10 * time.Minute
 	}
 	ticker = time.NewTicker(duration)
-	var key string
-	key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
-	LARK_MSG_CALL_MAP[key] = ticker
+	// var key string
+	// key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
+	// LARK_MSG_CALL_MAP[key] = ticker
+	LARK_MSG_CALL_MAP[fmt.Sprintf("%v_%v_%v_%v", task.ID, task.AppId, task.AppVersion, toolID)] = ticker
 	//获取BM负责人
 	project_id := ""
 	qa_bm := ""
