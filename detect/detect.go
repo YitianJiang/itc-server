@@ -354,11 +354,8 @@ func UpdateDetectTask(c *gin.Context) {
 		detectContent.ToolId = toolID
 		detectContent.HtmlContent = htmlContent
 		detectContent.JsonContent = jsonContent
-		detectContent.CreatedAt = time.Now()
-		detectContent.UpdatedAt = time.Now()
 		task.AppName = appName
 		task.AppVersion = appVersion
-		task.UpdatedAt = time.Now()
 		if err := dal.UpdateDetectModel(*task, detectContent); err != nil {
 			logs.Error("%s update error: %v", msgHeader, err)
 			return
