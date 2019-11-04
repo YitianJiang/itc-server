@@ -415,54 +415,15 @@ func notifyDeteckTaskResult(task *dal.DetectStruct, msgHeader *string, unConfirm
 	var os string
 	switch task.Platform {
 	case platformAndorid:
-		// message += " Android包"
 		message = fmt.Sprintf(message, task.AppName, task.AppVersion, "Android")
 		os = "1"
 	case platformiOS:
-		// message += " iOS包"
 		message = fmt.Sprintf(message, task.AppName, task.AppVersion, "iOS")
 		os = "2"
 	default:
-		// message += " unknow"
 		message = fmt.Sprintf(message, task.AppName, task.AppVersion, "unknow")
 	}
 
-	// appIdInt, _ := strconv.Atoi(appId)
-	// var config *dal.LarkMsgTimer
-	// config = dal.QueryLarkMsgTimerByAppId(appIdInt)
-	// alterType := 0
-	// var interval int
-	// if config == nil { //如果未进行消息提醒设置，则默认10分钟提醒一次
-	// 	logs.Info("采用默认10分钟频率进行提醒")
-	// 	alterType = 1
-	// 	interval = 10
-	// } else {
-	// 	logs.Info("采用设置的频率进行提醒")
-	// 	alterType = config.Type
-	// 	interval = config.MsgInterval
-	// }
-	// var ticker *time.Ticker
-	// var duration time.Duration
-	// switch alterType {
-	// case 0:
-	// 	logs.Info("提醒方式为秒")
-	// 	duration = time.Duration(interval) * time.Second
-	// case 1:
-	// 	logs.Info("提醒方式为分钟")
-	// 	duration = time.Duration(interval) * time.Minute
-	// case 2:
-	// 	logs.Info("提醒方式为小时")
-	// 	duration = time.Duration(interval) * time.Hour
-	// case 3:
-	// 	logs.Info("提醒方式为天")
-	// 	duration = time.Duration(interval) * time.Duration(24) * time.Hour
-	// default:
-	// 	logs.Info("提醒方式为分钟")
-	// 	duration = 10 * time.Minute
-	// }
-	// ticker = time.NewTicker(duration)
-	// LARK_MSG_CALL_MAP[fmt.Sprintf("%v_%v_%v_%v", task.ID, task.AppId, task.AppVersion, toolID)] = ticker
-	//获取BM负责人
 	var project_id string
 	var qa_bm string
 	var rd_bm string
@@ -503,18 +464,6 @@ func notifyDeteckTaskResult(task *dal.DetectStruct, msgHeader *string, unConfirm
 			}
 		}
 	}
-
-	// if config != nil {
-	// 	timerId := config.ID
-	// 	condition := "timer_id='" + fmt.Sprint(timerId) + "' and platform='" + strconv.Itoa(platform) + "'"
-	// 	groups := dal.QueryLarkGroupByCondition(condition)
-	// 	if groups != nil && len(*groups) > 0 {
-	// 		for i := 0; i < len(*groups); i++ {
-	// 			g := (*groups)[i]
-	// 			utils.LarkGroup(message, g.GroupId)
-	// 		}
-	// 	}
-	// }
 }
 
 /**
