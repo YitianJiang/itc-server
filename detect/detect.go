@@ -411,17 +411,19 @@ func notifyDeteckTaskResult(task *dal.DetectStruct, msgHeader *string, unConfirm
 		return
 	}
 
-	message := "你好，包检测完成。\n应用名称：%s\n版本号：%s\n操作系统：%s"
+	message := "你好，包检测完成。\n应用名称：%s\n版本号：%s"
+	message = fmt.Sprintf(message, task.AppName, task.AppVersion)
 	var os string
 	switch task.Platform {
 	case platformAndorid:
-		message = fmt.Sprintf(message, task.AppName, task.AppVersion, "Android")
+		message += fmt.Sprintf("(%s)", task.InnerVersion)
+		message += fmt.Sprintf("\n操作系统：%s", "Android")
 		os = "1"
 	case platformiOS:
-		message = fmt.Sprintf(message, task.AppName, task.AppVersion, "iOS")
+		message += fmt.Sprintf("\n操作系统：%s", "iOS")
 		os = "2"
 	default:
-		message = fmt.Sprintf(message, task.AppName, task.AppVersion, "unknow")
+		message += "unknow"
 	}
 
 	var project_id string
