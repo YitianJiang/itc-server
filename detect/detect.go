@@ -357,8 +357,17 @@ func UpdateDetectTask(c *gin.Context) {
 		detectContent.JsonContent = jsonContent
 		task.AppName = appName
 		task.AppVersion = appVersion
-		if err := dal.UpdateDetectModel(*task, detectContent); err != nil {
-			logs.Error("%s update error: %v", msgHeader, err)
+		if err := updateDetectTask(database.DB(), task); err != nil {
+			logs.Error("%s update detect task failed: %v", msgHeader, err)
+			return
+		}
+		logs.Notice("%s staus: %v", msgHeader, task.Status)
+		// if err := UpdateDetectModel(task, detectContent); err != nil {
+		// 	logs.Error("%s update error: %v", msgHeader, err)
+		// 	return
+		// }
+		if err := database.InsertDBRecord(database.DB(), &detectContent); err != nil {
+			logs.Error("%s store content error: %v", msgHeader, err)
 			return
 		}
 		//新表jsonContent分类存储
@@ -401,6 +410,43 @@ func updateDetectTaskStatus(db *gorm.DB, id interface{}, status int) error {
 
 	return nil
 }
+
+func updateDetectTask(db *gorm.DB, task *dal.DetectStruct) error {
+
+	if err := db.Debug().Model(task).Updates(task).Error; err != nil {
+		logs.Error("database error: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+// //update data
+// func UpdateDetectModel(task *dal.DetectStruct, content dal.DetectContent) error {
+// 	connection, err := database.GetDBConnection()
+// 	if err != nil {
+// 		logs.Error("Connect to DB failed: %v", err)
+// 		return err
+// 	}
+// 	defer connection.Close()
+// 	db := connection.Begin()
+// 	// condition := "id=" + fmt.Sprint(task.ID)
+// 	// if err := db.Table(dal.DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
+// 	// 	Where(condition).Update(task).Error; err != nil {
+// 	// 	logs.Error("update binary check failed, %v", err)
+// 	// 	db.Rollback()
+// 	// 	return err
+// 	// }
+// 	//insert detect content
+// 	if err := db.Table(dal.DetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).
+// 		Create(&content).Error; err != nil {
+// 		logs.Error("insert binary check content failed, %v", err)
+// 		db.Rollback()
+// 		return err
+// 	}
+// 	db.Commit()
+// 	return nil
+// }
 
 func notifyDeteckTaskResult(task *dal.DetectStruct, msgHeader *string, unConfirms int, unSelfCheck int) {
 
