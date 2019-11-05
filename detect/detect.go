@@ -322,10 +322,6 @@ func UpdateDetectTask(c *gin.Context) {
 		logs.Error("%s get detect task failed: %v", msgHeader, err)
 		return
 	}
-	// if err := updateDetectTaskStatus(database.DB(), task.ID, TaskStatusUnconfirm); err != nil {
-	// 	logs.Error("%s update status failed: %v", msgHeader, err)
-	// 	return
-	// }
 	task.Status = TaskStatusUnconfirm
 	if err := updateDetectTaskStatus(database.DB(), task); err != nil {
 		logs.Error("%s update status failed: %v", msgHeader, err)
@@ -356,11 +352,6 @@ func UpdateDetectTask(c *gin.Context) {
 	//ios新检测内容存储
 	if task.Platform == platformiOS {
 		//旧表更新
-		// var detectContent dal.DetectContent
-		// detectContent.TaskId = int(task.ID)
-		// detectContent.ToolId = toolID
-		// detectContent.HtmlContent = htmlContent
-		// detectContent.JsonContent = jsonContent
 		task.AppName = appName
 		task.AppVersion = appVersion
 		if err := updateDetectTask(database.DB(), task); err != nil {
