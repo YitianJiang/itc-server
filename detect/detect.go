@@ -230,7 +230,8 @@ func detectTaskFail(task *dal.DetectStruct, detail string) {
 	msgHeader := fmt.Sprintf("task id: %v", task.ID)
 	logs.Error("%s %s", msgHeader, detail)
 	go func() {
-		if err := updateDetectTaskStatus(database.DB(), task.ID, TaskStatusError); err != nil {
+		task.Status = TaskStatusError
+		if err := updateDetectTaskStatus(database.DB(), task); err != nil {
 			logs.Warn("%s update detect task failed: %v", msgHeader, err)
 		}
 	}()
@@ -321,7 +322,12 @@ func UpdateDetectTask(c *gin.Context) {
 		logs.Error("%s get detect task failed: %v", msgHeader, err)
 		return
 	}
-	if err := updateDetectTaskStatus(database.DB(), task.ID, TaskStatusUnconfirm); err != nil {
+	// if err := updateDetectTaskStatus(database.DB(), task.ID, TaskStatusUnconfirm); err != nil {
+	// 	logs.Error("%s update status failed: %v", msgHeader, err)
+	// 	return
+	// }
+	task.Status = TaskStatusUnconfirm
+	if err := updateDetectTaskStatus(database.DB(), task); err != nil {
 		logs.Error("%s update status failed: %v", msgHeader, err)
 		return
 	}
@@ -350,11 +356,11 @@ func UpdateDetectTask(c *gin.Context) {
 	//ios新检测内容存储
 	if task.Platform == platformiOS {
 		//旧表更新
-		var detectContent dal.DetectContent
-		detectContent.TaskId = int(task.ID)
-		detectContent.ToolId = toolID
-		detectContent.HtmlContent = htmlContent
-		detectContent.JsonContent = jsonContent
+		// var detectContent dal.DetectContent
+		// detectContent.TaskId = int(task.ID)
+		// detectContent.ToolId = toolID
+		// detectContent.HtmlContent = htmlContent
+		// detectContent.JsonContent = jsonContent
 		task.AppName = appName
 		task.AppVersion = appVersion
 		if err := updateDetectTask(database.DB(), task); err != nil {
@@ -362,11 +368,12 @@ func UpdateDetectTask(c *gin.Context) {
 			return
 		}
 		logs.Notice("%s staus: %v", msgHeader, task.Status)
-		// if err := UpdateDetectModel(task, detectContent); err != nil {
-		// 	logs.Error("%s update error: %v", msgHeader, err)
-		// 	return
-		// }
-		if err := database.InsertDBRecord(database.DB(), &detectContent); err != nil {
+		if err := database.InsertDBRecord(database.DB(), &dal.DetectContent{
+			TaskId:      int(task.ID),
+			ToolId:      toolID,
+			HtmlContent: htmlContent,
+			JsonContent: jsonContent,
+		}); err != nil {
 			logs.Error("%s store content error: %v", msgHeader, err)
 			return
 		}
@@ -400,10 +407,12 @@ func UpdateDetectTask(c *gin.Context) {
 	go notifyDeteckTaskResult(task, &msgHeader, unConfirms, unSelfCheck)
 }
 
-func updateDetectTaskStatus(db *gorm.DB, id interface{}, status int) error {
+// WARNING when update with struct, GORM will only update those fields
+// that with non blank value. So it is nessary to update the status of
+// detect task with a new function.
+func updateDetectTaskStatus(db *gorm.DB, task *dal.DetectStruct) error {
 
-	if err := db.Debug().Table("tb_binary_detect").Where("id=?", id).
-		Update("status", status).Error; err != nil {
+	if err := db.Debug().Model(task).Update("status", task.Status).Error; err != nil {
 		logs.Error("database error: %v", err)
 		return err
 	}
@@ -420,33 +429,6 @@ func updateDetectTask(db *gorm.DB, task *dal.DetectStruct) error {
 
 	return nil
 }
-
-// //update data
-// func UpdateDetectModel(task *dal.DetectStruct, content dal.DetectContent) error {
-// 	connection, err := database.GetDBConnection()
-// 	if err != nil {
-// 		logs.Error("Connect to DB failed: %v", err)
-// 		return err
-// 	}
-// 	defer connection.Close()
-// 	db := connection.Begin()
-// 	// condition := "id=" + fmt.Sprint(task.ID)
-// 	// if err := db.Table(dal.DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
-// 	// 	Where(condition).Update(task).Error; err != nil {
-// 	// 	logs.Error("update binary check failed, %v", err)
-// 	// 	db.Rollback()
-// 	// 	return err
-// 	// }
-// 	//insert detect content
-// 	if err := db.Table(dal.DetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).
-// 		Create(&content).Error; err != nil {
-// 		logs.Error("insert binary check content failed, %v", err)
-// 		db.Rollback()
-// 		return err
-// 	}
-// 	db.Commit()
-// 	return nil
-// }
 
 func notifyDeteckTaskResult(task *dal.DetectStruct, msgHeader *string, unConfirms int, unSelfCheck int) {
 
