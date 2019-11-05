@@ -25,17 +25,19 @@ const (
 安卓json检测信息分析----兼容.aab格式检测结果---json到Struct
 */
 
-func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
+func ApkJsonAnalysis_2(info string, taskID int, toolID int /*, task *dal.DetectStruct*/) (error, int) {
 
+	// msgHeader := fmt.Sprintf("task id: %v", task.ID)
+	msgHeader := fmt.Sprintf("task id: %v", taskID)
 	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskID})
 	if err != nil {
-		logs.Error("Task id: %v Fail to get detect task", taskID)
+		logs.Error("%s get detect task failed: %v", msgHeader, err)
 		return err, 0
 	}
 
 	var fisrtResult dal.JSONResultStruct
 	if err := json.Unmarshal([]byte(info), &fisrtResult); err != nil {
-		logs.Error("Task id: %v Unmarshal error: %v", taskID, err)
+		logs.Error("%s unmarshal error: %v", msgHeader, err)
 		handleDetectTaskError(task, DetectServiceScriptError, info)
 		return err, 0
 	}
@@ -44,22 +46,22 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 	for index, result := range fisrtResult.Result {
 		//检测基础信息解析
 		if err := AppInfoAnalysis_2(result.AppInfo,
-			&dal.DetectInfo{TaskId: taskID, ToolId: toolID},
+			&dal.DetectInfo{TaskId: int(task.ID), ToolId: toolID},
 			index); err != nil {
-			logs.Error("Task id: %v Failed to analysis package", taskID)
+			logs.Error("%s analysis package failed: %v", msgHeader, err)
 			return err, 0
 		}
 
 		//获取敏感方法和字符串的确认信息methodInfo,strInfos，为信息初始化做准备
 		methodInfo, strInfos, _, err := getIgnoredInfo_2(task.AppId, task.Platform)
 		if err != nil {
-			logs.Warn("Task id: %v Failed to retrieve negligible information about APP ID: %v, Platform: %v", taskID, task.AppId, task.Platform)
+			logs.Warn("%s Failed to retrieve negligible information about APP ID: %v, Platform: %v", msgHeader, task.AppId, task.Platform)
 		}
 		if methodInfo == nil {
-			logs.Warn("Task id: %v There are no negligible methods", taskID)
+			logs.Warn("%s There are no negligible methods", msgHeader)
 		}
 		if strInfos == nil {
-			logs.Warn("Task id: %v There are no negligible strings", taskID)
+			logs.Warn("%s There are no negligible strings", msgHeader)
 		}
 
 		//敏感method解析----先外层去重
@@ -91,16 +93,16 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 			} else {
 				detailContent.RiskLevel = "3"
 			}
-			detailContent.TaskId = taskID
+			detailContent.TaskId = int(task.ID)
 			detailContent.ToolId = toolID
 			//新增兼容下标
 			detailContent.SubIndex = index
 			allMethods = append(allMethods, *MethodAnalysis(newMethod, &detailContent, extraInfo)) //内层去重，并放入写库信息数组
 		}
 		if err := dal.InsertDetectDetailBatch(&allMethods); err != nil {
-			logs.Error("Task id: %v Failed to insert detect detail", taskID)
+			logs.Error("%s insert detect detail failed: %v", msgHeader, err)
 			//及时报警
-			message := "taskId:" + fmt.Sprint(taskID) + ",敏感method写入数据库失败，请解决;" + fmt.Sprint(err)
+			message := "taskId:" + fmt.Sprint(task.ID) + ",敏感method写入数据库失败，请解决;" + fmt.Sprint(err)
 			utils.LarkDingOneInner(informer, message)
 			return err, 0
 		}
@@ -109,24 +111,24 @@ func ApkJsonAnalysis_2(info string, taskID int, toolID int) (error, int) {
 		allStrs := make([]dal.DetectContentDetail, 0)
 		for _, strInfo := range result.StrInfos {
 			var detailContent dal.DetectContentDetail
-			detailContent.TaskId = taskID
+			detailContent.TaskId = int(task.ID)
 			detailContent.ToolId = toolID
 			detailContent.SubIndex = index
 			allStrs = append(allStrs, *StrAnalysis(strInfo, &detailContent, strInfos))
 		}
 		if err := dal.InsertDetectDetailBatch(&allStrs); err != nil {
-			logs.Error("Task id: %v Failed to insert detect detail", taskID)
+			logs.Error("%s insert detect detail failed: %v", msgHeader, err)
 			//及时报警
-			message := "taskId:" + fmt.Sprint(taskID) + ",敏感str写入数据库失败，请解决;" + fmt.Sprint(err)
+			message := "taskId:" + fmt.Sprint(task.ID) + ",敏感str写入数据库失败，请解决;" + fmt.Sprint(err)
 			utils.LarkDingOneInner(informer, message)
 			return err, 0
 		}
 	}
 
 	//任务状态更新----该app无需要特别确认的敏感方法、字符串或权限
-	errTaskUpdate, unConfirms := taskStatusUpdate(taskID, toolID, task, false, 0)
+	errTaskUpdate, unConfirms := taskStatusUpdate(int(task.ID), toolID, task, false, 0)
 	if errTaskUpdate != "" {
-		logs.Error("Task id: %v Failed to update task status", taskID)
+		logs.Error("%s update task status failed", msgHeader)
 		return fmt.Errorf(errTaskUpdate), 0
 	}
 	return nil, unConfirms
