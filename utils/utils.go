@@ -18,7 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const DETECT_URL_PRO = "10.1.221.188:9527"
+const DETECT_URL_PRO = "10.95.15.163:9527"
 
 //发送http post请求，其中rbody是一个json串
 func PostJsonHttp(url string, rbody []byte) (int, []byte) {
