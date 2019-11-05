@@ -77,7 +77,7 @@ func NewOtherDetect(c *gin.Context) {
 		errorFormatFile(c)
 		return
 	}
-	url = "http://" + DETECT_URL_PRO + "/apk_post/v2"
+	url = "http://" + _const.DETECT_URL_PRO + "/apk_post/v2"
 	//url  = "http://" + Local_URL_PRO + "/apk_post/v2"
 	_tmpDir := "./tmp"
 	exist, err := PathExists(_tmpDir)

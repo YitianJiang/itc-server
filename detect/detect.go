@@ -29,8 +29,6 @@ import (
 
 const (
 	DETECT_URL_DEV = "10.2.209.202:9527"
-	//DETECT_URL_PRO = "10.2.9.226:9527"
-	DETECT_URL_PRO = "10.95.15.163:9527"
 	//test----fj
 	Local_URL_PRO = "10.1.220.99:9527"
 
@@ -129,11 +127,11 @@ func UploadFile(c *gin.Context) {
 		}
 		if checkItem != "6" {
 			//旧服务url
-			url = "http://" + DETECT_URL_PRO + "/apk_post"
+			url = "http://" + _const.DETECT_URL_PRO + "/apk_post"
 		} else {
 			//新服务url
 			//url = "http://"+Local_URL_PRO +"/apk_post/v2"
-			url = "http://" + DETECT_URL_PRO + "/apk_post/v2"
+			url = "http://" + _const.DETECT_URL_PRO + "/apk_post/v2"
 		}
 		//url = "http://" + DETECT_URL_PRO + "/apk_post"
 
@@ -144,7 +142,7 @@ func UploadFile(c *gin.Context) {
 			return
 		}
 		//url = "http://"+Local_URL_PRO+"/ipa_post/v2"
-		url = "http://" + DETECT_URL_PRO + "/ipa_post/v2"
+		url = "http://" + _const.DETECT_URL_PRO + "/ipa_post/v2"
 	} else {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "platform参数不合法！",
