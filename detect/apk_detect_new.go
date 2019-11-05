@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"code.byted.org/clientQA/itc-server/database"
-
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
@@ -25,15 +23,15 @@ const (
 安卓json检测信息分析----兼容.aab格式检测结果---json到Struct
 */
 
-func ApkJsonAnalysis_2(info string, taskID int, toolID int /*, task *dal.DetectStruct*/) (error, int) {
+func ApkJsonAnalysis_2(task *dal.DetectStruct, info string /*taskID int,*/, toolID int) (error, int) {
 
-	// msgHeader := fmt.Sprintf("task id: %v", task.ID)
-	msgHeader := fmt.Sprintf("task id: %v", taskID)
-	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskID})
-	if err != nil {
-		logs.Error("%s get detect task failed: %v", msgHeader, err)
-		return err, 0
-	}
+	msgHeader := fmt.Sprintf("task id: %v", task.ID)
+	// msgHeader := fmt.Sprintf("task id: %v", taskID)
+	// task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskID})
+	// if err != nil {
+	// 	logs.Error("%s get detect task failed: %v", msgHeader, err)
+	// 	return err, 0
+	// }
 
 	var fisrtResult dal.JSONResultStruct
 	if err := json.Unmarshal([]byte(info), &fisrtResult); err != nil {
