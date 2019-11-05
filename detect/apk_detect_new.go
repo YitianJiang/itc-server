@@ -20,19 +20,19 @@ const (
 )
 
 // ParseResultAndroid supports apk and aab format.
-func ParseResultAndroid(task *dal.DetectStruct, info string, toolID int) (error, int) {
+func ParseResultAndroid(task *dal.DetectStruct, resultJson string, toolID int) (error, int) {
 
 	msgHeader := fmt.Sprintf("task id: %v", task.ID)
 
-	var fisrtResult dal.JSONResultStruct
-	if err := json.Unmarshal([]byte(info), &fisrtResult); err != nil {
+	var result dal.JSONResultStruct
+	if err := json.Unmarshal([]byte(resultJson), &result); err != nil {
 		logs.Error("%s unmarshal error: %v", msgHeader, err)
-		handleDetectTaskError(task, DetectServiceScriptError, info)
+		handleDetectTaskError(task, DetectServiceScriptError, resultJson)
 		return err, 0
 	}
 
 	//遍历结果数组，并将每组检测结果信息插入数据库
-	for index, result := range fisrtResult.Result {
+	for index, result := range result.Result {
 		//检测基础信息解析
 		if err := AppInfoAnalysis_2(result.AppInfo,
 			&dal.DetectInfo{TaskId: int(task.ID), ToolId: toolID},
