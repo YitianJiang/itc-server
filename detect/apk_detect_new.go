@@ -19,11 +19,8 @@ const (
 	informer = "hejiahui.2019"
 )
 
-/**
-安卓json检测信息分析----兼容.aab格式检测结果---json到Struct
-*/
-
-func ParseResultAPK(task *dal.DetectStruct, info string, toolID int) (error, int) {
+// ParseResultAndroid supports apk and aab format.
+func ParseResultAndroid(task *dal.DetectStruct, info string, toolID int) (error, int) {
 
 	msgHeader := fmt.Sprintf("task id: %v", task.ID)
 
