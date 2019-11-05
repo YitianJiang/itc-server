@@ -34,7 +34,7 @@ func ParseResultAndroid(task *dal.DetectStruct, resultJson string, toolID int) (
 	//遍历结果数组，并将每组检测结果信息插入数据库
 	for index, result := range result.Result {
 		//检测基础信息解析
-		if err := AppInfoAnalysis_2(result.AppInfo,
+		if err := AppInfoAnalysis_2(task, result.AppInfo,
 			&dal.DetectInfo{TaskId: int(task.ID), ToolId: toolID},
 			index); err != nil {
 			logs.Error("%s analysis package failed: %v", msgHeader, err)
@@ -127,7 +127,10 @@ func ParseResultAndroid(task *dal.DetectStruct, resultJson string, toolID int) (
 appInfo解析，并写入数据库,此处包含权限的处理-------fj
 新增了index下标，兼容.aab结果中新增sub_index，默认为0
 */
-func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index ...int) error {
+func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index ...int) error {
+
+	msgHeader := fmt.Sprintf("task id: %v", task.ID)
+
 	//数组结果排序标识处理，默认为0
 	var realIndex int
 	if len(index) == 0 {
@@ -140,7 +143,7 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 		"id": detectInfo.TaskId})
 	appID, err := strconv.Atoi((*detect)[0].AppId)
 	if err != nil {
-		logs.Error("Task id: %v Atoi error: %v", detectInfo.TaskId, err)
+		logs.Error("%s atoi error: %v", msgHeader, err)
 		return err
 	}
 
@@ -152,7 +155,7 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 		(*detect)[0].AppVersion = info.ApkVersionName
 		(*detect)[0].InnerVersion = info.Meta.InnerVersion
 		if err := dal.UpdateDetectModelNew((*detect)[0]); err != nil {
-			logs.Error("Task id: %v Failed to update detect task: %v", detectInfo.TaskId, err)
+			logs.Error("%s update detect task failed: %v", msgHeader, err)
 			return err
 		}
 	}
@@ -164,7 +167,7 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 	var permissionArr = info.PermsInAppInfo
 	permAppInfos, err := permUpdate(&permissionArr, detectInfo, detect)
 	if err != nil {
-		logs.Error("Task id: %v Failed to update permission", detectInfo.TaskId)
+		logs.Error("%s update permission failed: %v", msgHeader, err)
 		return err
 	}
 
@@ -181,7 +184,7 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 	relationship.SubIndex = realIndex //新增下标兼容.aab结果
 	relationship.PermInfos = permAppInfos
 	if err := dal.InsertPermAppRelation(relationship); err != nil {
-		logs.Error("Task id: %v Failed to insert permission app relation", detectInfo.TaskId)
+		logs.Error("%s insert permission app relation failed: %v", msgHeader, err)
 		return err
 	}
 
@@ -190,7 +193,7 @@ func AppInfoAnalysis_2(info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index
 	detectInfo.Permissions = perStr
 	detectInfo.SubIndex = realIndex
 	if err := dal.InsertDetectInfo(*detectInfo); err != nil {
-		logs.Error("Task id: %v Failed to insert detect information", detectInfo.TaskId)
+		logs.Error("%s insert detect information failed: %v", msgHeader, err)
 		return err
 	}
 
