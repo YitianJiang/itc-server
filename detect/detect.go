@@ -343,7 +343,7 @@ func UpdateDetectTask(c *gin.Context) {
 	var unSelfCheck int
 	if task.Platform == platformAndorid {
 		var errApk error
-		errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, int(task.ID), toolID)
+		errApk, unConfirms = ParseResultAPK(task, jsonContent, toolID)
 		if errApk != nil {
 			logs.Error("%s update apk detect result failed: %v", msgHeader, err)
 			return
