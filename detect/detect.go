@@ -351,14 +351,13 @@ func UpdateDetectTask(c *gin.Context) {
 	}
 	//ios新检测内容存储
 	if task.Platform == platformiOS {
-		//旧表更新
 		task.AppName = appName
 		task.AppVersion = appVersion
 		if err := updateDetectTask(database.DB(), task); err != nil {
 			logs.Error("%s update detect task failed: %v", msgHeader, err)
 			return
 		}
-		logs.Notice("%s staus: %v", msgHeader, task.Status)
+		//旧表更新
 		if err := database.InsertDBRecord(database.DB(), &dal.DetectContent{
 			TaskId:      int(task.ID),
 			ToolId:      toolID,
