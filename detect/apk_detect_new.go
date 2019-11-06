@@ -141,19 +141,10 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 		realIndex = index[0]
 	}
 
-	// detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-	// "id": detectInfo.TaskId})
 	//判断appInfo信息是否为主要信息，只有主要信息--primary为1才会修改任务的appName和Version,或者primary为nil---只有一个信息
 	var taskUpdateFlag = false
 	if info.Primary == nil || info.Primary.(float64) == 1 {
 		taskUpdateFlag = true
-		// (*detect)[0].AppName = info.ApkName
-		// (*detect)[0].AppVersion = info.ApkVersionName
-		// (*detect)[0].InnerVersion = info.Meta.InnerVersion
-		// if err := dal.UpdateDetectModelNew((*detect)[0]); err != nil {
-		// logs.Error("%s update detect task failed: %v", msgHeader, err)
-		// return err
-		// }
 		task.AppName = info.ApkName
 		task.AppVersion = info.ApkVersionName
 		task.InnerVersion = info.Meta.InnerVersion
@@ -178,7 +169,6 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 	//更新权限-app-task关系表
 	var relationship dal.PermAppRelation
 	relationship.TaskId = detectInfo.TaskId
-	// appID, err := strconv.Atoi((*detect)[0].AppId)
 	appID, err := strconv.Atoi(task.AppId)
 	if err != nil {
 		logs.Error("%s atoi error: %v", msgHeader, err)
@@ -186,7 +176,6 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 	}
 	relationship.AppId = appID
 	if taskUpdateFlag {
-		// relationship.AppVersion = (*detect)[0].AppVersion
 		relationship.AppVersion = task.AppVersion
 	} else {
 		relationship.AppVersion = ".aab副包+" + detectInfo.Version
@@ -265,7 +254,6 @@ func permUpdate(task *dal.DetectStruct, permissionArr *[]string, detectInfo *dal
 			//暂时定为固定---标识itc检测新增
 			conf.Creator = "itc"
 			conf.Platform = Android
-			// if _, ok := _const.DetectBlackList[(*detect)[0].Creator]; !ok {
 			if _, ok := _const.DetectBlackList[task.Creator]; !ok {
 				if err := dal.InsertDetectConfig(&conf); err != nil {
 					logs.Error("taskId:"+fmt.Sprint(taskId)+",update回调时新增权限失败，%v", err)
@@ -275,7 +263,6 @@ func permUpdate(task *dal.DetectStruct, permissionArr *[]string, detectInfo *dal
 				}
 				permInfo["perm_id"] = int(conf.ID)
 			} else {
-				// logs.Notice("task id: %v creator: %v DO NOT INSERT THE NEW DETECTION", (*detect)[0].ID, (*detect)[0].Creator)
 				logs.Notice("task id: %v creator: %v DO NOT INSERT THE NEW DETECTION", task.ID, task.Creator)
 				// The permission will not be inserted into the official ITC configures.
 				permInfo["perm_id"] = -1
