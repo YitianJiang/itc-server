@@ -196,7 +196,7 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 /**
 处理权限信息，包括（初次引入写入配置表，历史表，lark通知）
 */
-func permUpdate(task *dal.DetectStruct, permissionArr *[]string, detectInfo *dal.DetectInfo) (string, error) {
+func permUpdate(task *dal.DetectStruct, permissionArr *[]string /*, detectInfo *dal.DetectInfo*/) (string, error) {
 
 	msgHeader := fmt.Sprintf("task id: %v", task.ID)
 
@@ -264,7 +264,8 @@ func permUpdate(task *dal.DetectStruct, permissionArr *[]string, detectInfo *dal
 			//此处state表明该权限是自动添加，信息不全，后面query时需要重新读取相关信息
 			permInfo["state"] = 0
 			permInfo["status"] = 0
-			permInfo["first_version"] = detectInfo.Version
+			// permInfo["first_version"] = detectInfo.Version
+			permInfo["first_version"] = task.AppVersion
 		} else {
 			permInfo["perm_id"] = int((*queryResult)[0].ID)
 			permInfo["key"] = pers
@@ -276,7 +277,8 @@ func permUpdate(task *dal.DetectStruct, permissionArr *[]string, detectInfo *dal
 			if v, ok := impMap[int((*queryResult)[0].ID)]; !ok {
 				//logs.Error("未查询到该权限的操作历史")
 				permInfo["status"] = 0
-				permInfo["first_version"] = detectInfo.Version
+				// permInfo["first_version"] = detectInfo.Version
+				permInfo["first_version"] = task.AppVersion
 				fhflag = true
 			} else {
 				iMap := v.(map[string]interface{})
@@ -290,7 +292,8 @@ func permUpdate(task *dal.DetectStruct, permissionArr *[]string, detectInfo *dal
 			hist.Status = 0
 			appId, _ := strconv.Atoi(task.AppId)
 			hist.AppId = appId
-			hist.AppVersion = detectInfo.Version
+			// hist.AppVersion = detectInfo.Version
+			hist.AppVersion = task.AppVersion
 			hist.PermId = permInfo["perm_id"].(int)
 			hist.Confirmer = task.Creator
 			hist.Remarks = "包检测引入该权限"
