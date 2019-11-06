@@ -200,7 +200,14 @@ func permUpdate(task *dal.DetectStruct, permissionArr *[]string, detectInfo *dal
 
 	msgHeader := fmt.Sprintf("task id: %v", task.ID)
 
-	appId, _ := strconv.Atoi(task.AppId)
+	var larkPerms string //lark消息通知的权限内容
+	var first_history []dal.PermHistory
+	//获取app的权限操作历史map
+	impMap := getAPPPermissionHistory(task.AppId)
+	//判断是否属于初次引入
+	var fhflag bool
+	//权限去重map
+	permRepeatMap := make(map[string]int)
 	//更新任务的权限信息
 	permInfos := make([]map[string]interface{}, 0) //新版权限信息，结构如下
 	/**
@@ -214,15 +221,6 @@ func permUpdate(task *dal.DetectStruct, permissionArr *[]string, detectInfo *dal
 		"first_version"://引入信息
 	}
 	*/
-
-	larkPerms := "" //lark消息通知的权限内容
-	var first_history []dal.PermHistory
-	//获取app的权限操作历史map
-	impMap := getAPPPermissionHistory(appId)
-	//判断是否属于初次引入
-	var fhflag bool
-	//权限去重map
-	permRepeatMap := make(map[string]int)
 	for _, pers := range *permissionArr {
 		//权限去重
 		if v, ok := permRepeatMap[pers]; ok && v == 1 {
@@ -290,6 +288,7 @@ func permUpdate(task *dal.DetectStruct, permissionArr *[]string, detectInfo *dal
 		if fhflag {
 			var hist dal.PermHistory
 			hist.Status = 0
+			appId, _ := strconv.Atoi(task.AppId)
 			hist.AppId = appId
 			hist.AppVersion = detectInfo.Version
 			hist.PermId = permInfo["perm_id"].(int)
@@ -319,6 +318,35 @@ func permUpdate(task *dal.DetectStruct, permissionArr *[]string, detectInfo *dal
 	}
 
 	return string(bytePerms), nil
+}
+
+/**
+获取权限引入历史
+*/
+func getAPPPermissionHistory(appID interface{}) map[int]interface{} {
+
+	history, err := dal.QueryPermHistory(map[string]interface{}{"app_id": appID})
+	if err != nil || history == nil || len(*history) == 0 {
+		logs.Error("Cannot find any permission about app id: %v", appID)
+		return nil
+	}
+
+	result := make(map[int]interface{})
+	for _, infoP := range *history {
+		_, ok := result[infoP.PermId]
+		if !ok {
+			result[infoP.PermId] = map[string]interface{}{
+				"version": infoP.AppVersion,
+				"status":  infoP.Status}
+		} else if ok && infoP.Status == 0 {
+			// TODO
+			v := result[infoP.PermId].(map[string]interface{})
+			v["version"] = infoP.AppVersion
+			result[infoP.PermId] = v
+		}
+	}
+
+	return result
 }
 
 /**

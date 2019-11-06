@@ -96,35 +96,6 @@ func GetPermList() map[int]interface{} {
 }
 
 /**
-获取权限引入历史
-*/
-func getAPPPermissionHistory(appID int) map[int]interface{} {
-
-	history, err := dal.QueryPermHistory(map[string]interface{}{"app_id": appID})
-	if err != nil || history == nil || len(*history) == 0 {
-		logs.Error("Cannot find any permission about app id: %v", appID)
-		return nil
-	}
-
-	result := make(map[int]interface{})
-	for _, infoP := range *history {
-		_, ok := result[infoP.PermId]
-		if !ok {
-			result[infoP.PermId] = map[string]interface{}{
-				"version": infoP.AppVersion,
-				"status":  infoP.Status}
-		} else if ok && infoP.Status == 0 {
-			// TODO
-			v := result[infoP.PermId].(map[string]interface{})
-			v["version"] = infoP.AppVersion
-			result[infoP.PermId] = v
-		}
-	}
-
-	return result
-}
-
-/**
  *获取可忽略内容
  */
 func getIgnoredInfo_2(appID interface{}, platform interface{}) (map[string]interface{}, map[string]interface{}, map[string]interface{}, error) {
