@@ -152,8 +152,7 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 	detectInfo.Version = info.ApkVersionName
 	detectInfo.Channel = info.Channel
 	//更新任务的权限信息
-	var permissionArr = info.PermsInAppInfo
-	permAppInfos, err := permUpdate(task, &permissionArr)
+	permAppInfos, err := permUpdate(task, info.PermsInAppInfo)
 	if err != nil {
 		logs.Error("%s update permission failed: %v", msgHeader, err)
 		return err
@@ -196,7 +195,7 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 /**
 处理权限信息，包括（初次引入写入配置表，历史表，lark通知）
 */
-func permUpdate(task *dal.DetectStruct, permissionArr *[]string) (string, error) {
+func permUpdate(task *dal.DetectStruct, permissions []string) (string, error) {
 
 	msgHeader := fmt.Sprintf("task id: %v", task.ID)
 
@@ -221,7 +220,7 @@ func permUpdate(task *dal.DetectStruct, permissionArr *[]string) (string, error)
 		"first_version"://引入信息
 	}
 	*/
-	for _, pers := range *permissionArr {
+	for _, pers := range permissions {
 		//权限去重
 		if v, ok := permRepeatMap[pers]; ok && v == 1 {
 			// Continue the loop if the permission has been handled.
