@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"code.byted.org/clientQA/itc-server/database"
+
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
@@ -139,22 +141,23 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 		realIndex = index[0]
 	}
 
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": detectInfo.TaskId})
-	appID, err := strconv.Atoi((*detect)[0].AppId)
-	if err != nil {
-		logs.Error("%s atoi error: %v", msgHeader, err)
-		return err
-	}
-
+	// detect := dal.QueryDetectModelsByMap(map[string]interface{}{
+	// "id": detectInfo.TaskId})
 	//判断appInfo信息是否为主要信息，只有主要信息--primary为1才会修改任务的appName和Version,或者primary为nil---只有一个信息
 	var taskUpdateFlag = false
 	if info.Primary == nil || info.Primary.(float64) == 1 {
 		taskUpdateFlag = true
-		(*detect)[0].AppName = info.ApkName
-		(*detect)[0].AppVersion = info.ApkVersionName
-		(*detect)[0].InnerVersion = info.Meta.InnerVersion
-		if err := dal.UpdateDetectModelNew((*detect)[0]); err != nil {
+		// (*detect)[0].AppName = info.ApkName
+		// (*detect)[0].AppVersion = info.ApkVersionName
+		// (*detect)[0].InnerVersion = info.Meta.InnerVersion
+		// if err := dal.UpdateDetectModelNew((*detect)[0]); err != nil {
+		// logs.Error("%s update detect task failed: %v", msgHeader, err)
+		// return err
+		// }
+		task.AppName = info.ApkName
+		task.AppVersion = info.ApkVersionName
+		task.InnerVersion = info.Meta.InnerVersion
+		if err := updateDetectTask(database.DB(), task); err != nil {
 			logs.Error("%s update detect task failed: %v", msgHeader, err)
 			return err
 		}
@@ -165,7 +168,8 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 	detectInfo.Channel = info.Channel
 	//更新任务的权限信息
 	var permissionArr = info.PermsInAppInfo
-	permAppInfos, err := permUpdate(&permissionArr, detectInfo, detect)
+	// permAppInfos, err := permUpdate(&permissionArr, detectInfo, detect)
+	permAppInfos, err := permUpdate(task, &permissionArr, detectInfo)
 	if err != nil {
 		logs.Error("%s update permission failed: %v", msgHeader, err)
 		return err
@@ -174,9 +178,16 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 	//更新权限-app-task关系表
 	var relationship dal.PermAppRelation
 	relationship.TaskId = detectInfo.TaskId
+	// appID, err := strconv.Atoi((*detect)[0].AppId)
+	appID, err := strconv.Atoi(task.AppId)
+	if err != nil {
+		logs.Error("%s atoi error: %v", msgHeader, err)
+		return err
+	}
 	relationship.AppId = appID
 	if taskUpdateFlag {
-		relationship.AppVersion = (*detect)[0].AppVersion
+		// relationship.AppVersion = (*detect)[0].AppVersion
+		relationship.AppVersion = task.AppVersion
 	} else {
 		relationship.AppVersion = ".aab副包+" + detectInfo.Version
 	}
@@ -203,8 +214,9 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 /**
 处理权限信息，包括（初次引入写入配置表，历史表，lark通知）
 */
-func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]dal.DetectStruct) (string, error) {
-	appId, _ := strconv.Atoi((*detect)[0].AppId)
+func permUpdate(task *dal.DetectStruct, permissionArr *[]string, detectInfo *dal.DetectInfo /*,detect *[]dal.DetectStruct*/) (string, error) {
+	// appId, _ := strconv.Atoi((*detect)[0].AppId)
+	appId, _ := strconv.Atoi(task.AppId)
 	taskId := detectInfo.TaskId
 	//更新任务的权限信息
 	permInfos := make([]map[string]interface{}, 0) //新版权限信息，结构如下
@@ -253,7 +265,8 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 			//暂时定为固定---标识itc检测新增
 			conf.Creator = "itc"
 			conf.Platform = Android
-			if _, ok := _const.DetectBlackList[(*detect)[0].Creator]; !ok {
+			// if _, ok := _const.DetectBlackList[(*detect)[0].Creator]; !ok {
+			if _, ok := _const.DetectBlackList[task.Creator]; !ok {
 				if err := dal.InsertDetectConfig(&conf); err != nil {
 					logs.Error("taskId:"+fmt.Sprint(taskId)+",update回调时新增权限失败，%v", err)
 					//及时报警
@@ -262,7 +275,8 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 				}
 				permInfo["perm_id"] = int(conf.ID)
 			} else {
-				logs.Notice("task id: %v creator: %v DO NOT INSERT THE NEW DETECTION", (*detect)[0].ID, (*detect)[0].Creator)
+				// logs.Notice("task id: %v creator: %v DO NOT INSERT THE NEW DETECTION", (*detect)[0].ID, (*detect)[0].Creator)
+				logs.Notice("task id: %v creator: %v DO NOT INSERT THE NEW DETECTION", task.ID, task.Creator)
 				// The permission will not be inserted into the official ITC configures.
 				permInfo["perm_id"] = -1
 			}
@@ -302,7 +316,8 @@ func permUpdate(permissionArr *[]string, detectInfo *dal.DetectInfo, detect *[]d
 			hist.AppId = appId
 			hist.AppVersion = detectInfo.Version
 			hist.PermId = permInfo["perm_id"].(int)
-			hist.Confirmer = (*detect)[0].Creator
+			// hist.Confirmer = (*detect)[0].Creator
+			hist.Confirmer = task.Creator
 			hist.Remarks = "包检测引入该权限"
 			hist.TaskId = taskId
 			first_history = append(first_history, hist)
