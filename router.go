@@ -246,4 +246,10 @@ func InitRouter(r *ginex.Engine) {
 		testflightapi.POST("/deleteGroupTester", developerconnmanager.DeleteGroupTester)
 		testflightapi.POST("/uploadFileToTos", developerconnmanager.UploadFileToTos)
 	}
+
+	//哭泣，因为DBA下掉了所有的gui操作数据库的功能，固有此变更数据的接口出现
+	operationDBApi := r.Group("/v1/deleteBundleTable")
+	{
+		operationDBApi.POST("deleteBundleIdCap",developerconnmanager.DeleteBundleIdCap)
+	}
 }
