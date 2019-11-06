@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 
 	"code.byted.org/clientQA/itc-server/database"
 
@@ -300,7 +301,7 @@ func permUpdate(task *dal.DetectStruct, permissions []string) (string, error) {
 	bytePerms, _ := json.Marshal(permInfos)
 	//若存在初次引入权限，批量写入引入信息
 	if len(first_history) > 0 {
-		if err := dal.BatchInsertPermHistory(&first_history); err != nil {
+		if err := BatchInsertPermHistory(&first_history); err != nil {
 			logs.Error("%s insert permission history failed: %v", msgHeader, err)
 			return "", err
 		}
@@ -316,6 +317,31 @@ func permUpdate(task *dal.DetectStruct, permissions []string) (string, error) {
 	}
 
 	return string(bytePerms), nil
+}
+
+/**
+批量插入群仙操作历史
+*/
+func BatchInsertPermHistory(infos *[]dal.PermHistory) error {
+	connection, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("connect to db failed,%v", err)
+		return err
+	}
+	defer connection.Close()
+	db := connection.Table(dal.PermHistory{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	db.Begin()
+	for _, info := range *infos {
+		info.CreatedAt = time.Now()
+		info.UpdatedAt = time.Now()
+		if err := db.Create(&info).Error; err != nil {
+			logs.Error("insert perm history failed,%v", err)
+			db.Rollback()
+			return err
+		}
+	}
+	db.Commit()
+	return nil
 }
 
 /**

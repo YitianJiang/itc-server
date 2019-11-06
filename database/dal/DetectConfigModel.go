@@ -358,31 +358,6 @@ func InsertPermOperationHistory(data PermHistory) error {
 }
 
 /**
-批量插入群仙操作历史
-*/
-func BatchInsertPermHistory(infos *[]PermHistory) error {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("connect to db failed,%v", err)
-		return err
-	}
-	defer connection.Close()
-	db := connection.Table(PermHistory{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	db.Begin()
-	for _, info := range *infos {
-		info.CreatedAt = time.Now()
-		info.UpdatedAt = time.Now()
-		if err := db.Create(&info).Error; err != nil {
-			logs.Error("insert perm history failed,%v", err)
-			db.Rollback()
-			return err
-		}
-	}
-	db.Commit()
-	return nil
-}
-
-/**
 查询权限操作历史
 */
 func QueryPermHistory(condition map[string]interface{}) (*[]PermHistory, error) {
