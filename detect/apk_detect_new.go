@@ -92,10 +92,6 @@ func ParseResultAndroid(task *dal.DetectStruct, resultJson string, toolID int) (
 		}
 		if err := dal.InsertDetectDetailBatch(&allMethods); err != nil {
 			logs.Error("%s insert detect detail failed: %v", msgHeader, err)
-			//及时报警
-			// message := "taskId:" + fmt.Sprint(task.ID) + ",敏感method写入数据库失败，请解决;" + fmt.Sprint(err)
-			// utils.LarkDingOneInner(informer, message)
-			// utils.LarkDingOneInner(informer, fmt.Sprintf("%s insert detect detail failed: %v", msgHeader, err))
 			return err, 0
 		}
 
@@ -110,9 +106,6 @@ func ParseResultAndroid(task *dal.DetectStruct, resultJson string, toolID int) (
 		}
 		if err := dal.InsertDetectDetailBatch(&allStrs); err != nil {
 			logs.Error("%s insert detect detail failed: %v", msgHeader, err)
-			//及时报警
-			// message := "taskId:" + fmt.Sprint(task.ID) + ",敏感str写入数据库失败，请解决;" + fmt.Sprint(err)
-			// utils.LarkDingOneInner(informer, message)
 			return err, 0
 		}
 	}
@@ -208,7 +201,6 @@ func permUpdate(task *dal.DetectStruct, permissionArr *[]string, detectInfo *dal
 	msgHeader := fmt.Sprintf("task id: %v", task.ID)
 
 	appId, _ := strconv.Atoi(task.AppId)
-	// taskId := detectInfo.TaskId
 	//更新任务的权限信息
 	permInfos := make([]map[string]interface{}, 0) //新版权限信息，结构如下
 	/**
@@ -256,11 +248,7 @@ func permUpdate(task *dal.DetectStruct, permissionArr *[]string, detectInfo *dal
 			conf.Platform = Android
 			if _, ok := _const.DetectBlackList[task.Creator]; !ok {
 				if err := dal.InsertDetectConfig(&conf); err != nil {
-					// logs.Error("taskId:"+fmt.Sprint(taskId)+",update回调时新增权限失败，%v", err)
 					logs.Error("%s insert detect config failed: %v", msgHeader, err)
-					//及时报警
-					// utils.LarkDingOneInner(informer, "taskId:"+fmt.Sprint(taskId)+",update回调新增权限失败")
-					// utils.LarkDingOneInner(informer, fmt.Sprintf("%s insert detect config failed: %v\nconfig content: %v", msgHeader, err, conf))
 					return "", err
 				}
 				permInfo["perm_id"] = int(conf.ID)
@@ -305,10 +293,8 @@ func permUpdate(task *dal.DetectStruct, permissionArr *[]string, detectInfo *dal
 			hist.AppId = appId
 			hist.AppVersion = detectInfo.Version
 			hist.PermId = permInfo["perm_id"].(int)
-			// hist.Confirmer = (*detect)[0].Creator
 			hist.Confirmer = task.Creator
 			hist.Remarks = "包检测引入该权限"
-			// hist.TaskId = taskId
 			hist.TaskId = int(task.ID)
 			first_history = append(first_history, hist)
 		}
@@ -318,12 +304,7 @@ func permUpdate(task *dal.DetectStruct, permissionArr *[]string, detectInfo *dal
 	//若存在初次引入权限，批量写入引入信息
 	if len(first_history) > 0 {
 		if err := dal.BatchInsertPermHistory(&first_history); err != nil {
-			// if errB != nil {
-			// logs.Error("taskId:" + fmt.Sprint(taskId) + ",插入权限第一次引入历史失败")
 			logs.Error("%s insert permission history failed: %v", msgHeader, err)
-			//及时报警
-			// utils.LarkDingOneInner(informer, "taskId:"+fmt.Sprint(taskId)+",插入权限第一次引入历史失败")
-			// utils.LarkDingOneInner(informer, fmt.Sprintf("%s insert permission history failed: %v", msgHeader, err))
 			return "", err
 		}
 	}
