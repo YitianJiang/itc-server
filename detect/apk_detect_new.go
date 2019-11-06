@@ -313,9 +313,8 @@ func permUpdate(task *dal.DetectStruct, permissionArr *[]string, detectInfo *dal
 		message := "你好，安卓二进制静态包检测出未知权限，请去权限配置页面完善权限信息,需要完善的权限信息有：\n"
 		message += larkPerms
 		message += "修改链接：http://rocket.bytedance.net/rocket/itc/permission"
-
-		for _, people := range _const.PermLarkPeople {
-			utils.LarkDingOneInner(people, message)
+		for i := range _const.PermLarkPeople {
+			utils.LarkDingOneInner(_const.PermLarkPeople[i], message)
 		}
 	}
 
