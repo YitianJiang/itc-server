@@ -153,7 +153,7 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 	detectInfo.Channel = info.Channel
 	//更新任务的权限信息
 	var permissionArr = info.PermsInAppInfo
-	permAppInfos, err := permUpdate(task, &permissionArr, detectInfo)
+	permAppInfos, err := permUpdate(task, &permissionArr /*, detectInfo*/)
 	if err != nil {
 		logs.Error("%s update permission failed: %v", msgHeader, err)
 		return err
