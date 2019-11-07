@@ -34,15 +34,23 @@ func ParseResultAndroid(task *dal.DetectStruct, resultJson string, toolID int) (
 		return err, 0
 	}
 
-	//遍历结果数组，并将每组检测结果信息插入数据库
-	for index, result := range result.Result {
-		//检测基础信息解析
-		if err := AppInfoAnalysis_2(task, result.AppInfo,
-			&dal.DetectInfo{TaskId: int(task.ID), ToolId: toolID},
-			index); err != nil {
-			logs.Error("%s analysis package failed: %v", msgHeader, err)
+	for i := range result.Result {
+		if err := AppInfoAnalysis_2(task, result.Result[i].AppInfo,
+			&dal.DetectInfo{TaskId: int(task.ID), ToolId: toolID}, i); err != nil {
+			logs.Error("%s analysis app information failed: %v", msgHeader, err)
 			return err, 0
 		}
+	}
+
+	//遍历结果数组，并将每组检测结果信息插入数据库
+	for index, result := range result.Result {
+		// //检测基础信息解析
+		// if err := AppInfoAnalysis_2(task, result.AppInfo,
+		// 	&dal.DetectInfo{TaskId: int(task.ID), ToolId: toolID},
+		// 	index); err != nil {
+		// 	logs.Error("%s analysis package failed: %v", msgHeader, err)
+		// 	return err, 0
+		// }
 
 		//获取敏感方法和字符串的确认信息methodInfo,strInfos，为信息初始化做准备
 		methodInfo, strInfos, _, err := getIgnoredInfo_2(task.AppId, task.Platform)
