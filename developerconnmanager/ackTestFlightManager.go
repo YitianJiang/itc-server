@@ -4,15 +4,18 @@ import (
 	"bytes"
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/context"
 	"code.byted.org/gopkg/logs"
 	"code.byted.org/gopkg/tos"
+	"code.byted.org/yuyilei/bot-api/form"
+	"code.byted.org/yuyilei/bot-api/service"
 	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
-	"code.byted.org/gopkg/context"
 )
 
 type ReqTFReviewInfoFromClient struct {
@@ -162,6 +165,7 @@ type ReqDeleteTesterFromClient struct {
 	AppId                     string					`json:"app_id"                  binding:"required"`
 	GroupId                   string					`json:"group_id"                binding:"required"`
 	NumClear				  int						`json:"num_clear"`
+	LogSend                   bool                      `json:"log_send"`
 }
 //请求咱们的itc服务的body，要清理指定Group中的Tester *************End*************
 
@@ -512,90 +516,112 @@ func DeleteGroupTester(c *gin.Context){
 		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
 		return
 	}
-	tokenString := ""
-	//appAppleId := ""
-	successNum := 0
-	failNum := 0
-	loopNum := 1
-	LOOP: for i := 0; true; i++ {
-		logs.Info("正在执行第%d次删除任务,请等待",loopNum)
-		loopNum ++
-		var resTestInfo ResTesterInfoData
-		if _, ok := _const.TestFlightAppIdAnd[body.AppId]; ok {
-			tokenString = GetTokenStringByTeamId(_const.TestFlightAppIdAnd[body.AppId]["TeamId"])
-			//appAppleId = _const.TestFlightAppIdAnd[body.AppId]["AppAppleId"]
-		} else {
-			logs.Info("客户端发送了未知的app id，不在后段维护的const map中")
-			c.JSON(http.StatusNotFound, gin.H{
-				"message":    "客户端发送了未知的app id",
-				"error_code": "1",
-				"data":       map[string]interface{}{},
-			})
-			return
-		}
-		urlReq := _const.CreateTFGroupUrl + "/" + body.GroupId + "/betaTesters?limit=100"
-		//urlReq := _const.TFTesterManagerUrl + "?filter[apps]=" + appAppleId + "&filter[inviteType]=PUBLIC_LINK&limit=100"
-		reqResult := ReqToAppleTFHasObjMethod("GET",urlReq,tokenString,nil,&resTestInfo)
-		if !reqResult{
-			logs.Error("访问苹果的人员列表失败")
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"message":    "访问Tester列表时，苹果服务出错",
-				"delete_num": successNum,
-				"error_code": "2",
-				"data":       map[string]interface{}{},
-			})
-			return
-		}
-		topLev := ( i + 1 ) * 100
-		botLev := i * 100
-		brokenSign := false
-		if body.NumClear > 0 && (body.NumClear - topLev) < 0 && len(resTestInfo.Data) >= (body.NumClear - botLev) {
-			resTestInfo.Data = resTestInfo.Data[0:body.NumClear-botLev]
-			brokenSign = true
-		}
-		timeout := make(chan bool, len(resTestInfo.Data))
-		ch := make(chan int,len(resTestInfo.Data))
-		for _,item := range resTestInfo.Data {
-			go TimeOutFunc(timeout)
-			delUrl := _const.TFTesterManagerUrl + "/" + item.Id
-			go ReqToAppleTFHasObjMethodRoutine("DELETE",delUrl,tokenString,&resTestInfo,nil,ch)
-		}
-		for routineNum:=0;routineNum<len(resTestInfo.Data);routineNum++ {
-			select {
-			case sign := <- ch:
-				if sign == 1{
-					successNum = successNum + 1
-				}else {
-					failNum = failNum + 1
-				}
-			case <- timeout:
-				logs.Warn("访问苹果超时")
-				failNum = failNum + 1
-				break
-			}
-		}
-		if len(resTestInfo.Data) < 100 || brokenSign {
-			if failNum > 0 {
-				body.NumClear = failNum
-				logs.Info("删除收尾时，出现了%d次删除失败的情况",failNum)
-				failNum = 0
-				logs.Info("即将进行第%d次获取Tester循环，现在等待60秒",loopNum)
-				time.Sleep(61 * time.Second)
-				goto LOOP
-			}else {
-				c.JSON(http.StatusOK, gin.H{
-					"message":    "success",
-					"error_code": "0",
-					"delete_num": successNum,
-					"data":       map[string]interface{}{},
-				})
+	go func(ReqDeleteTesterFromClient){
+		tokenString := ""
+		//appAppleId := ""
+		successNum := 0
+		failNum := 0
+		loopNum := 1
+		LOOP: for i := 0; true; i++ {
+			logs.Info("正在执行第%d次删除任务,请等待",loopNum)
+			loopNum ++
+			var resTestInfo ResTesterInfoData
+			if _, ok := _const.TestFlightAppIdAnd[body.AppId]; ok {
+				tokenString = GetTokenStringByTeamId(_const.TestFlightAppIdAnd[body.AppId]["TeamId"])
+				//appAppleId = _const.TestFlightAppIdAnd[body.AppId]["AppAppleId"]
+			} else {
+				textLog := "客户端发送了未知的app id，不在后端维护的const map中"
+				logs.Info(textLog)
+				SendMessageToMe(&textLog)
 				return
 			}
+			urlReq := _const.CreateTFGroupUrl + "/" + body.GroupId + "/betaTesters?limit=100"
+			//urlReq := _const.TFTesterManagerUrl + "?filter[apps]=" + appAppleId + "&filter[inviteType]=PUBLIC_LINK&limit=100"
+			reqResult := ReqToAppleTFHasObjMethod("GET",urlReq,tokenString,nil,&resTestInfo)
+			if !reqResult{
+				textLog := fmt.Sprintf("访问苹果的人员列表失败，当前成功删除了%d人",successNum)
+				logs.Error(textLog)
+				SendMessageToMe(&textLog)
+				return
+			}
+			topLev := ( i + 1 ) * 100
+			botLev := i * 100
+			brokenSign := false
+			if body.NumClear > 0 && (body.NumClear - topLev) < 0 && len(resTestInfo.Data) >= (body.NumClear - botLev) {
+				resTestInfo.Data = resTestInfo.Data[0:body.NumClear-botLev]
+				brokenSign = true
+			}
+			timeout := make(chan bool, len(resTestInfo.Data))
+			ch := make(chan int,len(resTestInfo.Data))
+			for _,item := range resTestInfo.Data {
+				go TimeOutFunc(timeout)
+				delUrl := _const.TFTesterManagerUrl + "/" + item.Id
+				go ReqToAppleTFHasObjMethodRoutine("DELETE",delUrl,tokenString,&resTestInfo,nil,ch)
+			}
+			for routineNum:=0;routineNum<len(resTestInfo.Data);routineNum++ {
+				select {
+				case sign := <- ch:
+					if sign == 1{
+						successNum = successNum + 1
+					}else {
+						failNum = failNum + 1
+					}
+				case <- timeout:
+					logs.Warn("访问苹果超时")
+					failNum = failNum + 1
+					break
+				}
+			}
+			if len(resTestInfo.Data) < 100 || brokenSign {
+				if failNum > 0 {
+					body.NumClear = failNum
+					logs.Info("删除收尾时，出现了%d次删除失败的情况",failNum)
+					failNum = 0
+					logs.Info("即将进行第%d次获取Tester循环，现在等待60秒",loopNum)
+					if body.LogSend {
+						textLog := fmt.Sprintf("即将进行第%d次获取Tester循环，现在等待60秒，当前删除了%d人", loopNum, successNum)
+						SendMessageToMe(&textLog)
+					}
+					time.Sleep(61 * time.Second)
+					goto LOOP
+				}else {
+					textLog := fmt.Sprintf("删除TF Tester完毕，当前成功删除了%d人",successNum)
+					SendMessageToMe(&textLog)
+					return
+				}
+			}
+			logs.Info("即将进行第%d次获取Tester循环，现在等待60秒",loopNum)
+			if body.LogSend {
+				textLog := fmt.Sprintf("即将进行第%d次获取Tester循环，现在等待60秒，当前删除了%d人", loopNum, successNum)
+				SendMessageToMe(&textLog)
+			}
+			time.Sleep(61 * time.Second)
 		}
-		logs.Info("即将进行第%d次获取Tester循环，现在等待60秒",loopNum)
-		time.Sleep(61 * time.Second)
-	}
+		return
+	}(body)
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "success",
+		"error_code": "0",
+		"target_delete_num": body.NumClear,
+		"data":       map[string]interface{}{},
+	})
+	return
+}
 
+func SendMessageToMe(content *string) {
+	botService := service.BotService{}
+	botService.SetAppIdAndAppSecret(_const.BotApiId,_const.BotAppSecret)
+	contentText := form.SendMessageForm{}
+	msgType := "text"
+	openId := "ou_b392d8a6bdcac11e0a7401233cba38ce"
+
+	contentText.OpenID = &openId
+	contentText.MsgType = &msgType
+	contentText.Content.Text = content
+	_, errorSendInfo := botService.SendMessage(contentText)
+	if errorSendInfo != nil {
+		utils.RecordError("bot发送消息错误", errorSendInfo)
+	}
 }
 
 func UploadFileToTos(c *gin.Context)  {
