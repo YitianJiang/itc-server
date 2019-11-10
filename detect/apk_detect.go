@@ -8,9 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
-	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
@@ -821,8 +819,6 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 	}
 
 	if t.Type == 0 { //敏感方法和字符串确认
-		// detailInfo, err := queryDetectContentDetail(database.DB(),
-		// map[string]interface{}{"id": t.Id})
 		detection, err := readExactDetectContentDetail(database.DB(),
 			map[string]interface{}{"id": t.Id})
 		if err != nil {
@@ -840,30 +836,11 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("update failed: %v", err))
 			return
 		}
-		// if err != nil || detailInfo == nil || len(*detailInfo) == 0 {
-		// logs.Error("taskId:"+fmt.Sprint(t.TaskId)+",不存在该检测结果，ID：%d", t.Id)
-		// errorReturn(c, "不存在该检测结果")
-		// return
-		// }
-		// var data map[string]string
-		// data = make(map[string]string)
-		// data["id"] = strconv.Itoa(t.Id)
-		// data["confirmer"] = usernameStr
-		// data["remark"] = t.Remark
-		// data["status"] = strconv.Itoa(t.Status)
-		// flag := ConfirmApkBinaryResultNew(data)
-		// if !flag {
-		// 	logs.Error("taskId:" + fmt.Sprint(t.TaskId) + ",二进制检测内容确认失败")
-		// 	errorReturn(c, "二进制检测内容确认失败")
-		// 	return
-		// }
 
 		//增量忽略结果录入
 		if t.Status != 0 {
-			// senType := (*detailInfo)[0].SensiType
 			senType := detection.SensiType
 			if senType == 1 { //敏感方法
-				// keyInfo := (*detailInfo)[0].ClassName + "." + (*detailInfo)[0].KeyInfo
 				keyInfo := detection.ClassName + "." + detection.KeyInfo
 				if err := createIgnoreInfo(c, &t, task, usernameStr, keyInfo, 1); err != nil {
 					return
@@ -950,35 +927,6 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 
 	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
 	return
-}
-
-/**
-确认安卓二进制结果----------fj
-*/
-func ConfirmApkBinaryResultNew(data map[string]string) bool {
-	id := data["id"]
-	confirmer := data["confirmer"]
-	remark := data["remark"]
-	statusInt, _ := strconv.Atoi(data["status"])
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
-		return false
-	}
-	defer connection.Close()
-	db := connection.Table(dal.DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	condition := "id=" + id
-	if err := db.Where(condition).
-		Update(map[string]interface{}{
-			"status":     statusInt,
-			"confirmer":  confirmer,
-			"remark":     remark,
-			"updated_at": time.Now(),
-		}).Error; err != nil {
-		logs.Error("update db tb_detect_content failed: %v", err)
-		return false
-	}
-	return true
 }
 
 /**
