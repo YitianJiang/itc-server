@@ -198,7 +198,7 @@ type Permissions struct {
 type PostConfirm struct {
 	TaskId int    `json:"taskId"`
 	Id     int    `json:"id"`
-	Status int    `json:"status"`
+	Status int    `json:"status"  biding:"required"`
 	Remark string `json:"remark"`
 	ToolId int    `json:"toolId"`
 	Type   int    `json:"type"`
@@ -532,57 +532,6 @@ func InsertDetectDetailBatch(details *[]DetectContentDetail) error {
 		detail.UpdatedAt = time.Now()
 		if err1 := db.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&detail).Error; err1 != nil {
 			logs.Error("数据库新增敏感信息失败,%v，敏感信息具体key参数：%s", err1, detail.KeyInfo)
-			db.Rollback()
-			return err1
-		}
-	}
-	db.Commit()
-	return nil
-}
-
-/**
-可忽略信息insert------fj
-*/
-func InsertIgnoredInfo(detail IgnoreInfoStruct) error {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
-		return nil
-	}
-	defer connection.Close()
-
-	db := connection.Table(IgnoreInfoStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
-
-	detail.CreatedAt = time.Now()
-	detail.UpdatedAt = time.Now()
-
-	if err1 := db.Create(&detail).Error; err1 != nil {
-		logs.Error("数据库新增可忽略信息失败,%v，可忽略信息具体key参数：%s", err1, detail.KeysInfo)
-		return err1
-	}
-	return nil
-}
-
-/**
-可忽略信息批量insert------fj
-*/
-func InsertIgnoredInfoBatch(details *[]IgnoreInfoStruct) error {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
-		return nil
-	}
-	defer connection.Close()
-
-	db := connection.Table(IgnoreInfoStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
-
-	db.Begin()
-	for _, detail := range *details {
-		detail.CreatedAt = time.Now()
-		detail.UpdatedAt = time.Now()
-
-		if err1 := db.Create(&detail).Error; err1 != nil {
-			logs.Error("数据库新增可忽略信息失败,%v，可忽略信息具体key参数：%s", err1, detail.KeysInfo)
 			db.Rollback()
 			return err1
 		}
