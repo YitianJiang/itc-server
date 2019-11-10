@@ -792,32 +792,17 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 	}
 	usernameStr := username.(string)
 
-	// param, _ := ioutil.ReadAll(c.Request.Body)
 	var t dal.PostConfirm
-	// if err := json.Unmarshal(param, &t); err != nil {
-	// ReturnMsg(c, FAILURE, fmt.Sprintf("Unmarshal error: %v", err))
-	// return
-	// }
 	if err := c.ShouldBindJSON(&t); err != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid parameter: %v", err))
 		return
 	}
 
-	//获取任务信息
-	// detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-	// "id": t.TaskId,
-	// })
 	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": t.TaskId})
 	if err != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid task id (%v): %v", err, t.TaskId))
 		return
 	}
-	// db, err := database.GetDBConnection()
-	// if err != nil {
-	// logs.Error("Connect to DB failed: %v", err)
-	// return
-	// }
-	// defer db.Close()
 
 	if t.Type == 0 { //敏感方法和字符串确认
 		detailInfo, err := queryDetectContentDetail(database.DB(),
@@ -827,12 +812,6 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 			errorReturn(c, "不存在该检测结果")
 			return
 		}
-		// if detect == nil || len(*detect) == 0 {
-		// logs.Error("未查询到该taskid对应的检测任务，%v", t.TaskId)
-		// errorReturn(c, "未查询到该taskid对应的检测任务")
-		// return
-		// }
-
 		var data map[string]string
 		data = make(map[string]string)
 		data["id"] = strconv.Itoa(t.Id)
@@ -851,8 +830,6 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 			senType := (*detailInfo)[0].SensiType
 			if senType == 1 { //敏感方法
 				keyInfo := (*detailInfo)[0].ClassName + "." + (*detailInfo)[0].KeyInfo
-				//结果写入
-				// if err := createIgnoreInfo(c, &t, &(*detect)[0], usernameStr, keyInfo, 1); err != nil {
 				if err := createIgnoreInfo(c, &t, task, usernameStr, keyInfo, 1); err != nil {
 					return
 				}
@@ -860,8 +837,6 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 				keys := strings.Split((*detailInfo)[0].KeyInfo, ";")
 				var strIgnoreList []dal.IgnoreInfoStruct
 				for _, key := range keys[0 : len(keys)-1] {
-					//结果写入
-					// strIgnoreList = append(strIgnoreList, *createIgnoreInfoBatch(&t, &(*detect)[0], usernameStr, key, 2))
 					strIgnoreList = append(strIgnoreList, *createIgnoreInfoBatch(&t, task, usernameStr, key, 2))
 				}
 				if err := dal.InsertIgnoredInfoBatch(&strIgnoreList); err != nil {
@@ -871,7 +846,6 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 			}
 		}
 	} else {
-
 		//获取该任务的权限信息
 		perms, errPerm := dal.QueryPermAppRelation(map[string]interface{}{
 			"task_id": t.TaskId,
@@ -934,17 +908,11 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 	}
 
 	//任务状态更新
-	// updateInfo, _ := taskStatusUpdate(t.TaskId, t.ToolId, &(*detect)[0], notPassFlag, 1)
 	updateInfo, _ := taskStatusUpdate(t.TaskId, t.ToolId, task, notPassFlag, 1)
 	if updateInfo != "" {
 		errorReturn(c, updateInfo)
 	}
-	// logs.Info("confirm success +id :%d", t.Id)
-	// c.JSON(http.StatusOK, gin.H{
-	// 	"message":   "success",
-	// 	"errorCode": 0,
-	// 	"data":      "success",
-	// })
+
 	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
 	return
 }
@@ -954,11 +922,9 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 */
 func ConfirmApkBinaryResultNew(data map[string]string) bool {
 	id := data["id"]
-	//toolId := data["tool_id"]
 	confirmer := data["confirmer"]
 	remark := data["remark"]
 	statusInt, _ := strconv.Atoi(data["status"])
-	//statusInt, _ := strconv.Atoi(status)
 	connection, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("Connect to Db failed: %v", err)
@@ -975,10 +941,8 @@ func ConfirmApkBinaryResultNew(data map[string]string) bool {
 			"updated_at": time.Now(),
 		}).Error; err != nil {
 		logs.Error("update db tb_detect_content failed: %v", err)
-		//db.Rollback()
 		return false
 	}
-	//db.Commit()
 	return true
 }
 
