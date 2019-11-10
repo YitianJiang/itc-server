@@ -874,24 +874,6 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 				}
 			}
 		}
-		//增量忽略结果录入
-		// senType := detection.SensiType
-		// if senType == 1 { //敏感方法
-		// 	keyInfo := detection.ClassName + "." + detection.KeyInfo
-		// 	if err := createIgnoreInfo(c, &t, task, usernameStr, keyInfo, 1); err != nil {
-		// 		return
-		// 	}
-		// } else { //敏感字符串
-		// 	keys := strings.Split(detection.KeyInfo, ";")
-		// 	var strIgnoreList []dal.IgnoreInfoStruct
-		// 	for _, key := range keys[0 : len(keys)-1] {
-		// 		strIgnoreList = append(strIgnoreList, *createIgnoreInfoBatch(&t, task, usernameStr, key, 2))
-		// 	}
-		// 	if err := InsertIgnoredInfoBatch(&strIgnoreList); err != nil {
-		// 		errorReturn(c, "增量信息更新失败！")
-		// 		return
-		// 	}
-		// }
 	} else {
 		//获取该任务的权限信息
 		perms, errPerm := dal.QueryPermAppRelation(map[string]interface{}{
@@ -1036,89 +1018,6 @@ func QueryUnConfirmDetectContent(db *gorm.DB, condition string) (int, int) {
 
 	return int(total.Total), int(total.TotalUn)
 }
-
-// /**
-// 新增敏感字符or敏感方法确认历史
-// */
-// func createIgnoreInfo(c *gin.Context, t *dal.PostConfirm, detect *dal.DetectStruct, usernameStr string, key string, senType int) error {
-// 	var igInfo dal.IgnoreInfoStruct
-// 	igInfo.Platform = detect.Platform
-// 	igInfo.AppId, _ = strconv.Atoi(detect.AppId)
-// 	igInfo.SensiType = senType
-// 	igInfo.KeysInfo = key
-// 	igInfo.Confirmer = usernameStr
-// 	igInfo.Remarks = t.Remark
-// 	igInfo.Version = detect.AppVersion
-// 	igInfo.Status = t.Status
-// 	igInfo.TaskId = t.TaskId
-// 	err := InsertIgnoredInfo(igInfo)
-// 	if err != nil {
-// 		errorReturn(c, "增量信息更新失败！")
-// 		return err
-// 	}
-// 	return nil
-// }
-
-// /**
-// 可忽略信息insert------fj
-// */
-// func InsertIgnoredInfo(detail dal.IgnoreInfoStruct) error {
-// 	connection, err := database.GetDBConnection()
-// 	if err != nil {
-// 		logs.Error("Connect to Db failed: %v", err)
-// 		return nil
-// 	}
-// 	defer connection.Close()
-
-// 	db := connection.Table(dal.IgnoreInfoStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
-
-// 	if err1 := db.Create(&detail).Error; err1 != nil {
-// 		logs.Error("数据库新增可忽略信息失败,%v，可忽略信息具体key参数：%s", err1, detail.KeysInfo)
-// 		return err1
-// 	}
-// 	return nil
-// }
-
-// /**
-// 可忽略信息批量insert------fj
-// */
-// func InsertIgnoredInfoBatch(details *[]dal.IgnoreInfoStruct) error {
-// 	connection, err := database.GetDBConnection()
-// 	if err != nil {
-// 		logs.Error("Connect to Db failed: %v", err)
-// 		return nil
-// 	}
-// 	defer connection.Close()
-
-// 	db := connection.Table(dal.IgnoreInfoStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
-
-// 	db.Begin()
-// 	for _, detail := range *details {
-// 		detail.CreatedAt = time.Now()
-// 		detail.UpdatedAt = time.Now()
-
-// 		if err1 := db.Create(&detail).Error; err1 != nil {
-// 			logs.Error("数据库新增可忽略信息失败,%v，可忽略信息具体key参数：%s", err1, detail.KeysInfo)
-// 			db.Rollback()
-// 			return err1
-// 		}
-// 	}
-// 	db.Commit()
-// 	return nil
-// }
-// func createIgnoreInfoBatch(t *dal.PostConfirm, detect *dal.DetectStruct, usernameStr string, key string, senType int) *dal.IgnoreInfoStruct {
-// 	var igInfo dal.IgnoreInfoStruct
-// 	igInfo.Platform = detect.Platform
-// 	igInfo.AppId, _ = strconv.Atoi(detect.AppId)
-// 	igInfo.SensiType = senType
-// 	igInfo.KeysInfo = key
-// 	igInfo.Confirmer = usernameStr
-// 	igInfo.Remarks = t.Remark
-// 	igInfo.Version = detect.AppVersion
-// 	igInfo.Status = t.Status
-// 	igInfo.TaskId = t.TaskId
-// 	return &igInfo
-// }
 
 /**
 请求错误信息返回统一格式
