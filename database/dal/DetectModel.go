@@ -446,39 +446,6 @@ func ConfirmBinaryResult(data map[string]string) bool {
 	return true
 }
 
-/**
-确认安卓二进制结果----------fj
-*/
-func ConfirmApkBinaryResultNew(data map[string]string) bool {
-	id := data["id"]
-	//toolId := data["tool_id"]
-	confirmer := data["confirmer"]
-	remark := data["remark"]
-	statusInt, _ := strconv.Atoi(data["status"])
-	//statusInt, _ := strconv.Atoi(status)
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
-		return false
-	}
-	defer connection.Close()
-	db := connection.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	condition := "id=" + id
-	if err := db.Where(condition).
-		Update(map[string]interface{}{
-			"status":     statusInt,
-			"confirmer":  confirmer,
-			"remark":     remark,
-			"updated_at": time.Now(),
-		}).Error; err != nil {
-		logs.Error("update db tb_detect_content failed: %v", err)
-		//db.Rollback()
-		return false
-	}
-	//db.Commit()
-	return true
-}
-
 func UpdateOldApkDetectDetailLevel(ids *[]string, levels *[]string, configIds *[]DetailExtraInfo) error {
 	connection, err := database.GetDBConnection()
 	if err != nil {

@@ -8,7 +8,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
+	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
@@ -782,52 +784,54 @@ func GetTaskPermissions_2(info dal.PermAppRelation, perIgs map[int]interface{}, 
 安卓确认检测结果----兼容.aab结果
 */
 func ConfirmApkBinaryResultv_5(c *gin.Context) {
-	param, _ := ioutil.ReadAll(c.Request.Body)
-	var t dal.PostConfirm
-	if err := json.Unmarshal(param, &t); err != nil {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("Unmarshal error: %v", err))
+
+	username, exist := c.Get("username")
+	if !exist {
+		utils.ReturnMsg(c, http.StatusUnauthorized, utils.FAILURE, fmt.Sprintf("unauthorized user: %v", username))
 		return
 	}
-	//获取确认人信息
-	username, _ := c.Get("username")
 	usernameStr := username.(string)
 
-	//获取任务信息
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": t.TaskId,
-	})
-
-	//获取该任务的权限信息
-	perms, errPerm := dal.QueryPermAppRelation(map[string]interface{}{
-		"task_id": t.TaskId,
-	})
-
-	//是否更新任务表中detect_no_pass字段的标志
-	var notPassFlag = false
-	if t.Status == 2 {
-		notPassFlag = true
-	}
-
-	db, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
+	// param, _ := ioutil.ReadAll(c.Request.Body)
+	var t dal.PostConfirm
+	// if err := json.Unmarshal(param, &t); err != nil {
+	// ReturnMsg(c, FAILURE, fmt.Sprintf("Unmarshal error: %v", err))
+	// return
+	// }
+	if err := c.ShouldBindJSON(&t); err != nil {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid parameter: %v", err))
 		return
 	}
-	defer db.Close()
+
+	//获取任务信息
+	// detect := dal.QueryDetectModelsByMap(map[string]interface{}{
+	// "id": t.TaskId,
+	// })
+	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": t.TaskId})
+	if err != nil {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid task id (%v): %v", err, t.TaskId))
+		return
+	}
+	// db, err := database.GetDBConnection()
+	// if err != nil {
+	// logs.Error("Connect to DB failed: %v", err)
+	// return
+	// }
+	// defer db.Close()
 
 	if t.Type == 0 { //敏感方法和字符串确认
-		detailInfo, err := queryDetectContentDetail(db,
+		detailInfo, err := queryDetectContentDetail(database.DB(),
 			map[string]interface{}{"id": t.Id})
 		if err != nil || detailInfo == nil || len(*detailInfo) == 0 {
 			logs.Error("taskId:"+fmt.Sprint(t.TaskId)+",不存在该检测结果，ID：%d", t.Id)
 			errorReturn(c, "不存在该检测结果")
 			return
 		}
-		if detect == nil || len(*detect) == 0 {
-			logs.Error("未查询到该taskid对应的检测任务，%v", t.TaskId)
-			errorReturn(c, "未查询到该taskid对应的检测任务")
-			return
-		}
+		// if detect == nil || len(*detect) == 0 {
+		// logs.Error("未查询到该taskid对应的检测任务，%v", t.TaskId)
+		// errorReturn(c, "未查询到该taskid对应的检测任务")
+		// return
+		// }
 
 		var data map[string]string
 		data = make(map[string]string)
@@ -835,7 +839,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 		data["confirmer"] = usernameStr
 		data["remark"] = t.Remark
 		data["status"] = strconv.Itoa(t.Status)
-		flag := dal.ConfirmApkBinaryResultNew(data)
+		flag := ConfirmApkBinaryResultNew(data)
 		if !flag {
 			logs.Error("taskId:" + fmt.Sprint(t.TaskId) + ",二进制检测内容确认失败")
 			errorReturn(c, "二进制检测内容确认失败")
@@ -848,7 +852,8 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 			if senType == 1 { //敏感方法
 				keyInfo := (*detailInfo)[0].ClassName + "." + (*detailInfo)[0].KeyInfo
 				//结果写入
-				if err := createIgnoreInfo(c, &t, &(*detect)[0], usernameStr, keyInfo, 1); err != nil {
+				// if err := createIgnoreInfo(c, &t, &(*detect)[0], usernameStr, keyInfo, 1); err != nil {
+				if err := createIgnoreInfo(c, &t, task, usernameStr, keyInfo, 1); err != nil {
 					return
 				}
 			} else { //敏感字符串
@@ -856,7 +861,8 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 				var strIgnoreList []dal.IgnoreInfoStruct
 				for _, key := range keys[0 : len(keys)-1] {
 					//结果写入
-					strIgnoreList = append(strIgnoreList, *createIgnoreInfoBatch(&t, &(*detect)[0], usernameStr, key, 2))
+					// strIgnoreList = append(strIgnoreList, *createIgnoreInfoBatch(&t, &(*detect)[0], usernameStr, key, 2))
+					strIgnoreList = append(strIgnoreList, *createIgnoreInfoBatch(&t, task, usernameStr, key, 2))
 				}
 				if err := dal.InsertIgnoredInfoBatch(&strIgnoreList); err != nil {
 					errorReturn(c, "增量信息更新失败！")
@@ -865,6 +871,12 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 			}
 		}
 	} else {
+
+		//获取该任务的权限信息
+		perms, errPerm := dal.QueryPermAppRelation(map[string]interface{}{
+			"task_id": t.TaskId,
+		})
+
 		if errPerm != nil || perms == nil || len(*perms) == 0 {
 			logs.Error("taskId:" + fmt.Sprint(t.TaskId) + ",未查询到该任务的检测信息")
 			errorReturn(c, "未查询到该任务的检测信息")
@@ -915,18 +927,59 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 		}
 	}
 
+	//是否更新任务表中detect_no_pass字段的标志
+	var notPassFlag = false
+	if t.Status == 2 {
+		notPassFlag = true
+	}
+
 	//任务状态更新
-	updateInfo, _ := taskStatusUpdate(t.TaskId, t.ToolId, &(*detect)[0], notPassFlag, 1)
+	// updateInfo, _ := taskStatusUpdate(t.TaskId, t.ToolId, &(*detect)[0], notPassFlag, 1)
+	updateInfo, _ := taskStatusUpdate(t.TaskId, t.ToolId, task, notPassFlag, 1)
 	if updateInfo != "" {
 		errorReturn(c, updateInfo)
 	}
-	logs.Info("confirm success +id :%d", t.Id)
-	c.JSON(http.StatusOK, gin.H{
-		"message":   "success",
-		"errorCode": 0,
-		"data":      "success",
-	})
+	// logs.Info("confirm success +id :%d", t.Id)
+	// c.JSON(http.StatusOK, gin.H{
+	// 	"message":   "success",
+	// 	"errorCode": 0,
+	// 	"data":      "success",
+	// })
+	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
 	return
+}
+
+/**
+确认安卓二进制结果----------fj
+*/
+func ConfirmApkBinaryResultNew(data map[string]string) bool {
+	id := data["id"]
+	//toolId := data["tool_id"]
+	confirmer := data["confirmer"]
+	remark := data["remark"]
+	statusInt, _ := strconv.Atoi(data["status"])
+	//statusInt, _ := strconv.Atoi(status)
+	connection, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return false
+	}
+	defer connection.Close()
+	db := connection.Table(dal.DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
+	condition := "id=" + id
+	if err := db.Where(condition).
+		Update(map[string]interface{}{
+			"status":     statusInt,
+			"confirmer":  confirmer,
+			"remark":     remark,
+			"updated_at": time.Now(),
+		}).Error; err != nil {
+		logs.Error("update db tb_detect_content failed: %v", err)
+		//db.Rollback()
+		return false
+	}
+	//db.Commit()
+	return true
 }
 
 /**
