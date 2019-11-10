@@ -804,7 +804,6 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 		utils.ReturnMsg(c, http.StatusUnauthorized, utils.FAILURE, fmt.Sprintf("unauthorized user: %v", username))
 		return
 	}
-	usernameStr := username.(string)
 
 	var t dal.PostConfirm
 	if err := c.ShouldBindJSON(&t); err != nil {
@@ -817,28 +816,29 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid task id (%v): %v", err, t.TaskId))
 		return
 	}
+	msgHeader := fmt.Sprintf("task id: %v", task.ID)
 
 	if t.Type == 0 { //敏感方法和字符串确认
 		detection, err := readExactDetectContentDetail(database.DB(),
 			map[string]interface{}{"id": t.Id})
 		if err != nil {
-			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("read detection failed: %v", err))
+			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s read detection failed: %v", msgHeader, err))
 			return
 		}
 		if detection == nil {
-			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid detection id (%v)", t.Id))
+			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s invalid detection id (%v)", msgHeader, t.Id))
 			return
 		}
 		detection.Status = t.Status
 		detection.Confirmer = username.(string)
 		detection.Remark = t.Remark
 		if err := database.UpdateDBRecord(database.DB(), detection); err != nil {
-			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("update failed: %v", err))
+			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s update failed: %v", msgHeader, err))
 			return
 		}
 		appID, err := strconv.Atoi(task.AppId)
 		if err != nil {
-			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid app id (%v): %v", task.AppId, err))
+			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s invalid app id (%v): %v", msgHeader, task.AppId, err))
 			return
 		}
 		switch detection.SensiType {
@@ -853,7 +853,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 					Confirmer: username.(string),
 					Remarks:   t.Remark,
 					TaskId:    t.TaskId}); err != nil {
-				utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("insert ignore information failed: %v", err))
+				utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s insert ignore information failed: %v", msgHeader, err))
 				return
 			}
 		case String:
@@ -869,18 +869,19 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 						Confirmer: username.(string),
 						Remarks:   t.Remark,
 						TaskId:    t.TaskId}); err != nil {
-					utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("insert ignore information failed: %v", err))
+					utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s insert ignore information failed: %v", msgHeader, err))
 					return
 				}
 			}
 		}
-	} else {
-		//获取该任务的权限信息
-		perms, errPerm := dal.QueryPermAppRelation(map[string]interface{}{
-			"task_id": t.TaskId,
-		})
+	} else { //获取该任务的权限信息
+		perms, err := dal.QueryPermAppRelation(map[string]interface{}{"task_id": t.TaskId})
+		if err != nil {
+			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s read perm_app_relation error: %v", msgHeader, err))
+			return
+		}
 
-		if errPerm != nil || perms == nil || len(*perms) == 0 {
+		if perms == nil || len(*perms) == 0 {
 			logs.Error("taskId:" + fmt.Sprint(t.TaskId) + ",未查询到该任务的检测信息")
 			errorReturn(c, "未查询到该任务的检测信息")
 			return
@@ -890,9 +891,8 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 			errorReturn(c, "权限结果数组下标越界")
 			return
 		}
-		permsInfoDB := (*perms)[t.Index-1].PermInfos
 		var permList []interface{}
-		if err := json.Unmarshal([]byte(permsInfoDB), &permList); err != nil {
+		if err := json.Unmarshal([]byte((*perms)[t.Index-1].PermInfos), &permList); err != nil {
 			logs.Error("taskId:" + fmt.Sprint(t.TaskId) + ",该任务的权限存储信息格式出错")
 			errorReturn(c, "该任务的权限存储信息格式出错")
 			return
@@ -921,7 +921,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 		history.AppId = (*perms)[t.Index-1].AppId
 		history.PermId = permId
 		history.Remarks = t.Remark
-		history.Confirmer = usernameStr
+		history.Confirmer = username.(string)
 		history.TaskId = t.TaskId
 		if err := dal.InsertPermOperationHistory(history); err != nil {
 			logs.Error("taskId:" + fmt.Sprint(t.TaskId) + ",权限操作历史写入失败！")
@@ -940,6 +940,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 	updateInfo, _ := taskStatusUpdate(t.TaskId, t.ToolId, task, notPassFlag, 1)
 	if updateInfo != "" {
 		errorReturn(c, updateInfo)
+		return
 	}
 
 	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
