@@ -584,22 +584,6 @@ func InsertNewIOSDetect(black, method, privacy IOSNewDetectContent) bool {
 	return true
 }
 
-//insert tb_ios_detect_permission
-func CreatePrivacyHistoryModel(permission PrivacyHistory) error {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return err
-	}
-	defer connection.Close()
-	//insert detect content
-	if err := connection.Table(PrivacyHistory{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&permission).Error; err != nil {
-		logs.Error("插入权限确认信息出错！, %v", err)
-		return err
-	}
-	return nil
-}
-
 //query tb_ios_privacy_history
 func QueryPrivacyHistoryModel(condition map[string]interface{}) *[]PrivacyHistory {
 	connection, err := database.GetDBConnection()
