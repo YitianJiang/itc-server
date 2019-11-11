@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	_const "code.byted.org/clientQA/itc-server/const"
+	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/utils"
 
 	"github.com/gin-gonic/gin"
@@ -366,7 +368,7 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 				return
 			} else {
 				//中间数据处理成功后，重新读取一次新库
-				iosTaskBinaryCheckContent = dal.QueryNewIOSDetectModel(map[string]interface{}{
+				iosTaskBinaryCheckContent = QueryNewIOSDetectModel(map[string]interface{}{
 					"taskId": taskId,
 					"toolId": toolId,
 				})
@@ -505,43 +507,57 @@ type IOSConfirm struct {
 }
 
 func ConfirmIOSBinaryResult(c *gin.Context) {
+
+	username, exist := c.Get("username")
+	if !exist {
+		utils.ReturnMsg(c, http.StatusUnauthorized, utils.FAILURE, "unauthorized user")
+		return
+	}
 	//参数校验
 	var ios IOSConfirm
-	if err := c.BindJSON(&ios); err != nil {
-		logs.Error("确认二进制检测结果传参出错！", err.Error())
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "参数不合法！",
-			"errorCode": -1,
-			"data":      "参数不合法！",
-		})
+	if err := c.ShouldBindJSON(&ios); err != nil {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid user: %v", err))
+		// logs.Error("确认二进制检测结果传参出错！", err.Error())
+		// c.JSON(http.StatusOK, gin.H{
+		// 	"message":   "参数不合法！",
+		// 	"errorCode": -1,
+		// 	"data":      "参数不合法！",
+		// })
 		return
 	}
-	//参数异常处理
-	if ios.ConfirmType < 0 || ios.ConfirmType > 3 {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "参数错误！",
-			"errorCode": -1,
-			"data":      "参数错误，id和permission不能同时传入！",
-		})
-		return
-	}
+	// //参数异常处理
+	// if ios.ConfirmType < 0 || ios.ConfirmType > 3 {
+	// 	c.JSON(http.StatusOK, gin.H{
+	// 		"message":   "参数错误！",
+	// 		"errorCode": -1,
+	// 		"data":      "参数错误，id和permission不能同时传入！",
+	// 	})
+	// 	return
+	// }
 	//获取确认人信息
-	username, _ := c.Get("username")
-	if confirmIOSBinaryResult(ios, username.(string)) {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "success",
-			"errorCode": 0,
-			"data":      "success",
-		})
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "update failed！",
-			"errorCode": -1,
-			"data":      "update failed！",
-		})
+	// username, _ := c.Get("username")
+	// if !confirmIOSBinaryResult(ios, username.(string)) {
+	if !confirmIOSBinaryResult(&ios, username.(string)) {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, "confirm failed")
+		return
+		// c.JSON(http.StatusOK, gin.H{
+		// 	"message":   "success",
+		// 	"errorCode": 0,
+		// 	"data":      "success",
+		// })
 	}
+	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
+	// } else {
+	// 	c.JSON(http.StatusOK, gin.H{
+	// 		"message":   "update failed！",
+	// 		"errorCode": -1,
+	// 		"data":      "update failed！",
+	// 	})
+	// }
 }
-func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
+
+// func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
+func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 		"id": ios.TaskId,
 	})
@@ -594,7 +610,7 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 		queryKey = "privacy"
 	}
 	//数据库读取检测内容转为map
-	iosDetect := dal.QueryNewIOSDetectModel(map[string]interface{}{
+	iosDetect := QueryNewIOSDetectModel(map[string]interface{}{
 		"taskId":      ios.TaskId,
 		"toolId":      ios.ToolId,
 		"detect_type": queryKey,
@@ -704,12 +720,29 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 	return true
 }
 
+//query tb_ios_detect_content
+func QueryNewIOSDetectModel(condition map[string]interface{}) *[]dal.IOSNewDetectContent {
+	connection, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return nil
+	}
+	defer connection.Close()
+
+	var iosDetectContent []dal.IOSNewDetectContent
+	if err := connection.Table(dal.IOSNewDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).Find(&iosDetectContent).Error; err != nil {
+		logs.Error("请求iOS静态检测结果出错！！！", err.Error())
+		return nil
+	}
+	return &iosDetectContent
+}
+
 //判断是否需要更新total status状态值
 func changeTotalStatus(taskId, toolId, confirmLark int) (error, int) {
 	var newChangeFlag = true
 	var unConfirmNum = 0
 	var notPassNum = 0 //确认不通过数目
-	iosDetectAll := dal.QueryNewIOSDetectModel(map[string]interface{}{
+	iosDetectAll := QueryNewIOSDetectModel(map[string]interface{}{
 		"taskId": taskId,
 		"toolId": toolId,
 	})
@@ -788,7 +821,8 @@ func middleDataDeal(taskId, toolId, aId int) (bool, bool) {
 			updateConfirm.ConfirmContent = detectContent
 			updateConfirm.Status = m.Status
 			updateConfirm.Remark = m.Remark
-			if confirmIOSBinaryResult(updateConfirm, m.Confirmer) == false {
+			// if confirmIOSBinaryResult(updateConfirm, m.Confirmer) == false {
+			if confirmIOSBinaryResult(&updateConfirm, m.Confirmer) == false {
 				logs.Error("兼容中间数据更新出错！")
 				return true, false
 			}
