@@ -258,7 +258,7 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 	}
 	insertFlag := dal.InsertNewIOSDetect(blackDetect, methodDetect, privacyDetect)
 	//更新tb_binary_detect中status值
-	unRes, err := changeTotalStatus(taskId, toolId, 0)
+	unRes, err := updateTaskStatusiOS(taskId, toolId, 0)
 	if err != nil {
 		logs.Error("判断总的total status出错！", err.Error())
 	}
@@ -684,7 +684,7 @@ func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 	// 	delete(LARK_MSG_CALL_MAP, key)
 	// }
 	//更新tb_binary_detect中status值
-	if _, err := changeTotalStatus(ios.TaskId, ios.ToolId, 1); err != nil {
+	if _, err := updateTaskStatusiOS(ios.TaskId, ios.ToolId, 1); err != nil {
 		logs.Error("总任务状态更改出错！", err)
 		return false
 	}
@@ -704,7 +704,7 @@ func QueryNewIOSDetectModel(db *gorm.DB, sieve map[string]interface{}) (*[]dal.I
 }
 
 //判断是否需要更新total status状态值
-func changeTotalStatus(taskId, toolId, confirmLark int) (int, error) {
+func updateTaskStatusiOS(taskId, toolId, confirmLark int) (int, error) {
 	var newChangeFlag = true
 	var unconfirmedCount = 0
 	var confirmedFailCount = 0 //确认不通过数目
