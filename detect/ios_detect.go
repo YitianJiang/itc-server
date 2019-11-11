@@ -63,7 +63,7 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 	//获取上次黑名单检测结果
 	var blacklist []interface{}
 	var method []interface{}
-	var lastDetectContent *[]dal.IOSNewDetectContent
+	var lastDetectContent []dal.IOSNewDetectContent
 	if lastTaskId >= 0 {
 		var err error
 		lastDetectContent, err = readDetectContentiOS(database.DB(),
@@ -73,10 +73,10 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 			return false, warnFlag, 0
 		}
 	}
-	if lastDetectContent == nil || len(*lastDetectContent) == 0 {
+	if lastDetectContent == nil || len(lastDetectContent) == 0 {
 		logs.Error(strconv.Itoa(lastTaskId) + "没有存储在检测结果中！原因可能为：上一次检测任务没有检测结果，检测工具回调出错！")
 	} else {
-		for _, lastDetect := range *lastDetectContent {
+		for _, lastDetect := range lastDetectContent {
 			if lastDetect.DetectType == "blacklist" {
 				b := make(map[string]interface{})
 				err := json.Unmarshal([]byte(lastDetect.DetectContent), &b)
@@ -350,7 +350,7 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 		logs.Warn("read tb_ios_new_detect_content failed: %v", err)
 	}
 	//如果数据在新库中查不到就去访问老库
-	if iosTaskBinaryCheckContent == nil || len(*iosTaskBinaryCheckContent) == 0 {
+	if iosTaskBinaryCheckContent == nil || len(iosTaskBinaryCheckContent) == 0 {
 		//中间数据处理
 		detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 			"id": taskId,
@@ -402,13 +402,13 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 	}
 	//返回检测结果给前端
 	data := map[string]interface{}{
-		"appName":    (*iosTaskBinaryCheckContent)[0].AppName,
-		"appVersion": (*iosTaskBinaryCheckContent)[0].Version,
-		"bundleId":   (*iosTaskBinaryCheckContent)[0].BundleId,
-		"sdkVersion": (*iosTaskBinaryCheckContent)[0].SdkVersion,
-		"minVersion": (*iosTaskBinaryCheckContent)[0].MinVersion,
+		"appName":    iosTaskBinaryCheckContent[0].AppName,
+		"appVersion": iosTaskBinaryCheckContent[0].Version,
+		"bundleId":   iosTaskBinaryCheckContent[0].BundleId,
+		"sdkVersion": iosTaskBinaryCheckContent[0].SdkVersion,
+		"minVersion": iosTaskBinaryCheckContent[0].MinVersion,
 	}
-	for _, iosContent := range *iosTaskBinaryCheckContent {
+	for _, iosContent := range iosTaskBinaryCheckContent {
 		var m map[string]interface{}
 		err := json.Unmarshal([]byte(iosContent.DetectContent), &m)
 		if err != nil {
@@ -595,12 +595,12 @@ func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 		logs.Error("read tb_ios_new_detect_content failed: %v", err)
 		return false
 	}
-	if iosDetect == nil || len(*iosDetect) == 0 {
+	if iosDetect == nil || len(iosDetect) == 0 {
 		logs.Error("查询iOS检测内容数据库出错！！！")
 		return false
 	}
 	var m map[string]interface{}
-	if err := json.Unmarshal([]byte((*iosDetect)[0].DetectContent), &m); err != nil {
+	if err := json.Unmarshal([]byte(iosDetect[0].DetectContent), &m); err != nil {
 		logs.Error("数据库内容转map出错!", err.Error())
 		return false
 	}
@@ -641,9 +641,9 @@ func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 		}
 	} else {
 		if err := database.InsertDBRecord(database.DB(), &dal.PrivacyHistory{
-			AppId:          (*iosDetect)[0].AppId,
-			AppName:        (*iosDetect)[0].AppName,
-			ConfirmVersion: (*iosDetect)[0].Version,
+			AppId:          iosDetect[0].AppId,
+			AppName:        iosDetect[0].AppName,
+			ConfirmVersion: iosDetect[0].Version,
 			Status:         ios.Status,
 			Confirmer:      confirmer,
 			ConfirmReason:  ios.Remark,
@@ -656,7 +656,7 @@ func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 		for _, pp := range m["privacy"].([]interface{}) {
 			confirmprivacy := pp.(map[string]interface{})
 			if confirmprivacy["permission"] == ios.ConfirmContent {
-				confirmprivacy["confirmVersion"] = (*iosDetect)[0].Version
+				confirmprivacy["confirmVersion"] = iosDetect[0].Version
 				confirmprivacy["confirmReason"] = ios.Remark
 				confirmprivacy["confirmer"] = confirmer
 				confirmprivacy["status"] = ios.Status
@@ -669,8 +669,8 @@ func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 		logs.Error("marshal error: %v", err)
 		return false
 	}
-	(*iosDetect)[0].DetectContent = string(confirmedContent)
-	if err := database.UpdateDBRecord(database.DB(), &(*iosDetect)[0]); err != nil {
+	iosDetect[0].DetectContent = string(confirmedContent)
+	if err := database.UpdateDBRecord(database.DB(), &iosDetect[0]); err != nil {
 		logs.Error("update tb_ios_new_detect_content failed: %v", err)
 		return false
 	}
@@ -691,15 +691,15 @@ func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 	return true
 }
 
-func readDetectContentiOS(db *gorm.DB, sieve map[string]interface{}) (*[]dal.IOSNewDetectContent, error) {
+func readDetectContentiOS(db *gorm.DB, sieve map[string]interface{}) ([]dal.IOSNewDetectContent, error) {
 
 	var result []dal.IOSNewDetectContent
 	if err := db.Debug().Where(sieve).Find(&result).Error; err != nil {
-		logs.Error("dabase error: %v", err)
+		logs.Error("database error: %v", err)
 		return nil, err
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 //判断是否需要更新total status状态值
@@ -715,7 +715,7 @@ func updateTaskStatusiOS(taskId, toolId, confirmLark int) (int, error) {
 		logs.Error("read tb_ios_new_detect_content failed: %v", err)
 		return unconfirmedCount, err
 	}
-	for _, oneDetect := range *iosDetectAll {
+	for _, oneDetect := range iosDetectAll {
 		var im map[string]interface{}
 		if err := json.Unmarshal([]byte(oneDetect.DetectContent), &im); err != nil {
 			logs.Error("unmarshal error: %v", err)
