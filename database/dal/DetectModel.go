@@ -540,21 +540,6 @@ func InsertDetectDetailBatch(details *[]DetectContentDetail) error {
 	return nil
 }
 
-//update tb_ios_detect_content
-func UpdateNewIOSDetectModel(model IOSNewDetectContent, updates map[string]interface{}) bool {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return false
-	}
-	defer connection.Close()
-	if err := connection.Table(IOSNewDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Model(&model).Update(updates).Error; err != nil {
-		logs.Error("更新iOS静态检测结果出错！！！", err.Error())
-		return false
-	}
-	return true
-}
-
 //iOS 检测结果分类处理
 func InsertNewIOSDetect(black, method, privacy IOSNewDetectContent) bool {
 	connection, err := database.GetDBConnection()

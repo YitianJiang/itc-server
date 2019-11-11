@@ -671,13 +671,6 @@ func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 		logs.Error("update tb_ios_new_detect_content failed: %v", err)
 		return false
 	}
-	// flag := UpdateNewIOSDetectModel((*iosDetect)[0], map[string]interface{}{
-	// 	"detect_content": string(confirmedContent),
-	// })
-	// if !flag {
-	// 	logs.Error("iOS黑名单检测内容确认失败")
-	// 	return false
-	// }
 	//取消Lark通知逻辑暂时不改，增量ready后修改
 	appId := (*detect)[0].AppId
 	appVersion := (*detect)[0].AppVersion
@@ -694,21 +687,6 @@ func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 	}
 	return true
 }
-
-// //update tb_ios_detect_content
-// func UpdateNewIOSDetectModel(model dal.IOSNewDetectContent, updates map[string]interface{}) bool {
-// 	connection, err := database.GetDBConnection()
-// 	if err != nil {
-// 		logs.Error("Connect to DB failed: %v", err)
-// 		return false
-// 	}
-// 	defer connection.Close()
-// 	if err := connection.Table(IOSNewDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Model(&model).Update(updates).Error; err != nil {
-// 		logs.Error("更新iOS静态检测结果出错！！！", err.Error())
-// 		return false
-// 	}
-// 	return true
-// }
 
 //query tb_ios_detect_content
 func QueryNewIOSDetectModel(db *gorm.DB, sieve map[string]interface{}) (*[]dal.IOSNewDetectContent, error) {
