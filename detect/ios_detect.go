@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
@@ -259,7 +258,7 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 	}
 	insertFlag := dal.InsertNewIOSDetect(blackDetect, methodDetect, privacyDetect)
 	//更新tb_binary_detect中status值
-	err, unRes := changeTotalStatus(taskId, toolId, 0)
+	unRes, err := changeTotalStatus(taskId, toolId, 0)
 	if err != nil {
 		logs.Error("判断总的total status出错！", err.Error())
 	}
@@ -665,23 +664,27 @@ func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 		}
 	}
 	//更新后的内容重新转成json存储到数据库
-	confirmedContent, _ := json.Marshal(m)
+	confirmedContent, err := json.Marshal(m)
+	if err != nil {
+		logs.Error("marshal error: %v", err)
+		return false
+	}
 	(*iosDetect)[0].DetectContent = string(confirmedContent)
 	if err := database.UpdateDBRecord(database.DB(), &(*iosDetect)[0]); err != nil {
 		logs.Error("update tb_ios_new_detect_content failed: %v", err)
 		return false
 	}
-	//取消Lark通知逻辑暂时不改，增量ready后修改
-	appId := (*detect)[0].AppId
-	appVersion := (*detect)[0].AppVersion
-	key := strconv.Itoa(ios.TaskId) + "_" + appId + "_" + appVersion + "_" + strconv.Itoa(ios.ToolId)
-	ticker := LARK_MSG_CALL_MAP[key]
-	if ticker != nil {
-		ticker.(*time.Ticker).Stop()
-		delete(LARK_MSG_CALL_MAP, key)
-	}
+	// //取消Lark通知逻辑暂时不改，增量ready后修改
+	// appId := (*detect)[0].AppId
+	// appVersion := (*detect)[0].AppVersion
+	// key := strconv.Itoa(ios.TaskId) + "_" + appId + "_" + appVersion + "_" + strconv.Itoa(ios.ToolId)
+	// ticker := LARK_MSG_CALL_MAP[key]
+	// if ticker != nil {
+	// 	ticker.(*time.Ticker).Stop()
+	// 	delete(LARK_MSG_CALL_MAP, key)
+	// }
 	//更新tb_binary_detect中status值
-	if err, _ := changeTotalStatus(ios.TaskId, ios.ToolId, 1); err != nil {
+	if _, err := changeTotalStatus(ios.TaskId, ios.ToolId, 1); err != nil {
 		logs.Error("总任务状态更改出错！", err)
 		return false
 	}
@@ -701,24 +704,23 @@ func QueryNewIOSDetectModel(db *gorm.DB, sieve map[string]interface{}) (*[]dal.I
 }
 
 //判断是否需要更新total status状态值
-func changeTotalStatus(taskId, toolId, confirmLark int) (error, int) {
+func changeTotalStatus(taskId, toolId, confirmLark int) (int, error) {
 	var newChangeFlag = true
-	var unConfirmNum = 0
-	var notPassNum = 0 //确认不通过数目
+	var unconfirmedCount = 0
+	var confirmedFailCount = 0 //确认不通过数目
 	iosDetectAll, err := QueryNewIOSDetectModel(database.DB(), map[string]interface{}{
 		"taskId": taskId,
 		"toolId": toolId,
 	})
 	if err != nil {
 		logs.Error("read tb_ios_new_detect_content failed: %v", err)
-		return err, unConfirmNum
+		return unconfirmedCount, err
 	}
 	for _, oneDetect := range *iosDetectAll {
 		var im map[string]interface{}
-		err := json.Unmarshal([]byte(oneDetect.DetectContent), &im)
-		if err != nil {
-			logs.Error("确认任务状态时，map信息数据库内容转map出错!", err.Error())
-			return err, unConfirmNum
+		if err := json.Unmarshal([]byte(oneDetect.DetectContent), &im); err != nil {
+			logs.Error("unmarshal error: %v", err)
+			return unconfirmedCount, err
 		}
 		newQueryKey := oneDetect.DetectType
 		if newQueryKey == "blacklist" {
@@ -727,11 +729,11 @@ func changeTotalStatus(taskId, toolId, confirmLark int) (error, int) {
 		a := im[newQueryKey].([]interface{})
 		for _, oneBlack := range a {
 			needConfirm := oneBlack.(map[string]interface{})
-			if needConfirm["status"].(float64) == 0 {
+			if int(needConfirm["status"].(float64)) == Unconfirmed {
 				newChangeFlag = false
-				unConfirmNum++
-			} else if needConfirm["status"].(float64) == 2 {
-				notPassNum++
+				unconfirmedCount++
+			} else if int(needConfirm["status"].(float64)) == ConfirmedFail {
+				confirmedFailCount++
 			}
 		}
 	}
@@ -740,21 +742,22 @@ func changeTotalStatus(taskId, toolId, confirmLark int) (error, int) {
 		detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 			"id": taskId,
 		})
-		if notPassNum == 0 {
+		if confirmedFailCount == 0 {
 			(*detect)[0].Status = 1 //1代表全部确认且确认通过
 		} else {
 			(*detect)[0].Status = 2 //2代表全部确认且有确认不通过
 		}
-		(*detect)[0].DetectNoPass = notPassNum //不通过总数
+		(*detect)[0].DetectNoPass = confirmedFailCount //不通过总数
 		err := dal.UpdateDetectModelNew((*detect)[0])
 		if err != nil {
 			logs.Error("更新任务状态失败，任务ID："+strconv.Itoa(taskId)+",错误原因:%v", err)
-			return err, unConfirmNum
+			return unconfirmedCount, err
 		}
 		StatusDeal((*detect)[0], confirmLark) //ci回调和不通过block处理
 		sameConfirm((*detect)[0])             //相同包检测结果确认
 	}
-	return nil, unConfirmNum
+
+	return unconfirmedCount, nil
 }
 
 //返回两个bool值，第一个代表是否是middl数据，第二个代表处理是否成功
