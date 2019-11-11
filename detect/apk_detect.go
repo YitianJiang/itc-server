@@ -682,7 +682,7 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, m
 			str.Desc = detail.DescInfo
 			str.Id = detail.ID
 			str.RiskLevel = detail.RiskLevel
-			if detection, err := retrieveDetection(database.DB,
+			if detection, err := retrieveDetection(database.DB(),
 				map[string]interface{}{"key_info": strings.Split(str.Keys, ";")[0]}); err != nil {
 				str.RiskLevel = "unknown"
 			} else {
@@ -964,7 +964,7 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassFlag bool, confirmLark int) (string, int) {
 
 	condition := "deleted_at IS NULL and task_id='" + strconv.Itoa(taskId) + "' and tool_id='" + strconv.Itoa(toolId) + "'"
-	counts, countsUn := QueryUnConfirmDetectContent(database.DB, condition)
+	counts, countsUn := QueryUnConfirmDetectContent(database.DB(), condition)
 
 	perms, _ := dal.QueryPermAppRelation(map[string]interface{}{"task_id": taskId})
 	var permFlag = true

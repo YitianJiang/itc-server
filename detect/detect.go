@@ -29,8 +29,6 @@ import (
 
 const (
 	DETECT_URL_DEV = "10.2.209.202:9527"
-	//DETECT_URL_PRO = "10.2.9.226:9527"
-	DETECT_URL_PRO = "10.1.221.188:9527"
 	//test----fj
 	Local_URL_PRO = "10.1.220.99:9527"
 
@@ -129,11 +127,11 @@ func UploadFile(c *gin.Context) {
 		}
 		if checkItem != "6" {
 			//旧服务url
-			url = "http://" + DETECT_URL_PRO + "/apk_post"
+			url = "http://" + _const.DETECT_URL_PRO + "/apk_post"
 		} else {
 			//新服务url
 			//url = "http://"+Local_URL_PRO +"/apk_post/v2"
-			url = "http://" + DETECT_URL_PRO + "/apk_post/v2"
+			url = "http://" + _const.DETECT_URL_PRO + "/apk_post/v2"
 		}
 		//url = "http://" + DETECT_URL_PRO + "/apk_post"
 
@@ -144,7 +142,7 @@ func UploadFile(c *gin.Context) {
 			return
 		}
 		//url = "http://"+Local_URL_PRO+"/ipa_post/v2"
-		url = "http://" + DETECT_URL_PRO + "/ipa_post/v2"
+		url = "http://" + _const.DETECT_URL_PRO + "/ipa_post/v2"
 	} else {
 		c.JSON(http.StatusOK, gin.H{
 			"message":   "platform参数不合法！",
@@ -161,8 +159,8 @@ func UploadFile(c *gin.Context) {
 	//2、将相关信息保存至数据库
 	var dbDetectModel dal.DetectStruct
 	dbDetectModel.Creator = nameI.(string)
-	dbDetectModel.ToLarker = name
-	dbDetectModel.ToGroup = toGroup
+	dbDetectModel.ToLarker = removeDuplicate(strings.Split(name, ","))
+	dbDetectModel.ToGroup = removeDuplicate(strings.Split(toGroup, ","))
 	dbDetectModel.SelfCheckStatus = 0
 	dbDetectModel.CreatedAt = time.Now()
 	dbDetectModel.UpdatedAt = time.Now()
@@ -247,7 +245,7 @@ func UploadFile(c *gin.Context) {
 		response, err := toolHttp.Post(url, contentType, bodyBuffer)
 		if err != nil {
 			logs.Error("taskId:"+fmt.Sprint(dbDetectModelId)+",上传二进制包出错,", err.Error())
-			if err := updateDetectTaskStatus(database.DB,
+			if err := updateDetectTaskStatus(database.DB(),
 				dbDetectModelId,
 				TaskStatusError); err != nil {
 				logs.Warn("Task id: %v Failed to update detect task", dbDetectModelId)
@@ -268,7 +266,7 @@ func UploadFile(c *gin.Context) {
 			json.Unmarshal(resBody.Bytes(), &data)
 			logs.Info("Task id: %v upload detect url's response: %+v", dbDetectModelId, data)
 			if fmt.Sprint(data["success"]) != "1" {
-				if err := updateDetectTaskStatus(database.DB,
+				if err := updateDetectTaskStatus(database.DB(),
 					dbDetectModelId,
 					TaskStatusError); err != nil {
 					logs.Warn("Task id: %v Failed to update detect task", dbDetectModelId)
@@ -288,6 +286,22 @@ func UploadFile(c *gin.Context) {
 			"taskId": dbDetectModelId,
 		},
 	})
+}
+
+func removeDuplicate(s []string) string {
+
+	m := make(map[string]bool)
+	for i := range s {
+		if _, ok := m[s[i]]; !ok {
+			m[s[i]] = false
+		}
+	}
+
+	var result string
+	for k := range m {
+		result += k + ","
+	}
+	return result[:len(result)-1]
 }
 
 //emptyError标识该文件必须上传，且对文件大小有要求（大于1M）
@@ -323,17 +337,16 @@ func getFilesFromRequest(c *gin.Context, fieldName string, emptyError bool) (str
 	filepath := _tmpDir + "/" + filename
 	out, err := os.Create(filepath)
 	if err != nil {
-		errorReturn(c, fieldName+":安装包文件处理失败，请联系相关人员！", -6)
-		logs.Fatal("临时文件保存失败")
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("os create failed: %v", err))
 		return "", "", false
 	}
 	defer out.Close()
 	_, err = io.Copy(out, file)
 	if err != nil {
-		errorReturn(c, fieldName+":安装包文件处理失败，请联系相关人员！", -6)
-		logs.Fatal("临时文件保存失败")
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("io copy failed: %v", err))
 		return "", "", false
 	}
+
 	return filepath, filename, true
 }
 
@@ -349,7 +362,7 @@ func UpdateDetectInfos(c *gin.Context) {
 	}
 	logs.Info("Task id: %v Binary detect tool callback", taskId)
 
-	if err := updateDetectTaskStatus(database.DB,
+	if err := updateDetectTaskStatus(database.DB(),
 		taskId, TaskStatusUnconfirm); err != nil {
 		logs.Error("Task id: %v Failed to update detect task", taskId)
 		return
@@ -361,53 +374,33 @@ func UpdateDetectInfos(c *gin.Context) {
 	appVersion := c.Request.FormValue("appVersion")
 	htmlContent := c.Request.FormValue("content")
 
-	task, err := getExactDetectTask(database.DB, map[string]interface{}{"id": taskId})
+	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
 	if err != nil {
 		logs.Error("Task id: %v Failed to get detect task", taskId)
 		return
 	}
-	toolIdInt, _ := strconv.Atoi(toolId)
 
 	//消息通知条数--检测项+自查项
 	var unConfirms int
 	var unSelfCheck int
 	if task.Platform == 0 {
-		if toolIdInt == 6 { //安卓兼容新版本
-			//安卓检测信息分析，并将检测信息写库-----fj
-			taskID, err := strconv.Atoi(taskId)
-			if err != nil {
-				logs.Error("String convert error: %v", taskId)
-			}
-			toolID, err := strconv.Atoi(toolId)
-			if err != nil {
-				logs.Error("String convert error: %v", toolId)
-			}
-			var errApk error
-			go logs.Debug("Task id: %v json content: %v", taskId, jsonContent)
-			errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, taskID, toolID)
-			if errApk != nil {
-				ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to update APK detect reuslt: %v", errApk))
-				return
-			}
-		} else {
-			var detectContent dal.DetectContent
-			detectContent.TaskId, _ = strconv.Atoi(taskId)
-			detectContent.ToolId, _ = strconv.Atoi(toolId)
-			detectContent.HtmlContent = htmlContent
-			detectContent.JsonContent = jsonContent
-			detectContent.CreatedAt = time.Now()
-			detectContent.UpdatedAt = time.Now()
-			task.AppName = appName
-			task.AppVersion = appVersion
-			task.UpdatedAt = time.Now()
-			if err := dal.UpdateDetectModel(*task, detectContent); err != nil {
-				c.JSON(http.StatusOK, gin.H{
-					"message":   "数据库更新检测信息失败",
-					"errorCode": -3,
-					"data":      "数据库更新检测信息失败",
-				})
-				return
-			}
+		taskID, err := strconv.Atoi(taskId)
+		if err != nil {
+			ReturnMsg(c, FAILURE, fmt.Sprintf("invalid task id: %v(%v)", err, taskId))
+			return
+
+		}
+		toolID, err := strconv.Atoi(toolId)
+		if err != nil {
+			ReturnMsg(c, FAILURE, fmt.Sprintf("Task id: %v invalid tool id: %v(%v)", taskId, err, toolId))
+			return
+		}
+		var errApk error
+		go logs.Debug("Task id: %v json content: %v", taskId, jsonContent)
+		errApk, unConfirms = ApkJsonAnalysis_2(jsonContent, taskID, toolID)
+		if errApk != nil {
+			ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to update APK detect reuslt: %v", errApk))
+			return
 		}
 	}
 	//ios新检测内容存储
@@ -466,7 +459,7 @@ func UpdateDetectInfos(c *gin.Context) {
 	}
 
 	//进行lark消息提醒
-	task, err = getExactDetectTask(database.DB, map[string]interface{}{"id": taskId})
+	task, err = getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
 	if err != nil {
 		logs.Error("Task id: %v Failed to get detect task", taskId)
 		return
@@ -550,9 +543,9 @@ func UpdateDetectInfos(c *gin.Context) {
 	// 此处测试时注释掉
 	larkUrl := "http://rocket.bytedance.net/rocket/itc/task?biz=" + appId + "&showItcDetail=1&itcTaskId=" + taskId
 	for _, creator := range larkList {
-		utils.UserInGroup(creator)                                                                             //将用户拉入预审平台群
-		res := utils.LarkDetectResult(creator, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, false) //new lark卡片通知形式
-		logs.Info("taskId: " + taskId + ", creator: " + creator + ", lark message result: " + fmt.Sprint(res))
+		utils.UserInGroup(creator)                                                                                     //将用户拉入预审平台群
+		res := utils.LarkDetectResult(taskId, creator, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, false) //new lark卡片通知形式
+		logs.Info("task id: " + taskId + ", creator: " + creator + ", lark message result: " + fmt.Sprint(res))
 	}
 	//发给群消息沿用旧的机器人，给群ID对应群发送消息
 	toGroupID := task.ToGroup
@@ -562,7 +555,7 @@ func UpdateDetectInfos(c *gin.Context) {
 		for _, group_id := range groupArr {
 			to_lark_group := strings.Trim(group_id, " ")
 			// 新样式
-			if utils.LarkDetectResult(to_lark_group, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, true) == false {
+			if utils.LarkDetectResult(taskId, to_lark_group, rd_bm, qa_bm, message, larkUrl, unConfirms, unSelfCheck, true) == false {
 				message += message + larkUrl
 				utils.LarkGroup(message, to_lark_group)
 			}

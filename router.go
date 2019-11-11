@@ -6,11 +6,14 @@ import (
 	"code.byted.org/clientQA/itc-server/detect"
 	"code.byted.org/clientQA/itc-server/developerconnmanager"
 	"code.byted.org/clientQA/itc-server/middleware"
+	"code.byted.org/clientQA/itc-server/settings"
 	"code.byted.org/gin/ginex"
 )
 
 func InitRouter(r *ginex.Engine) {
 
+	r.POST("/settings", settings.Refresh)
+	r.GET("/settings", settings.Show)
 	api := r.GroupEX("/api")
 	//二进制包检测回调接口
 	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
@@ -30,9 +33,10 @@ func InitRouter(r *ginex.Engine) {
 	detectapi.POST("/new/uploadUnconfirmedDetections", detect.UploadUnconfirmedDetections)
 	detectapi.Use(middleware.JWTCheck())
 	{
-		detectapi.POST("/new/unconfirmedList", detect.UnconfirmedList)
-		detectapi.GET("/new/unconfirmedDetail", detect.UnconfirmedDetail)
-		detectapi.GET("/new/confirm", detect.Confirm)
+		detectapi.POST("/new/list", detect.List)
+		detectapi.GET("/new/detail", detect.Detail)
+		detectapi.PUT("/new/confirmation", detect.Confirm)
+		detectapi.DELETE("/new", detect.Delete)
 	}
 
 	//检测服务检测异常报警接口
@@ -239,7 +243,14 @@ func InitRouter(r *ginex.Engine) {
 	{
 		testflightapi.GET("/getRecentVersionReviewInfo", developerconnmanager.GetRecentVersionReviewInfo)
 		testflightapi.POST("/createGroupAddVesion", developerconnmanager.CreateGroupAddVesion)
-		testflightapi.POST("/deleteGroupTester",developerconnmanager.DeleteGroupTester)
-		testflightapi.POST("/uploadFileToTos",developerconnmanager.UploadFileToTos)
+		testflightapi.POST("/deleteGroupTester", developerconnmanager.DeleteGroupTester)
+		testflightapi.POST("/uploadFileToTos", developerconnmanager.UploadFileToTos)
+	}
+
+	//哭泣，因为DBA下掉了所有的gui操作数据库的功能，固有此变更数据的接口出现
+	operationDBApi := r.Group("/v1/deleteBundleTable")
+	{
+		operationDBApi.POST("deleteBundleIdCap",developerconnmanager.DeleteBundleIdCap)
+		operationDBApi.POST("deleteCertPrivKey",developerconnmanager.DeleteCertPrivKey)
 	}
 }

@@ -18,7 +18,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const DETECT_URL_PRO = "10.1.221.188:9527"
 
 //发送http post请求，其中rbody是一个json串
 func PostJsonHttp(url string, rbody []byte) (int, []byte) {
@@ -159,7 +158,7 @@ func PostJsonHttp2(rbody []byte) bool {
 	//增加header选项
 	reqest.Header.Add("token", _const.ROCKETTOKEN)
 	if err != nil {
-		logs.Error("rocket发送消息失败！", err.Error())
+		logs.Error("rocket发送消息失败！%v", err)
 		return false
 	}
 	//处理返回结果
@@ -168,7 +167,7 @@ func PostJsonHttp2(rbody []byte) bool {
 	body, _ := ioutil.ReadAll(response.Body)
 	m := make(map[string]interface{})
 	if err := json.Unmarshal(body, &m); err != nil {
-		logs.Error("读取返回body出错！", err.Error())
+		logs.Error("读取返回body出错！%v", err)
 		return false
 	}
 	if int(m["errorCode"].(float64)) == 0 {
@@ -181,12 +180,12 @@ func GetLarkToken() string {
 	resp, err := http.PostForm("https://open.feishu.cn/open-apis/auth/v3/app_access_token/internal/",
 		url.Values{"app_id": {"cli_9d8a78c3eff61101"}, "app_secret": {"3kYDkS2M0obuzaEWrArGIc6NOJU6ZVeF"}})
 	if err != nil {
-		logs.Error("请求lark token出错！", err.Error())
+		logs.Error("请求lark token出错！%v", err)
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logs.Error("lark token读取返回出错！", err.Error())
+		logs.Error("lark token读取返回出错！%v", err)
 	}
 	m := make(map[string]interface{})
 	json.Unmarshal(body, &m)
@@ -202,7 +201,7 @@ func PostJsonHttp3(rbody []byte, token, url string) (bool, string) {
 	newToken := "Bearer " + token
 	reqest.Header.Add("Authorization", newToken)
 	if err != nil {
-		logs.Error("lark官方API rocket发送消息失败！", err.Error())
+		logs.Error("lark官方API rocket发送消息失败！%v", err)
 		return false, ""
 	}
 	//处理返回结果
@@ -221,7 +220,7 @@ func PostJsonHttp3(rbody []byte, token, url string) (bool, string) {
 
 	m := make(map[string]interface{})
 	if err := json.Unmarshal(body, &m); err != nil {
-		logs.Error("读取返回body出错！", err.Error())
+		logs.Error("读取返回body出错！%v", err)
 		return false, ""
 	}
 	//返回bool只适合发检测的lark消息
@@ -252,13 +251,13 @@ func GetVersionBMInfo(biz, project, version, os_type string) (rd string, qa stri
 	reqest.URL.RawQuery = q.Encode()
 	resp, _ := client.Do(reqest)
 	if err != nil {
-		logs.Error("获取version info出错！", err.Error())
+		logs.Error("获取version info出错！%v", err)
 		return "", ""
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logs.Error("读取version返回出错！", err.Error())
+		logs.Error("读取version返回出错！%v", err)
 		return "", ""
 	}
 	m := map[string]interface{}{}
@@ -308,7 +307,7 @@ func GetLarkInfo(url string, rbody map[string]string) string {
 	reqest.URL.RawQuery = q.Encode()
 	resp, _ := client.Do(reqest)
 	if err != nil {
-		logs.Error("获取version info出错！", err.Error())
+		logs.Error("获取version info出错！%v", err)
 		return ""
 	}
 	defer resp.Body.Close()
@@ -318,7 +317,7 @@ func GetLarkInfo(url string, rbody map[string]string) string {
 
 //通用获取文件过期时间方法
 func GetFileExpireTime(fileName string, fileType string, fileBytes []byte, userName string) *time.Time {
-	getCertExpUrl := "http://" + DETECT_URL_PRO + "/query_certificate_expire_date" //过期日期访问地址
+	getCertExpUrl := "http://" + _const.DETECT_URL_PRO + "/query_certificate_expire_date" //过期日期访问地址
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	fileWriter, err := writer.CreateFormFile("certificate", fileName)
@@ -495,13 +494,13 @@ func GetItcToken(username string) string {
 	url := "https://itc.bytedance.net/t/generateToken?username=" + username
 	resp, err := http.Get(url)
 	if err != nil {
-		logs.Error("请求itc token出错！", err.Error())
+		logs.Error("请求itc token出错！%v", err)
 		return ""
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logs.Error("itc token读取返回出错！", err.Error())
+		logs.Error("itc token读取返回出错！%v", err)
 		return ""
 	}
 	m := make(map[string]interface{})

@@ -8,8 +8,8 @@ import (
 	"code.byted.org/clientQA/itc-server/conf"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/detect"
+	"code.byted.org/clientQA/itc-server/settings"
 	"code.byted.org/gin/ginex"
-	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,16 +20,16 @@ func main() {
 	// add your handlers here
 	//init
 	conf.InitConfiguration()
+
 	//r.Use(casInitAndVerify())
 	r.Use(Cors())
 	database.InitDB()
-	db, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		panic(fmt.Sprintf("Failed to connet database: %v", err))
+	if err := database.InitDBHandler(); err != nil {
+		panic(fmt.Sprintf("failed to initialize the global database handler: %v", err))
 	}
-	defer db.Close()
-	database.DB = db
+	if err := settings.Load(database.DB()); err != nil {
+		panic(fmt.Sprintf("failed to load settings: %v", err))
+	}
 
 	InitRouter(r)
 	detect.InitCron()

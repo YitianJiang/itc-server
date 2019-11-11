@@ -11,25 +11,27 @@ import (
 	"time"
 
 	"code.byted.org/clientQA/itc-server/database"
+	"code.byted.org/clientQA/itc-server/settings"
+	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
 )
 
 type detectionBasic struct {
-	APPID      string `json:"appid"`
-	APPName    string `json:"appName"`
-	APPVersion string `json:"appVersion"`
-	Platform   string `json:"platform"`
-	RDName     string `json:"rd_username"`
-	RDEmail    string `json:"rd_email"`
-	CommitID   string `json:"commitId"`
+	APPID      string `json:"appid"       binding:"required"`
+	APPName    string `json:"appName"     binding:"required"`
+	APPVersion string `json:"appVersion"  binding:"required"`
+	Platform   string `json:"platform"    binding:"required"`
+	RDName     string `json:"rd_username" binding:"required"`
+	RDEmail    string `json:"rd_email"    binding:"email"`
+	CommitID   string `json:"commitId"    binding:"required"`
 	Branch     string `json:"branch"`
 }
 
 // If the type is "敏感方法", the key is equal to className.methodName
 type detectionDetail struct {
-	DetectConfigID uint64         `json:"configid"`
+	DetectConfigID int64          `json:"configid"`
 	ClassName      string         `json:"className"`
 	MethodName     string         `json:"methodName"`
 	Key            string         `json:"key"`
@@ -60,6 +62,7 @@ type Confirmation struct {
 type NewDetection struct {
 	ID             uint64    `gorm:"column:id"`
 	CreatedAt      time.Time `gorm:"column:created_at"`
+	UpdatedAt      time.Time `gorm:"column:updated_at"`
 	APPID          string    `gorm:"column:app_id"`
 	APPName        string    `gorm:"column:app_name"`
 	APPVersion     string    `gorm:"column:app_version"`
@@ -68,7 +71,7 @@ type NewDetection struct {
 	RDEmail        string    `gorm:"column:rd_email"`
 	CommitID       string    `gorm:"column:commit_id"`
 	Branch         string    `gorm:"column:branch"`
-	DetectConfigID uint64    `gorm:"column:detect_config_id"`
+	DetectConfigID int64     `gorm:"column:detect_config_id"`
 	Key            string    `gorm:"column:key_name"`
 	Description    string    `gorm:"column:description"`
 	Type           string    `gorm:"column:type"`
@@ -78,6 +81,7 @@ type NewDetection struct {
 	CallLocations  string    `gorm:"column:call_locations"`
 	Confirmed      bool      `gorm:"column:confirmed"`
 	Confirmer      string    `gorm:"column:confirmer"`
+	Remark         string    `gorm:"column:remark"`
 }
 
 // UploadUnconfirmedDetections writes the new detections to tables in
@@ -85,21 +89,16 @@ type NewDetection struct {
 // in order to inform him/her to comfirm the new detections.
 func UploadUnconfirmedDetections(c *gin.Context) {
 
-	body, err := ioutil.ReadAll(c.Request.Body)
-	if err != nil {
-		msg := "Failed to read request body: " + err.Error()
-		ReturnMsg(c, FAILURE, msg)
-		return
-	}
-
 	var detections Confirmation
-	if err := json.Unmarshal(body, &detections); err != nil {
-		msg := "Failed to unmarshal new detections: %v"
-		ReturnMsg(c, FAILURE, msg)
+	if err := c.ShouldBindJSON(&detections); err != nil {
+		ReturnMsg(c, FAILURE, fmt.Sprintf("Invalid parameter: %v", err))
 		return
 	}
 
-	go handleNewDetections(&detections)
+	if err := handleNewDetections(&detections); err != nil {
+		ReturnMsg(c, FAILURE, fmt.Sprintf("handle detections error: %v", err))
+		return
+	}
 
 	ReturnMsg(c, SUCCESS, "Receive new detections success")
 	return
@@ -112,67 +111,52 @@ var (
 	message   string
 )
 
-func handleNewDetections(detections *Confirmation) {
+func handleNewDetections(detections *Confirmation) error {
 
 	if err := storeNewDetections(detections); err != nil {
 		logs.Error("Failed to store new detections")
-		return
+		return err
 	}
 
-	settings, err := getUploadNewDetectionsSettings("settings.json")
-	if err != nil {
-		logs.Error("Failed to get settings")
-		return
-	}
-	appID = settings["app_id"].(string)
-	appSecret = settings["app_secret"].(string)
+	appID = settings.Get().UploadNewDetection.APPID
+	appSecret = settings.Get().UploadNewDetection.APPSecret
 
 	if len(detections.Permissions) > 0 ||
 		len(detections.SensitiveMethods) > 0 ||
 		len(detections.SensitiveStrings) > 0 {
-		if err := informConfirmor(settings["group_name"].(string),
+		if _, ok := settings.Get().UploadNewDetection.Groups[detections.APPID]; !ok {
+			name := fmt.Sprintf(settings.Get().UploadNewDetection.GroupNameTemplate,
+				detections.APPName)
+			if err := createLarkGroupSimple(name, settings.Get().
+				UploadNewDetection.DefaultPeople); err != nil {
+				logs.Error("create lark group error: %v", err)
+				return err
+			}
+			settings.Get().UploadNewDetection.Groups[detections.APPID] = name
+			if err := settings.Store(database.DB()); err != nil {
+				logs.Error("write settings error: %v", err)
+				return err
+			}
+		}
+
+		if err := informConfirmor(settings.Get().UploadNewDetection.Groups[detections.APPID],
 			detections.RDEmail,
 			packMessage(detections)); err != nil {
 			logs.Error("Failed to inform the confirmor %v", detections.RDEmail)
-			return
+			return err
 		}
 	} else {
 		logs.Info("There are no new detections")
 	}
 
-	return
-}
-
-func getUploadNewDetectionsSettings(
-	fileName string) (map[string]interface{}, error) {
-
-	data, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		logs.Error("IO ReadFile failed: %v", err)
-		return nil, err
-	}
-
-	result := make(map[string]interface{})
-	if err := json.Unmarshal(data, &result); err != nil {
-		logs.Error("Unmarshal failed: %v", err)
-		return nil, err
-	}
-
-	return result["upload_new_detections"].(map[string]interface{}), nil
+	return nil
 }
 
 func storeNewDetections(detections *Confirmation) error {
 
-	db, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return err
-	}
-	defer db.Close()
-
-	keyMap, err := getExraDetectionKeys(db, map[string]interface{}{
-		"app_id":   detections.APPID,
-		"platform": detections.Platform})
+	keyMap, err := getExtraDetectionKeys(database.DB(),
+		map[string]interface{}{"app_id": detections.APPID,
+			"platform": detections.Platform})
 	if err != nil {
 		logs.Error("Failed to get unconfirmed detection keys")
 		return err
@@ -183,9 +167,9 @@ func storeNewDetections(detections *Confirmation) error {
 	removeDuplicateSensitiveMethod(detections, keyMap)
 	removeDuplicateSensitiveString(detections, keyMap)
 
-	storeNewPermissions(db, detections)
-	storeNewSensiMethods(db, detections)
-	storeNewSensiStrings(db, detections)
+	storeNewPermissions(database.DB(), detections)
+	storeNewSensiMethods(database.DB(), detections)
+	storeNewSensiStrings(database.DB(), detections)
 
 	return nil
 }
@@ -229,8 +213,16 @@ func removeDuplicateSensitiveString(
 	detections.SensitiveStrings = r
 }
 
-func getExraDetectionKeys(
-	db *gorm.DB, condition map[string]interface{}) (map[string]bool, error) {
+func getExtraDetectionKeys(db *gorm.DB, condition map[string]interface{}) (
+	map[string]bool, error) {
+
+	// Delete expired record from database which was unconfirmed and
+	// inserted one week ago.
+	if err := db.Debug().Exec(settings.Get().UploadNewDetection.ClearRule).
+		Error; err != nil {
+		logs.Error("Database error: %v", err)
+		return nil, err
+	}
 
 	var keys []struct {
 		Key string `gorm:"column:key_name"`
@@ -305,7 +297,6 @@ func storeNewSensiMethods(db *gorm.DB, detections *Confirmation) {
 			Confirmed:      false,
 		})
 	}
-
 }
 
 func storeNewSensiStrings(db *gorm.DB, detections *Confirmation) {
@@ -349,39 +340,39 @@ func insertDetection(db *gorm.DB, detection *NewDetection) error {
 	return nil
 }
 
-// UnconfirmedList returns all unconfirmed detections from table new_detection.
-func UnconfirmedList(c *gin.Context) {
+// List returns all eligible detections from table new_detection.
+func List(c *gin.Context) {
 
 	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		ReturnMsg(c, FAILURE, "Failed to read request body: "+err.Error())
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("read request body failed: %v", err))
 		return
 	}
 
 	sieve := make(map[string]interface{})
 	if err := json.Unmarshal(body, &sieve); err != nil {
-		ReturnMsg(c, FAILURE, "Failed to unmarshal request body: "+err.Error())
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("unmarshal error: %v", err))
 		return
 	}
 
 	if int(sieve["page"].(float64)) <= 0 ||
 		int(sieve["pageSize"].(float64)) <= 0 {
-		ReturnMsg(c, FAILURE, "Invalid page or pageSize")
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid page (%v) or pageSize (%v)", sieve["page"], sieve["pageSize"]))
 		return
 	}
 
 	data, total, err := getDetectionList(sieve)
 	if err != nil {
-		ReturnMsg(c, FAILURE, "Failed to get detection list: "+err.Error())
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("get detection list failed: %v", err))
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"errorCode": SUCCESS,
-		"message":   "success",
-		"total":     total,
-		"data":      data})
-	logs.Info("Get unconfirmed detection list success")
+		"code":    SUCCESS,
+		"message": "success",
+		"total":   total,
+		"data":    data})
+	logs.Info("success")
 	return
 }
 
@@ -393,25 +384,18 @@ type detectionOutline struct {
 	Type        string `gorm:"column:type"        json:"type"`
 	RiskLevel   int    `gorm:"column:risk_level"  json:"risk_level"`
 	Creator     string `gorm:"column:creator"     json:"creator"`
+	Confirmed   bool   `gorm:"column:confirmed"   json:"confirmed"`
 }
 
-func getDetectionList(
-	sieve map[string]interface{}) ([]detectionOutline, int, error) {
-
-	db, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return nil, 0, err
-	}
-	defer db.Close()
+func getDetectionList(sieve map[string]interface{}) (
+	[]detectionOutline, int, error) {
 
 	page := int(sieve["page"].(float64))
 	pageSize := int(sieve["pageSize"].(float64))
 	delete(sieve, "page")
 	delete(sieve, "pageSize")
-	sieve["confirmed"] = false // Only retrieve unconfirmed detections.
 
-	data, err := getDetectionOutline(db, sieve)
+	data, err := getDetectionOutline(database.DB(), sieve)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -451,7 +435,7 @@ func getDetectionOutline(db *gorm.DB, sieve map[string]interface{}) (
 	[]detectionOutline, error) {
 
 	var result []detectionOutline
-	if err := db.Debug().Table("new_detection").
+	if err := db.Debug().Table("new_detection").Order("created_at desc").
 		Where(sieve).Find(&result).Error; err != nil {
 		logs.Error("Failed to retrieve detection outline: %v", err)
 		return nil, err
@@ -460,26 +444,23 @@ func getDetectionOutline(db *gorm.DB, sieve map[string]interface{}) (
 	return result, nil
 }
 
-// UnconfirmedDetail returns the detail of the specific detection
+// Detail returns the detail of the specific detection
 // from table new_detection.
-func UnconfirmedDetail(c *gin.Context) {
+func Detail(c *gin.Context) {
 
 	id, err := getID(c)
 	if err != nil {
-		ReturnMsg(c, FAILURE, err.Error())
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, err.Error())
 		return
 	}
 
 	result, err := getDetectionDetail(id)
 	if err != nil {
-		ReturnMsg(c, FAILURE, err.Error())
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"errorCode": SUCCESS,
-		"message":   "success",
-		"data":      result})
+	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success", result)
 	return
 }
 
@@ -488,12 +469,12 @@ func getID(c *gin.Context) (uint64, error) {
 
 	id, exist := c.GetQuery("id")
 	if !exist {
-		return 0, errors.New("Miss id")
+		return 0, errors.New("miss id")
 	}
 
 	detectionID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		return 0, errors.New("Parse id error: " + err.Error())
+		return 0, errors.New("parse id error: " + err.Error())
 	}
 
 	return detectionID, nil
@@ -501,15 +482,8 @@ func getID(c *gin.Context) (uint64, error) {
 
 func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 
-	db, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return nil, err
-	}
-	defer db.Close()
-
-	data, err := retrieveSingleDetection(db, map[string]interface{}{
-		"id": id})
+	data, err := retrieveSingleDetection(database.DB(),
+		map[string]interface{}{"id": id})
 	if err != nil {
 		logs.Error("Failed to retrieve detection")
 		return nil, err
@@ -539,50 +513,73 @@ func getDetectionDetail(id uint64) (map[string]interface{}, error) {
 		"app_version":    data.APPVersion,
 	}
 
+	if data.Confirmed {
+		result["updated_at"] = data.UpdatedAt
+		result["confirmer"] = data.Confirmer
+		result["remark"] = data.Remark
+	}
+
 	return result, nil
 }
 
-// Confirm set the specific detection's the value of confirmed TRUE.
+// Confirm sets the specific detection's confirmed filed as TRUE.
 func Confirm(c *gin.Context) {
 
 	userName, exist := c.Get("username")
 	if !exist {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("Invalid user: %v", userName))
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("Invalid user: %v", userName))
+		return
+	}
+
+	type info struct {
+		ID     uint64 `json:"id"     binding:"required"`
+		Remark string `json:"remark" binding:"required"`
+	}
+	var data info
+	if err := c.ShouldBindJSON(&data); err != nil {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid parameter: %v", err))
+		return
+	}
+
+	if err := confirmDetection(data.ID, userName.(string),
+		data.Remark); err != nil {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm failed: %v", err))
+		return
+	}
+
+	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
+	return
+}
+
+// Delete removes the specified record from the table new_detection.
+func Delete(c *gin.Context) {
+
+	userName, exist := c.Get("username")
+	if !exist {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid user: %v", userName))
 		return
 	}
 
 	id, err := getID(c)
 	if err != nil {
-		ReturnMsg(c, FAILURE, err.Error())
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, err.Error())
 		return
 	}
 
-	if err := confirmDetection(id, userName.(string)); err != nil {
-		ReturnMsg(c, FAILURE, "Confirm failed: "+err.Error())
+	if err := database.DeleteDBRecord(database.DB(),
+		&NewDetection{}, map[string]interface{}{"id": id}); err != nil {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("delete failed: %v", err))
 		return
 	}
 
-	ReturnMsg(c, SUCCESS, "success")
+	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
 	return
 }
 
-func confirmDetection(id uint64, userName string) error {
+func confirmDetection(id uint64, userName string, remark string) error {
 
-	db, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return err
-	}
-	defer db.Close()
-
-	if _, err := retrieveSingleDetection(db, map[string]interface{}{
-		"id": id,
-	}); err != nil {
-		return err
-	}
-
-	if err := updateDetection(db, &NewDetection{
-		ID: id, Confirmer: userName}); err != nil {
+	if err := updateDetection(database.DB(), &NewDetection{
+		ID: id, Confirmer: userName, Remark: remark}); err != nil {
 		return err
 	}
 
@@ -626,6 +623,7 @@ func updateDetection(db *gorm.DB, detection *NewDetection) error {
 		Updates(map[string]interface{}{
 			"confirmed": true,
 			"confirmer": detection.Confirmer,
+			"remark":    detection.Remark,
 		}).Error; err != nil {
 		logs.Error("Database error: %v", err)
 		return err
@@ -671,7 +669,7 @@ func packMessage(detections *Confirmation) string {
 		atMsg = fmt.Sprintf("<at open_id=\"%v\"></at>", openID)
 	}
 
-	msg := " 本次编译出现新增未确认项，请前往预审平台查看确认。\n" +
+	msg := "本次编译出现新增未确认项，请前往预审平台查看确认。\n" +
 		"查看与确认地址: https://rocket.bytedance.net/rocket/itc/branchCheck?biz=" +
 		detections.APPID + "\n\n" +
 		"【编译信息】\n" +
@@ -709,7 +707,56 @@ func packMessage(detections *Confirmation) string {
 	return msg
 }
 
+func createLarkGroupSimple(groupName string, openIDs []string) error {
+
+	token, err := getTenantAccessToken(appID, appSecret)
+	if err != nil {
+		logs.Error("Failed to get tenant access token: %v", err)
+		return err
+	}
+
+	return createLarkGroup(token, groupName, openIDs)
+}
+
+func createLarkGroup(token string, groupName string, openIDs []string) error {
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + token,
+		"Content-Type":  "application/json"}
+
+	data, err := json.Marshal(map[string]interface{}{
+		"name":        groupName,
+		"description": settings.Get().UploadNewDetection.GroupDescription,
+		"open_ids":    openIDs,
+	})
+	if err != nil {
+		logs.Error("marshal error: %v", err)
+		return err
+	}
+
+	// The URL was fixed and only used here, so hard code is ok.
+	body, err := SendHTTPRequest("POST",
+		"https://open.feishu.cn/open-apis/chat/v4/create/",
+		headers, data)
+	if err != nil {
+		logs.Error("Failed to send http request for addUserToGroup: %v", err)
+		return err
+	}
+
+	response := make(map[string]interface{})
+	if err := json.Unmarshal(body, &response); err != nil {
+		logs.Error("unmarshal error: %v", err)
+		return err
+	}
+	if int(response["code"].(float64)) != 0 {
+		return fmt.Errorf("code: %v, message:%v", response["code"], response["msg"])
+	}
+
+	return nil
+}
+
 func isUserInGroupSimple(groupName string, userEmail string) (bool, error) {
+
 	token, err := getTenantAccessToken(appID, appSecret)
 	if err != nil {
 		logs.Error("Failed to get tenant access token: %v", err)
