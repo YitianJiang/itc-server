@@ -45,3 +45,7 @@ type AffectedApp struct {
 	gorm.Model
 	AppName          string `gorm:"column:app_name"`
 }
+
+type AppIdType struct {
+	AppId              string              `gorm:"column:app_id"`
+}

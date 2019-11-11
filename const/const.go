@@ -41,6 +41,7 @@ var DetectBlackList = map[string]int{
 const (
 	ITC_SIGN_SYSTEM_ADDRESS       = "https://rocket.bytedance.net/rocket/itc/iossignature?biz="
 	ITC_CERT_SYSTEM_ADDRESS       = "https://rocket.bytedance.net/rocket/itc/ioscertification"
+	ITC_PUSH_CERT_SYSTEM_ADDRESS  = "https://rocket.bytedance.net/itc/iossignature?biz="
 	DayTimeUnit                   = "天"
 	IOS_CERT_MANAGE_GROUP_CHAT_ID = "oc_6524b9b1d771ecca33a0dac3df185fd7"
 )
