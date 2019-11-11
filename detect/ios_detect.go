@@ -9,14 +9,12 @@ import (
 	"strings"
 	"time"
 
-	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
-	"code.byted.org/clientQA/itc-server/utils"
-
-	"github.com/gin-gonic/gin"
-
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
+	"github.com/gin-gonic/gin"
 )
 
 //0--一般，1--低危，2--中危，3--高危
@@ -68,9 +66,13 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 	var method []interface{}
 	var lastDetectContent *[]dal.IOSNewDetectContent
 	if lastTaskId >= 0 {
-		lastDetectContent = dal.QueryNewIOSDetectModel(map[string]interface{}{
-			"taskId": lastTaskId,
-		})
+		var err error
+		lastDetectContent, err = QueryNewIOSDetectModel(database.DB(),
+			map[string]interface{}{"taskId": lastTaskId})
+		if err != nil {
+			logs.Error("read tb_ios_new_detect_content failed: %v", err)
+			return false, warnFlag, 0
+		}
 	}
 	if lastDetectContent == nil || len(*lastDetectContent) == 0 {
 		logs.Error(strconv.Itoa(lastTaskId) + "没有存储在检测结果中！原因可能为：上一次检测任务没有检测结果，检测工具回调出错！")
@@ -343,10 +345,11 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 		return
 	}
 	//首先查询新库
-	iosTaskBinaryCheckContent := dal.QueryNewIOSDetectModel(map[string]interface{}{
-		"taskId": taskId,
-		"toolId": toolId,
-	})
+	iosTaskBinaryCheckContent, err := QueryNewIOSDetectModel(database.DB(),
+		map[string]interface{}{"taskId": taskId, "toolId": toolId})
+	if err != nil {
+		logs.Warn("read tb_ios_new_detect_content failed: %v", err)
+	}
 	//如果数据在新库中查不到就去访问老库
 	if iosTaskBinaryCheckContent == nil || len(*iosTaskBinaryCheckContent) == 0 {
 		//中间数据处理
@@ -368,10 +371,13 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 				return
 			} else {
 				//中间数据处理成功后，重新读取一次新库
-				iosTaskBinaryCheckContent = QueryNewIOSDetectModel(map[string]interface{}{
-					"taskId": taskId,
-					"toolId": toolId,
-				})
+				var err error
+				iosTaskBinaryCheckContent, err = QueryNewIOSDetectModel(database.DB(),
+					map[string]interface{}{"taskId": taskId, "toolId": toolId})
+				if err != nil {
+					logs.Error("read tb_ios_new_detect_content failed: %v", err)
+					return
+				}
 			}
 		} else {
 			//不再中间库，去老库中寻找
@@ -581,18 +587,21 @@ func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 		queryKey = "privacy"
 	}
 	//数据库读取检测内容转为map
-	iosDetect := QueryNewIOSDetectModel(map[string]interface{}{
+	iosDetect, err := QueryNewIOSDetectModel(database.DB(), map[string]interface{}{
 		"taskId":      ios.TaskId,
 		"toolId":      ios.ToolId,
 		"detect_type": queryKey,
 	})
+	if err != nil {
+		logs.Error("read tb_ios_new_detect_content failed: %v", err)
+		return false
+	}
 	if iosDetect == nil || len(*iosDetect) == 0 {
 		logs.Error("查询iOS检测内容数据库出错！！！")
 		return false
 	}
 	var m map[string]interface{}
-	err := json.Unmarshal([]byte((*iosDetect)[0].DetectContent), &m)
-	if err != nil {
+	if err := json.Unmarshal([]byte((*iosDetect)[0].DetectContent), &m); err != nil {
 		logs.Error("数据库内容转map出错!", err.Error())
 		return false
 	}
@@ -692,20 +701,15 @@ func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 }
 
 //query tb_ios_detect_content
-func QueryNewIOSDetectModel(condition map[string]interface{}) *[]dal.IOSNewDetectContent {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return nil
-	}
-	defer connection.Close()
+func QueryNewIOSDetectModel(db *gorm.DB, sieve map[string]interface{}) (*[]dal.IOSNewDetectContent, error) {
 
-	var iosDetectContent []dal.IOSNewDetectContent
-	if err := connection.Table(dal.IOSNewDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).Find(&iosDetectContent).Error; err != nil {
-		logs.Error("请求iOS静态检测结果出错！！！", err.Error())
-		return nil
+	var result []dal.IOSNewDetectContent
+	if err := db.Debug().Where(sieve).Find(&result).Error; err != nil {
+		logs.Error("dabase error: %v", err)
+		return nil, err
 	}
-	return &iosDetectContent
+
+	return &result, nil
 }
 
 //判断是否需要更新total status状态值
@@ -713,10 +717,14 @@ func changeTotalStatus(taskId, toolId, confirmLark int) (error, int) {
 	var newChangeFlag = true
 	var unConfirmNum = 0
 	var notPassNum = 0 //确认不通过数目
-	iosDetectAll := QueryNewIOSDetectModel(map[string]interface{}{
+	iosDetectAll, err := QueryNewIOSDetectModel(map[string]interface{}{
 		"taskId": taskId,
 		"toolId": toolId,
 	})
+	if err != nil {
+		logs.Error("read tb_ios_new_detect_content failed: %v", err)
+		return err, unConfirmNum
+	}
 	for _, oneDetect := range *iosDetectAll {
 		var im map[string]interface{}
 		err := json.Unmarshal([]byte(oneDetect.DetectContent), &im)
