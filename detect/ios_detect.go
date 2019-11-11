@@ -513,47 +513,18 @@ func ConfirmIOSBinaryResult(c *gin.Context) {
 		utils.ReturnMsg(c, http.StatusUnauthorized, utils.FAILURE, "unauthorized user")
 		return
 	}
-	//参数校验
 	var ios IOSConfirm
 	if err := c.ShouldBindJSON(&ios); err != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid user: %v", err))
-		// logs.Error("确认二进制检测结果传参出错！", err.Error())
-		// c.JSON(http.StatusOK, gin.H{
-		// 	"message":   "参数不合法！",
-		// 	"errorCode": -1,
-		// 	"data":      "参数不合法！",
-		// })
 		return
 	}
-	// //参数异常处理
-	// if ios.ConfirmType < 0 || ios.ConfirmType > 3 {
-	// 	c.JSON(http.StatusOK, gin.H{
-	// 		"message":   "参数错误！",
-	// 		"errorCode": -1,
-	// 		"data":      "参数错误，id和permission不能同时传入！",
-	// 	})
-	// 	return
-	// }
-	//获取确认人信息
-	// username, _ := c.Get("username")
-	// if !confirmIOSBinaryResult(ios, username.(string)) {
+
 	if !confirmIOSBinaryResult(&ios, username.(string)) {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, "confirm failed")
 		return
-		// c.JSON(http.StatusOK, gin.H{
-		// 	"message":   "success",
-		// 	"errorCode": 0,
-		// 	"data":      "success",
-		// })
 	}
+
 	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
-	// } else {
-	// 	c.JSON(http.StatusOK, gin.H{
-	// 		"message":   "update failed！",
-	// 		"errorCode": -1,
-	// 		"data":      "update failed！",
-	// 	})
-	// }
 }
 
 // func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
