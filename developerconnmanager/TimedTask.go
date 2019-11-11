@@ -148,7 +148,12 @@ func generateCardOfCertExpired(expiredCertCardInput *devconnmanager.ExpiredCertC
 	cardFormArray = append(cardFormArray, *generateEmphasisInfoLineOfCard(utils.CertExpiredTimeToNow,timeToExpired+_const.DayTimeUnit))
 	cardFormArray = append(cardFormArray, *generateEmphasisInfoLineOfCard(utils.CertExpiredAppHeader,appNames))
 	cardFormArray = append(cardFormArray, *generateEmphasisInfoLineOfCard(utils.CertExpiredTipHeader,""))
-	cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.CertBindChangeHeader,_const.ITC_CERT_SYSTEM_ADDRESS,_const.ITC_CERT_SYSTEM_ADDRESS))
+	if expiredCertCardInput.CertType==_const.IOS_PUSH{
+		appId,_:=devconnmanager.GetAppIdByPushCertId(expiredCertCardInput.CertId)
+		cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.CertBindChangeHeader, _const.ITC_PUSH_CERT_SYSTEM_ADDRESS+appId.AppId, _const.ITC_PUSH_CERT_SYSTEM_ADDRESS+appId.AppId))
+	}else {
+		cardFormArray = append(cardFormArray, *generateAtLineOfCard(utils.CertBindChangeHeader, _const.ITC_CERT_SYSTEM_ADDRESS, _const.ITC_CERT_SYSTEM_ADDRESS))
+	}
 	return &cardFormArray
 }
 
