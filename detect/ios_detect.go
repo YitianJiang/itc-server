@@ -66,7 +66,7 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 	var lastDetectContent *[]dal.IOSNewDetectContent
 	if lastTaskId >= 0 {
 		var err error
-		lastDetectContent, err = QueryNewIOSDetectModel(database.DB(),
+		lastDetectContent, err = readDetectContentiOS(database.DB(),
 			map[string]interface{}{"taskId": lastTaskId})
 		if err != nil {
 			logs.Error("read tb_ios_new_detect_content failed: %v", err)
@@ -344,7 +344,7 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 		return
 	}
 	//首先查询新库
-	iosTaskBinaryCheckContent, err := QueryNewIOSDetectModel(database.DB(),
+	iosTaskBinaryCheckContent, err := readDetectContentiOS(database.DB(),
 		map[string]interface{}{"taskId": taskId, "toolId": toolId})
 	if err != nil {
 		logs.Warn("read tb_ios_new_detect_content failed: %v", err)
@@ -371,7 +371,7 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 			} else {
 				//中间数据处理成功后，重新读取一次新库
 				var err error
-				iosTaskBinaryCheckContent, err = QueryNewIOSDetectModel(database.DB(),
+				iosTaskBinaryCheckContent, err = readDetectContentiOS(database.DB(),
 					map[string]interface{}{"taskId": taskId, "toolId": toolId})
 				if err != nil {
 					logs.Error("read tb_ios_new_detect_content failed: %v", err)
@@ -586,7 +586,7 @@ func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 		queryKey = "privacy"
 	}
 	//数据库读取检测内容转为map
-	iosDetect, err := QueryNewIOSDetectModel(database.DB(), map[string]interface{}{
+	iosDetect, err := readDetectContentiOS(database.DB(), map[string]interface{}{
 		"taskId":      ios.TaskId,
 		"toolId":      ios.ToolId,
 		"detect_type": queryKey,
@@ -691,8 +691,7 @@ func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 	return true
 }
 
-//query tb_ios_detect_content
-func QueryNewIOSDetectModel(db *gorm.DB, sieve map[string]interface{}) (*[]dal.IOSNewDetectContent, error) {
+func readDetectContentiOS(db *gorm.DB, sieve map[string]interface{}) (*[]dal.IOSNewDetectContent, error) {
 
 	var result []dal.IOSNewDetectContent
 	if err := db.Debug().Where(sieve).Find(&result).Error; err != nil {
@@ -708,7 +707,7 @@ func updateTaskStatusiOS(taskId, toolId, confirmLark int) (int, error) {
 	var newChangeFlag = true
 	var unconfirmedCount = 0
 	var confirmedFailCount = 0 //确认不通过数目
-	iosDetectAll, err := QueryNewIOSDetectModel(database.DB(), map[string]interface{}{
+	iosDetectAll, err := readDetectContentiOS(database.DB(), map[string]interface{}{
 		"taskId": taskId,
 		"toolId": toolId,
 	})
