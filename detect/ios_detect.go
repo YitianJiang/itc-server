@@ -642,33 +642,49 @@ func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 		}
 	} else {
 		//权限确认历史表中增加一条记录
-		var newHistory dal.PrivacyHistory
-		newHistory.AppId = (*iosDetect)[0].AppId
-		newHistory.AppName = (*iosDetect)[0].AppName
-		newHistory.ConfirmVersion = (*iosDetect)[0].Version
-		newHistory.Status = ios.Status
-		newHistory.Confirmer = confirmer
-		newHistory.ConfirmReason = ios.Remark
-		newHistory.Platform = 1
-		newHistory.Permission = ios.ConfirmContent
-		if err := dal.CreatePrivacyHistoryModel(newHistory); err != nil {
-			logs.Error("更新数据库出错！")
+		// var newHistory dal.PrivacyHistory
+		// newHistory.AppId = (*iosDetect)[0].AppId
+		// newHistory.AppName = (*iosDetect)[0].AppName
+		// newHistory.ConfirmVersion = (*iosDetect)[0].Version
+		// newHistory.Status = ios.Status
+		// newHistory.Confirmer = confirmer
+		// newHistory.ConfirmReason = ios.Remark
+		// newHistory.Platform = 1
+		// newHistory.Permission = ios.ConfirmContent
+		// if err := dal.CreatePrivacyHistoryModel(newHistory); err != nil {
+		// 	logs.Error("更新数据库出错！")
+		// 	return false
+		// }
+		if err := database.InsertDBRecord(database.DB(), &dal.PrivacyHistory{
+			AppId:          (*iosDetect)[0].AppId,
+			AppName:        (*iosDetect)[0].AppName,
+			ConfirmVersion: (*iosDetect)[0].Version,
+			Status:         ios.Status,
+			Confirmer:      confirmer,
+			ConfirmReason:  ios.Remark,
+			Platform:       1,
+			Permission:     ios.ConfirmContent,
+		}); err != nil {
+			logs.Error("insert tb_privacy_history failed: %v", err)
 			return false
 		}
-		confirmHistory := dal.QueryPrivacyHistoryModel(map[string]interface{}{
-			"app_id":     (*iosDetect)[0].AppId,
-			"appname":    (*iosDetect)[0].AppName,
-			"permission": ios.ConfirmContent,
-			"platform":   1,
-		})
-		confirmer := (*confirmHistory)[0].Confirmer
-		confirmReason := (*confirmHistory)[0].ConfirmReason
-		confirmVersion := (*confirmHistory)[len(*confirmHistory)-1].ConfirmVersion
+		// confirmHistory := dal.QueryPrivacyHistoryModel(map[string]interface{}{
+		// 	"app_id":     (*iosDetect)[0].AppId,
+		// 	"appname":    (*iosDetect)[0].AppName,
+		// 	"permission": ios.ConfirmContent,
+		// 	"platform":   1,
+		// })
+		// confirmer := (*confirmHistory)[0].Confirmer
+		// confirmReason := (*confirmHistory)[0].ConfirmReason
+		// confirmVersion := (*confirmHistory)[len(*confirmHistory)-1].ConfirmVersion
 		for _, pp := range m["privacy"].([]interface{}) {
 			confirmprivacy := pp.(map[string]interface{})
 			if confirmprivacy["permission"] == ios.ConfirmContent {
-				confirmprivacy["confirmVersion"] = confirmVersion
-				confirmprivacy["confirmReason"] = confirmReason
+				// confirmprivacy["confirmVersion"] = confirmVersion
+				// confirmprivacy["confirmReason"] = confirmReason
+				// confirmprivacy["confirmer"] = confirmer
+				confirmprivacy["confirmVersion"] = (*iosDetect)[0].Version
+				confirmprivacy["confirmReason"] = ios.Remark
 				confirmprivacy["confirmer"] = confirmer
 				confirmprivacy["status"] = ios.Status
 			}
@@ -717,7 +733,7 @@ func changeTotalStatus(taskId, toolId, confirmLark int) (error, int) {
 	var newChangeFlag = true
 	var unConfirmNum = 0
 	var notPassNum = 0 //确认不通过数目
-	iosDetectAll, err := QueryNewIOSDetectModel(map[string]interface{}{
+	iosDetectAll, err := QueryNewIOSDetectModel(database.DB(), map[string]interface{}{
 		"taskId": taskId,
 		"toolId": toolId,
 	})
