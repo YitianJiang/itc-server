@@ -19,6 +19,7 @@ import (
 	_const "code.byted.org/clientQA/itc-server/const"
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/settings"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
@@ -192,7 +193,8 @@ func UploadFile(c *gin.Context) {
 	//go upload2Tos(filepath, dbDetectModelId)
 	go func() {
 		logs.Info("Task id: %v start to call detect tool", dbDetectModelId)
-		callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
+		// callBackUrl := "https://itc.bytedance.net/updateDetectInfos"
+		callBackUrl := "http://10.227.10.206:6789/updateDetectInfos" // TEST
 		bodyBuffer := &bytes.Buffer{}
 		bodyWriter := multipart.NewWriter(bodyBuffer)
 		bodyWriter.WriteField("recipients", recipients)
@@ -519,12 +521,13 @@ func UpdateDetectInfos(c *gin.Context) {
 	key = taskId + "_" + appId + "_" + appVersion + "_" + toolId
 	LARK_MSG_CALL_MAP[key] = ticker
 	//获取BM负责人
-	project_id := ""
 	qa_bm := ""
 	rd_bm := ""
-	if p, ok := _const.AppVersionProject[appId]; ok {
-		project_id = p
-		rd, qa := utils.GetVersionBMInfo(appId, project_id, task.AppVersion, os_code)
+	if project_id, ok := _const.AppVersionProject[appId]; ok {
+		rd, qa, err := GetVersionBMInfo(appId, project_id, task.AppVersion, os_code)
+		if err != nil {
+			logs.Warn("task id: %v get preject version failed: %v", taskId, err)
+		}
 		rd_id := utils.GetUserOpenId(rd + "@bytedance.com")
 		if rd_id != "" {
 			rd_info := utils.GetUserAllInfo(rd_id)
@@ -587,6 +590,102 @@ func updateDetectTaskStatus(db *gorm.DB, id interface{}, status int) error {
 	}
 
 	return nil
+}
+
+func GetVersionBMInfo(biz, project, version, os_type string) (rd string, qa string, err error) {
+	version_arr := strings.Split(version, ".")
+	//TikTok这类型版本号：122005 无法获取BM信息
+	if len(version_arr) < 3 {
+		return "", "", fmt.Errorf("unsupported version format: %v", version)
+	}
+	new_version := version_arr[0] + "." + version_arr[1] + "." + version_arr[2]
+	body, err := utils.SendHTTPRequest("GET",
+		settings.Get().RocketAPI.ProjectVersionURL,
+		map[string]string{
+			"project":      project,
+			"biz":          biz,
+			"achieve_type": os_type,
+			"version_code": new_version,
+			"nextpage":     "1"},
+		map[string]string{
+			"token": settings.Get().RocketAPI.Token}, nil)
+	if err != nil {
+		logs.Error("send http request error: %v", err)
+		return "", "", err
+	}
+	m := make(map[string]interface{})
+	if err := json.Unmarshal(body, &m); err != nil {
+		logs.Error("unmarshal error: %v", err)
+		return "", "", err
+	}
+	if fmt.Sprint(m["errorCode"]) != "0" {
+		logs.Error("invalid response: %s", body)
+		return "", "", fmt.Errorf("invalid response: %s", body)
+	}
+	// client := &http.Client{}
+	// requestUrl := "https://rocket.bytedance.net/api/v1/project/versions"
+	// reqest, err := http.NewRequest("GET", requestUrl, nil)
+	// reqest.Header.Add("token", _const.ROCKETTOKEN)
+	// q := reqest.URL.Query()
+	// q.Add("project", project)
+	// q.Add("biz", biz)
+	// q.Add("achieve_type", os_type)
+	// q.Add("version_code", new_version)
+	// q.Add("nextpage", "1")
+	// reqest.URL.RawQuery = q.Encode()
+	// resp, _ := client.Do(reqest)
+	// if err != nil {
+	// logs.Error("获取version info出错！%v", err)
+	// return "", ""
+	// }
+	// defer resp.Body.Close()
+	// body, err := ioutil.ReadAll(resp.Body)
+	// if err != nil {
+	// logs.Error("读取version返回出错！%v", err)
+	// return "", ""
+	// }
+	// m := map[string]interface{}{}
+	// json.Unmarshal(body, &m)
+	// if m["data"] == nil {
+	// logs.Error("读取BM信息出错！")
+	// return "", ""
+	// }
+	versionInfo, ok := m["data"].(map[string]interface{})["VersionCards"].([]interface{})
+	if !ok {
+		logs.Error("cannot assert to []interface{}: %v", m["data"].(map[string]interface{})["VersionCards"])
+		return "", "", fmt.Errorf("cannot assert to []interface{}: %v", m["data"].(map[string]interface{})["VersionCards"])
+	}
+	if len(versionInfo) == 0 {
+		return "", "", fmt.Errorf("VersionCards is empty: %v", m["data"].(map[string]interface{})["VersionCards"])
+	}
+	versionParam, ok := versionInfo[0].(map[string]interface{})["Param_ext"].(string)
+	if !ok {
+		logs.Error("cannot assert to string: %v", versionInfo[0].(map[string]interface{})["Param_ext"])
+		return "", "", fmt.Errorf("cannot assert to string: %v", versionInfo[0].(map[string]interface{})["Param_ext"])
+	}
+	var l []interface{}
+	if err = json.Unmarshal([]byte(versionParam), &l); err != nil {
+		logs.Error("unmarshal error: %v", err)
+		return "", "", fmt.Errorf("unmarshal error: %v", err)
+	}
+	var rd_bm string
+	var qa_bm string
+	for _, bm := range l {
+		if bm.(map[string]interface{})["Param_desc"].(string) == "RD BM" || bm.(map[string]interface{})["Param_desc"].(string) == "QA BM" {
+			if bm.(map[string]interface{})["Param_desc"].(string) == "RD BM" {
+				rd_bm = bm.(map[string]interface{})["Value"].(string)
+			} else {
+				qa_bm = bm.(map[string]interface{})["Value"].(string)
+			}
+			if rd_bm != "" && qa_bm != "" {
+				break
+			} else {
+				continue
+			}
+		}
+	}
+
+	return rd_bm, qa_bm, nil
 }
 
 /**
