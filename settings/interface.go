@@ -9,6 +9,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Insert inserts a new settings to database, then update current settings.
+func Insert(c *gin.Context) {
+
+	var settings Settings
+	if err := c.ShouldBindJSON(&settings); err != nil {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid parameter: %v", err))
+		return
+	}
+
+	if err := Store(database.DB(), &settings); err != nil {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("store new settings failed: %v", err))
+		return
+	}
+
+	Refresh(c)
+}
+
 // Refresh will update the current settings
 // while programming is still running.
 func Refresh(c *gin.Context) {
