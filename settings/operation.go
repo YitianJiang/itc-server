@@ -10,19 +10,20 @@ import (
 
 // Settings contains all customize settings.
 type Settings struct {
-	Detect struct {
+	NightWatchman string `json:"night_watchman"`
+	Detect        struct {
 		TaskURL         string `json:"task_url"`
 		ToolURL         string `json:"tool_url"`
 		ToolCallbackURL string `json:"tool_callback_url"`
 	} `json:"detect"`
 	UploadNewDetection struct {
-		APPID             string            `json:"app_id"`
-		APPSecret         string            `json:"app_secret"`
-		Groups            map[string]string `json:"groups"`
-		ClearRule         string            `json:"clear_rule"`
-		GroupNameTemplate string            `json:"group_name_template"`
-		GroupDescription  string            `json:"group_description"`
-		DefaultPeople     []string          `json:"default_people"`
+		APPID             string            `json:"app_id"              binding:"required"`
+		APPSecret         string            `json:"app_secret"          binding:"required"`
+		Groups            map[string]string `json:"groups"              binding:"required"`
+		ClearRule         string            `json:"clear_rule"          binding:"required"`
+		GroupNameTemplate string            `json:"group_name_template" binding:"required"`
+		GroupDescription  string            `json:"group_description"   binding:"required"`
+		DefaultPeople     []string          `json:"default_people"      binding:"required"`
 	} `json:"upload_new_detections"`
 }
 
@@ -35,7 +36,6 @@ type settingsTable struct {
 }
 
 func (t settingsTable) TableName() string {
-
 	return "settings_history"
 }
 
@@ -60,12 +60,19 @@ func Load(db *gorm.DB) error {
 }
 
 // Store writes data into table settings_history.
-func Store(db *gorm.DB) (err error) {
+func Store(db *gorm.DB, s ...*Settings) (err error) {
 
 	var t settingsTable
-	if t.Content, err = json.Marshal(settings); err != nil {
-		logs.Error("marshal error: %v", err)
-		return
+	if len(s) > 0 {
+		if t.Content, err = json.Marshal(s[0]); err != nil {
+			logs.Error("marshal error: %v", err)
+			return
+		}
+	} else {
+		if t.Content, err = json.Marshal(settings); err != nil {
+			logs.Error("marshal error: %v", err)
+			return
+		}
 	}
 
 	if err = db.Debug().Create(&t).Error; err != nil {
