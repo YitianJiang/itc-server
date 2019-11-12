@@ -14,6 +14,7 @@ RUN_NAME=${PRODUCT}.${SUBSYS}.${MODULE}
 mkdir -p output/bin output/conf
 cp script/bootstrap.sh script/pre_nginx.sh script/settings.py output 2>/dev/null
 cp tmp_rules.json output/
+cp ./refresh_online_settings.sh output/
 chmod +x output/bootstrap.sh output/pre_nginx.sh
 find conf/ -type f ! -name "*_local.*" | xargs -I{} cp {} output/conf/
 
