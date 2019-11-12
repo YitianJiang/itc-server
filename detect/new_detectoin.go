@@ -137,6 +137,7 @@ func handleNewDetections(detections *Confirmation) error {
 				logs.Error("write settings error: %v", err)
 				return err
 			}
+			go settings.Sync()
 		}
 
 		if err := informConfirmor(settings.Get().UploadNewDetection.Groups[detections.APPID],

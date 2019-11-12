@@ -10,6 +10,7 @@ import (
 
 // Settings contains all customize settings.
 type Settings struct {
+	NightWatchman      string `json:"night_watchman"`
 	UploadNewDetection struct {
 		APPID             string            `json:"app_id"              binding:"required"`
 		APPSecret         string            `json:"app_secret"          binding:"required"`
