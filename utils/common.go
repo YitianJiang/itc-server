@@ -1,6 +1,10 @@
 package utils
 
 import (
+	"bytes"
+	"io/ioutil"
+	"net/http"
+
 	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
 )
@@ -22,6 +26,8 @@ func ReturnMsg(c *gin.Context, httpCode int, code int, msg string,
 		logs.Error(msg)
 	case SUCCESS:
 		logs.Debug(msg)
+	default:
+		logs.Notice("unsupport code (%v): %v", code, msg)
 	}
 
 	obj := gin.H{"code": code, "message": msg}
@@ -32,4 +38,49 @@ func ReturnMsg(c *gin.Context, httpCode int, code int, msg string,
 	c.JSON(httpCode, obj)
 
 	return
+}
+
+// SendHTTPRequest uses specific method sending data to specific URL
+// via HTTP request.
+func SendHTTPRequest(method string, url string, params map[string]string, headers map[string]string,
+	data []byte) ([]byte, error) {
+
+	// Construct HTTP handler
+	req, err := http.NewRequest(method, url, bytes.NewBuffer([]byte(data)))
+	if err != nil {
+		logs.Error("Construct HTTP request failed in SendHTTPRequest: %v", err)
+		return nil, err
+	}
+
+	// Add query parameters
+	q := req.URL.Query()
+	for k, v := range params {
+		q.Add(k, v)
+	}
+	req.URL.RawQuery = q.Encode()
+
+	// Set request header
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	logs.Debug("%v", req)
+
+	// Send HTTP request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		logs.Error("Send HTTP request failed in SendHTTPRequest: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Read HTTP response
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logs.Error("Read content from HTTP response failed in SendHTTPRequest: %v", err)
+		return nil, err
+	}
+	logs.Debug("%s", body)
+
+	return body, err
 }
