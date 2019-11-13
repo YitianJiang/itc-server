@@ -703,7 +703,7 @@ func readDetectContentiOS(db *gorm.DB, sieve map[string]interface{}) ([]dal.IOSN
 }
 
 //判断是否需要更新total status状态值
-func updateTaskStatusiOS(taskId, toolId, confirmLark int) (int, error) {
+func updateTaskStatusiOS(taskId, toolId interface{}, confirmLark int) (int, error) {
 	var newChangeFlag = true
 	var unconfirmedCount = 0
 	var confirmedFailCount = 0 //确认不通过数目
