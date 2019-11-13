@@ -17,6 +17,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const logHeader = "[task id %v]"
+
 //权限排序
 type PermSlice []dal.Permissions
 
@@ -331,12 +333,6 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 	}
 
 	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success", result)
-	// c.JSON(http.StatusOK, gin.H{
-	// "message":   "success",
-	// "errorCode": SUCCESS,
-	// "data":      result})
-
-	// logs.Debug("Get task ID %v binary detect result success", taskID)
 	return
 }
 
@@ -354,9 +350,10 @@ func getExactDetectTask(db *gorm.DB, sieve map[string]interface{}) (
 
 func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.DetectQueryStruct {
 
+	header := fmt.Sprintf(logHeader, taskId)
 	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
 	if err != nil {
-		logs.Error("Task id: %v Failed to get the task information", taskId)
+		logs.Error("%s get detect task failed: %v", header, err)
 		return nil
 	}
 
@@ -364,7 +361,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(task.AppId, task.Platform)
 	if errIg != nil {
 		// It's acceptable if failed to get the  negligible information.
-		logs.Warn("Task id: %v Failed to retrieve negligible information", taskId)
+		logs.Warn("%s read negligible information failed", header)
 	}
 
 	//查询基础信息和敏感信息
@@ -372,11 +369,11 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		"task_id": taskId,
 		"tool_id": toolId})
 	if err != nil {
-		logs.Error("Task id: %v Failed to retrieve APK information", taskId)
+		logs.Error("%s read app information failed: %v", header, err)
 		return nil
 	}
 	if len(*contents) <= 0 {
-		logs.Error("Task id: %v Cannot find any matched APK information", taskId)
+		logs.Error("%s cannot find any matched app information", header)
 		return nil
 	}
 
@@ -384,11 +381,11 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		"task_id": taskId,
 		"tool_id": toolId})
 	if err != nil {
-		logs.Error("Task id: %v Failed to retrieve detect content detail", taskId)
+		logs.Error("%s read tb_detect_content_detail failed: %v", header, err)
 		return nil
 	}
 	if len(*details) <= 0 {
-		logs.Error("Task id: %v Cannot find any matched detect content detail", taskId)
+		logs.Error("%s cannot find any matched detect content detail", header)
 		return nil
 	}
 
@@ -441,7 +438,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 
 	appID, err := strconv.Atoi(task.AppId)
 	if err != nil {
-		logs.Error("Task id: %v atoi error: %v", taskId, err)
+		logs.Error("%s atoi error: %v", header, err)
 		return nil
 	}
 	perIgs := GetIgnoredPermission(appID)
