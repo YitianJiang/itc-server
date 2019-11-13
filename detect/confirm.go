@@ -45,13 +45,32 @@ func ConfirmAndroid(c *gin.Context) {
 			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s invalid detection id (%v)", msgHeader, t.Id))
 			return
 		}
-		detection.Status = t.Status
-		detection.Confirmer = username.(string)
-		detection.Remark = t.Remark
-		if err := database.UpdateDBRecord(database.DB(), detection); err != nil {
-			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s update failed: %v", msgHeader, err))
+
+		itemName := detection.KeyInfo
+		var itemType *string
+		switch detection.SensiType {
+		case Permission:
+			itemType = &TypePermission
+		case Method:
+			itemType = &TypeMethod
+			itemName = detection.ClassName + delimiter + detection.KeyInfo
+		case String:
+			itemType = &TypeString
+		}
+		if err := preAutoConfirmTask(task,
+			&Item{Name: itemName, Type: itemType},
+			t.Status, username.(string), t.Remark, t.Index); err != nil {
+			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed: %v", err))
 			return
 		}
+		// detection.Status = t.Status
+		// detection.Confirmer = username.(string)
+		// detection.Remark = t.Remark
+		// if err := database.UpdateDBRecord(database.DB(), detection); err != nil {
+		// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s update failed: %v", msgHeader, err))
+		// 	return
+		// }
+
 		// appID, err := strconv.Atoi(task.AppId)
 		// if err != nil {
 		// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s invalid app id (%v): %v", msgHeader, task.AppId, err))
@@ -125,6 +144,7 @@ func ConfirmAndroid(c *gin.Context) {
 			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed: %v", err))
 			return
 		}
+
 		// //写入操作历史
 		// var history dal.PermHistory
 		// history.Status = t.Status

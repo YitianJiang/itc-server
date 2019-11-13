@@ -9,11 +9,13 @@ import (
 
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 )
 
 const delimiter = "."
 const toolIDiOS = 5
+const toolIDAndroid = 6
 
 // MR confirm
 func preAutoConfirmMR(appID string, platform int, version string,
@@ -34,7 +36,7 @@ func preAutoConfirmMR(appID string, platform int, version string,
 }
 
 // Binary detect task confirm
-func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who string, remark string) error {
+func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who string, remark string, index int) error {
 
 	freshman, err := preAutoConfirm(task.AppId, task.Platform, task.AppVersion, item, who, status, remark)
 	if err != nil {
@@ -47,6 +49,95 @@ func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who stri
 		// TODO
 		switch task.Platform {
 		case platformAndorid:
+			switch *item.Type {
+			case TypeString:
+				fallthrough
+			case TypeMethod:
+				tasks, err := readDetectTask(database.DB(),
+					map[string]interface{}{
+						"app_id":      task.AppId,
+						"platform":    task.Platform,
+						"app_version": task.AppVersion})
+				if err != nil {
+					logs.Error("read tb_binary_detect failed: %v", err)
+					return err
+				}
+				for i := range tasks {
+					var sieve map[string]interface{}
+					switch *item.Type {
+					case TypeString:
+						sieve = map[string]interface{}{
+							"task_id":    tasks[i].ID,
+							"sensi_type": String,
+							"key_info":   item.Name}
+					case TypeMethod:
+						k := strings.LastIndex(item.Name, delimiter)
+						sieve = map[string]interface{}{
+							"task_id":    tasks[i].ID,
+							"sensi_type": Method,
+							"class_name": item.Name[:k],
+							"key_info":   item.Name[k+1:]}
+					}
+					record, err := readExactDetectContentDetail(database.DB(), sieve)
+					if err != nil {
+						logs.Error("read tb_detect_content_detail failed: %v", err)
+						return err
+					}
+					record.Status = status
+					record.Confirmer = who
+					record.Remark = remark
+					if err := database.UpdateDBRecord(database.DB(), record); err != nil {
+						logs.Error("update tb_perm_app_relation failed: %v", err)
+						return err
+					}
+				}
+			case TypePermission:
+				records, err := readPermAPPRelation(database.DB(),
+					map[string]interface{}{
+						"app_id":      task.AppId,
+						"app_version": task.AppVersion,
+						"sub_index":   index})
+				if err != nil {
+					logs.Error("read perm_app_relation error: %v", err)
+					return err
+				}
+				for i := range records {
+					var permissionList []interface{}
+					if err := json.Unmarshal([]byte(records[i].PermInfos), &permissionList); err != nil {
+						logs.Error("unmarshal error: %v", err)
+						return err
+					}
+					var updated bool
+					for j := range permissionList {
+						t, ok := permissionList[j].(map[string]interface{})
+						if !ok {
+							logs.Error("cannot assert to map[string]interface{}: %v", permissionList[j])
+							return err
+						}
+						if t["key"] == item.Name {
+							t["status"] = status
+							t["confirmer"] = who
+							t["remark"] = remark
+							updated = true
+						}
+					}
+					if updated {
+						data, err := json.Marshal(permissionList)
+						if err != nil {
+							logs.Error("marshal error: %v", err)
+							return err
+						}
+						records[i].PermInfos = string(data)
+						if err := database.UpdateDBRecord(database.DB(), &records[i]); err != nil {
+							logs.Error("update tb_perm_app_relation failed: %v", err)
+							return err
+						}
+					}
+				}
+			default:
+				return fmt.Errorf("unsupported platform: %v", task.Platform)
+			}
+
 		case platformiOS:
 			var detectType string
 			switch *item.Type {
@@ -149,6 +240,18 @@ func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who stri
 	}
 
 	return nil
+}
+
+func readDetectTask(db *gorm.DB, sieve map[string]interface{}) (
+	[]dal.DetectStruct, error) {
+
+	var tasks []dal.DetectStruct
+	if err := db.Debug().Where(sieve).Find(&tasks).Error; err != nil {
+		logs.Error("database error: %v", err)
+		return nil, err
+	}
+
+	return tasks, nil
 }
 
 // The bool in return value named freshman which only valid if no error.
