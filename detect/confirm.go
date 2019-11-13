@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
-	"strings"
 
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
@@ -54,44 +52,44 @@ func ConfirmAndroid(c *gin.Context) {
 			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s update failed: %v", msgHeader, err))
 			return
 		}
-		appID, err := strconv.Atoi(task.AppId)
-		if err != nil {
-			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s invalid app id (%v): %v", msgHeader, task.AppId, err))
-			return
-		}
-		switch detection.SensiType {
-		case Method:
-			if err := database.InsertDBRecord(database.DB(),
-				&dal.IgnoreInfoStruct{
-					AppId:     appID,
-					Platform:  task.Platform,
-					KeysInfo:  detection.ClassName + delimiter + detection.KeyInfo,
-					SensiType: Method,
-					Version:   task.AppVersion,
-					Confirmer: username.(string),
-					Remarks:   t.Remark,
-					TaskId:    t.TaskId}); err != nil {
-				utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s insert ignore information failed: %v", msgHeader, err))
-				return
-			}
-		case String:
-			keys := strings.Split(strings.Trim(detection.KeyInfo, " ;"), ";")
-			for i := range keys {
-				if err := database.InsertDBRecord(database.DB(),
-					&dal.IgnoreInfoStruct{
-						AppId:     appID,
-						Platform:  task.Platform,
-						KeysInfo:  keys[i],
-						SensiType: String,
-						Version:   task.AppVersion,
-						Confirmer: username.(string),
-						Remarks:   t.Remark,
-						TaskId:    t.TaskId}); err != nil {
-					utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s insert ignore information failed: %v", msgHeader, err))
-					return
-				}
-			}
-		}
+		// appID, err := strconv.Atoi(task.AppId)
+		// if err != nil {
+		// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s invalid app id (%v): %v", msgHeader, task.AppId, err))
+		// 	return
+		// }
+		// switch detection.SensiType {
+		// case Method:
+		// 	if err := database.InsertDBRecord(database.DB(),
+		// 		&dal.IgnoreInfoStruct{
+		// 			AppId:     appID,
+		// 			Platform:  task.Platform,
+		// 			KeysInfo:  detection.ClassName + delimiter + detection.KeyInfo,
+		// 			SensiType: Method,
+		// 			Version:   task.AppVersion,
+		// 			Confirmer: username.(string),
+		// 			Remarks:   t.Remark,
+		// 			TaskId:    t.TaskId}); err != nil {
+		// 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s insert ignore information failed: %v", msgHeader, err))
+		// 		return
+		// 	}
+		// case String:
+		// 	keys := strings.Split(strings.Trim(detection.KeyInfo, " ;"), ";")
+		// 	for i := range keys {
+		// 		if err := database.InsertDBRecord(database.DB(),
+		// 			&dal.IgnoreInfoStruct{
+		// 				AppId:     appID,
+		// 				Platform:  task.Platform,
+		// 				KeysInfo:  keys[i],
+		// 				SensiType: String,
+		// 				Version:   task.AppVersion,
+		// 				Confirmer: username.(string),
+		// 				Remarks:   t.Remark,
+		// 				TaskId:    t.TaskId}); err != nil {
+		// 			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s insert ignore information failed: %v", msgHeader, err))
+		// 			return
+		// 		}
+		// 	}
+		// }
 	} else { //获取该任务的权限信息
 		record, err := readExactPermAPPRelation(database.DB(), map[string]interface{}{
 			"task_id": t.TaskId, "sub_index": t.Index - 1})
