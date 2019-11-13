@@ -445,10 +445,10 @@ func notifyDeteckTaskResult(task *dal.DetectStruct, msgHeader *string, unConfirm
 	}
 	var qa_bm string
 	var rd_bm string
-	if project_id, ok := _const.AppVersionProject[appId]; ok {
-		rd, qa, err := GetVersionBMInfo(appId, project_id, task.AppVersion, os_code)
+	if project_id, ok := _const.AppVersionProject[task.AppId]; ok {
+		rd, qa, err := GetVersionBMInfo(task.AppId, project_id, task.AppVersion, os)
 		if err != nil {
-			logs.Warn("task id: %v get preject version failed: %v", taskId, err)
+			logs.Warn("%s get preject version failed: %v", *msgHeader, err)
 		}
 		rd_id := utils.GetUserOpenId(rd + "@bytedance.com")
 		if rd_id != "" {
