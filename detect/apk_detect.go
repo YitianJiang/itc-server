@@ -357,13 +357,6 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		return nil
 	}
 
-	//查询增量信息
-	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(task.AppId, task.Platform)
-	if errIg != nil {
-		// It's acceptable if failed to get the  negligible information.
-		logs.Warn("%s read negligible information failed", header)
-	}
-
 	//查询基础信息和敏感信息
 	contents, err := retrieveTaskAPP(database.DB(), map[string]interface{}{
 		"task_id": taskId,
@@ -428,6 +421,12 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	finalResult = append(finalResult, midResult...)
 
 	perIgs := GetIgnoredPermission(task.AppId)
+	//查询增量信息
+	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(task.AppId, task.Platform)
+	if errIg != nil {
+		// It's acceptable if failed to get the  negligible information.
+		logs.Warn("%s read negligible information failed", header)
+	}
 	//任务检测结果组输出重组
 	allPermList := GetPermList()
 	for i := 0; i < len(finalResult); i++ {
