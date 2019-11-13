@@ -350,56 +350,56 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 		logs.Warn("read tb_ios_new_detect_content failed: %v", err)
 	}
 	//如果数据在新库中查不到就去访问老库
-	if iosTaskBinaryCheckContent == nil || len(iosTaskBinaryCheckContent) == 0 {
-		//中间数据处理
-		detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-			"id": taskId,
-		})
-		aId, _ := strconv.Atoi((*detect)[0].AppId)
-		sId, _ := strconv.Atoi(taskId)
-		tId, _ := strconv.Atoi(toolId)
-		middleFlag, dealFlag := middleDataDeal(sId, tId, aId)
-		if middleFlag {
-			//如果中间数据处理失败
-			if dealFlag == false {
-				c.JSON(http.StatusOK, gin.H{
-					"message":   "中间数据处理失败！",
-					"errorCode": 0,
-					"data":      "中间数据处理失败！",
-				})
-				return
-			} else {
-				//中间数据处理成功后，重新读取一次新库
-				var err error
-				iosTaskBinaryCheckContent, err = readDetectContentiOS(database.DB(),
-					map[string]interface{}{"taskId": taskId, "toolId": toolId})
-				if err != nil {
-					logs.Error("read tb_ios_new_detect_content failed: %v", err)
-					return
-				}
-			}
-		} else {
-			//不再中间库，去老库中寻找
-			conditionOld := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
-			content := dal.QueryTaskBinaryCheckContent(conditionOld)
-			if content == nil || len(*content) == 0 {
-				logs.Info("未查询到检测内容")
-				c.JSON(http.StatusOK, gin.H{
-					"message":   "未查询到检测内容",
-					"errorCode": -3,
-					"data":      "未查询到检测内容",
-				})
-				return
-			} else {
-				c.JSON(http.StatusOK, gin.H{
-					"message":   "success",
-					"errorCode": 0,
-					"data":      (*content)[0],
-				})
-				return
-			}
-		}
-	}
+	// if iosTaskBinaryCheckContent == nil || len(iosTaskBinaryCheckContent) == 0 {
+	// 	//中间数据处理
+	// 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
+	// 		"id": taskId,
+	// 	})
+	// 	aId, _ := strconv.Atoi((*detect)[0].AppId)
+	// 	sId, _ := strconv.Atoi(taskId)
+	// 	tId, _ := strconv.Atoi(toolId)
+	// 	middleFlag, dealFlag := middleDataDeal(sId, tId, aId)
+	// 	if middleFlag {
+	// 		//如果中间数据处理失败
+	// 		if dealFlag == false {
+	// 			c.JSON(http.StatusOK, gin.H{
+	// 				"message":   "中间数据处理失败！",
+	// 				"errorCode": 0,
+	// 				"data":      "中间数据处理失败！",
+	// 			})
+	// 			return
+	// 		} else {
+	// 			//中间数据处理成功后，重新读取一次新库
+	// 			var err error
+	// 			iosTaskBinaryCheckContent, err = readDetectContentiOS(database.DB(),
+	// 				map[string]interface{}{"taskId": taskId, "toolId": toolId})
+	// 			if err != nil {
+	// 				logs.Error("read tb_ios_new_detect_content failed: %v", err)
+	// 				return
+	// 			}
+	// 		}
+	// 	} else {
+	// 		//不再中间库，去老库中寻找
+	// 		conditionOld := "task_id='" + taskId + "' and tool_id='" + toolId + "'"
+	// 		content := dal.QueryTaskBinaryCheckContent(conditionOld)
+	// 		if content == nil || len(*content) == 0 {
+	// 			logs.Info("未查询到检测内容")
+	// 			c.JSON(http.StatusOK, gin.H{
+	// 				"message":   "未查询到检测内容",
+	// 				"errorCode": -3,
+	// 				"data":      "未查询到检测内容",
+	// 			})
+	// 			return
+	// 		} else {
+	// 			c.JSON(http.StatusOK, gin.H{
+	// 				"message":   "success",
+	// 				"errorCode": 0,
+	// 				"data":      (*content)[0],
+	// 			})
+	// 			return
+	// 		}
+	// 	}
+	// }
 	//返回检测结果给前端
 	data := map[string]interface{}{
 		"appName":    iosTaskBinaryCheckContent[0].AppName,
@@ -620,49 +620,49 @@ func updateTaskStatusiOS(taskId, toolId interface{}, confirmLark int) (int, erro
 	return unconfirmedCount, nil
 }
 
-//返回两个bool值，第一个代表是否是middl数据，第二个代表处理是否成功
-func middleDataDeal(taskId, toolId, aId int) (bool, bool) {
-	middleData := dal.QueryIOSDetectContent(map[string]interface{}{
-		"taskId": taskId,
-		"toolId": toolId,
-	})
-	if middleData == nil || len(*middleData) == 0 {
-		logs.Error("没有查询到中间数据！")
-		return false, false
-	}
-	insertFlag, _, _ := iOSResultClassify(taskId, toolId, aId, (*middleData)[0].JsonContent) //插入数据
-	//已经确认记得在map中更新数据
-	if insertFlag {
-		for _, m := range *middleData {
-			var updateConfirm IOSConfirm
-			var detectType int
-			var detectContent string
-			switch m.Category {
-			case "blacklist":
-				detectType = 1
-				detectContent = m.CategoryName
-			case "method":
-				detectType = 2
-				detectContent = m.CategoryName + "+" + m.CategoryContent
-			}
-			updateConfirm.TaskId = taskId
-			updateConfirm.ToolId = toolId
-			updateConfirm.ConfirmType = detectType
-			updateConfirm.ConfirmContent = detectContent
-			updateConfirm.Status = m.Status
-			updateConfirm.Remark = m.Remark
-			// if confirmIOSBinaryResult(updateConfirm, m.Confirmer) == false {
-			if confirmIOSBinaryResult(&updateConfirm, m.Confirmer) == false {
-				logs.Error("兼容中间数据更新出错！")
-				return true, false
-			}
-		}
-	} else {
-		logs.Error("兼容旧数据插入出错！")
-		return true, false
-	}
-	return true, true
-}
+// //返回两个bool值，第一个代表是否是middl数据，第二个代表处理是否成功
+// func middleDataDeal(taskId, toolId, aId int) (bool, bool) {
+// 	middleData := dal.QueryIOSDetectContent(map[string]interface{}{
+// 		"taskId": taskId,
+// 		"toolId": toolId,
+// 	})
+// 	if middleData == nil || len(*middleData) == 0 {
+// 		logs.Error("没有查询到中间数据！")
+// 		return false, false
+// 	}
+// 	insertFlag, _, _ := iOSResultClassify(taskId, toolId, aId, (*middleData)[0].JsonContent) //插入数据
+// 	//已经确认记得在map中更新数据
+// 	if insertFlag {
+// 		for _, m := range *middleData {
+// 			var updateConfirm IOSConfirm
+// 			var detectType int
+// 			var detectContent string
+// 			switch m.Category {
+// 			case "blacklist":
+// 				detectType = 1
+// 				detectContent = m.CategoryName
+// 			case "method":
+// 				detectType = 2
+// 				detectContent = m.CategoryName + "+" + m.CategoryContent
+// 			}
+// 			updateConfirm.TaskId = taskId
+// 			updateConfirm.ToolId = toolId
+// 			updateConfirm.ConfirmType = detectType
+// 			updateConfirm.ConfirmContent = detectContent
+// 			updateConfirm.Status = m.Status
+// 			updateConfirm.Remark = m.Remark
+// 			// if confirmIOSBinaryResult(updateConfirm, m.Confirmer) == false {
+// 			if confirmIOSBinaryResult(&updateConfirm, m.Confirmer) == false {
+// 				logs.Error("兼容中间数据更新出错！")
+// 				return true, false
+// 			}
+// 		}
+// 	} else {
+// 		logs.Error("兼容旧数据插入出错！")
+// 		return true, false
+// 	}
+// 	return true, true
+// }
 
 func GetIOSSelfNum(appid, taskId int) (bool, int) {
 	url := "https://itc.bytedance.net/api/getSelfCheckItems?taskId=" + strconv.Itoa(taskId) + "&appId=" + strconv.Itoa(appid)
