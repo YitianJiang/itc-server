@@ -252,7 +252,7 @@ func retrieveLatestDetectResult(db *gorm.DB, condition map[string]interface{}) (
 }
 
 // The type of detection
-const (
+var (
 	TypePermission = "权限"
 	TypeMethod     = "敏感方法"
 	TypeString     = "敏感词汇"
