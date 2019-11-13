@@ -400,7 +400,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		queryResult.ApkName = content.ApkName
 		queryResult.Version = content.Version
 		queryResult.Index = num + 1
-		detailListIndex := make([]dal.DetectContentDetail, 0)
+		var detailListIndex []dal.DetectContentDetail
 		for i := 0; i < len(details); i++ {
 			if details[i].SubIndex == num {
 				detailListIndex = append(detailListIndex, details[i])
