@@ -399,14 +399,6 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		queryResult.Channel = content.Channel
 		queryResult.ApkName = content.ApkName
 		queryResult.Version = content.Version
-
-		permission := ""
-		//增量的时候，此处一般为""
-		perms := strings.Split(content.Permissions, ";")
-		for _, perm := range perms[0:(len(perms) - 1)] {
-			permission += perm + "\n"
-		}
-		queryResult.Permissions = permission
 		queryResult.Index = num + 1
 		detailListIndex := make([]dal.DetectContentDetail, 0)
 		for i := 0; i < len(details); i++ {
