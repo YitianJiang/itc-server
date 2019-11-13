@@ -372,7 +372,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		logs.Error("%s read app information failed: %v", header, err)
 		return nil
 	}
-	if len(*contents) <= 0 {
+	if len(contents) <= 0 {
 		logs.Error("%s cannot find any matched app information", header)
 		return nil
 	}
@@ -394,7 +394,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	permsMap := make(map[int]dal.PermAppRelation)
 	var midResult []dal.DetectQueryStruct
 	var firstResult dal.DetectQueryStruct //主要包检测结果
-	for num, content := range *contents {
+	for num, content := range contents {
 		var queryResult dal.DetectQueryStruct
 		queryResult.Channel = content.Channel
 		queryResult.ApkName = content.ApkName
@@ -494,15 +494,15 @@ func getPermAPPReltion(taskID string) (*[]dal.PermAppRelation, bool) {
 */
 // retrieveTaskAPP returns the information of APP in the binary detect task.
 func retrieveTaskAPP(db *gorm.DB, sieve map[string]interface{}) (
-	*[]dal.DetectInfo, error) {
+	[]dal.DetectInfo, error) {
 
 	var detectInfo []dal.DetectInfo
 	if err := db.Debug().Where(sieve).Find(&detectInfo).Error; err != nil {
-		logs.Error("Database error: %v", err)
+		logs.Error("database error: %v", err)
 		return nil, err
 	}
 
-	return &detectInfo, nil
+	return detectInfo, nil
 }
 
 func readExactDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (
