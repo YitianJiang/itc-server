@@ -749,7 +749,7 @@ func updateTaskStatusiOS(taskId, toolId interface{}, confirmLark int) (int, erro
 		(*detect)[0].DetectNoPass = confirmedFailCount //不通过总数
 		err := dal.UpdateDetectModelNew((*detect)[0])
 		if err != nil {
-			logs.Error("更新任务状态失败，任务ID："+strconv.Itoa(taskId)+",错误原因:%v", err)
+			logs.Error("task id: %v update tb_binary_detect failed: %v", taskId, err)
 			return unconfirmedCount, err
 		}
 		StatusDeal((*detect)[0], confirmLark) //ci回调和不通过block处理
