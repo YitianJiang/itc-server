@@ -85,19 +85,27 @@ func ConfirmAndroid(c *gin.Context) {
 			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("cannot assert to map[string]interface{}: %v", permissionList[t.Id-1]))
 			return
 		}
-		m["status"] = t.Status
-		m["confirmer"] = username.(string)
-		m["remark"] = t.Remark
-		data, err := json.Marshal(permissionList)
-		if err != nil {
-			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("marshal error: %v", err))
+
+		if err := preAutoConfirmTask(task,
+			&Item{Name: m["key"].(string), Type: &TypePermission},
+			t.Status, username.(string), t.Remark, t.Index-1); err != nil {
+			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed:%v", err))
 			return
 		}
-		record.PermInfos = string(data)
-		if err := database.UpdateDBRecord(database.DB(), record); err != nil {
-			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed: %v", err))
-			return
-		}
+
+		// m["status"] = t.Status
+		// m["confirmer"] = username.(string)
+		// m["remark"] = t.Remark
+		// data, err := json.Marshal(permissionList)
+		// if err != nil {
+		// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("marshal error: %v", err))
+		// 	return
+		// }
+		// record.PermInfos = string(data)
+		// if err := database.UpdateDBRecord(database.DB(), record); err != nil {
+		// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed: %v", err))
+		// 	return
+		// }
 
 		// //写入操作历史
 		// var history dal.PermHistory
