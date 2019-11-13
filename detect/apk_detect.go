@@ -49,7 +49,7 @@ func (a MethodSlice) Less(i, j int) bool { // 重写 Less() 方法， 从大到�
 获取权限的确认历史信息------fj
 */
 
-func GetIgnoredPermission(appId int) map[int]interface{} {
+func GetIgnoredPermission(appId interface{}) map[int]interface{} {
 	result := make(map[int]interface{})
 	queryResult, err := dal.QueryPermHistory(map[string]interface{}{
 		"app_id": appId,
@@ -427,12 +427,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	finalResult := []dal.DetectQueryStruct{firstResult}
 	finalResult = append(finalResult, midResult...)
 
-	appID, err := strconv.Atoi(task.AppId)
-	if err != nil {
-		logs.Error("%s atoi error: %v", header, err)
-		return nil
-	}
-	perIgs := GetIgnoredPermission(appID)
+	perIgs := GetIgnoredPermission(task.AppId)
 	//任务检测结果组输出重组
 	allPermList := GetPermList()
 	for i := 0; i < len(finalResult); i++ {
