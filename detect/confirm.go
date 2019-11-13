@@ -59,7 +59,7 @@ func ConfirmAndroid(c *gin.Context) {
 		}
 		if err := preAutoConfirmTask(task,
 			&Item{Name: itemName, Type: itemType},
-			t.Status, username.(string), t.Remark, t.Index); err != nil {
+			t.Status, username.(string), t.Remark, t.Index, t.ToolId); err != nil {
 			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed: %v", err))
 			return
 		}
@@ -88,23 +88,10 @@ func ConfirmAndroid(c *gin.Context) {
 
 		if err := preAutoConfirmTask(task,
 			&Item{Name: m["key"].(string), Type: &TypePermission},
-			t.Status, username.(string), t.Remark, t.Index-1); err != nil {
+			t.Status, username.(string), t.Remark, t.Index-1, t.ToolId); err != nil {
 			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed:%v", err))
 			return
 		}
-	}
-
-	//是否更新任务表中detect_no_pass字段的标志
-	var notPassFlag = false
-	if t.Status == 2 {
-		notPassFlag = true
-	}
-
-	//任务状态更新
-	updateInfo, _ := taskStatusUpdate(t.TaskId, t.ToolId, task, notPassFlag, 1)
-	if updateInfo != "" {
-		errorReturn(c, updateInfo)
-		return
 	}
 
 	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")

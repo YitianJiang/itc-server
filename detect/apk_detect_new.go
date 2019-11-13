@@ -41,6 +41,7 @@ func ParseResultAndroid(task *dal.DetectStruct, resultJson string, toolID int) (
 			logs.Error("%s analysis app information failed: %v", msgHeader, err)
 			return err, 0
 		}
+		go autoConfirm(task, result.Result[i].AppInfo.PermsInAppInfo, result.Result[i].MethodInfos, result.Result[i].StrInfos)
 	}
 
 	//遍历结果数组，并将每组检测结果信息插入数据库
@@ -114,7 +115,7 @@ func ParseResultAndroid(task *dal.DetectStruct, resultJson string, toolID int) (
 	}
 
 	//任务状态更新----该app无需要特别确认的敏感方法、字符串或权限
-	errTaskUpdate, unConfirms := taskStatusUpdate(int(task.ID), toolID, task, false, 0)
+	errTaskUpdate, unConfirms := taskStatusUpdate(task.ID, toolID, task, false, 0)
 	if errTaskUpdate != "" {
 		logs.Error("%s update task status failed", msgHeader)
 		return fmt.Errorf(errTaskUpdate), 0

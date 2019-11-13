@@ -544,7 +544,7 @@ func ConfirmIOSBinaryResult(c *gin.Context) {
 	if err := preAutoConfirmTask(task, &Item{
 		Name: itemName,
 		Type: itemType},
-		ios.Status, username.(string), ios.Remark); err != nil {
+		ios.Status, username.(string), ios.Remark, 0, ios.ToolId); err != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm iOS detection failed: %v", err))
 		return
 	}

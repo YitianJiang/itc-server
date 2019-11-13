@@ -36,7 +36,7 @@ func preAutoConfirmMR(appID string, platform int, version string,
 }
 
 // Binary detect task confirm
-func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who string, remark string, index int) error {
+func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who string, remark string, index int, toolID int) error {
 
 	freshman, err := preAutoConfirm(task.AppId, task.Platform, task.AppVersion, item, who, status, remark)
 	if err != nil {
@@ -138,6 +138,17 @@ func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who stri
 				return fmt.Errorf("unsupported platform: %v", task.Platform)
 			}
 
+			//是否更新任务表中detect_no_pass字段的标志
+			var notPassFlag = false
+			if status == ConfirmedFail {
+				notPassFlag = true
+			}
+
+			//任务状态更新
+			updateInfo, _ := taskStatusUpdate(task.ID, toolID, task, notPassFlag, 1)
+			if updateInfo != "" {
+				return fmt.Errorf("update task status failed: %v", updateInfo)
+			}
 		case platformiOS:
 			var detectType string
 			switch *item.Type {

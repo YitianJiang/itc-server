@@ -797,9 +797,9 @@ func GetTaskPermissions_2(info dal.PermAppRelation, perIgs map[int]interface{}, 
 /**
 任务确认状态更新
 */
-func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassFlag bool, confirmLark int) (string, int) {
+func taskStatusUpdate(taskId uint, toolId int, detect *dal.DetectStruct, notPassFlag bool, confirmLark int) (string, int) {
 
-	condition := "deleted_at IS NULL and task_id='" + strconv.Itoa(taskId) + "' and tool_id='" + strconv.Itoa(toolId) + "'"
+	condition := fmt.Sprintf("deleted_at IS NULL and task_id='%v' and tool_id='%v'", taskId, toolId)
 	counts, countsUn := QueryUnConfirmDetectContent(database.DB(), condition)
 
 	perms, _ := dal.QueryPermAppRelation(map[string]interface{}{"task_id": taskId})
