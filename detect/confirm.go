@@ -92,35 +92,6 @@ func ConfirmAndroid(c *gin.Context) {
 			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed:%v", err))
 			return
 		}
-
-		// m["status"] = t.Status
-		// m["confirmer"] = username.(string)
-		// m["remark"] = t.Remark
-		// data, err := json.Marshal(permissionList)
-		// if err != nil {
-		// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("marshal error: %v", err))
-		// 	return
-		// }
-		// record.PermInfos = string(data)
-		// if err := database.UpdateDBRecord(database.DB(), record); err != nil {
-		// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed: %v", err))
-		// 	return
-		// }
-
-		// //写入操作历史
-		// var history dal.PermHistory
-		// history.Status = t.Status
-		// history.AppVersion = (*perms)[t.Index-1].AppVersion
-		// history.AppId = (*perms)[t.Index-1].AppId
-		// history.PermId = permId
-		// history.Remarks = t.Remark
-		// history.Confirmer = username.(string)
-		// history.TaskId = t.TaskId
-		// if err := dal.InsertPermOperationHistory(history); err != nil {
-		// 	logs.Error("taskId:" + fmt.Sprint(t.TaskId) + ",权限操作历史写入失败！")
-		// 	errorReturn(c, "权限操作历史写入失败！")
-		// 	return
-		// }
 	}
 
 	//是否更新任务表中detect_no_pass字段的标志
