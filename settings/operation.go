@@ -11,11 +11,13 @@ import (
 // Settings contains all customize settings.
 type Settings struct {
 	NightWatchman string `json:"night_watchman"`
-	Detect        struct {
+
+	Detect struct {
 		TaskURL         string `json:"task_url"`
 		ToolURL         string `json:"tool_url"`
 		ToolCallbackURL string `json:"tool_callback_url"`
 	} `json:"detect"`
+
 	UploadNewDetection struct {
 		APPID             string            `json:"app_id"              binding:"required"`
 		APPSecret         string            `json:"app_secret"          binding:"required"`
@@ -25,6 +27,11 @@ type Settings struct {
 		GroupDescription  string            `json:"group_description"   binding:"required"`
 		DefaultPeople     []string          `json:"default_people"      binding:"required"`
 	} `json:"upload_new_detections"`
+
+	RocketAPI struct {
+		Token             string `json:"token"               binding:"required"`
+		ProjectVersionURL string `json:"project_version_url" binding:"required"`
+	} `json:"rocket_api"`
 }
 
 var settings *Settings

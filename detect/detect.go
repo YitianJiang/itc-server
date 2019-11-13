@@ -443,13 +443,13 @@ func notifyDeteckTaskResult(task *dal.DetectStruct, msgHeader *string, unConfirm
 	default:
 		message += "unknow"
 	}
-
-	var project_id string
 	var qa_bm string
 	var rd_bm string
-	if p, ok := _const.AppVersionProject[task.AppId]; ok {
-		project_id = p
-		rd, qa := utils.GetVersionBMInfo(task.AppId, project_id, task.AppVersion, os)
+	if project_id, ok := _const.AppVersionProject[appId]; ok {
+		rd, qa, err := GetVersionBMInfo(appId, project_id, task.AppVersion, os_code)
+		if err != nil {
+			logs.Warn("task id: %v get preject version failed: %v", taskId, err)
+		}
 		rd_id := utils.GetUserOpenId(rd + "@bytedance.com")
 		if rd_id != "" {
 			rd_info := utils.GetUserAllInfo(rd_id)
@@ -484,6 +484,74 @@ func notifyDeteckTaskResult(task *dal.DetectStruct, msgHeader *string, unConfirm
 			}
 		}
 	}
+}
+
+func GetVersionBMInfo(biz, project, version, os_type string) (rd string, qa string, err error) {
+	version_arr := strings.Split(version, ".")
+	//TikTok这类型版本号：122005 无法获取BM信息
+	if len(version_arr) < 3 {
+		return "", "", fmt.Errorf("unsupported version format: %v", version)
+	}
+	new_version := version_arr[0] + "." + version_arr[1] + "." + version_arr[2]
+	body, err := utils.SendHTTPRequest("GET",
+		settings.Get().RocketAPI.ProjectVersionURL,
+		map[string]string{
+			"project":      project,
+			"biz":          biz,
+			"achieve_type": os_type,
+			"version_code": new_version,
+			"nextpage":     "1"},
+		map[string]string{
+			"token": settings.Get().RocketAPI.Token}, nil)
+	if err != nil {
+		logs.Error("send http request error: %v", err)
+		return "", "", err
+	}
+	m := make(map[string]interface{})
+	if err := json.Unmarshal(body, &m); err != nil {
+		logs.Error("unmarshal error: %v", err)
+		return "", "", err
+	}
+	if fmt.Sprint(m["errorCode"]) != "0" {
+		logs.Error("invalid response: %s", body)
+		return "", "", fmt.Errorf("invalid response: %s", body)
+	}
+	versionInfo, ok := m["data"].(map[string]interface{})["VersionCards"].([]interface{})
+	if !ok {
+		logs.Error("cannot assert to []interface{}: %v", m["data"].(map[string]interface{})["VersionCards"])
+		return "", "", fmt.Errorf("cannot assert to []interface{}: %v", m["data"].(map[string]interface{})["VersionCards"])
+	}
+	if len(versionInfo) == 0 {
+		return "", "", fmt.Errorf("VersionCards is empty: %v", m["data"].(map[string]interface{})["VersionCards"])
+	}
+	versionParam, ok := versionInfo[0].(map[string]interface{})["Param_ext"].(string)
+	if !ok {
+		logs.Error("cannot assert to string: %v", versionInfo[0].(map[string]interface{})["Param_ext"])
+		return "", "", fmt.Errorf("cannot assert to string: %v", versionInfo[0].(map[string]interface{})["Param_ext"])
+	}
+	var l []interface{}
+	if err = json.Unmarshal([]byte(versionParam), &l); err != nil {
+		logs.Error("unmarshal error: %v", err)
+		return "", "", fmt.Errorf("unmarshal error: %v", err)
+	}
+	var rd_bm string
+	var qa_bm string
+	for _, bm := range l {
+		if bm.(map[string]interface{})["Param_desc"].(string) == "RD BM" || bm.(map[string]interface{})["Param_desc"].(string) == "QA BM" {
+			if bm.(map[string]interface{})["Param_desc"].(string) == "RD BM" {
+				rd_bm = bm.(map[string]interface{})["Value"].(string)
+			} else {
+				qa_bm = bm.(map[string]interface{})["Value"].(string)
+			}
+			if rd_bm != "" && qa_bm != "" {
+				break
+			} else {
+				continue
+			}
+		}
+	}
+
+	return rd_bm, qa_bm, nil
 }
 
 /**

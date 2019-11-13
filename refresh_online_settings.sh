@@ -14,7 +14,7 @@ echo ${url}
 curl ${url}/settings GET
 
 echo "Refresh online instance(${ur}) settings..."
-curl ${url}/settings -X POST
+curl ${url}/settings -X PUT
 echo "Refresh online instance(${ur}) settings... DONE"
 done
 
