@@ -877,8 +877,6 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 	} else { //获取该任务的权限信息
 		record, err := readExactPermAPPRelation(database.DB(), map[string]interface{}{
 			"task_id": t.TaskId, "sub_index": t.Index - 1})
-		// perms, err := dal.QueryPermAppRelation(map[string]interface{}{
-		// 	"task_id": t.TaskId, "sub_index": t.Index - 1})
 		if err != nil {
 			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("%s read perm_app_relation error: %v", msgHeader, err))
 			return
@@ -909,39 +907,6 @@ func ConfirmApkBinaryResultv_5(c *gin.Context) {
 			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed: %v", err))
 			return
 		}
-		// if perms == nil || len(*perms) == 0 {
-		// 	logs.Error("taskId:" + fmt.Sprint(t.TaskId) + ",未查询到该任务的检测信息")
-		// 	errorReturn(c, "未查询到该任务的检测信息")
-		// 	return
-		// }
-		// if t.Index > len(*perms) {
-		// 	logs.Error("权限结果数组下标越界")
-		// 	errorReturn(c, "权限结果数组下标越界")
-		// 	return
-		// }
-		// var permList []interface{}
-		// if err := json.Unmarshal([]byte((*perms)[t.Index-1].PermInfos), &permList); err != nil {
-		// 	logs.Error("taskId:" + fmt.Sprint(t.TaskId) + ",该任务的权限存储信息格式出错")
-		// 	errorReturn(c, "该任务的权限存储信息格式出错")
-		// 	return
-		// }
-		//增加数组越界维护
-		// if t.Id > len(permList) {
-		// 	logs.Error("权限ID越界")
-		// 	errorReturn(c, "权限ID越界")
-		// 	return
-		// }
-		// permMap := permList[t.Id-1].(map[string]interface{})
-		// permMap["status"] = t.Status
-
-		// permId := int(permMap["perm_id"].(float64))
-		// newPerms, _ := json.Marshal(permList)
-		// (*perms)[t.Index-1].PermInfos = string(newPerms)
-		// if err := dal.UpdataPermAppRelation(&(*perms)[t.Index-1]); err != nil {
-		// 	logs.Error("taskId:" + fmt.Sprint(t.TaskId) + ",更新任务权限确认情况失败")
-		// 	errorReturn(c, "更新任务权限确认情况失败")
-		// 	return
-		// }
 		// //写入操作历史
 		// var history dal.PermHistory
 		// history.Status = t.Status

@@ -1,7 +1,6 @@
 package dal
 
 import (
-	"fmt"
 	"time"
 
 	_const "code.byted.org/clientQA/itc-server/const"
@@ -270,27 +269,6 @@ func InsertPermAppRelation(relation PermAppRelation) error {
 	db := connection.Table(PermAppRelation{}.TableName()).LogMode(_const.DB_LOG_MODE)
 	if err := db.Create(&relation).Error; err != nil {
 		logs.Error("insert permission-app relationship failed,%v", err)
-		return err
-	}
-	return nil
-}
-
-/**
-更新权限app对应关系
-*/
-func UpdataPermAppRelation(data *PermAppRelation) error {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("connect to db failed,%v", err)
-		return err
-	}
-	defer connection.Close()
-	data.UpdatedAt = time.Now()
-	id := data.ID
-	condition := "id= '" + fmt.Sprint(id) + "'"
-	db := connection.Table(PermAppRelation{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	if err := db.Where(condition).Update(&data).Error; err != nil {
-		logs.Error("update permission-app relationship failed,%v", err)
 		return err
 	}
 	return nil
