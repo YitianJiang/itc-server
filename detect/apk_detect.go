@@ -310,11 +310,11 @@ func QueryIgnoredHistory(c *gin.Context) {
 安卓获取检测任务详情---数组形式
 */
 func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
+
 	taskID, taskExist := c.GetQuery("taskId")
 	toolID, toolExist := c.GetQuery("toolId")
 	if !taskExist || !toolExist {
-		logs.Error("Miss taskId or toolId")
-		errorReturn(c, "Miss taskId or toolId")
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, "miss task id or tool id")
 		return
 	}
 
@@ -326,16 +326,17 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 
 	result := getDetectResult(c, taskID, toolID)
 	if result == nil {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to get binary detect result about task id: %v", taskID))
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("get binary detect result (task id: %v) failed", taskID))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message":   "success",
-		"errorCode": SUCCESS,
-		"data":      result})
+	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success", result)
+	// c.JSON(http.StatusOK, gin.H{
+	// "message":   "success",
+	// "errorCode": SUCCESS,
+	// "data":      result})
 
-	logs.Debug("Get task ID %v binary detect result success", taskID)
+	// logs.Debug("Get task ID %v binary detect result success", taskID)
 	return
 }
 
@@ -353,14 +354,7 @@ func getExactDetectTask(db *gorm.DB, sieve map[string]interface{}) (
 
 func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.DetectQueryStruct {
 
-	db, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return nil
-	}
-	defer db.Close()
-
-	task, err := getExactDetectTask(db, map[string]interface{}{"id": taskId})
+	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
 	if err != nil {
 		logs.Error("Task id: %v Failed to get the task information", taskId)
 		return nil
@@ -374,7 +368,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	}
 
 	//查询基础信息和敏感信息
-	contents, err := retrieveTaskAPP(db, map[string]interface{}{
+	contents, err := retrieveTaskAPP(database.DB(), map[string]interface{}{
 		"task_id": taskId,
 		"tool_id": toolId})
 	if err != nil {
@@ -386,7 +380,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		return nil
 	}
 
-	details, err := queryDetectContentDetail(db, map[string]interface{}{
+	details, err := queryDetectContentDetail(database.DB(), map[string]interface{}{
 		"task_id": taskId,
 		"tool_id": toolId})
 	if err != nil {
