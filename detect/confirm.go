@@ -115,6 +115,8 @@ func ConfirmAndroid(c *gin.Context) {
 			return
 		}
 		m["status"] = t.Status
+		m["confirmer"] = username.(string)
+		m["remark"] = t.Remark
 		data, err := json.Marshal(permissionList)
 		if err != nil {
 			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("marshal error: %v", err))
