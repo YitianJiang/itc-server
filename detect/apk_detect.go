@@ -425,7 +425,6 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		}
 	}
 	finalResult := []dal.DetectQueryStruct{firstResult}
-	// finalResult = append(finalResult, firstResult)
 	finalResult = append(finalResult, midResult...)
 
 	appID, err := strconv.Atoi(task.AppId)
