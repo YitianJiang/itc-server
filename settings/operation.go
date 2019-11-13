@@ -92,6 +92,5 @@ func Store(db *gorm.DB, s ...*Settings) (err error) {
 
 // Get returns the global handler of settings.
 func Get() *Settings {
-
 	return settings
 }
