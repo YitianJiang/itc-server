@@ -524,19 +524,10 @@ func ConfirmIOSBinaryResult(c *gin.Context) {
 		return
 	}
 
-	if !confirmIOSBinaryResult(&ios, username.(string)) {
-		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, "confirm failed")
-		return
-	}
-
-	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
-}
-
-func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": ios.TaskId})
 	if err != nil {
-		logs.Error("read tb_binary_detect failed: %v", err)
-		return false
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("read tb_binary_detect failed: %v", err))
+		return
 	}
 	itemName := ios.ConfirmContent
 	var itemType *string
@@ -553,11 +544,12 @@ func confirmIOSBinaryResult(ios *IOSConfirm, confirmer string) bool {
 	if err := preAutoConfirmTask(task, &Item{
 		Name: itemName,
 		Type: itemType},
-		ios.Status, confirmer, ios.Remark); err != nil {
-		logs.Error("confirm iOS detection failed: %v", err)
-		return false
+		ios.Status, username.(string), ios.Remark); err != nil {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm iOS detection failed: %v", err))
+		return
 	}
-	return true
+
+	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
 }
 
 func readDetectContentiOS(db *gorm.DB, sieve map[string]interface{}) ([]dal.IOSNewDetectContent, error) {
