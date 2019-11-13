@@ -384,7 +384,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		logs.Error("%s read tb_detect_content_detail failed: %v", header, err)
 		return nil
 	}
-	if len(*details) <= 0 {
+	if len(details) <= 0 {
 		logs.Error("%s cannot find any matched detect content detail", header)
 		return nil
 	}
@@ -409,9 +409,9 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		queryResult.Permissions = permission
 		queryResult.Index = num + 1
 		detailListIndex := make([]dal.DetectContentDetail, 0)
-		for i := 0; i < len(*details); i++ {
-			if (*details)[i].SubIndex == num {
-				detailListIndex = append(detailListIndex, (*details)[i])
+		for i := 0; i < len(details); i++ {
+			if details[i].SubIndex == num {
+				detailListIndex = append(detailListIndex, details[i])
 			}
 		}
 		detailMap[num+1] = detailListIndex
@@ -514,27 +514,27 @@ func readExactDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (
 		return nil, err
 	}
 
-	if len(*data) <= 0 {
+	if len(data) <= 0 {
 		return nil, nil
 	}
 
-	return &(*data)[0], nil
+	return &data[0], nil
 }
 
 /**
 查询apk敏感信息----fj
 */
 func queryDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (
-	*[]dal.DetectContentDetail, error) {
+	[]dal.DetectContentDetail, error) {
 
 	var result []dal.DetectContentDetail
 	if err := db.Debug().Where(sieve).Order("status ASC").
 		Find(&result).Error; err != nil {
-		logs.Error("Database error: %v", err)
+		logs.Error("database error: %v", err)
 		return nil, err
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 /**
