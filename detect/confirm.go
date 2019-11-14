@@ -13,7 +13,7 @@ import (
 )
 
 type confirmaParams struct {
-	TaskID int    `json:"taskId"`
+	TaskID uint   `json:"taskId"`
 	ToolID int    `json:"toolId"`
 	Status int    `json:"status"`
 	Remark string `json:"remark"`
@@ -34,6 +34,13 @@ type confirmaParams struct {
 	TypeiOS int `json:"confirmType"`
 	// Name=methodName+className if the type is method.
 	Name string `json:"confirmContent"`
+
+	// The field will be filled in the code.
+	APPID      string
+	Platform   int
+	APPVersion string
+	Item       *Item
+	Confirmer  string
 }
 
 // ConfirmAndroid supports .apk and .aab format.
