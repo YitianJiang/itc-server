@@ -428,7 +428,6 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		logs.Warn("%s read negligible information failed", header)
 	}
 	//任务检测结果组输出重组
-	allPermList := GetPermList()
 	for i := 0; i < len(finalResult); i++ {
 		details := detailMap[finalResult[i].Index]
 		//获取敏感信息输出结果
@@ -440,7 +439,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		finalResult[i].SStrs_new = strs_un
 
 		if hasPermListFlag { //权限结果重组
-			permissionsP, err := packPermissionListAndroid(permsMap[finalResult[i].Index].PermInfos, perIgs, allPermList)
+			permissionsP, err := packPermissionListAndroid(permsMap[finalResult[i].Index].PermInfos, perIgs)
 			if err != nil {
 				logs.Error("%s construct permission list failed: %v", header, err)
 				return nil
@@ -713,7 +712,7 @@ func methodRiskLevelUpdate(ids *[]string, levels *[]string, configIds *[]dal.Det
 /**
 权限结果输出解析
 */
-func packPermissionListAndroid(permission string, perIgs map[int]interface{}, allPermList map[int]interface{}) (*PermSlice, error) {
+func packPermissionListAndroid(permission string, perIgs map[int]interface{}) (*PermSlice, error) {
 	var permissionList []interface{}
 	if err := json.Unmarshal([]byte(permission), &permissionList); err != nil {
 		logs.Error("unmarshal error: %v content: %v", err, permission)
@@ -724,16 +723,8 @@ func packPermissionListAndroid(permission string, perIgs map[int]interface{}, al
 	var reulst_con PermSlice
 	for v, permInfo := range permissionList {
 		permMap := permInfo.(map[string]interface{})
-		//更新权限信息
-		// permMap["priority"] = int(permMap["priority"].(float64))
-		// if v, ok := allPermList[int(permMap["perm_id"].(float64))]; ok {
-		// info := v.(map[string]interface{})
-		// permMap["priority"] = info["priority"].(int)
-		// permMap["ability"] = info["ability"].(string)
-		// }
 		var permOut dal.Permissions
 		permOut.Id = uint(v) + 1
-		// permOut.Priority = permMap["priority"].(int)
 		permOut.Priority = int(permMap["priority"].(float64))
 		permOut.RiskLevel = fmt.Sprint(permMap["priority"])
 		permOut.Status = int(permMap["status"].(float64))
