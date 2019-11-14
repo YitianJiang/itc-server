@@ -420,17 +420,11 @@ func getDetectResult(taskId string, toolId string) *[]dal.DetectQueryStruct {
 	finalResult := []dal.DetectQueryStruct{firstResult}
 	finalResult = append(finalResult, midResult...)
 
-	//查询增量信息
-	// methodIgs, _, _, errIg := getIgnoredInfo_2(task.AppId, task.Platform)
-	// if errIg != nil {
-	// It's acceptable if failed to get the  negligible information.
-	// logs.Warn("%s read negligible information failed", header)
-	// }
 	//任务检测结果组输出重组
 	for i := 0; i < len(finalResult); i++ {
 		details := detailMap[finalResult[i].Index]
 		//获取敏感信息输出结果
-		methods_un, strs_un := GetDetectDetailOutInfo(details /*, methodIgs*/)
+		methods_un, strs_un := GetDetectDetailOutInfo(details)
 		if methods_un == nil && strs_un == nil {
 			return nil
 		}
@@ -515,7 +509,7 @@ func queryDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (
 /**
 敏感方法和字符串的结果输出解析---新版
 */
-func GetDetectDetailOutInfo(details []dal.DetectContentDetail /*, methodIgs map[string]interface{}*/) ([]dal.SMethod, []dal.SStr) {
+func GetDetectDetailOutInfo(details []dal.DetectContentDetail) ([]dal.SMethod, []dal.SStr) {
 	methods_un := make(MethodSlice, 0)
 	methods_con := make(MethodSlice, 0)
 	strs_un := make([]dal.SStr, 0)
@@ -569,17 +563,6 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail /*, methodIgs map[
 				}
 				updateConfigIds = append(updateConfigIds, t)
 			}
-			// if methodIgs != nil {
-			// 	if v, ok := methodIgs[detail.ClassName+"."+detail.KeyInfo]; ok {
-			// 		info := v.(map[string]interface{})
-			// 		if info["status"] != 0 && method.Status != 0 {
-			// 			method.Status = info["status"].(int)
-			// 			method.Confirmer = info["confirmer"].(string)
-			// 			method.Remark = info["remarks"].(string)
-			// 			method.OtherVersion = info["version"].(string)
-			// 		}
-			// 	}
-			// }
 			callLocs := strings.Split(detail.CallLoc, ";")
 			callLoc := make([]dal.MethodCallJson, 0)
 			for _, call_loc := range callLocs[0:(len(callLocs) - 1)] {
