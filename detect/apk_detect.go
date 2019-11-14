@@ -440,7 +440,6 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		finalResult[i].SStrs = make([]dal.SStr, 0)
 		finalResult[i].SStrs_new = strs_un
 
-		// var permissions []dal.Permissions
 		if hasPermListFlag { //权限结果重组
 			thePerm := permsMap[finalResult[i].Index]
 			permissionsP, err := GetTaskPermissions_2(thePerm, perIgs, allPermList)
@@ -449,15 +448,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 				return nil
 			}
 			finalResult[i].Permissions_2 = (*permissionsP)
-			// if errP != nil || permissionsP == nil || len(*permissionsP) == 0 {
-			// finalResult[i].Permissions_2 = permissions
-			// } else {
-			// finalResult[i].Permissions_2 = (*permissionsP)
-			// }
 		}
-		// } else {
-		// finalResult[i].Permissions_2 = permissions
-		// }
 	}
 
 	return &finalResult
