@@ -431,8 +431,6 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	allPermList := GetPermList()
 	for i := 0; i < len(finalResult); i++ {
 		details := detailMap[finalResult[i].Index]
-		permissions := make([]dal.Permissions, 0)
-
 		//获取敏感信息输出结果
 		methods_un, strs_un := GetDetectDetailOutInfo(details, c, methodIgs, strIgs)
 		if methods_un == nil && strs_un == nil {
@@ -442,6 +440,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		finalResult[i].SStrs = make([]dal.SStr, 0)
 		finalResult[i].SStrs_new = strs_un
 
+		var permissions []dal.Permissions
 		//权限结果重组
 		if hasPermListFlag {
 			thePerm := permsMap[finalResult[i].Index]
