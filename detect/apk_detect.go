@@ -437,7 +437,6 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 			return nil
 		}
 		finalResult[i].SMethods = methods_un
-		finalResult[i].SStrs = make([]dal.SStr, 0)
 		finalResult[i].SStrs_new = strs_un
 
 		if hasPermListFlag { //权限结果重组
