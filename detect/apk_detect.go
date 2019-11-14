@@ -726,14 +726,15 @@ func packPermissionListAndroid(permission string, perIgs map[int]interface{}, al
 		permMap := permInfo.(map[string]interface{})
 		//更新权限信息
 		// permMap["priority"] = int(permMap["priority"].(float64))
-		if v, ok := allPermList[int(permMap["perm_id"].(float64))]; ok {
-			info := v.(map[string]interface{})
-			permMap["priority"] = info["priority"].(int)
-			permMap["ability"] = info["ability"].(string)
-		}
+		// if v, ok := allPermList[int(permMap["perm_id"].(float64))]; ok {
+		// info := v.(map[string]interface{})
+		// permMap["priority"] = info["priority"].(int)
+		// permMap["ability"] = info["ability"].(string)
+		// }
 		var permOut dal.Permissions
 		permOut.Id = uint(v) + 1
-		permOut.Priority = permMap["priority"].(int)
+		// permOut.Priority = permMap["priority"].(int)
+		permOut.Priority = int(permMap["priority"].(float64))
 		permOut.RiskLevel = fmt.Sprint(permMap["priority"])
 		permOut.Status = int(permMap["status"].(float64))
 		permOut.Key = permMap["key"].(string)
