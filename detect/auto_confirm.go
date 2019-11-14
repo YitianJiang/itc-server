@@ -63,20 +63,18 @@ func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who stri
 					return err
 				}
 				for i := range tasks {
-					var sieve map[string]interface{}
+					sieve := make(map[string]interface{})
+					sieve["task_id"] = tasks[i].ID
+					sieve["sub_index"] = index
 					switch *item.Type {
 					case TypeString:
-						sieve = map[string]interface{}{
-							"task_id":    tasks[i].ID,
-							"sensi_type": String,
-							"key_info":   item.Name}
+						sieve["sensi_type"] = String
+						sieve["key_info"] = item.Name
 					case TypeMethod:
 						k := strings.LastIndex(item.Name, delimiter)
-						sieve = map[string]interface{}{
-							"task_id":    tasks[i].ID,
-							"sensi_type": Method,
-							"class_name": item.Name[:k],
-							"key_info":   item.Name[k+1:]}
+						sieve["sensi_type"] = Method
+						sieve["class_name"] = item.Name[:k]
+						sieve["key_info"] = item.Name[k+1:]
 					}
 					record, err := readExactDetectContentDetail(database.DB(), sieve)
 					if err != nil {

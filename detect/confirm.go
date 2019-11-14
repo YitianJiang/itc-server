@@ -59,7 +59,7 @@ func ConfirmAndroid(c *gin.Context) {
 		}
 		if err := preAutoConfirmTask(task,
 			&Item{Name: itemName, Type: itemType},
-			t.Status, username.(string), t.Remark, t.Index, t.ToolId); err != nil {
+			t.Status, username.(string), t.Remark, detection.SubIndex, t.ToolId); err != nil {
 			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed: %v", err))
 			return
 		}
