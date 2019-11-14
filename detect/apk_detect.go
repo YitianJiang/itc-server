@@ -599,36 +599,41 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, m
 				methods_con = append(methods_con, method)
 			}
 		} else if detail.SensiType == 2 { //敏感字符串
-			keys2 := make(map[string]int)
+			// keys2 := make(map[string]int)
 			//var keys3 = detail.KeyInfo
 			var str dal.SStr
 			str.Status = detail.Status
 			confirmInfos := make([]dal.ConfirmInfo, 0)
 			keys := strings.Split(detail.KeyInfo, ";")
-			keys3 := ""
+			// keys3 := ""
 			for _, keyInfo := range keys[0 : len(keys)-1] {
-				var confirmInfo dal.ConfirmInfo
-				if v, ok := strIgs[keyInfo]; ok && str.Status != 0 {
-					info := v.(map[string]interface{})
-					if info["status"] != 0 {
-						keys2[keyInfo] = 1
-						confirmInfo.Key = keyInfo
-						confirmInfo.Status = info["status"].(int)
-						confirmInfo.Remark = info["remarks"].(string)
-						confirmInfo.Status = info["status"].(int)
-						confirmInfo.Confirmer = info["confirmer"].(string)
-						confirmInfo.OtherVersion = info["version"].(string)
-						confirmInfos = append(confirmInfos, confirmInfo)
-					}
-				} else {
-					keys3 += keyInfo + ";"
-					confirmInfo.Key = keyInfo
-					confirmInfos = append(confirmInfos, confirmInfo)
-				}
+				// var confirmInfo dal.ConfirmInfo
+				// if v, ok := strIgs[keyInfo]; ok && str.Status != 0 {
+				// 	info := v.(map[string]interface{})
+				// 	if info["status"] != 0 {
+				// 		keys2[keyInfo] = 1
+				// 		confirmInfo.Key = keyInfo
+				// 		confirmInfo.Status = info["status"].(int)
+				// 		confirmInfo.Remark = info["remarks"].(string)
+				// 		confirmInfo.Status = info["status"].(int)
+				// 		confirmInfo.Confirmer = info["confirmer"].(string)
+				// 		confirmInfo.OtherVersion = info["version"].(string)
+				// 		confirmInfos = append(confirmInfos, confirmInfo)
+				// 	}
+				// } else {
+				// keys3 += keyInfo + ";"
+				// confirmInfo.Key = keyInfo
+				// confirmInfos = append(confirmInfos, confirmInfo)
+				// }
+				confirmInfos = append(confirmInfos, dal.ConfirmInfo{
+					Key:       keyInfo,
+					Status:    detail.Status,
+					Confirmer: detail.Confirmer,
+					Remark:    detail.Remark})
 			}
-			if keys3 == "" {
-				str.Status = 1
-			}
+			// if keys3 == "" {
+			// 	str.Status = 1
+			// }
 			str.Keys = detail.KeyInfo
 			str.Remark = detail.Remark
 			str.Confirmer = detail.Confirmer
