@@ -121,15 +121,6 @@ func ConfirmAndroid(c *gin.Context) {
 	return
 }
 
-type IOSConfirm struct {
-	TaskId         int    `json:"taskId"           form:"taskId"`
-	ToolId         int    `json:"toolId"           form:"toolId"`
-	Status         int    `json:"status"           form:"status"`
-	Remark         string `json:"remark"           form:"remark"`
-	ConfirmType    int    `json:"confirmType"      form:"confirmType"` //0是旧样式黑名单，1是新样式黑名单，2是可疑方法，3是权限
-	ConfirmContent string `json:"confirmContent"   form:"confirmContent"`
-}
-
 // ConfirmiOS supports .ipa format.
 func ConfirmiOS(c *gin.Context) {
 
@@ -140,23 +131,18 @@ func ConfirmiOS(c *gin.Context) {
 	}
 	var p confirmaParams
 	if err := c.ShouldBindJSON(&p); err != nil {
-		// var ios IOSConfirm
-		// if err := c.ShouldBindJSON(&ios); err != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid user: %v", err))
 		return
 	}
 
 	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": p.TaskID})
-	// task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": ios.TaskId})
 	if err != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("read tb_binary_detect failed: %v", err))
 		return
 	}
 	itemName := p.Name
-	// itemName := ios.ConfirmContent
 	var itemType *string
 	switch p.TypeiOS {
-	// switch ios.ConfirmType {
 	case 1:
 		itemType = &TypeString
 	case 2:
@@ -170,7 +156,6 @@ func ConfirmiOS(c *gin.Context) {
 		Name: itemName,
 		Type: itemType},
 		p.Status, username.(string), p.Remark, 0, p.ToolID); err != nil {
-		// ios.Status, username.(string), ios.Remark, 0, ios.ToolId); err != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm iOS detection failed: %v", err))
 		return
 	}
