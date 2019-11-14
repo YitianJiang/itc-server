@@ -723,15 +723,15 @@ func packPermissionListAndroid(permission string, perIgs map[int]interface{}, al
 	var result PermSlice
 	var reulst_con PermSlice
 	for v, permInfo := range permissionList {
-		var permOut dal.Permissions
 		permMap := permInfo.(map[string]interface{})
 		//更新权限信息
-		permMap["priority"] = int(permMap["priority"].(float64))
+		// permMap["priority"] = int(permMap["priority"].(float64))
 		if v, ok := allPermList[int(permMap["perm_id"].(float64))]; ok {
 			info := v.(map[string]interface{})
 			permMap["priority"] = info["priority"].(int)
 			permMap["ability"] = info["ability"].(string)
 		}
+		var permOut dal.Permissions
 		permOut.Id = uint(v) + 1
 		permOut.Priority = permMap["priority"].(int)
 		permOut.RiskLevel = fmt.Sprint(permMap["priority"])
