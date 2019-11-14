@@ -188,7 +188,7 @@ func GetSpecificAppVersionDetectResults(c *gin.Context) {
 		return
 	}
 
-	data := getDetectResult(c, strconv.Itoa(int(task.ID)), "6")
+	data := getDetectResult(strconv.Itoa(int(task.ID)), "6")
 	if data == nil {
 		logs.Error("Failed to get task ID %v binary detect result", task.ID)
 		return

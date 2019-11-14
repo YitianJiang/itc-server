@@ -41,7 +41,7 @@ func GetDetectTaskResult(c *gin.Context) {
 		return
 	}
 
-	data := getDetectResult(c, taskID, latestDetectTool)
+	data := getDetectResult(taskID, latestDetectTool)
 	if data == nil {
 		ReturnMsg(c, ErrTaskOther, fmt.Sprintf("Task id: %v Failed to get binary detect result", taskID))
 		return

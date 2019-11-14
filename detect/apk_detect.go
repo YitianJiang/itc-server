@@ -326,7 +326,7 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 		return
 	}
 
-	result := getDetectResult(c, taskID, toolID)
+	result := getDetectResult(taskID, toolID)
 	if result == nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("get binary detect result (task id: %v) failed", taskID))
 		return
@@ -348,7 +348,7 @@ func getExactDetectTask(db *gorm.DB, sieve map[string]interface{}) (
 	return &task, nil
 }
 
-func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.DetectQueryStruct {
+func getDetectResult(taskId string, toolId string) *[]dal.DetectQueryStruct {
 
 	header := fmt.Sprintf(logHeader, taskId)
 	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
