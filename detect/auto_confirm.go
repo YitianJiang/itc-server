@@ -153,104 +153,127 @@ func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who stri
 				return fmt.Errorf("update task status failed: %v", updateInfo)
 			}
 		case platformiOS:
-			var detectType string
-			switch *item.Type {
-			case TypeString:
-				detectType = "blackList"
-			case TypeMethod:
-				detectType = "method"
-			case TypePermission:
-				detectType = "privacy"
-			default:
-				return fmt.Errorf("invalid detect type: %v", *item.Type)
+			if err := autoConfirmiOS(&confirmParams{
+				TaskID:     task.ID,
+				ToolID:     toolID,
+				Item:       item,
+				Status:     status,
+				Confirmer:  who,
+				Remark:     remark,
+				APPID:      task.AppId,
+				APPVersion: task.AppVersion,
+			}); err != nil {
 			}
-			content, err := readDetectContentiOS(database.DB(), map[string]interface{}{
-				"taskId":      task.ID,
-				"toolId":      "5",
-				"detect_type": detectType})
-			if err != nil {
-				logs.Error("read tb_ios_new_detect_content failed: %v", err)
-				return err
-			}
-			if len(content) == 0 {
-				logs.Error("invalid task id: %v cannot find any matched record", task.ID)
-				return fmt.Errorf("invalid task id: %v cannot find any matched record", task.ID)
-			}
-			m := make(map[string]interface{})
-			if err := json.Unmarshal([]byte(content[0].DetectContent), &m); err != nil {
-				logs.Error("unmarshal error: %v", err)
-				return err
-			}
-			switch *item.Type {
-			case TypeString:
-				stringList, ok := m[detectType].([]interface{})
-				if !ok {
-					return fmt.Errorf("%s cannot assert to []interface{}: %v", TypeString, m[TypeString])
-				}
-				for i := range stringList {
-					t, ok := stringList[i].(map[string]interface{})
-					if !ok {
-						return fmt.Errorf("cannot assert to map[string]interface{}: %v", stringList[i])
-					}
-					if t["name"] == item.Name {
-						t["status"] = status
-						t["confirmer"] = who
-						t["remark"] = remark
-					}
-				}
-			case TypeMethod:
-				methodList, ok := m[detectType].([]interface{})
-				if !ok {
-					return fmt.Errorf("%s cannot assert to []interface{}: %v", TypeMethod, m[TypeMethod])
-				}
-				for i := range methodList {
-					t, ok := methodList[i].(map[string]interface{})
-					if !ok {
-						return fmt.Errorf("cannot assert to map[string]interface{}: %v", methodList[i])
-					}
-					if fmt.Sprintf("%v%v%v", t["content"], delimiter, t["name"]) == item.Name {
-						t["status"] = status
-						t["confirmer"] = who
-						t["remark"] = remark
-					}
-				}
-			case TypePermission:
-				permissionList, ok := m[detectType].([]interface{})
-				if !ok {
-					return fmt.Errorf("%s cannot assert to []interface{}: %v", TypePermission, m[TypeMethod])
-				}
-				for i := range permissionList {
-					t, ok := permissionList[i].(map[string]interface{})
-					if !ok {
-						return fmt.Errorf("cannot assert to map[string]interface{}: %v", permissionList[i])
-					}
-					if t["permission"] == item.Name {
-						t["status"] = status
-						t["confirmer"] = who
-						t["confirmReason"] = remark
-						t["confirmVersion"] = task.AppVersion
-					}
-				}
-			default:
-				return fmt.Errorf("invalid detect type: %v", *item.Type)
-			}
-			confirmedContent, err := json.Marshal(m)
-			if err != nil {
-				logs.Error("marshal error: %v", err)
-				return err
-			}
-			content[0].DetectContent = string(confirmedContent)
-			if err := database.UpdateDBRecord(database.DB(), &content[0]); err != nil {
-				logs.Error("update tb_ios_new_detect_content failed: %v", err)
-				return err
-			}
-			if _, err := updateTaskStatusiOS(task.ID, toolIDiOS, 1); err != nil {
-				logs.Error("update iOS detect task failed: %v", err)
-				return err
-			}
+
 		default:
 			return fmt.Errorf("unsupported platform: %v", task.Platform)
 		}
+	}
+
+	return nil
+}
+
+// func autoConfirmAndroid(p *confirmaParams) error {
+
+// 	return nil
+// }
+
+func autoConfirmiOS(p *confirmParams) error {
+
+	var detectType string
+	switch *p.Item.Type {
+	case TypeString:
+		detectType = "blackList"
+	case TypeMethod:
+		detectType = "method"
+	case TypePermission:
+		detectType = "privacy"
+	default:
+		return fmt.Errorf("invalid detect type: %v", *p.Item.Type)
+	}
+	content, err := readDetectContentiOS(database.DB(), map[string]interface{}{
+		"taskId":      p.TaskID,
+		"toolId":      "5",
+		"detect_type": detectType})
+	if err != nil {
+		logs.Error("read tb_ios_new_detect_content failed: %v", err)
+		return err
+	}
+	if len(content) == 0 {
+		logs.Error("invalid task id: %v cannot find any matched record", p.TaskID)
+		return fmt.Errorf("invalid task id: %v cannot find any matched record", p.TaskID)
+	}
+	m := make(map[string]interface{})
+	if err := json.Unmarshal([]byte(content[0].DetectContent), &m); err != nil {
+		logs.Error("unmarshal error: %v", err)
+		return err
+	}
+	switch *p.Item.Type {
+	case TypeString:
+		stringList, ok := m[detectType].([]interface{})
+		if !ok {
+			return fmt.Errorf("%s cannot assert to []interface{}: %v", TypeString, m[TypeString])
+		}
+		for i := range stringList {
+			t, ok := stringList[i].(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("cannot assert to map[string]interface{}: %v", stringList[i])
+			}
+			if t["name"] == p.Item.Name {
+				t["status"] = p.Status
+				t["confirmer"] = p.Confirmer
+				t["remark"] = p.Remark
+			}
+		}
+	case TypeMethod:
+		methodList, ok := m[detectType].([]interface{})
+		if !ok {
+			return fmt.Errorf("%s cannot assert to []interface{}: %v", TypeMethod, m[TypeMethod])
+		}
+		for i := range methodList {
+			t, ok := methodList[i].(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("cannot assert to map[string]interface{}: %v", methodList[i])
+			}
+			if fmt.Sprintf("%v%v%v", t["content"], delimiter, t["name"]) == p.Item.Name {
+				t["status"] = p.Status
+				t["confirmer"] = p.Confirmer
+				t["remark"] = p.Remark
+			}
+		}
+	case TypePermission:
+		permissionList, ok := m[detectType].([]interface{})
+		if !ok {
+			return fmt.Errorf("%s cannot assert to []interface{}: %v", TypePermission, m[TypeMethod])
+		}
+		for i := range permissionList {
+			t, ok := permissionList[i].(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("cannot assert to map[string]interface{}: %v", permissionList[i])
+			}
+			if t["permission"] == p.Item.Name {
+				t["status"] = p.Status
+				t["confirmer"] = p.Confirmer
+				t["confirmReason"] = p.Remark
+				t["confirmVersion"] = p.APPVersion
+			}
+		}
+	default:
+		return fmt.Errorf("invalid detect type: %v", *p.Item.Type)
+	}
+	confirmedContent, err := json.Marshal(m)
+	if err != nil {
+		logs.Error("marshal error: %v", err)
+		return err
+	}
+	content[0].DetectContent = string(confirmedContent)
+	if err := database.UpdateDBRecord(database.DB(), &content[0]); err != nil {
+		logs.Error("update tb_ios_new_detect_content failed: %v", err)
+		return err
+	}
+	if _, err := updateTaskStatusiOS(p.TaskID, p.ToolID, 1); err != nil {
+		logs.Error("update iOS detect task failed: %v", err)
+		return err
 	}
 
 	return nil
