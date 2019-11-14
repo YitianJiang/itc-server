@@ -420,7 +420,6 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	finalResult := []dal.DetectQueryStruct{firstResult}
 	finalResult = append(finalResult, midResult...)
 
-	perIgs := GetIgnoredPermission(task.AppId)
 	//查询增量信息
 	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(task.AppId, task.Platform)
 	if errIg != nil {
@@ -439,7 +438,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		finalResult[i].SStrs_new = strs_un
 
 		if hasPermListFlag { //权限结果重组
-			permissionsP, err := packPermissionListAndroid(permsMap[finalResult[i].Index].PermInfos, perIgs)
+			permissionsP, err := packPermissionListAndroid(permsMap[finalResult[i].Index].PermInfos)
 			if err != nil {
 				logs.Error("%s construct permission list failed: %v", header, err)
 				return nil
@@ -712,7 +711,7 @@ func methodRiskLevelUpdate(ids *[]string, levels *[]string, configIds *[]dal.Det
 /**
 权限结果输出解析
 */
-func packPermissionListAndroid(permission string, perIgs map[int]interface{}) (*PermSlice, error) {
+func packPermissionListAndroid(permission string) (*PermSlice, error) {
 	var permissionList []interface{}
 	if err := json.Unmarshal([]byte(permission), &permissionList); err != nil {
 		logs.Error("unmarshal error: %v content: %v", err, permission)
@@ -736,13 +735,6 @@ func packPermissionListAndroid(permission string, perIgs map[int]interface{}) (*
 		// if the assert failed, the variable will be set to the default value.
 		permOut.Confirmer, _ = permMap["confirmer"].(string)
 		permOut.Remark, _ = permMap["remark"].(string)
-
-		// if v, ok := perIgs[int(permMap["perm_id"].(float64))]; ok && permOut.Status != 0 {
-		// 	perm := v.(map[string]interface{})
-		// 	permOut.Status = perm["status"].(int)
-		// 	permOut.Remark = perm["remarks"].(string)
-		// 	permOut.Confirmer = perm["confirmer"].(string)
-		// }
 
 		if permOut.Status == 0 {
 			result = append(result, permOut)
