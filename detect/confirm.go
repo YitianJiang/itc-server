@@ -130,7 +130,7 @@ type IOSConfirm struct {
 	ConfirmContent string `json:"confirmContent"   form:"confirmContent"`
 }
 
-func ConfirmIOSBinaryResult(c *gin.Context) {
+func ConfirmiOS(c *gin.Context) {
 
 	username, exist := c.Get("username")
 	if !exist {

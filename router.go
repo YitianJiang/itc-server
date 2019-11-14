@@ -110,7 +110,7 @@ func InitRouter(r *ginex.Engine) {
 		//获取iOS当前任务的二进制工具检测内容
 		api.GET("/task/queryIOSBinaryContent", detect.QueryIOSTaskBinaryCheckContent)
 		//确认iOS二进制检测信息
-		api.POST("/detect/confirmIOSResult", detect.ConfirmIOSBinaryResult)
+		api.POST("/detect/confirmIOSResult", detect.ConfirmiOS)
 		//查询权限确认历史
 		api.POST("detect/queryIgnoreHistory", detect.QueryIgnoredHistory)
 		//新增权限
