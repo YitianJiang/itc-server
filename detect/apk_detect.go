@@ -421,7 +421,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	finalResult = append(finalResult, midResult...)
 
 	//查询增量信息
-	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(task.AppId, task.Platform)
+	methodIgs, _, _, errIg := getIgnoredInfo_2(task.AppId, task.Platform)
 	if errIg != nil {
 		// It's acceptable if failed to get the  negligible information.
 		logs.Warn("%s read negligible information failed", header)
@@ -430,7 +430,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	for i := 0; i < len(finalResult); i++ {
 		details := detailMap[finalResult[i].Index]
 		//获取敏感信息输出结果
-		methods_un, strs_un := GetDetectDetailOutInfo(details, c, methodIgs, strIgs)
+		methods_un, strs_un := GetDetectDetailOutInfo(details, c, methodIgs)
 		if methods_un == nil && strs_un == nil {
 			return nil
 		}
@@ -515,7 +515,7 @@ func queryDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (
 /**
 敏感方法和字符串的结果输出解析---新版
 */
-func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, methodIgs map[string]interface{}, strIgs map[string]interface{}) ([]dal.SMethod, []dal.SStr) {
+func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, methodIgs map[string]interface{}) ([]dal.SMethod, []dal.SStr) {
 	methods_un := make(MethodSlice, 0)
 	methods_con := make(MethodSlice, 0)
 	strs_un := make([]dal.SStr, 0)
@@ -599,41 +599,19 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, m
 				methods_con = append(methods_con, method)
 			}
 		} else if detail.SensiType == 2 { //敏感字符串
-			// keys2 := make(map[string]int)
-			//var keys3 = detail.KeyInfo
 			var str dal.SStr
 			str.Status = detail.Status
 			confirmInfos := make([]dal.ConfirmInfo, 0)
 			keys := strings.Split(detail.KeyInfo, ";")
-			// keys3 := ""
+
 			for _, keyInfo := range keys[0 : len(keys)-1] {
-				// var confirmInfo dal.ConfirmInfo
-				// if v, ok := strIgs[keyInfo]; ok && str.Status != 0 {
-				// 	info := v.(map[string]interface{})
-				// 	if info["status"] != 0 {
-				// 		keys2[keyInfo] = 1
-				// 		confirmInfo.Key = keyInfo
-				// 		confirmInfo.Status = info["status"].(int)
-				// 		confirmInfo.Remark = info["remarks"].(string)
-				// 		confirmInfo.Status = info["status"].(int)
-				// 		confirmInfo.Confirmer = info["confirmer"].(string)
-				// 		confirmInfo.OtherVersion = info["version"].(string)
-				// 		confirmInfos = append(confirmInfos, confirmInfo)
-				// 	}
-				// } else {
-				// keys3 += keyInfo + ";"
-				// confirmInfo.Key = keyInfo
-				// confirmInfos = append(confirmInfos, confirmInfo)
-				// }
+
 				confirmInfos = append(confirmInfos, dal.ConfirmInfo{
 					Key:       keyInfo,
 					Status:    detail.Status,
 					Confirmer: detail.Confirmer,
 					Remark:    detail.Remark})
 			}
-			// if keys3 == "" {
-			// 	str.Status = 1
-			// }
 			str.Keys = detail.KeyInfo
 			str.Remark = detail.Remark
 			str.Confirmer = detail.Confirmer
