@@ -131,7 +131,7 @@ func ConfirmiOS(c *gin.Context) {
 	}
 	var p confirmaParams
 	if err := c.ShouldBindJSON(&p); err != nil {
-		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid user: %v", err))
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid parameter: %v", err))
 		return
 	}
 
@@ -161,4 +161,5 @@ func ConfirmiOS(c *gin.Context) {
 	}
 
 	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
+	return
 }
