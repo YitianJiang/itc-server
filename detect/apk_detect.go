@@ -441,8 +441,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 		finalResult[i].SStrs_new = strs_un
 
 		if hasPermListFlag { //权限结果重组
-			thePerm := permsMap[finalResult[i].Index]
-			permissionsP, err := packPermissionListAndroid(thePerm, thePerm.PermInfos, perIgs, allPermList)
+			permissionsP, err := packPermissionListAndroid(permsMap[finalResult[i].Index].PermInfos, perIgs, allPermList)
 			if err != nil {
 				logs.Error("%s construct permission list failed: %v", header, err)
 				return nil
@@ -715,9 +714,8 @@ func methodRiskLevelUpdate(ids *[]string, levels *[]string, configIds *[]dal.Det
 /**
 权限结果输出解析
 */
-func packPermissionListAndroid(info dal.PermAppRelation, permission string, perIgs map[int]interface{}, allPermList map[int]interface{}) (*PermSlice, error) {
+func packPermissionListAndroid(permission string, perIgs map[int]interface{}, allPermList map[int]interface{}) (*PermSlice, error) {
 	var infos []interface{}
-	// if err := json.Unmarshal([]byte(info.PermInfos), &infos); err != nil {
 	if err := json.Unmarshal([]byte(permission), &infos); err != nil {
 		logs.Error("unmarshal error: %v content: %v", err, permission)
 		return nil, err
