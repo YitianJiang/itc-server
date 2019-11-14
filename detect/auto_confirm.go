@@ -160,48 +160,6 @@ func autoConfirmAndroid(p *confirmParams) error {
 				}
 			}
 		}
-		// records, err := readPermAPPRelation(database.DB(),
-		// map[string]interface{}{
-		// "app_id":      p.APPID,
-		// "app_version": p.APPVersion,
-		// "sub_index":   p.Index})
-		// if err != nil {
-		// logs.Error("read perm_app_relation error: %v", err)
-		// return err
-		// }
-		// for i := range records {
-		// var permissionList []interface{}
-		// if err := json.Unmarshal([]byte(records[i].PermInfos), &permissionList); err != nil {
-		// 	logs.Error("unmarshal error: %v", err)
-		// 	return err
-		// // }
-		// var updated bool
-		// for j := range permissionList {
-		// 	t, ok := permissionList[j].(map[string]interface{})
-		// 	if !ok {
-		// 		logs.Error("cannot assert to map[string]interface{}: %v", permissionList[j])
-		// 		return err
-		// 	}
-		// 	if t["key"] == p.Item.Name {
-		// 		t["status"] = p.Status
-		// 		t["confirmer"] = p.Confirmer
-		// 		t["remark"] = p.Remark
-		// 		updated = true
-		// 	}
-		// }
-		// if updated {
-		// 	data, err := json.Marshal(permissionList)
-		// 	if err != nil {
-		// 		logs.Error("marshal error: %v", err)
-		// 		return err
-		// 	}
-		// 	records[i].PermInfos = string(data)
-		// 	if err := database.UpdateDBRecord(database.DB(), &records[i]); err != nil {
-		// 		logs.Error("update tb_perm_app_relation failed: %v", err)
-		// 		return err
-		// 	}
-		// 	// }
-		// }
 	default:
 		return fmt.Errorf("unsupported platform: %v", p.Platform)
 	}
