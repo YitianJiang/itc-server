@@ -430,7 +430,7 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	for i := 0; i < len(finalResult); i++ {
 		details := detailMap[finalResult[i].Index]
 		//获取敏感信息输出结果
-		methods_un, strs_un := GetDetectDetailOutInfo(details, c, methodIgs)
+		methods_un, strs_un := GetDetectDetailOutInfo(details, methodIgs)
 		if methods_un == nil && strs_un == nil {
 			return nil
 		}
@@ -515,7 +515,7 @@ func queryDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (
 /**
 敏感方法和字符串的结果输出解析---新版
 */
-func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, methodIgs map[string]interface{}) ([]dal.SMethod, []dal.SStr) {
+func GetDetectDetailOutInfo(details []dal.DetectContentDetail, methodIgs map[string]interface{}) ([]dal.SMethod, []dal.SStr) {
 	methods_un := make(MethodSlice, 0)
 	methods_con := make(MethodSlice, 0)
 	strs_un := make([]dal.SStr, 0)
@@ -584,10 +584,8 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, m
 			callLoc := make([]dal.MethodCallJson, 0)
 			for _, call_loc := range callLocs[0:(len(callLocs) - 1)] {
 				var call_loc_json dal.MethodCallJson
-				err := json.Unmarshal([]byte(call_loc), &call_loc_json)
-				if err != nil {
+				if err := json.Unmarshal([]byte(call_loc), &call_loc_json); err != nil {
 					logs.Error("taskId:"+fmt.Sprint(detail.TaskId)+",callLoc数据不符合要求，%v===========%s", err, call_loc)
-					errorReturn(c, "callLoc数据不符合要求")
 					return nil, nil
 				}
 				callLoc = append(callLoc, call_loc_json)
@@ -633,10 +631,8 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, m
 			callLoc := make([]dal.StrCallJson, 0)
 			for _, call_loc := range callLocs[0:(len(callLocs) - 1)] {
 				var callLoc_json dal.StrCallJson
-				err := json.Unmarshal([]byte(call_loc), &callLoc_json)
-				if err != nil {
+				if err := json.Unmarshal([]byte(call_loc), &callLoc_json); err != nil {
 					logs.Error("taskId:"+fmt.Sprint(detail.TaskId)+",callLoc数据不符合要求，%v========%s", err, call_loc)
-					errorReturn(c, "callLoc数据不符合要求")
 					return nil, nil
 				}
 				callLoc = append(callLoc, callLoc_json)
