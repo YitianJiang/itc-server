@@ -20,9 +20,11 @@ type confirmaParams struct {
 
 	// Only used in Android.
 	// ID is the id of table tb_detect_content_detail if the type is method or string.
+	// ID is the array index of table tb_perm_app_relation's field perm_infos
+	// if the type is permission. And must use ID-1 because it starts from 1.
 	ID int `json:"id"`
-	// Index is the array index of table tb_perm_app_relation's field perm_infos
-	// if the type is permission. And must use Index-1 because it starts from one.
+	// Index corresponds to the table tb_perm_app_relation's field perm_infos
+	// because .aab package may have more than one record in single task.
 	Index int `json:"index"`
 	// 0-->method/string 1-->permission
 	TypeAndroid int `json:"type"`
