@@ -29,7 +29,7 @@ type confirmaParams struct {
 	TypeAndroid int `json:"type"`
 
 	// Only used in iOS.
-	// 1-->blacklist 2-->method 3-->privacy
+	// 1-->blacklist(string) 2-->method 3-->privacy(permission)
 	TypeiOS int `json:"confirmType"`
 	// Name=methodName+className if the type is method.
 	Name string `json:"confirmContent"`
