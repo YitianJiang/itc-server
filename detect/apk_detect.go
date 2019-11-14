@@ -714,15 +714,15 @@ func methodRiskLevelUpdate(ids *[]string, levels *[]string, configIds *[]dal.Det
 权限结果输出解析
 */
 func packPermissionListAndroid(permission string, perIgs map[int]interface{}, allPermList map[int]interface{}) (*PermSlice, error) {
-	var infos []interface{}
-	if err := json.Unmarshal([]byte(permission), &infos); err != nil {
+	var permissionList []interface{}
+	if err := json.Unmarshal([]byte(permission), &permissionList); err != nil {
 		logs.Error("unmarshal error: %v content: %v", err, permission)
 		return nil, err
 	}
 
 	var result PermSlice
 	var reulst_con PermSlice
-	for v, permInfo := range infos {
+	for v, permInfo := range permissionList {
 		var permOut dal.Permissions
 		permMap := permInfo.(map[string]interface{})
 		//更新权限信息
