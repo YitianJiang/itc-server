@@ -49,16 +49,8 @@ func preAutoConfirmTask(p *confirmParams) error {
 		switch p.Platform {
 		case platformAndorid:
 			return autoConfirmAndroid(p)
-			// if err := autoConfirmAndroid(p); err != nil {
-			// 	logs.Error("confirm Android failed: %v", err)
-			// 	return err
-			// }
 		case platformiOS:
 			return autoConfirmiOS(p)
-			// if err := autoConfirmiOS(p); err != nil {
-			// 	logs.Error("confirm iOS failed: %v", err)
-			// 	return err
-			// }
 		default:
 			return fmt.Errorf("unsupported platform: %v", p.Platform)
 		}
@@ -110,46 +102,10 @@ func autoConfirmAndroidEx(p *confirmParams, tag bool) error {
 		if !updated {
 			continue
 		}
-		// sieve := make(map[string]interface{})
-		// sieve["task_id"] = tasks[i].ID
-		// sieve["sub_index"] = p.Index
-		// switch *p.Item.Type {
-		// case TypeString:
-		// 	sieve["sensi_type"] = String
-		// 	sieve["key_info"] = p.Item.Name
-		// case TypeMethod:
-		// 	k := strings.LastIndex(p.Item.Name, delimiter)
-		// 	sieve["sensi_type"] = Method
-		// 	sieve["class_name"] = p.Item.Name[:k]
-		// 	sieve["key_info"] = p.Item.Name[k+1:]
-		// }
-		// record, err := readExactDetectContentDetail(database.DB(), sieve)
-		// if err != nil {
-		// 	logs.Error("read tb_detect_content_detail failed: %v", err)
-		// 	return err
-		// }
-		// if record == nil {
-		// 	// It's ok because the tasks selected contain fail and detecting state.
-		// 	logs.Warn("cannot find any matched record with sieve: %v", sieve)
-		// 	continue
-		// }
-		// record.Status = p.Status
-		// record.Confirmer = p.Confirmer
-		// record.Remark = p.Remark
-		// if err := database.UpdateDBRecord(database.DB(), record); err != nil {
-		// 	logs.Error("update tb_perm_app_relation failed: %v", err)
-		// 	return err
-		// }
-
-		// TODO
-
-		//是否更新任务表中detect_no_pass字段的标志
 		var notPassFlag = false
 		if p.Status == ConfirmedFail {
 			notPassFlag = true
 		}
-
-		//任务状态更新
 		updateInfo, _ := taskStatusUpdate(p.TaskID, p.ToolID, &tasks[i], notPassFlag, 1)
 		if updateInfo != "" {
 			return fmt.Errorf("update task status failed: %v", updateInfo)
