@@ -49,108 +49,20 @@ func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who stri
 		// TODO
 		switch task.Platform {
 		case platformAndorid:
-			switch *item.Type {
-			case TypeString:
-				fallthrough
-			case TypeMethod:
-				tasks, err := readDetectTask(database.DB(),
-					map[string]interface{}{
-						"app_id":      task.AppId,
-						"platform":    task.Platform,
-						"app_version": task.AppVersion})
-				if err != nil {
-					logs.Error("read tb_binary_detect failed: %v", err)
-					return err
-				}
-				for i := range tasks {
-					sieve := make(map[string]interface{})
-					sieve["task_id"] = tasks[i].ID
-					sieve["sub_index"] = index
-					switch *item.Type {
-					case TypeString:
-						sieve["sensi_type"] = String
-						sieve["key_info"] = item.Name
-					case TypeMethod:
-						k := strings.LastIndex(item.Name, delimiter)
-						sieve["sensi_type"] = Method
-						sieve["class_name"] = item.Name[:k]
-						sieve["key_info"] = item.Name[k+1:]
-					}
-					record, err := readExactDetectContentDetail(database.DB(), sieve)
-					if err != nil {
-						logs.Error("read tb_detect_content_detail failed: %v", err)
-						return err
-					}
-					if record == nil {
-						// It's ok because the tasks selected contain fail and detecting state.
-						logs.Warn("cannot find any matched record with sieve: %v", sieve)
-						continue
-					}
-					record.Status = status
-					record.Confirmer = who
-					record.Remark = remark
-					if err := database.UpdateDBRecord(database.DB(), record); err != nil {
-						logs.Error("update tb_perm_app_relation failed: %v", err)
-						return err
-					}
-				}
-			case TypePermission:
-				records, err := readPermAPPRelation(database.DB(),
-					map[string]interface{}{
-						"app_id":      task.AppId,
-						"app_version": task.AppVersion,
-						"sub_index":   index})
-				if err != nil {
-					logs.Error("read perm_app_relation error: %v", err)
-					return err
-				}
-				for i := range records {
-					var permissionList []interface{}
-					if err := json.Unmarshal([]byte(records[i].PermInfos), &permissionList); err != nil {
-						logs.Error("unmarshal error: %v", err)
-						return err
-					}
-					var updated bool
-					for j := range permissionList {
-						t, ok := permissionList[j].(map[string]interface{})
-						if !ok {
-							logs.Error("cannot assert to map[string]interface{}: %v", permissionList[j])
-							return err
-						}
-						if t["key"] == item.Name {
-							t["status"] = status
-							t["confirmer"] = who
-							t["remark"] = remark
-							updated = true
-						}
-					}
-					if updated {
-						data, err := json.Marshal(permissionList)
-						if err != nil {
-							logs.Error("marshal error: %v", err)
-							return err
-						}
-						records[i].PermInfos = string(data)
-						if err := database.UpdateDBRecord(database.DB(), &records[i]); err != nil {
-							logs.Error("update tb_perm_app_relation failed: %v", err)
-							return err
-						}
-					}
-				}
-			default:
-				return fmt.Errorf("unsupported platform: %v", task.Platform)
-			}
-
-			//是否更新任务表中detect_no_pass字段的标志
-			var notPassFlag = false
-			if status == ConfirmedFail {
-				notPassFlag = true
-			}
-
-			//任务状态更新
-			updateInfo, _ := taskStatusUpdate(task.ID, toolID, task, notPassFlag, 1)
-			if updateInfo != "" {
-				return fmt.Errorf("update task status failed: %v", updateInfo)
+			if err := autoConfirmAndroid(&confirmParams{
+				TaskID:     task.ID,
+				ToolID:     toolID,
+				Item:       item,
+				Status:     status,
+				Confirmer:  who,
+				Remark:     remark,
+				Index:      index,
+				APPID:      task.AppId,
+				Platform:   task.Platform,
+				APPVersion: task.AppVersion,
+			}); err != nil {
+				logs.Error("confirm iOS failed: %v", err)
+				return err
 			}
 		case platformiOS:
 			if err := autoConfirmiOS(&confirmParams{
@@ -166,7 +78,6 @@ func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who stri
 				logs.Error("confirm iOS failed: %v", err)
 				return err
 			}
-
 		default:
 			return fmt.Errorf("unsupported platform: %v", task.Platform)
 		}
@@ -176,6 +87,111 @@ func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who stri
 }
 
 func autoConfirmAndroid(p *confirmParams) error {
+
+	switch *p.Item.Type {
+	case TypeString:
+		fallthrough
+	case TypeMethod:
+		tasks, err := readDetectTask(database.DB(),
+			map[string]interface{}{
+				"app_id":      p.APPID,
+				"platform":    p.Platform,
+				"app_version": p.APPVersion})
+		if err != nil {
+			logs.Error("read tb_binary_detect failed: %v", err)
+			return err
+		}
+		for i := range tasks {
+			sieve := make(map[string]interface{})
+			sieve["task_id"] = tasks[i].ID
+			sieve["sub_index"] = p.Index
+			switch *p.Item.Type {
+			case TypeString:
+				sieve["sensi_type"] = String
+				sieve["key_info"] = p.Item.Name
+			case TypeMethod:
+				k := strings.LastIndex(p.Item.Name, delimiter)
+				sieve["sensi_type"] = Method
+				sieve["class_name"] = p.Item.Name[:k]
+				sieve["key_info"] = p.Item.Name[k+1:]
+			}
+			record, err := readExactDetectContentDetail(database.DB(), sieve)
+			if err != nil {
+				logs.Error("read tb_detect_content_detail failed: %v", err)
+				return err
+			}
+			if record == nil {
+				// It's ok because the tasks selected contain fail and detecting state.
+				logs.Warn("cannot find any matched record with sieve: %v", sieve)
+				continue
+			}
+			record.Status = p.Status
+			record.Confirmer = p.Confirmer
+			record.Remark = p.Remark
+			if err := database.UpdateDBRecord(database.DB(), record); err != nil {
+				logs.Error("update tb_perm_app_relation failed: %v", err)
+				return err
+			}
+		}
+	case TypePermission:
+		records, err := readPermAPPRelation(database.DB(),
+			map[string]interface{}{
+				"app_id":      p.APPID,
+				"app_version": p.APPVersion,
+				"sub_index":   p.Index})
+		if err != nil {
+			logs.Error("read perm_app_relation error: %v", err)
+			return err
+		}
+		for i := range records {
+			var permissionList []interface{}
+			if err := json.Unmarshal([]byte(records[i].PermInfos), &permissionList); err != nil {
+				logs.Error("unmarshal error: %v", err)
+				return err
+			}
+			var updated bool
+			for j := range permissionList {
+				t, ok := permissionList[j].(map[string]interface{})
+				if !ok {
+					logs.Error("cannot assert to map[string]interface{}: %v", permissionList[j])
+					return err
+				}
+				if t["key"] == p.Item.Name {
+					t["status"] = p.Status
+					t["confirmer"] = p.Confirmer
+					t["remark"] = p.Remark
+					updated = true
+				}
+			}
+			if updated {
+				data, err := json.Marshal(permissionList)
+				if err != nil {
+					logs.Error("marshal error: %v", err)
+					return err
+				}
+				records[i].PermInfos = string(data)
+				if err := database.UpdateDBRecord(database.DB(), &records[i]); err != nil {
+					logs.Error("update tb_perm_app_relation failed: %v", err)
+					return err
+				}
+			}
+		}
+	default:
+		return fmt.Errorf("unsupported platform: %v", p.Platform)
+	}
+	// TODO
+
+	// //是否更新任务表中detect_no_pass字段的标志
+	// var notPassFlag = false
+	// if p.Status == ConfirmedFail {
+	// 	notPassFlag = true
+	// }
+
+	// //任务状态更新
+	// updateInfo, _ := taskStatusUpdate(p.TaskID, p.ToolID, task, notPassFlag, 1)
+	// if updateInfo != "" {
+	// 	return fmt.Errorf("update task status failed: %v", updateInfo)
+	// }
 
 	return nil
 }
@@ -195,7 +211,7 @@ func autoConfirmiOS(p *confirmParams) error {
 	}
 	content, err := readDetectContentiOS(database.DB(), map[string]interface{}{
 		"taskId":      p.TaskID,
-		"toolId":      "5",
+		"toolId":      p.ToolID,
 		"detect_type": detectType})
 	if err != nil {
 		logs.Error("read tb_ios_new_detect_content failed: %v", err)
