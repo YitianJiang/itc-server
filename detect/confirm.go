@@ -93,6 +93,7 @@ func ConfirmAndroid(c *gin.Context) {
 			itemType = &TypeString
 		}
 		p.Item = &Item{Name: itemName, Type: itemType}
+		p.Index = detection.SubIndex
 	} else { //获取该任务的权限信息
 		record, err := readExactPermAPPRelation(database.DB(), map[string]interface{}{
 			"task_id": p.TaskID, "sub_index": p.Index - 1})
@@ -116,6 +117,7 @@ func ConfirmAndroid(c *gin.Context) {
 			return
 		}
 		p.Item = &Item{Name: m["key"].(string), Type: &TypePermission}
+		p.Index--
 	}
 
 	if err := preAutoConfirmTask(&p); err != nil {
