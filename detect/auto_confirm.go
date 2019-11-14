@@ -36,9 +36,10 @@ func preAutoConfirmMR(appID string, platform int, version string,
 }
 
 // Binary detect task confirm
-func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who string, remark string, index int, toolID int) error {
-
-	freshman, err := preAutoConfirm(task.AppId, task.Platform, task.AppVersion, item, who, status, remark)
+func preAutoConfirmTask(p *confirmParams) error {
+	// func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who string, remark string, index int, toolID int) error {
+	freshman, err := preAutoConfirm(p.APPID, p.Platform, p.APPVersion, p.Item, p.Confirmer, p.Status, p.Remark)
+	// freshman, err := preAutoConfirm(task.AppId, task.Platform, task.AppVersion, item, who, status, remark)
 	if err != nil {
 		logs.Error("pre auto confirm failed: %v", err)
 		return err
@@ -47,39 +48,44 @@ func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who stri
 	// Distribute the confirm result.
 	if !freshman {
 		// TODO
-		switch task.Platform {
+		switch p.Platform {
+		// switch task.Platform {
 		case platformAndorid:
-			if err := autoConfirmAndroid(&confirmParams{
-				TaskID:     task.ID,
-				ToolID:     toolID,
-				Item:       item,
-				Status:     status,
-				Confirmer:  who,
-				Remark:     remark,
-				Index:      index,
-				APPID:      task.AppId,
-				Platform:   task.Platform,
-				APPVersion: task.AppVersion,
-			}); err != nil {
+			if err := autoConfirmAndroid(p); err != nil {
+				// if err := autoConfirmAndroid(&confirmParams{
+				// 	TaskID:     task.ID,
+				// 	ToolID:     toolID,
+				// 	Item:       item,
+				// 	Status:     status,
+				// 	Confirmer:  who,
+				// 	Remark:     remark,
+				// 	Index:      index,
+				// 	APPID:      task.AppId,
+				// 	Platform:   task.Platform,
+				// 	APPVersion: task.AppVersion,
+				// }); err != nil {
+
 				logs.Error("confirm iOS failed: %v", err)
 				return err
 			}
 		case platformiOS:
-			if err := autoConfirmiOS(&confirmParams{
-				TaskID:     task.ID,
-				ToolID:     toolID,
-				Item:       item,
-				Status:     status,
-				Confirmer:  who,
-				Remark:     remark,
-				APPID:      task.AppId,
-				APPVersion: task.AppVersion,
-			}); err != nil {
+			if err := autoConfirmiOS(p); err != nil {
+				// if err := autoConfirmiOS(&confirmParams{
+				// 	TaskID:     task.ID,
+				// 	ToolID:     toolID,
+				// 	Item:       item,
+				// 	Status:     status,
+				// 	Confirmer:  who,
+				// 	Remark:     remark,
+				// 	APPID:      task.AppId,
+				// 	APPVersion: task.AppVersion,
+				// }); err != nil {
 				logs.Error("confirm iOS failed: %v", err)
 				return err
 			}
 		default:
-			return fmt.Errorf("unsupported platform: %v", task.Platform)
+			return fmt.Errorf("unsupported platform: %v", p.Platform)
+			// return fmt.Errorf("unsupported platform: %v", task.Platform)
 		}
 	}
 

@@ -65,6 +65,10 @@ func ConfirmAndroid(c *gin.Context) {
 	}
 	msgHeader := fmt.Sprintf("task id: %v", task.ID)
 
+	p.Confirmer = username.(string)
+	p.APPID = task.AppId
+	p.Platform = task.Platform
+	p.APPVersion = task.AppVersion
 	if p.TypeAndroid == 0 { //敏感方法和字符串确认
 		detection, err := readExactDetectContentDetail(database.DB(),
 			map[string]interface{}{"id": p.ID})
@@ -88,12 +92,14 @@ func ConfirmAndroid(c *gin.Context) {
 		case String:
 			itemType = &TypeString
 		}
-		if err := preAutoConfirmTask(task,
-			&Item{Name: itemName, Type: itemType},
-			p.Status, username.(string), p.Remark, detection.SubIndex, p.ToolID); err != nil {
-			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed: %v", err))
-			return
-		}
+		p.Item = &Item{Name: itemName, Type: itemType}
+
+		// if err := preAutoConfirmTask(task,
+		// &Item{Name: itemName, Type: itemType},
+		// p.Status, username.(string), p.Remark, detection.SubIndex, p.ToolID); err != nil {
+		// utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed: %v", err))
+		// return
+		// }
 	} else { //获取该任务的权限信息
 		record, err := readExactPermAPPRelation(database.DB(), map[string]interface{}{
 			"task_id": p.TaskID, "sub_index": p.Index - 1})
@@ -116,13 +122,19 @@ func ConfirmAndroid(c *gin.Context) {
 			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("cannot assert to map[string]interface{}: %v", permissionList[p.ID-1]))
 			return
 		}
+		p.Item = &Item{Name: m["key"].(string), Type: &TypePermission}
 
-		if err := preAutoConfirmTask(task,
-			&Item{Name: m["key"].(string), Type: &TypePermission},
-			p.Status, username.(string), p.Remark, p.Index-1, p.ToolID); err != nil {
-			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed:%v", err))
-			return
-		}
+		// if err := preAutoConfirmTask(task,
+		// 	&Item{Name: m["key"].(string), Type: &TypePermission},
+		// 	p.Status, username.(string), p.Remark, p.Index-1, p.ToolID); err != nil {
+		// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed:%v", err))
+		// 	return
+		// }
+	}
+
+	if err := preAutoConfirmTask(&p); err != nil {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed: %v", err))
+		return
 	}
 
 	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
@@ -148,6 +160,11 @@ func ConfirmiOS(c *gin.Context) {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("read tb_binary_detect failed: %v", err))
 		return
 	}
+	p.Confirmer = username.(string)
+	p.APPID = task.AppId
+	p.Platform = task.Platform
+	p.APPVersion = task.AppVersion
+
 	itemName := p.Name
 	var itemType *string
 	switch p.TypeiOS {
@@ -160,13 +177,18 @@ func ConfirmiOS(c *gin.Context) {
 	case 3:
 		itemType = &TypePermission
 	}
-	if err := preAutoConfirmTask(task, &Item{
-		Name: itemName,
-		Type: itemType},
-		p.Status, username.(string), p.Remark, 0, p.ToolID); err != nil {
-		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm iOS detection failed: %v", err))
+	p.Item = &Item{Name: itemName, Type: itemType}
+	if err := preAutoConfirmTask(&p); err != nil {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed: %v", err))
 		return
 	}
+	// if err := preAutoConfirmTask(task, &Item{
+	// 	Name: itemName,
+	// 	Type: itemType},
+	// 	p.Status, username.(string), p.Remark, 0, p.ToolID); err != nil {
+	// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm iOS detection failed: %v", err))
+	// 	return
+	// }
 
 	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
 	return
