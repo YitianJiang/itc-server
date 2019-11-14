@@ -81,6 +81,11 @@ func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who stri
 						logs.Error("read tb_detect_content_detail failed: %v", err)
 						return err
 					}
+					if record == nil {
+						// It's ok because the tasks selected contain fail and detecting state.
+						logs.Warn("cannot find any matched record with sieve: %v", sieve)
+						continue
+					}
 					record.Status = status
 					record.Confirmer = who
 					record.Remark = remark
