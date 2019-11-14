@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type confirmaParams struct {
+type confirmParams struct {
 	TaskID uint   `json:"taskId"`
 	ToolID int    `json:"toolId"`
 	Status int    `json:"status"`
@@ -52,7 +52,7 @@ func ConfirmAndroid(c *gin.Context) {
 		return
 	}
 
-	var p confirmaParams
+	var p confirmParams
 	if err := c.ShouldBindJSON(&p); err != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid parameter: %v", err))
 		return
@@ -137,7 +137,7 @@ func ConfirmiOS(c *gin.Context) {
 		utils.ReturnMsg(c, http.StatusUnauthorized, utils.FAILURE, "unauthorized user")
 		return
 	}
-	var p confirmaParams
+	var p confirmParams
 	if err := c.ShouldBindJSON(&p); err != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid parameter: %v", err))
 		return
