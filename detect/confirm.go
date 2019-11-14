@@ -93,13 +93,6 @@ func ConfirmAndroid(c *gin.Context) {
 			itemType = &TypeString
 		}
 		p.Item = &Item{Name: itemName, Type: itemType}
-
-		// if err := preAutoConfirmTask(task,
-		// &Item{Name: itemName, Type: itemType},
-		// p.Status, username.(string), p.Remark, detection.SubIndex, p.ToolID); err != nil {
-		// utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed: %v", err))
-		// return
-		// }
 	} else { //获取该任务的权限信息
 		record, err := readExactPermAPPRelation(database.DB(), map[string]interface{}{
 			"task_id": p.TaskID, "sub_index": p.Index - 1})
@@ -123,13 +116,6 @@ func ConfirmAndroid(c *gin.Context) {
 			return
 		}
 		p.Item = &Item{Name: m["key"].(string), Type: &TypePermission}
-
-		// if err := preAutoConfirmTask(task,
-		// 	&Item{Name: m["key"].(string), Type: &TypePermission},
-		// 	p.Status, username.(string), p.Remark, p.Index-1, p.ToolID); err != nil {
-		// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed:%v", err))
-		// 	return
-		// }
 	}
 
 	if err := preAutoConfirmTask(&p); err != nil {
@@ -182,13 +168,6 @@ func ConfirmiOS(c *gin.Context) {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed: %v", err))
 		return
 	}
-	// if err := preAutoConfirmTask(task, &Item{
-	// 	Name: itemName,
-	// 	Type: itemType},
-	// 	p.Status, username.(string), p.Remark, 0, p.ToolID); err != nil {
-	// 	utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm iOS detection failed: %v", err))
-	// 	return
-	// }
 
 	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
 	return
