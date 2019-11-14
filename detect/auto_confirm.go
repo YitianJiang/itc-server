@@ -37,7 +37,8 @@ func preAutoConfirmMR(appID string, platform int, version string,
 
 // Binary detect task confirm
 func preAutoConfirmTask(p *confirmParams) error {
-	freshman, err := preAutoConfirm(p.APPID, p.Platform, p.APPVersion, p.Item, p.Confirmer, p.Status, p.Remark)
+	freshman, err := preAutoConfirm(p.APPID, p.Platform, p.APPVersion,
+		p.Item, p.Confirmer, p.Status, p.Remark)
 	if err != nil {
 		logs.Error("pre auto confirm failed: %v", err)
 		return err
