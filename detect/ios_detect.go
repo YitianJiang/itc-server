@@ -2,7 +2,6 @@ package detect
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -497,59 +496,6 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 		"errorCode": 0,
 		"data":      data,
 	})
-}
-
-/**
- *更新iOS静态检测结果
- */
-type IOSConfirm struct {
-	TaskId         int    `json:"taskId"           form:"taskId"`
-	ToolId         int    `json:"toolId"           form:"toolId"`
-	Status         int    `json:"status"           form:"status"`
-	Remark         string `json:"remark"           form:"remark"`
-	ConfirmType    int    `json:"confirmType"      form:"confirmType"` //0是旧样式黑名单，1是新样式黑名单，2是可疑方法，3是权限
-	ConfirmContent string `json:"confirmContent"   form:"confirmContent"`
-}
-
-func ConfirmIOSBinaryResult(c *gin.Context) {
-
-	username, exist := c.Get("username")
-	if !exist {
-		utils.ReturnMsg(c, http.StatusUnauthorized, utils.FAILURE, "unauthorized user")
-		return
-	}
-	var ios IOSConfirm
-	if err := c.ShouldBindJSON(&ios); err != nil {
-		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid user: %v", err))
-		return
-	}
-
-	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": ios.TaskId})
-	if err != nil {
-		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("read tb_binary_detect failed: %v", err))
-		return
-	}
-	itemName := ios.ConfirmContent
-	var itemType *string
-	switch ios.ConfirmType {
-	case 1:
-		itemType = &TypeString
-	case 2:
-		itemType = &TypeMethod
-		i := strings.Index(itemName, "+")
-		itemName = itemName[i+1:] + delimiter + itemName[:i]
-	case 3:
-		itemType = &TypePermission
-	}
-	if err := preAutoConfirmTask(task, &Item{
-		Name: itemName,
-		Type: itemType},
-		ios.Status, username.(string), ios.Remark, 0, ios.ToolId); err != nil {
-		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm iOS detection failed: %v", err))
-		return
-	}
-
-	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
 }
 
 func readDetectContentiOS(db *gorm.DB, sieve map[string]interface{}) ([]dal.IOSNewDetectContent, error) {
