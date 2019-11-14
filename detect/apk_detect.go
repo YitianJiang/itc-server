@@ -732,13 +732,17 @@ func packPermissionListAndroid(permission string, perIgs map[int]interface{}) (*
 		permOut.PermId = int(permMap["perm_id"].(float64))
 		permOut.Desc = permMap["ability"].(string)
 		permOut.OtherVersion = permMap["first_version"].(string)
+		permOut.Status = int(permMap["status"].(float64))
+		// if the assert failed, the variable will be set to the default value.
+		permOut.Confirmer, _ = permMap["confirmer"].(string)
+		permOut.Remark, _ = permMap["remark"].(string)
 
-		if v, ok := perIgs[int(permMap["perm_id"].(float64))]; ok && permOut.Status != 0 {
-			perm := v.(map[string]interface{})
-			permOut.Status = perm["status"].(int)
-			permOut.Remark = perm["remarks"].(string)
-			permOut.Confirmer = perm["confirmer"].(string)
-		}
+		// if v, ok := perIgs[int(permMap["perm_id"].(float64))]; ok && permOut.Status != 0 {
+		// 	perm := v.(map[string]interface{})
+		// 	permOut.Status = perm["status"].(int)
+		// 	permOut.Remark = perm["remarks"].(string)
+		// 	permOut.Confirmer = perm["confirmer"].(string)
+		// }
 
 		if permOut.Status == 0 {
 			result = append(result, permOut)
