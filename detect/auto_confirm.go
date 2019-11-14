@@ -163,6 +163,8 @@ func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who stri
 				APPID:      task.AppId,
 				APPVersion: task.AppVersion,
 			}); err != nil {
+				logs.Error("confirm iOS failed: %v", err)
+				return err
 			}
 
 		default:
@@ -173,10 +175,10 @@ func preAutoConfirmTask(task *dal.DetectStruct, item *Item, status int, who stri
 	return nil
 }
 
-// func autoConfirmAndroid(p *confirmaParams) error {
+func autoConfirmAndroid(p *confirmParams) error {
 
-// 	return nil
-// }
+	return nil
+}
 
 func autoConfirmiOS(p *confirmParams) error {
 
