@@ -105,6 +105,8 @@ func ReturnMsg(c *gin.Context, httpCode int, code int, msg string,
 		logs.Error(msg)
 	case SUCCESS:
 		logs.Debug(msg)
+	default:
+		logs.Notice("unsupport code (%v): %v", code, msg)
 	}
 
 	obj := gin.H{"code": code, "message": msg}
@@ -209,29 +211,14 @@ func SendHTTPRequest(method string, url string, params map[string]string, header
 
 为了实现高度灵活的配置化，同时尽量避免上线操作，我增加了一个`settings`包，该包中包含了一个全局句柄，它指向了一些自定义的配置，配置对应了数据库表`settings_history`的`content`字段内容，每次程序启动时都会获取表中最新一条配置。
 
-> 如何使用？目前的操作方式比较原始:P
+> 如何使用？
 
 1. 拷贝最新一份配置，即`content`字段对应的内容。以`created_at`字段为准。
 
-2. 修改配置中的目标字段。最好用可以编辑json的文件。
+2. 修改配置中的目标字段。最好用可以编辑json的工具。
 
-3. 接着在表`settings_history`中新增一条记录。
+3. 调用增加配置接口。
 
-4. 使用修改后的配置替代该记录的`content`字段内容。**确保格式正确**，最好使用raw格式，节省一点空间。
-
-5. 最后调用如下命令:
-
-```bash
-curl https://itc.bytedance.net/settings -X POST
-```
-
-不出意外地话，将会得到如下输出：
-
-```
-{
-    "code": 0,
-    "message": "refresh settings success"
-}
 ```
 **警告** 调用线上接口时请三思。
 
@@ -241,6 +228,6 @@ curl https://itc.bytedance.net/settings -X POST
 
 目前只配置了一小部分，理论上代码中所有的常量都可以使用此种方式配置，这是一个长期的过程。
 
-> 为什么是POST方法？没看到传入参数？
+使用示例：
 
-是的，该接口不用传入任何参数。因为该接口的本质其实是新增了一条配置记录，所以这里使用了POST方法。
+![插入新的配置](assets/image/insert-settings.png)
