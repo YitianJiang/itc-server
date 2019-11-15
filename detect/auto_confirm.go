@@ -85,34 +85,51 @@ func autoConfirmAndroidEx(p *confirmParams, tag bool) error {
 		return err
 	}
 
+	sync := make(chan error, 1)
 	for i := range tasks {
-		sieve := make(map[string]interface{})
-		sieve["task_id"] = tasks[i].ID
-		sieve["sub_index"] = p.Index
-		var updated bool
-		var err error
-		if tag {
-			updated, err = autoConfirmAndroidPermission(p, sieve)
-		} else {
-			updated, err = autoConfirmAndroidStringMethod(p, sieve)
-		}
-		if err != nil {
-			return err
-		}
-		if !updated {
-			continue
-		}
-		var notPassFlag = false
-		if p.Status == ConfirmedFail {
-			notPassFlag = true
-		}
-		updateInfo, _ := taskStatusUpdate(p.TaskID, p.ToolID, &tasks[i], notPassFlag, 1)
-		if updateInfo != "" {
-			return fmt.Errorf("update task status failed: %v", updateInfo)
-		}
+		go func(task *dal.DetectStruct) {
+			sieve := make(map[string]interface{})
+			sieve["task_id"] = task.ID
+			sieve["sub_index"] = p.Index
+			var updated bool
+			var err error
+			if tag {
+				updated, err = autoConfirmAndroidPermission(p, sieve)
+			} else {
+				updated, err = autoConfirmAndroidStringMethod(p, sieve)
+			}
+			if err != nil {
+				logs.Error("task id: %v auto confirm failed: %v", task.ID, err)
+				if task.ID == p.TaskID {
+					sync <- err
+				}
+				return
+			}
+			if !updated {
+				if task.ID == p.TaskID {
+					sync <- nil
+				}
+				return
+			}
+			var notPassFlag = false
+			if p.Status == ConfirmedFail {
+				notPassFlag = true
+			}
+			updateInfo, _ := taskStatusUpdate(p.TaskID, p.ToolID, task, notPassFlag, 1)
+			if updateInfo != "" {
+				logs.Error("task id: %v update task status failed: %v", task.ID, updateInfo)
+				if task.ID == p.TaskID {
+					sync <- fmt.Errorf("update task status failed: %v", updateInfo)
+				}
+				return
+			}
+			if task.ID == p.TaskID {
+				sync <- nil
+			}
+		}(&tasks[i])
 	}
 
-	return nil
+	return <-sync
 }
 
 func autoConfirmAndroidStringMethod(p *confirmParams, sieve map[string]interface{}) (bool, error) {
@@ -308,7 +325,7 @@ func readDetectTask(db *gorm.DB, sieve map[string]interface{}) (
 	return tasks, nil
 }
 
-// The bool in return value named freshman which only valid if no error.
+// The returned bool named freshman which only valid if there is no error.
 func preAutoConfirm(appID string, platform int, version string,
 	item *Item, who string, status int, remark string) (bool, error) {
 
@@ -419,7 +436,7 @@ func transformRawData(permissions []string, sensitiveMethods []dal.MethodInfo,
 	return items
 }
 
-// The bool in return value named freshman which only valid is no error.
+// The returned bool named freshman which only valid if there is no error.
 func firstTime(appID string, platform int, version string, items []Item) (
 	map[string]*Attention, bool, error) {
 
