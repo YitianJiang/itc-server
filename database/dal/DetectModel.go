@@ -667,20 +667,15 @@ func InsertIgnoredInfoBatch(details *[]IgnoreInfoStruct) error {
 }
 
 //query tb_ios_detect_content
-func QueryNewIOSDetectModel(condition map[string]interface{}) *[]IOSNewDetectContent {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return nil
-	}
-	defer connection.Close()
+func QueryNewIOSDetectModel(db *gorm.DB, sieve map[string]interface{}) ([]IOSNewDetectContent, error) {
 
-	var iosDetectContent []IOSNewDetectContent
-	if err := connection.Table(IOSNewDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Where(condition).Find(&iosDetectContent).Error; err != nil {
-		logs.Error("请求iOS静态检测结果出错！！！", err.Error())
-		return nil
+	var result []IOSNewDetectContent
+	if err := db.Where(sieve).Find(&result).Error; err != nil {
+		logs.Error("database error: %v", err)
+		return nil, err
 	}
-	return &iosDetectContent
+
+	return result, nil
 }
 
 //update tb_ios_detect_content
