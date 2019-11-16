@@ -701,61 +701,7 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 
 //判断是否需要更新total status状态值
 func changeTotalStatus(taskId, toolId, confirmLark int) (error, int) {
-	// var newChangeFlag = true
-	// var unConfirmNum = 0
-	// var notPassNum = 0 //确认不通过数目
-	// iosDetectAll := dal.QueryNewIOSDetectModel(map[string]interface{}{
-	// 	"taskId": taskId,
-	// 	"toolId": toolId,
-	// })
-	// header := fmt.Sprintf("task id: %v", taskId)
-	// for _, oneDetect := range *iosDetectAll {
-	// 	var im map[string]interface{}
-	// 	if err := json.Unmarshal([]byte(oneDetect.DetectContent), &im); err != nil {
-	// 		logs.Error("%s unmarshal error: %v", header, err)
-	// 		return err, unConfirmNum
-	// 	}
-	// 	newQueryKey := oneDetect.DetectType
-	// 	if newQueryKey == "blacklist" {
-	// 		newQueryKey = "blackList"
-	// 	}
-	// 	a, ok := im[newQueryKey].([]interface{})
-	// 	if !ok {
-	// 		logs.Error("%s cannot assert to []interface{}: %v", header, im[newQueryKey])
-	// 		return fmt.Errorf("%s cannot assert to []interface{}: %v", header, im[newQueryKey]), unConfirmNum
-	// 	}
-	// 	for _, oneBlack := range a {
-	// 		needConfirm, ok := oneBlack.(map[string]interface{})
-	// 		if !ok {
-	// 			logs.Error("%s cannot assert to map[string]interface{}: %v", header, im[newQueryKey])
-	// 			return fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, im[newQueryKey]), unConfirmNum
-	// 		}
-	// 		if needConfirm["status"].(float64) == 0 {
-	// 			newChangeFlag = false
-	// 			unConfirmNum++
-	// 		} else if needConfirm["status"].(float64) == 2 {
-	// 			notPassNum++
-	// 		}
-	// 	}
-	// }
-	// //检测项全部确认，更改任务状态
-	// if newChangeFlag {
-	// 	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-	// 		"id": taskId,
-	// 	})
-	// 	if notPassNum == 0 {
-	// 		(*detect)[0].Status = 1 //1代表全部确认且确认通过
-	// 	} else {
-	// 		(*detect)[0].Status = 2 //2代表全部确认且有确认不通过
-	// 	}
-	// 	(*detect)[0].DetectNoPass = notPassNum //不通过总数
-	// 	if err := dal.UpdateDetectModelNew((*detect)[0]); err != nil {
-	// 		logs.Error("%s update detect task failed: %v", header, err)
-	// 		return err, unConfirmNum
-	// }
-	// StatusDeal((*detect)[0], confirmLark) //ci回调和不通过block处理
-	// sameConfirm((*detect)[0])             //相同包检测结果确认
-	// }
+
 	header := fmt.Sprintf("task id: %v", taskId)
 	unconfirmed, _, fail, err := taskDetailiOS(taskId, toolId)
 	if err != nil {
