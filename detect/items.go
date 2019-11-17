@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
 )
@@ -357,43 +358,50 @@ func ConfirmSelfCheckItems(c *gin.Context) {
 
 	userName, exist := c.Get("username")
 	if !exist {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("Invalid user: %v", userName))
+		utils.ReturnMsg(c, http.StatusUnauthorized, utils.FAILURE, "unauthrized user")
 		return
 	}
 
-	body, err := ioutil.ReadAll(c.Request.Body)
-	if err != nil {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to read request body: %v", err))
-		return
-	}
+	// body, err := ioutil.ReadAll(c.Request.Body)
+	// if err != nil {
+	// ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to read request body: %v", err))
+	// return
+	// }
 
 	var t dal.Confirm
-	if err := json.Unmarshal(body, &t); err != nil {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("Unmarshal error: %v", err))
+	// if err := json.Unmarshal(body, &t); err != nil {
+	// ReturnMsg(c, FAILURE, fmt.Sprintf("Unmarshal error: %v", err))
+	// return
+	// }
+
+	if err := c.ShouldBindJSON(&t); err != nil {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid parameter: %v", err))
 		return
 	}
 
 	var passItems []dal.Self
 	for i := range t.Data {
-		if t.Data[i].Status != 0 {
+		if t.Data[i].Status == 1 {
 			passItems = append(passItems, t.Data[i])
 		}
 	}
 
-	success, detect := dal.ConfirmSelfCheck(map[string]interface{}{
+	detect, err := dal.ConfirmSelfCheck(map[string]interface{}{
 		"taskId":   t.TaskId,
 		"data":     passItems,
 		"operator": userName})
-	if !success {
-		ReturnMsg(c, FAILURE, "Self-check failed")
+	if err != nil {
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("self-check failed: %v", err))
+		// ReturnMsg(c, FAILURE, "Self-check failed")
 		return
 	}
 	if detect != nil && detect.Status != 0 && detect.SelfCheckStatus != 0 {
 		StatusDeal(*detect, 2)
-		sameConfirm(*detect) //相同包检测结果确认
+		// sameConfirm(*detect) //相同包检测结果确认
 	}
 
-	ReturnMsg(c, SUCCESS, "Self-check success")
+	// ReturnMsg(c, SUCCESS, "Self-check success")
+	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
 	return
 }
 
