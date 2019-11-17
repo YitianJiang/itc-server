@@ -42,8 +42,6 @@ func UpdateDetectTask(c *gin.Context) {
 	}
 
 	jsonContent := c.Request.FormValue("jsonContent")
-	// appName := c.Request.FormValue("appName")
-	// appVersion := c.Request.FormValue("appVersion")
 	htmlContent := c.Request.FormValue("content")
 	//消息通知条数--检测项+自查项
 	var unConfirms int
