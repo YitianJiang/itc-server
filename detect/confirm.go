@@ -120,7 +120,7 @@ func ConfirmAndroid(c *gin.Context) {
 		p.Index--
 	}
 
-	if err := preAutoConfirmTask(&p); err != nil {
+	if err := autoConfirmTask(&p); err != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed: %v", err))
 		return
 	}
@@ -166,7 +166,7 @@ func ConfirmiOS(c *gin.Context) {
 		itemType = &TypePermission
 	}
 	p.Item = &Item{Name: itemName, Type: itemType}
-	if err := preAutoConfirmTask(&p); err != nil {
+	if err := autoConfirmTask(&p); err != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("confirm Android detection failed: %v", err))
 		return
 	}

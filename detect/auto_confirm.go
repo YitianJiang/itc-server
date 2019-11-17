@@ -36,7 +36,7 @@ func preAutoConfirmMR(appID string, platform int, version string,
 }
 
 // Confirm binary package detect task.
-func preAutoConfirmTask(p *confirmParams) error {
+func autoConfirmTask(p *confirmParams) error {
 	freshman, err := preAutoConfirm(p.APPID, p.Platform, p.APPVersion,
 		p.Item, p.Confirmer, p.Status, p.Remark)
 	if err != nil {
