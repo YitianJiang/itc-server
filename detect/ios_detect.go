@@ -46,7 +46,9 @@ var iosBlackListDescription = map[string]interface{}{
 /**
  *iOS 检测结果jsonContent处理
  */
-func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, bool, int) {
+func iOSResultClassify(task *dal.DetectStruct, taskId, toolId, appId int, jsonContent string) (bool, bool, int) {
+
+	header := fmt.Sprintf("task id: %v", taskId)
 	warnFlag := false
 	var dat map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonContent), &dat); err != nil {
@@ -59,42 +61,52 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 	minVersion := dat["min_version"].(string)
 	sdkVersion := dat["tar_version"].(string)
 
-	lastTaskId := dal.QueryLastTaskId(taskId) //获取相同app上次检测taskId
-	//获取上次黑名单检测结果
-	var blacklist []interface{}
-	var method []interface{}
-
-	lastDetectContent, err := readDetectContentiOS(database.DB(),
-		map[string]interface{}{"taskId": lastTaskId})
-	if err != nil {
-		logs.Error("read tb_ios_new_detect_content failed: %v", err)
+	task.AppName = appName
+	task.AppVersion = version
+	if err := database.UpdateDBRecord(database.DB(), task); err != nil {
+		logs.Error("%s update detect task failed: %v", header, err)
 		return false, warnFlag, 0
 	}
 
-	if lastDetectContent == nil || len(lastDetectContent) == 0 {
-		logs.Error(strconv.Itoa(lastTaskId) + "没有存储在检测结果中！原因可能为：上一次检测任务没有检测结果，检测工具回调出错！")
-	} else {
-		for _, lastDetect := range lastDetectContent {
-			if lastDetect.DetectType == "blacklist" {
-				b := make(map[string]interface{})
-				err := json.Unmarshal([]byte(lastDetect.DetectContent), &b)
-				if err != nil {
-					logs.Error("Umarshal failed:", err.Error())
-				}
-				blacklist = b["blackList"].([]interface{})
+	// lastTaskId := dal.QueryLastTaskId(taskId) //获取相同app上次检测taskId
+	//获取上次黑名单检测结果
+	// var blacklist []interface{}
+	// var method []interface{}
 
-			}
+	// lastDetectContent, err := readDetectContentiOS(database.DB(),
+	// map[string]interface{}{"taskId": lastTaskId})
+	// if err != nil {
+	// logs.Error("read tb_ios_new_detect_content failed: %v", err)
+	// return false, warnFlag, 0
+	// }
 
-			if lastDetect.DetectType == "method" {
-				m := make(map[string]interface{})
-				err := json.Unmarshal([]byte(lastDetect.DetectContent), &m)
-				if err != nil {
-					logs.Error("Umarshal failed:", err.Error())
-				}
-				method = m["method"].([]interface{})
-			}
-		}
-	}
+	// if lastDetectContent == nil || len(lastDetectContent) == 0 {
+	// logs.Error(strconv.Itoa(lastTaskId) + "没有存储在检测结果中！原因可能为：上一次检测任务没有检测结果，检测工具回调出错！")
+	// } else {
+	// for _, lastDetect := range lastDetectContent {
+	// if lastDetect.DetectType == "blacklist" {
+	// b := make(map[string]interface{})
+	// err := json.Unmarshal([]byte(lastDetect.DetectContent), &b)
+	// if err != nil {
+	// logs.Error("Umarshal failed:", err.Error())
+	// }
+	// blacklist = b["blackList"].([]interface{})
+	//
+	// }
+
+	// if lastDetect.DetectType == "method" {
+	// m := make(map[string]interface{})
+	// err := json.Unmarshal([]byte(lastDetect.DetectContent), &m)
+	// if err != nil {
+	// logs.Error("Umarshal failed:", err.Error())
+	// }
+	// method = m["method"].([]interface{})
+	// }
+	// }
+	// }
+	var permissions []string
+	var sensitiveMethods []string
+	var sensitiveStrings []string
 	//黑名单处理
 	var blackDetect dal.IOSNewDetectContent
 	blackContent := dat["blacklist_in_app"]
@@ -107,22 +119,23 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 			}
 			blackMap["name"] = k
 			blackMap["content"] = v
-			if blacklist != nil || len(blacklist) != 0 { //diff处理
-				status, confirmer, remark := iosDetectDiff(blackMap, blacklist)
-				if status == 1 {
-					blackMap["status"] = status
-					blackMap["confirmer"] = confirmer
-					blackMap["remark"] = remark
-				} else {
-					blackMap["status"] = 0
-					blackMap["confirmer"] = ""
-					blackMap["remark"] = ""
-				}
-			} else {
-				blackMap["status"] = 0
-				blackMap["confirmer"] = ""
-				blackMap["remark"] = ""
-			}
+			// if blacklist != nil || len(blacklist) != 0 { //diff处理
+			// status, confirmer, remark := iosDetectDiff(blackMap, blacklist)
+			// if status == 1 {
+			// blackMap["status"] = status
+			// blackMap["confirmer"] = confirmer
+			// blackMap["remark"] = remark
+			// } else {
+			// blackMap["status"] = 0
+			// blackMap["confirmer"] = ""
+			// blackMap["remark"] = ""
+			// }
+			// } else {
+			blackMap["status"] = 0
+			blackMap["confirmer"] = ""
+			blackMap["remark"] = ""
+			// }
+			sensitiveStrings = append(sensitiveStrings, k)
 			blackList = append(blackList, blackMap)
 			if k == "itms-services" {
 				warnFlag = true
@@ -132,7 +145,8 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 			"blackList": blackList,
 		})
 		if err != nil {
-			logs.Error("map转json出错！")
+			logs.Error("%s marshal error: %v", header, err)
+			// logs.Error("map转json出错！")
 			return false, warnFlag, 0
 		}
 		blackDetect.DetectContent = string(BlackContentValue)
@@ -166,29 +180,31 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 			susClass := temMethod.(map[string]interface{})["class_name"].(string)
 			methodMap["name"] = susApi
 			methodMap["content"] = susClass
-			if method != nil || len(method) != 0 { //diff 处理
-				status, confirmer, remark := iosDetectDiff(methodMap, method)
-				if status == 1 {
-					methodMap["status"] = status
-					methodMap["confirmer"] = confirmer
-					methodMap["remark"] = remark
-				} else {
-					methodMap["status"] = 0
-					methodMap["confirmer"] = ""
-					methodMap["remark"] = ""
-				}
-			} else {
-				methodMap["status"] = 0
-				methodMap["confirmer"] = ""
-				methodMap["remark"] = ""
-			}
+			// if method != nil || len(method) != 0 { //diff 处理
+			// status, confirmer, remark := iosDetectDiff(methodMap, method)
+			// if status == 1 {
+			// methodMap["status"] = status
+			// methodMap["confirmer"] = confirmer
+			// methodMap["remark"] = remark
+			// } else {
+			// methodMap["status"] = 0
+			// methodMap["confirmer"] = ""
+			// methodMap["remark"] = ""
+			// }
+			// } else {
+			methodMap["status"] = 0
+			methodMap["confirmer"] = ""
+			methodMap["remark"] = ""
+			// }
+			sensitiveMethods = append(sensitiveMethods, susClass+delimiter+susClass)
 			methodList = append(methodList, methodMap)
 		}
 		methodContentValue, err := json.Marshal(map[string]interface{}{
 			"method": methodList,
 		})
 		if err != nil {
-			logs.Error("map转json出错！")
+			logs.Error("%s marshal error: %v", header, err)
+			// logs.Error("map转json出错！")
 			return false, warnFlag, 0
 		}
 		methodDetect.DetectContent = string(methodContentValue)
@@ -218,30 +234,32 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 				privacyMap["priority"] = 3
 			}
 			//找到权限确认信息
-			confirmHistory := dal.QueryPrivacyHistoryModel(map[string]interface{}{
-				"app_id":     appId,
-				"appname":    appName,
-				"permission": e,
-				"platform":   1,
-			})
-			if confirmHistory == nil || len(*confirmHistory) == 0 {
-				privacyMap["confirmer"] = ""
-				privacyMap["confirmVersion"] = ""
-				privacyMap["confirmReason"] = ""
-				privacyMap["status"] = 0
-			} else {
-				privacyMap["confirmer"] = (*confirmHistory)[0].Confirmer
-				privacyMap["confirmReason"] = (*confirmHistory)[0].ConfirmReason
-				privacyMap["confirmVersion"] = (*confirmHistory)[len(*confirmHistory)-1].ConfirmVersion
-				privacyMap["status"] = 1
-			}
+			// confirmHistory := dal.QueryPrivacyHistoryModel(map[string]interface{}{
+			// "app_id":     appId,
+			// "appname":    appName,
+			// "permission": e,
+			// "platform":   1,
+			// })
+			// if confirmHistory == nil || len(*confirmHistory) == 0 {
+			privacyMap["confirmer"] = ""
+			privacyMap["confirmVersion"] = ""
+			privacyMap["confirmReason"] = ""
+			privacyMap["status"] = 0
+			// } else {
+			// privacyMap["confirmer"] = (*confirmHistory)[0].Confirmer
+			// privacyMap["confirmReason"] = (*confirmHistory)[0].ConfirmReason
+			// privacyMap["confirmVersion"] = (*confirmHistory)[len(*confirmHistory)-1].ConfirmVersion
+			// privacyMap["status"] = 1
+			// }
+			permissions = append(permissions, e)
 			privacyList = append(privacyList, privacyMap)
 		}
 		privacyContentValue, err := json.Marshal(map[string]interface{}{
 			"privacy": privacyList,
 		})
 		if err != nil {
-			logs.Error("map转json出错！")
+			logs.Error("%s marshal error: %v", header, err)
+			// logs.Error("map转json出错！")
 			return false, warnFlag, 0
 		}
 		privacyDetect.DetectContent = string(privacyContentValue)
@@ -258,6 +276,12 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 	}
 	insertFlag := dal.InsertNewIOSDetect(blackDetect, methodDetect, privacyDetect)
 	//更新tb_binary_detect中status值
+	sync := make(chan struct{}, 1)
+	go func() {
+		autoConfirmCallBack(task, permissions, sensitiveMethods, sensitiveStrings)
+		sync <- struct{}{}
+	}()
+	<-sync
 	unRes, err := updateTaskStatusiOS(taskId, toolId, 0)
 	if err != nil {
 		logs.Error("判断总的total status出错！", err.Error())
@@ -526,10 +550,10 @@ func taskDetailiOS(taskID interface{}, toolID interface{}) (int, int, int, error
 				logs.Error("%s cannot assert to map[string]interface{}: %v", header, list[j])
 				return unconfirmed, pass, fail, fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, list[j])
 			}
-			switch int(t["status"].(float64)) {
-			case ConfirmedPass:
+			switch fmt.Sprint(t["status"]) {
+			case "1":
 				pass++
-			case ConfirmedFail:
+			case "2":
 				fail++
 			default:
 				unconfirmed++
