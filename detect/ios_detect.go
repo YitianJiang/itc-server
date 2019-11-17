@@ -459,10 +459,10 @@ func readDetectContentiOS(db *gorm.DB, sieve map[string]interface{}) ([]dal.IOSN
 }
 
 // //判断是否需要更新total status状态值
-func updateTaskStatusiOS(taskId, toolId interface{}, confirmLark int) (int, error) {
+func updateTaskStatusiOS(taskID, toolID interface{}, confirmLark int) (int, error) {
 
-	header := fmt.Sprintf("task id: %v", taskId)
-	unconfirmed, _, fail, err := taskDetailiOS(taskId, toolId)
+	header := fmt.Sprintf("task id: %v", taskID)
+	unconfirmed, _, fail, err := taskDetailiOS(taskID, toolID)
 	if err != nil {
 		logs.Error("%s get iOS task detail failed: %v", header, err)
 		return unconfirmed, err
@@ -471,7 +471,7 @@ func updateTaskStatusiOS(taskId, toolId interface{}, confirmLark int) (int, erro
 		return unconfirmed, nil
 	}
 
-	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
+	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskID})
 	if err != nil {
 		logs.Error("%s get detect task failed: %v", header, err)
 		return unconfirmed, err
