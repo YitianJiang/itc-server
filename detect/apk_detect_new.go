@@ -41,7 +41,7 @@ func ParseResultAndroid(task *dal.DetectStruct, resultJson string, toolID int) (
 			logs.Error("%s analysis app information failed: %v", msgHeader, err)
 			return err, 0
 		}
-		go autoConfirm(task, result.Result[i].AppInfo.PermsInAppInfo, result.Result[i].MethodInfos, result.Result[i].StrInfos)
+		// go autoConfirm(task, result.Result[i].AppInfo.PermsInAppInfo, result.Result[i].MethodInfos, result.Result[i].StrInfos)
 	}
 
 	//遍历结果数组，并将每组检测结果信息插入数据库
