@@ -540,6 +540,84 @@ func InsertDetectDetailBatch(details *[]DetectContentDetail) error {
 	return nil
 }
 
+/**
+可忽略信息insert------fj
+*/
+func InsertIgnoredInfo(detail IgnoreInfoStruct) error {
+	connection, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return nil
+	}
+	defer connection.Close()
+
+	db := connection.Table(IgnoreInfoStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
+
+	detail.CreatedAt = time.Now()
+	detail.UpdatedAt = time.Now()
+
+	if err1 := db.Create(&detail).Error; err1 != nil {
+		logs.Error("数据库新增可忽略信息失败,%v，可忽略信息具体key参数：%s", err1, detail.KeysInfo)
+		return err1
+	}
+	return nil
+}
+
+/**
+可忽略信息批量insert------fj
+*/
+func InsertIgnoredInfoBatch(details *[]IgnoreInfoStruct) error {
+	connection, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to Db failed: %v", err)
+		return nil
+	}
+	defer connection.Close()
+
+	db := connection.Table(IgnoreInfoStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
+
+	db.Begin()
+	for _, detail := range *details {
+		detail.CreatedAt = time.Now()
+		detail.UpdatedAt = time.Now()
+
+		if err1 := db.Create(&detail).Error; err1 != nil {
+			logs.Error("数据库新增可忽略信息失败,%v，可忽略信息具体key参数：%s", err1, detail.KeysInfo)
+			db.Rollback()
+			return err1
+		}
+	}
+	db.Commit()
+	return nil
+}
+
+//query tb_ios_detect_content
+func QueryNewIOSDetectModel(db *gorm.DB, sieve map[string]interface{}) ([]IOSNewDetectContent, error) {
+
+	var result []IOSNewDetectContent
+	if err := db.Where(sieve).Find(&result).Error; err != nil {
+		logs.Error("database error: %v", err)
+		return nil, err
+	}
+
+	return result, nil
+}
+
+//update tb_ios_detect_content
+func UpdateNewIOSDetectModel(model IOSNewDetectContent, updates map[string]interface{}) bool {
+	connection, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Connect to DB failed: %v", err)
+		return false
+	}
+	defer connection.Close()
+	if err := connection.Table(IOSNewDetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).Model(&model).Update(updates).Error; err != nil {
+		logs.Error("更新iOS静态检测结果出错！！！", err.Error())
+		return false
+	}
+	return true
+}
+
 //iOS 检测结果分类处理
 func InsertNewIOSDetect(black, method, privacy IOSNewDetectContent) bool {
 	connection, err := database.GetDBConnection()

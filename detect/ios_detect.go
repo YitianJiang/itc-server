@@ -2,6 +2,7 @@ package detect
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -62,16 +63,14 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 	//获取上次黑名单检测结果
 	var blacklist []interface{}
 	var method []interface{}
-	var lastDetectContent []dal.IOSNewDetectContent
-	if lastTaskId >= 0 {
-		var err error
-		lastDetectContent, err = readDetectContentiOS(database.DB(),
-			map[string]interface{}{"taskId": lastTaskId})
-		if err != nil {
-			logs.Error("read tb_ios_new_detect_content failed: %v", err)
-			return false, warnFlag, 0
-		}
+
+	lastDetectContent, err := readDetectContentiOS(database.DB(),
+		map[string]interface{}{"taskId": lastTaskId})
+	if err != nil {
+		logs.Error("read tb_ios_new_detect_content failed: %v", err)
+		return false, warnFlag, 0
 	}
+
 	if lastDetectContent == nil || len(lastDetectContent) == 0 {
 		logs.Error(strconv.Itoa(lastTaskId) + "没有存储在检测结果中！原因可能为：上一次检测任务没有检测结果，检测工具回调出错！")
 	} else {
@@ -83,7 +82,9 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 					logs.Error("Umarshal failed:", err.Error())
 				}
 				blacklist = b["blackList"].([]interface{})
+
 			}
+
 			if lastDetect.DetectType == "method" {
 				m := make(map[string]interface{})
 				err := json.Unmarshal([]byte(lastDetect.DetectContent), &m)
@@ -509,61 +510,86 @@ func readDetectContentiOS(db *gorm.DB, sieve map[string]interface{}) ([]dal.IOSN
 	return result, nil
 }
 
-//判断是否需要更新total status状态值
+// //判断是否需要更新total status状态值
 func updateTaskStatusiOS(taskId, toolId interface{}, confirmLark int) (int, error) {
-	var newChangeFlag = true
-	var unconfirmedCount = 0
-	var confirmedFailCount = 0 //确认不通过数目
-	iosDetectAll, err := readDetectContentiOS(database.DB(), map[string]interface{}{
-		"taskId": taskId,
-		"toolId": toolId,
+
+	header := fmt.Sprintf("task id: %v", taskId)
+	unconfirmed, _, fail, err := taskDetailiOS(taskId, toolId)
+	if err != nil {
+		logs.Error("%s get iOS task detail failed: %v", header, err)
+		return unconfirmed, err
+	}
+	if fail <= 0 && unconfirmed > 0 {
+		return unconfirmed, nil
+	}
+
+	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
+	if err != nil {
+		logs.Error("%s get detect task failed: %v", header, err)
+		return unconfirmed, err
+	}
+	if unconfirmed <= 0 {
+		task.Status = ConfirmedPass
+	}
+	if fail > 0 {
+		task.Status = ConfirmedFail
+		task.DetectNoPass = fail
+	}
+	if err := dal.UpdateDetectModelNew(*task); err != nil {
+		logs.Error("%s update detect task failed: %v", header, err)
+		return unconfirmed, err
+	}
+	StatusDeal(*task, confirmLark) //ci回调和不通过block处理
+
+	return unconfirmed, nil
+}
+
+func taskDetailiOS(taskID interface{}, toolID interface{}) (int, int, int, error) {
+
+	header := fmt.Sprintf("task id: %v", taskID)
+	unconfirmed := 0
+	pass := 0
+	fail := 0
+	content, err := dal.QueryNewIOSDetectModel(database.DB(), map[string]interface{}{
+		"taskId": taskID,
+		"toolId": toolID,
 	})
 	if err != nil {
-		logs.Error("read tb_ios_new_detect_content failed: %v", err)
-		return unconfirmedCount, err
+		logs.Error("%s read iOS detect content failed: %v", header, err)
+		return unconfirmed, pass, fail, err
 	}
-	for _, oneDetect := range iosDetectAll {
-		var im map[string]interface{}
-		if err := json.Unmarshal([]byte(oneDetect.DetectContent), &im); err != nil {
-			logs.Error("unmarshal error: %v", err)
-			return unconfirmedCount, err
+	for i := range content {
+		var m map[string]interface{}
+		if err := json.Unmarshal([]byte(content[i].DetectContent), &m); err != nil {
+			logs.Error("%s unmarshal error: %v", header, err)
 		}
-		newQueryKey := oneDetect.DetectType
-		if newQueryKey == "blacklist" {
-			newQueryKey = "blackList"
+		keyword := content[i].DetectType
+		if keyword == "blacklist" {
+			keyword = "blackList"
 		}
-		a := im[newQueryKey].([]interface{})
-		for _, oneBlack := range a {
-			needConfirm := oneBlack.(map[string]interface{})
-			if int(needConfirm["status"].(float64)) == Unconfirmed {
-				newChangeFlag = false
-				unconfirmedCount++
-			} else if int(needConfirm["status"].(float64)) == ConfirmedFail {
-				confirmedFailCount++
+		list, ok := m[keyword].([]interface{})
+		if !ok {
+			logs.Error("%s cannot assert to []interface{}: %v", header, m[keyword])
+			return unconfirmed, pass, fail, fmt.Errorf("%s cannot assert to []interface{}: %v", header, m[keyword])
+		}
+		for j := range list {
+			t, ok := list[j].(map[string]interface{})
+			if !ok {
+				logs.Error("%s cannot assert to map[string]interface{}: %v", header, list[j])
+				return unconfirmed, pass, fail, fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, list[j])
+			}
+			switch int(t["status"].(float64)) {
+			case ConfirmedPass:
+				pass++
+			case ConfirmedFail:
+				fail++
+			default:
+				unconfirmed++
 			}
 		}
 	}
-	//检测项全部确认，更改任务状态
-	if newChangeFlag {
-		detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-			"id": taskId,
-		})
-		if confirmedFailCount == 0 {
-			(*detect)[0].Status = 1 //1代表全部确认且确认通过
-		} else {
-			(*detect)[0].Status = 2 //2代表全部确认且有确认不通过
-		}
-		(*detect)[0].DetectNoPass = confirmedFailCount //不通过总数
-		err := dal.UpdateDetectModelNew((*detect)[0])
-		if err != nil {
-			logs.Error("task id: %v update tb_binary_detect failed: %v", taskId, err)
-			return unconfirmedCount, err
-		}
-		StatusDeal((*detect)[0], confirmLark) //ci回调和不通过block处理
-		sameConfirm((*detect)[0])             //相同包检测结果确认
-	}
 
-	return unconfirmedCount, nil
+	return unconfirmed, pass, fail, nil
 }
 
 // //返回两个bool值，第一个代表是否是middl数据，第二个代表处理是否成功
@@ -687,23 +713,4 @@ func StatusDeal(detect dal.DetectStruct, confirmLark int) error {
 		}()
 	}
 	return nil
-}
-
-func sameConfirm(detect dal.DetectStruct) {
-	//相同appname、appversion和appid任务结果一致确认
-	sameDetect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"app_name":    detect.AppName,
-		"app_version": detect.AppVersion,
-		"platform":    detect.Platform,
-	})
-	if len(*sameDetect) != 1 {
-		for _, same := range *sameDetect {
-			same.SelftNoPass = detect.SelftNoPass
-			same.DetectNoPass = detect.DetectNoPass
-			same.Status = detect.Status
-			same.SelfCheckStatus = detect.SelfCheckStatus
-			dal.UpdateDetectModelNew(same)
-			StatusDeal(same, 0)
-		}
-	}
 }
