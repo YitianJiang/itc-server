@@ -46,9 +46,9 @@ var iosBlackListDescription = map[string]interface{}{
 /**
  *iOS 检测结果jsonContent处理
  */
-func iOSResultClassify(task *dal.DetectStruct, taskId, toolId, appId int, jsonContent string) (bool, bool, int) {
+func iOSResultClassify(task *dal.DetectStruct, toolId int, jsonContent string) (bool, bool, int) {
 
-	header := fmt.Sprintf("task id: %v", taskId)
+	header := fmt.Sprintf("task id: %v", task.ID)
 	warnFlag := false
 	var dat map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonContent), &dat); err != nil {
@@ -67,43 +67,7 @@ func iOSResultClassify(task *dal.DetectStruct, taskId, toolId, appId int, jsonCo
 		logs.Error("%s update detect task failed: %v", header, err)
 		return false, warnFlag, 0
 	}
-
-	// lastTaskId := dal.QueryLastTaskId(taskId) //获取相同app上次检测taskId
-	//获取上次黑名单检测结果
-	// var blacklist []interface{}
-	// var method []interface{}
-
-	// lastDetectContent, err := readDetectContentiOS(database.DB(),
-	// map[string]interface{}{"taskId": lastTaskId})
-	// if err != nil {
-	// logs.Error("read tb_ios_new_detect_content failed: %v", err)
-	// return false, warnFlag, 0
-	// }
-
-	// if lastDetectContent == nil || len(lastDetectContent) == 0 {
-	// logs.Error(strconv.Itoa(lastTaskId) + "没有存储在检测结果中！原因可能为：上一次检测任务没有检测结果，检测工具回调出错！")
-	// } else {
-	// for _, lastDetect := range lastDetectContent {
-	// if lastDetect.DetectType == "blacklist" {
-	// b := make(map[string]interface{})
-	// err := json.Unmarshal([]byte(lastDetect.DetectContent), &b)
-	// if err != nil {
-	// logs.Error("Umarshal failed:", err.Error())
-	// }
-	// blacklist = b["blackList"].([]interface{})
-	//
-	// }
-
-	// if lastDetect.DetectType == "method" {
-	// m := make(map[string]interface{})
-	// err := json.Unmarshal([]byte(lastDetect.DetectContent), &m)
-	// if err != nil {
-	// logs.Error("Umarshal failed:", err.Error())
-	// }
-	// method = m["method"].([]interface{})
-	// }
-	// }
-	// }
+	appID, _ := strconv.Atoi(task.AppId)
 	var permissions []string
 	var sensitiveMethods []string
 	var sensitiveStrings []string
@@ -119,18 +83,6 @@ func iOSResultClassify(task *dal.DetectStruct, taskId, toolId, appId int, jsonCo
 			}
 			blackMap["name"] = k
 			blackMap["content"] = v
-			// if blacklist != nil || len(blacklist) != 0 { //diff处理
-			// status, confirmer, remark := iosDetectDiff(blackMap, blacklist)
-			// if status == 1 {
-			// blackMap["status"] = status
-			// blackMap["confirmer"] = confirmer
-			// blackMap["remark"] = remark
-			// } else {
-			// blackMap["status"] = 0
-			// blackMap["confirmer"] = ""
-			// blackMap["remark"] = ""
-			// }
-			// } else {
 			blackMap["status"] = 0
 			blackMap["confirmer"] = ""
 			blackMap["remark"] = ""
@@ -146,14 +98,13 @@ func iOSResultClassify(task *dal.DetectStruct, taskId, toolId, appId int, jsonCo
 		})
 		if err != nil {
 			logs.Error("%s marshal error: %v", header, err)
-			// logs.Error("map转json出错！")
 			return false, warnFlag, 0
 		}
 		blackDetect.DetectContent = string(BlackContentValue)
 		blackDetect.DetectType = "blacklist"
 		blackDetect.ToolId = toolId
-		blackDetect.TaskId = taskId
-		blackDetect.AppId = appId
+		blackDetect.TaskId = int(task.ID)
+		blackDetect.AppId = appID
 		blackDetect.AppName = appName
 		blackDetect.Version = version
 		blackDetect.BundleId = bundleId
@@ -180,22 +131,9 @@ func iOSResultClassify(task *dal.DetectStruct, taskId, toolId, appId int, jsonCo
 			susClass := temMethod.(map[string]interface{})["class_name"].(string)
 			methodMap["name"] = susApi
 			methodMap["content"] = susClass
-			// if method != nil || len(method) != 0 { //diff 处理
-			// status, confirmer, remark := iosDetectDiff(methodMap, method)
-			// if status == 1 {
-			// methodMap["status"] = status
-			// methodMap["confirmer"] = confirmer
-			// methodMap["remark"] = remark
-			// } else {
-			// methodMap["status"] = 0
-			// methodMap["confirmer"] = ""
-			// methodMap["remark"] = ""
-			// }
-			// } else {
 			methodMap["status"] = 0
 			methodMap["confirmer"] = ""
 			methodMap["remark"] = ""
-			// }
 			sensitiveMethods = append(sensitiveMethods, susClass+delimiter+susClass)
 			methodList = append(methodList, methodMap)
 		}
@@ -204,14 +142,13 @@ func iOSResultClassify(task *dal.DetectStruct, taskId, toolId, appId int, jsonCo
 		})
 		if err != nil {
 			logs.Error("%s marshal error: %v", header, err)
-			// logs.Error("map转json出错！")
 			return false, warnFlag, 0
 		}
 		methodDetect.DetectContent = string(methodContentValue)
 		methodDetect.DetectType = "method"
 		methodDetect.ToolId = toolId
-		methodDetect.TaskId = taskId
-		methodDetect.AppId = appId
+		methodDetect.TaskId = int(task.ID)
+		methodDetect.AppId = appID
 		methodDetect.AppName = appName
 		methodDetect.Version = version
 		methodDetect.BundleId = bundleId
@@ -233,24 +170,10 @@ func iOSResultClassify(task *dal.DetectStruct, taskId, toolId, appId int, jsonCo
 			} else {
 				privacyMap["priority"] = 3
 			}
-			//找到权限确认信息
-			// confirmHistory := dal.QueryPrivacyHistoryModel(map[string]interface{}{
-			// "app_id":     appId,
-			// "appname":    appName,
-			// "permission": e,
-			// "platform":   1,
-			// })
-			// if confirmHistory == nil || len(*confirmHistory) == 0 {
 			privacyMap["confirmer"] = ""
 			privacyMap["confirmVersion"] = ""
 			privacyMap["confirmReason"] = ""
 			privacyMap["status"] = 0
-			// } else {
-			// privacyMap["confirmer"] = (*confirmHistory)[0].Confirmer
-			// privacyMap["confirmReason"] = (*confirmHistory)[0].ConfirmReason
-			// privacyMap["confirmVersion"] = (*confirmHistory)[len(*confirmHistory)-1].ConfirmVersion
-			// privacyMap["status"] = 1
-			// }
 			permissions = append(permissions, e)
 			privacyList = append(privacyList, privacyMap)
 		}
@@ -259,14 +182,13 @@ func iOSResultClassify(task *dal.DetectStruct, taskId, toolId, appId int, jsonCo
 		})
 		if err != nil {
 			logs.Error("%s marshal error: %v", header, err)
-			// logs.Error("map转json出错！")
 			return false, warnFlag, 0
 		}
 		privacyDetect.DetectContent = string(privacyContentValue)
 		privacyDetect.DetectType = "privacy"
 		privacyDetect.ToolId = toolId
-		privacyDetect.TaskId = taskId
-		privacyDetect.AppId = appId
+		privacyDetect.TaskId = int(task.ID)
+		privacyDetect.AppId = appID
 		privacyDetect.AppName = appName
 		privacyDetect.Version = version
 		privacyDetect.BundleId = bundleId
@@ -282,9 +204,10 @@ func iOSResultClassify(task *dal.DetectStruct, taskId, toolId, appId int, jsonCo
 		sync <- struct{}{}
 	}()
 	<-sync
-	unRes, err := updateTaskStatusiOS(taskId, toolId, 0)
+	unRes, err := updateTaskStatusiOS(int(task.ID), toolId, 0)
 	if err != nil {
-		logs.Error("判断总的total status出错！", err.Error())
+		logs.Error("update iOS task status failed: %v", err)
+		return false, warnFlag, 0
 	}
 	return insertFlag, warnFlag, unRes
 }
