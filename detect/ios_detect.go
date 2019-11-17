@@ -903,22 +903,3 @@ func StatusDeal(detect dal.DetectStruct, confirmLark int) error {
 	}
 	return nil
 }
-
-func sameConfirm(detect dal.DetectStruct) {
-	//相同appname、appversion和appid任务结果一致确认
-	sameDetect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"app_name":    detect.AppName,
-		"app_version": detect.AppVersion,
-		"platform":    detect.Platform,
-	})
-	if len(*sameDetect) != 1 {
-		for _, same := range *sameDetect {
-			same.SelftNoPass = detect.SelftNoPass
-			same.DetectNoPass = detect.DetectNoPass
-			same.Status = detect.Status
-			same.SelfCheckStatus = detect.SelfCheckStatus
-			dal.UpdateDetectModelNew(same)
-			StatusDeal(same, 0)
-		}
-	}
-}

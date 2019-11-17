@@ -385,7 +385,7 @@ func ConfirmSelfCheckItems(c *gin.Context) {
 	}
 	if detect != nil && detect.Status != 0 && detect.SelfCheckStatus != 0 {
 		StatusDeal(*detect, 2)
-		// sameConfirm(*detect) //相同包检测结果确认
+		// TODO: auto update
 	}
 
 	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
