@@ -372,20 +372,113 @@ func preAutoConfirm(appID string, platform int, version string,
 	return true, nil
 }
 
-func autoConfirm(task *dal.DetectStruct, permissions []string,
-	sensitiveMethods []dal.MethodInfo, sensitiveStrings []dal.StrInfo) {
+func autoConfirmCallBack(task *dal.DetectStruct, permissions []string,
+	sensitiveMethods []string, sensitiveStrings []string) {
 
-	_, freshman, err := preAutoConfirmCallback(task, permissions, sensitiveMethods, sensitiveStrings)
+	header := fmt.Sprintf("task id: %v", task.ID)
+	m, freshman, err := preAutoConfirmCallback(task, permissions, sensitiveMethods, sensitiveStrings)
 	if err != nil {
-		logs.Error("task id: %v pre auto confirm failed: %v", task.ID, err)
+		logs.Error("%s pre auto confirm failed: %v", header, err)
 	}
 	if !freshman {
 		// TODO
+		switch task.Platform {
+		case platformAndorid:
+		case platformiOS:
+			content, err := readDetectContentiOS(database.DB(), map[string]interface{}{
+				"taskId": task.ID})
+			if err != nil {
+				logs.Error("%s read iOS detect content failed: %v", header, err)
+				return
+			}
+			for i := range content {
+				t := make(map[string]interface{})
+				if err := json.Unmarshal([]byte(content[i].DetectContent), &t); err != nil {
+					logs.Error("%s unmarshal error: %v", header, err)
+					return
+				}
+				switch content[i].DetectType {
+				case "privacy":
+					list, ok := t["privacy"].([]interface{})
+					if !ok {
+						logs.Error("%s cannot assert to []interface{}: %v", header, t["privacy"])
+						return
+					}
+					for j := range list {
+						v, ok := list[j].(map[string]interface{})
+						if !ok {
+							logs.Error("%s cannot assert to map[string]interface{}: %v", header, list[j])
+							return
+						}
+						key := fmt.Sprint(v["permission"])
+						if _, ok := m[key]; ok {
+							logs.Notice("permission: %v", m[v["permission"].(string)])
+							v["status"] = m[key].Status
+							v["confirmer"] = m[key].Confirmer
+							v["confirmReason"] = m[key].Remark
+						}
+					}
+				case "method":
+					list, ok := t["method"].([]interface{})
+					if !ok {
+						logs.Error("%s cannot assert to []interface{}: %v", header, t["method"])
+						return
+					}
+					for j := range list {
+						v, ok := list[j].(map[string]interface{})
+						if !ok {
+							logs.Error("%s cannot assert to map[string]interface{}: %v", header, list[j])
+							return
+
+						}
+						key := fmt.Sprintf("%v%v%v", v["content"], delimiter, v["name"])
+						if _, ok := m[key]; ok {
+							logs.Notice("permission: %v", m[v["content"].(string)+delimiter+v["name"].(string)])
+							v["status"] = m[key].Status
+							v["confirmer"] = m[key].Confirmer
+							v["remark"] = m[key].Remark
+						}
+					}
+				case "blacklist":
+					list, ok := t["blackList"].([]interface{})
+					if !ok {
+						logs.Error("%s cannot assert to []interface{}: %v", header, t["blackList"])
+						return
+					}
+					for j := range list {
+						v, ok := list[j].(map[string]interface{})
+						if !ok {
+							logs.Error("%s cannot assert to map[string]interface{}: %v", header, list[j])
+							return
+						}
+						key := fmt.Sprint(v["name"])
+						if _, ok := m[key]; ok {
+							logs.Notice("permission: %v", m[v["name"].(string)])
+							v["status"] = m[key].Status
+							v["confirmer"] = m[key].Confirmer
+							v["remark"] = m[key].Remark
+						}
+					}
+				}
+				data, err := json.Marshal(&t)
+				if err != nil {
+					logs.Error("%s unmarshal error: %v", header, err)
+					return
+				}
+				content[i].DetectContent = string(data)
+				if err := database.UpdateDBRecord(database.DB(), &content[i]); err != nil {
+					logs.Error("%s update tb_ios_new_detect_content: %v", header, err)
+					return
+				}
+			}
+		default:
+			logs.Error("%s unsupport platform: %v", header, task.Platform)
+		}
 	}
 }
 
 func preAutoConfirmCallback(task *dal.DetectStruct, permissions []string,
-	sensitiveMethods []dal.MethodInfo, sensitiveStrings []dal.StrInfo) (
+	sensitiveMethods []string, sensitiveStrings []string) (
 	map[string]*Attention, bool, error) {
 
 	items := transformRawData(permissions, sensitiveMethods, sensitiveStrings)
@@ -411,26 +504,22 @@ func preAutoConfirmCallback(task *dal.DetectStruct, permissions []string,
 	return m, false, nil
 }
 
-func transformRawData(permissions []string, sensitiveMethods []dal.MethodInfo,
-	sensitiveStrings []dal.StrInfo) []Item {
+func transformRawData(permissions []string, sensitiveMethods []string,
+	sensitiveStrings []string) []Item {
 
 	var items []Item
 	for i := range permissions {
-		items = append(items, Item{
-			Name: permissions[i],
+		items = append(items, Item{Name: permissions[i],
 			Type: &TypePermission})
 	}
 	for i := range sensitiveMethods {
-		items = append(items, Item{Name: sensitiveMethods[i].ClassName +
-			delimiter + sensitiveMethods[i].MethodName,
+		items = append(items, Item{Name: sensitiveMethods[i],
 			Type: &TypeMethod})
 	}
 	for i := range sensitiveStrings {
-		for j := range sensitiveStrings[i].Keys {
-			items = append(items, Item{
-				Name: sensitiveStrings[i].Keys[j],
-				Type: &TypeString})
-		}
+		items = append(items, Item{Name: sensitiveStrings[i],
+			Type: &TypeString})
+
 	}
 
 	return items
