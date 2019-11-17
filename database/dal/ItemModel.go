@@ -552,8 +552,7 @@ func ConfirmSelfCheck(param map[string]interface{}) (*DetectStruct, error) {
 			detect.SelfCheckStatus = 2 //全部确认且有不通过
 		}
 		detect.SelftNoPass = isNotPass //自查项不通过数量
-		if err = database.DB().Debug().
-			Save(&detect).Error; err != nil {
+		if err = database.DB().Debug().Save(&detect).Error; err != nil {
 			logs.Error("%s database error: %v", header, err)
 			return nil, err
 		}
