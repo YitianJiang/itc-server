@@ -46,12 +46,12 @@ var iosBlackListDescription = map[string]interface{}{
 /**
  *iOS 检测结果jsonContent处理
  */
-func iOSResultClassify(task *dal.DetectStruct, toolId int, jsonContent string) (bool, bool, int) {
+func iOSResultClassify(task *dal.DetectStruct, toolId int, jsonContent *string) (bool, bool, int) {
 
 	header := fmt.Sprintf("task id: %v", task.ID)
 	warnFlag := false
 	var dat map[string]interface{}
-	if err := json.Unmarshal([]byte(jsonContent), &dat); err != nil {
+	if err := json.Unmarshal([]byte(*jsonContent), &dat); err != nil {
 		logs.Error("json转map出错！", err.Error())
 		return false, warnFlag, 0
 	}
@@ -110,7 +110,7 @@ func iOSResultClassify(task *dal.DetectStruct, toolId int, jsonContent string) (
 		blackDetect.BundleId = bundleId
 		blackDetect.MinVersion = minVersion
 		blackDetect.SdkVersion = sdkVersion
-		blackDetect.JsonContent = jsonContent
+		blackDetect.JsonContent = *jsonContent
 	}
 	//可疑方法名处理
 	var methodDetect dal.IOSNewDetectContent
@@ -154,7 +154,7 @@ func iOSResultClassify(task *dal.DetectStruct, toolId int, jsonContent string) (
 		methodDetect.BundleId = bundleId
 		methodDetect.MinVersion = minVersion
 		methodDetect.SdkVersion = sdkVersion
-		methodDetect.JsonContent = jsonContent
+		methodDetect.JsonContent = *jsonContent
 	}
 	//权限处理
 	var privacyDetect dal.IOSNewDetectContent
@@ -194,7 +194,7 @@ func iOSResultClassify(task *dal.DetectStruct, toolId int, jsonContent string) (
 		privacyDetect.BundleId = bundleId
 		privacyDetect.MinVersion = minVersion
 		privacyDetect.SdkVersion = sdkVersion
-		privacyDetect.JsonContent = jsonContent
+		privacyDetect.JsonContent = *jsonContent
 	}
 	insertFlag := dal.InsertNewIOSDetect(blackDetect, methodDetect, privacyDetect)
 	//更新tb_binary_detect中status值

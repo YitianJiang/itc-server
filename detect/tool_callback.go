@@ -67,7 +67,7 @@ func UpdateDetectTask(c *gin.Context) {
 		}
 		//新表jsonContent分类存储
 		appId, _ := strconv.Atoi(task.AppId)
-		res, warnFlag, detectNo := iOSResultClassify(task, toolID, jsonContent) //检测结果处理
+		res, warnFlag, detectNo := iOSResultClassify(task, toolID, &jsonContent) //检测结果处理
 		unConfirms = detectNo
 		if res == false {
 			logs.Error("iOS 新增new detect content失败！！！") //防止影响现有用户，出错后暂不return
