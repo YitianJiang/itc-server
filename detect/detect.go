@@ -385,11 +385,6 @@ func QueryTaskQueryTools(c *gin.Context) {
 	taskId := c.DefaultQuery("taskId", "")
 	if taskId == "" {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, "miss taskId")
-		// c.JSON(http.StatusOK, gin.H{
-		// 	"message":   "缺少taskId参数",
-		// 	"errorCode": -1,
-		// 	"data":      "缺少taskId参数",
-		// })
 		return
 	}
 	task := dal.QueryDetectModelsByMap(map[string]interface{}{
@@ -397,11 +392,6 @@ func QueryTaskQueryTools(c *gin.Context) {
 	})
 	if task == nil || len(*task) == 0 {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("invalid taskId: %v", taskId))
-		// c.JSON(http.StatusOK, gin.H{
-		// 	"message":   "未查询到该taskId对应的检测任务",
-		// 	"errorCode": -2,
-		// 	"data":      "未查询到该taskId对应的检测任务",
-		// })
 		return
 	}
 	platform := (*task)[0].Platform
