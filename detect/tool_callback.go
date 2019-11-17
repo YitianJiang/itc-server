@@ -42,8 +42,8 @@ func UpdateDetectTask(c *gin.Context) {
 	}
 
 	jsonContent := c.Request.FormValue("jsonContent")
-	appName := c.Request.FormValue("appName")
-	appVersion := c.Request.FormValue("appVersion")
+	// appName := c.Request.FormValue("appName")
+	// appVersion := c.Request.FormValue("appVersion")
 	htmlContent := c.Request.FormValue("content")
 	//消息通知条数--检测项+自查项
 	var unConfirms int
@@ -58,13 +58,6 @@ func UpdateDetectTask(c *gin.Context) {
 	}
 	//ios新检测内容存储
 	if task.Platform == platformiOS {
-		task.AppName = appName
-		task.AppVersion = appVersion
-		if err := database.UpdateDBRecord(database.DB(), task); err != nil {
-			logs.Error("%s update detect task failed: %v", msgHeader, err)
-			return
-		}
-		//旧表更新
 		if err := database.InsertDBRecord(database.DB(), &dal.DetectContent{
 			TaskId:      int(task.ID),
 			ToolId:      toolID,
@@ -76,7 +69,7 @@ func UpdateDetectTask(c *gin.Context) {
 		}
 		//新表jsonContent分类存储
 		appId, _ := strconv.Atoi(task.AppId)
-		res, warnFlag, detectNo := iOSResultClassify(int(task.ID), toolID, appId, jsonContent) //检测结果处理
+		res, warnFlag, detectNo := iOSResultClassify(task, int(task.ID), toolID, appId, jsonContent) //检测结果处理
 		unConfirms = detectNo
 		if res == false {
 			logs.Error("iOS 新增new detect content失败！！！") //防止影响现有用户，出错后暂不return
