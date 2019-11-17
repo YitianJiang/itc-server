@@ -70,7 +70,7 @@ func UpdateDetectTask(c *gin.Context) {
 		res, warnFlag, detectNo := iOSResultClassify(task, toolID, &jsonContent) //检测结果处理
 		unConfirms = detectNo
 		if res == false {
-			logs.Error("iOS 新增new detect content失败！！！") //防止影响现有用户，出错后暂不return
+			logs.Error("%s handle iOS detect result failed", msgHeader) //防止影响现有用户，出错后暂不return
 		}
 		//iOS付费相关黑名单及时报警
 		if res && warnFlag {
