@@ -2,6 +2,7 @@ package dal
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -486,78 +487,64 @@ func DeleteItemsByCondition(condition map[string]interface{}) bool {
 }
 
 //taskID确认自查项
-func ConfirmSelfCheck(param map[string]interface{}) (bool, *DetectStruct) {
+func ConfirmSelfCheck(param map[string]interface{}) (*DetectStruct, error) {
 	//获取前端数据
 	operator := param["operator"]
 	taskId := param["taskId"]
 	data := param["data"]
-	//连接数据库
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return false, nil
-	}
-	defer connection.Close()
-	db := connection.Begin()
+	header := fmt.Sprintf("task id: %v", taskId)
 	//获取自查记录
 	allCheckFlag := true //自查项是否全部确认标志
 	isNotPass := 0       //自查项是否有确认不通过数量
 	var taskSelf TaskSelfItem
-	if err := db.Table(TaskSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Where("taskId = ?", taskId).Find(&taskSelf).Error; err != nil {
-		logs.Error("查询taskId自查项失败！", err.Error())
-		db.Rollback()
-		return false, nil
+	if err := database.DB().Debug().Where("taskId = ?", taskId).Find(&taskSelf).Error; err != nil {
+		logs.Error("%s database error: %v", header, err)
+		return nil, err
 	}
 	taskSelfMap := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(taskSelf.SelfItems), &taskSelfMap); err != nil {
-		logs.Error("json map转换失败！", err.Error())
-		db.Rollback()
-		return false, nil
+		logs.Error("%s unmarshal error: %v", header, err)
+		return nil, err
 	}
 	taskSelfList := taskSelfMap["item"].([]interface{})
 	idArray := data.([]Self)
 	for _, self := range taskSelfList {
-		id := int(self.(map[string]interface{})["id"].(float64))
+		m, ok := self.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, self)
+		}
 		for _, confirmSelf := range idArray {
-			if confirmSelf.Id == id {
-				self.(map[string]interface{})["status"] = confirmSelf.Status
-				self.(map[string]interface{})["remark"] = confirmSelf.Remark
-				self.(map[string]interface{})["confirmer"] = operator
+			if confirmSelf.Id == int(m["id"].(float64)) {
+				m["status"] = confirmSelf.Status
+				m["remark"] = confirmSelf.Remark
+				m["confirmer"] = operator
 			}
 		}
-		if self.(map[string]interface{})["status"] == 0 {
+		if fmt.Sprint(m["status"]) == "0" {
 			allCheckFlag = false
 		}
-		if self.(map[string]interface{})["status"] == 2 && int(self.(map[string]interface{})["keyWord"].(float64)) == 8 {
+		if fmt.Sprint(m["status"]) == "2" && fmt.Sprint(m["keyWord"]) == "8" {
 			isNotPass++
 		}
 	}
 	taskSelfMap["item"] = taskSelfList
 	task_self, err := json.Marshal(taskSelfMap)
 	if err != nil {
-		logs.Error("map json转换失败！", err.Error())
-		db.Rollback()
-		return false, nil
+		logs.Error("%s marshal error: %v", header, err)
+		return nil, err
 	}
 	taskSelf.SelfItems = string(task_self)
-	if err := db.Table(TaskSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE).Save(&taskSelf).Error; err != nil {
-		logs.Error(err.Error())
-		db.Rollback()
-		return false, nil
+	if err := database.DB().Debug().Save(&taskSelf).Error; err != nil {
+		logs.Error("%s database error: %v", header, err)
+		return nil, err
 	}
 	//最后更新检测任务的自查状态
 	var detect DetectStruct
 	if allCheckFlag {
-		if err = db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
+		if err = database.DB().Debug().
 			Where("id=?", taskId).Find(&detect).Error; err != nil {
-			logs.Error("%v", err)
-			db.Rollback()
-			return false, nil
-		}
-		if &detect == nil {
-			logs.Error(err.Error())
-			db.Rollback()
-			return false, nil
+			logs.Error("%s database error: %v", header, err)
+			return nil, err
 		}
 		if isNotPass == 0 {
 			detect.SelfCheckStatus = 1 //全部确认且通过
@@ -565,15 +552,12 @@ func ConfirmSelfCheck(param map[string]interface{}) (bool, *DetectStruct) {
 			detect.SelfCheckStatus = 2 //全部确认且有不通过
 		}
 		detect.SelftNoPass = isNotPass //自查项不通过数量
-		if err = db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
-			Save(&detect).Error; err != nil {
-			logs.Error("%v", err)
-			db.Rollback()
-			return false, nil
+		if err = database.DB().Debug().Save(&detect).Error; err != nil {
+			logs.Error("%s database error: %v", header, err)
+			return nil, err
 		}
 	}
-	db.Commit()
-	return true, &detect
+	return &detect, nil
 }
 
 //根据任务id拿到对应的自查信息
