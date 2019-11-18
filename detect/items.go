@@ -112,11 +112,11 @@ func GetSelfCheckItems(c *gin.Context) {
 	}
 	taskId, bool := c.GetQuery("taskId")
 	if !bool { //检查项管理中返回和appID相关检查项，
-		appSelfItem_A := QueryAppSelfItem(database.DB(), map[string]interface{}{
+		appSelfItem_A := readSelfcheckItem(database.DB(), map[string]interface{}{
 			"appId":    appID,
 			"platform": 0,
 		})
-		appSelfItem_O := QueryAppSelfItem(database.DB(), map[string]interface{}{
+		appSelfItem_O := readSelfcheckItem(database.DB(), map[string]interface{}{
 			"appId":    appID,
 			"platform": 1,
 		})
@@ -188,7 +188,7 @@ func GetSelfCheckItems(c *gin.Context) {
 	}
 	//查询taskItemList为空
 	if data == nil {
-		appSelf := QueryAppSelfItem(database.DB(), map[string]interface{}{
+		appSelf := readSelfcheckItem(database.DB(), map[string]interface{}{
 			"appId":    appID,
 			"platform": platform,
 		})
@@ -274,7 +274,7 @@ func GetSelfCheckItems(c *gin.Context) {
 }
 
 //查询app对应自查项
-func QueryAppSelfItem(db *gorm.DB, sieve map[string]interface{}) *[]dal.AppSelfItem {
+func readSelfcheckItem(db *gorm.DB, sieve map[string]interface{}) *[]dal.AppSelfItem {
 
 	var appSelf []dal.AppSelfItem
 	if err := db.Debug().Where(sieve).Order("platform", true).Find(&appSelf).Error; err != nil {
