@@ -373,7 +373,7 @@ func preAutoConfirm(appID string, platform int, version string,
 }
 
 func autoConfirmCallBack(task *dal.DetectStruct, permissions []string,
-	sensitiveMethods []string, sensitiveStrings []string) {
+	sensitiveMethods []string, sensitiveStrings []string) error {
 
 	header := fmt.Sprintf("task id: %v", task.ID)
 	m, freshman, err := preAutoConfirmCallback(task, permissions, sensitiveMethods, sensitiveStrings)
@@ -389,26 +389,26 @@ func autoConfirmCallBack(task *dal.DetectStruct, permissions []string,
 				"taskId": task.ID})
 			if err != nil {
 				logs.Error("%s read iOS detect content failed: %v", header, err)
-				return
+				return err
 			}
 			for i := range content {
 				t := make(map[string]interface{})
 				if err := json.Unmarshal([]byte(content[i].DetectContent), &t); err != nil {
 					logs.Error("%s unmarshal error: %v", header, err)
-					return
+					return err
 				}
 				switch content[i].DetectType {
 				case "privacy":
 					list, ok := t["privacy"].([]interface{})
 					if !ok {
 						logs.Error("%s cannot assert to []interface{}: %v", header, t["privacy"])
-						return
+						return fmt.Errorf("%s cannot assert to []interface{}: %v", header, t["privacy"])
 					}
 					for j := range list {
 						v, ok := list[j].(map[string]interface{})
 						if !ok {
 							logs.Error("%s cannot assert to map[string]interface{}: %v", header, list[j])
-							return
+							return fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, list[j])
 						}
 						key := fmt.Sprint(v["permission"])
 						if _, ok := m[key]; ok {
@@ -422,14 +422,13 @@ func autoConfirmCallBack(task *dal.DetectStruct, permissions []string,
 					list, ok := t["method"].([]interface{})
 					if !ok {
 						logs.Error("%s cannot assert to []interface{}: %v", header, t["method"])
-						return
+						return fmt.Errorf("%s cannot assert to []interface{}: %v", header, t["method"])
 					}
 					for j := range list {
 						v, ok := list[j].(map[string]interface{})
 						if !ok {
 							logs.Error("%s cannot assert to map[string]interface{}: %v", header, list[j])
-							return
-
+							return fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, list[j])
 						}
 						key := fmt.Sprintf("%v%v%v", v["content"], delimiter, v["name"])
 						if _, ok := m[key]; ok {
@@ -443,13 +442,13 @@ func autoConfirmCallBack(task *dal.DetectStruct, permissions []string,
 					list, ok := t["blackList"].([]interface{})
 					if !ok {
 						logs.Error("%s cannot assert to []interface{}: %v", header, t["blackList"])
-						return
+						return fmt.Errorf("%s cannot assert to []interface{}: %v", header, t["blackList"])
 					}
 					for j := range list {
 						v, ok := list[j].(map[string]interface{})
 						if !ok {
 							logs.Error("%s cannot assert to map[string]interface{}: %v", header, list[j])
-							return
+							return fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, list[j])
 						}
 						key := fmt.Sprint(v["name"])
 						if _, ok := m[key]; ok {
@@ -463,18 +462,21 @@ func autoConfirmCallBack(task *dal.DetectStruct, permissions []string,
 				data, err := json.Marshal(&t)
 				if err != nil {
 					logs.Error("%s unmarshal error: %v", header, err)
-					return
+					return err
 				}
 				content[i].DetectContent = string(data)
 				if err := database.UpdateDBRecord(database.DB(), &content[i]); err != nil {
 					logs.Error("%s update tb_ios_new_detect_content: %v", header, err)
-					return
+					return err
 				}
 			}
 		default:
 			logs.Error("%s unsupport platform: %v", header, task.Platform)
+			return fmt.Errorf("%s unsupport platform: %v", header, task.Platform)
 		}
 	}
+
+	return nil
 }
 
 func preAutoConfirmCallback(task *dal.DetectStruct, permissions []string,
