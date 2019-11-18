@@ -710,62 +710,6 @@ func packPermissionListAndroid(permission string) (*PermSlice, error) {
 	return &result, nil
 }
 
-func taskDetailAndroid(taskID interface{}, toolID interface{}) (int, int, int, error) {
-
-	unconfirmed := 0
-	pass := 0
-	fail := 0
-	header := fmt.Sprintf("task id: %v", taskID)
-	details, err := readDetectContentDetail(database.DB(), map[string]interface{}{
-		"task_id": taskID, "tool_id": toolID})
-	if err != nil {
-		logs.Error("%s read tb_detect_content_detail failed: %v", header, err)
-		return unconfirmed, pass, fail, err
-	}
-	for i := range details {
-		switch details[i].Status {
-		case ConfirmedPass:
-			pass++
-		case ConfirmedFail:
-			fail++
-		default:
-			unconfirmed++
-		}
-	}
-
-	permissions, err := readPermAPPRelation(database.DB(), map[string]interface{}{
-		"task_id": taskID})
-	if err != nil {
-		logs.Error("%s read tb_perm_app_relation failed: %v", header, err)
-		return unconfirmed, pass, fail, err
-	}
-	for i := range permissions {
-		var list []interface{}
-		if err := json.Unmarshal([]byte(permissions[i].PermInfos), &list); err != nil {
-			logs.Error("%s unmarshal error: %v content: %s", header, err, permissions[i].PermInfos)
-			return unconfirmed, pass, fail, err
-		}
-		for j := range list {
-			m, ok := list[j].(map[string]interface{})
-			if !ok {
-				logs.Error("%s cannot assert to map[string]interface{}: %v", header, list[j])
-				return unconfirmed, pass, fail, fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, list[j])
-
-			}
-			switch fmt.Sprint(m["status"]) {
-			case Pass:
-				pass++
-			case Fail:
-				fail++
-			default:
-				unconfirmed++
-			}
-		}
-	}
-
-	return unconfirmed, pass, fail, nil
-}
-
 func readExactPermAPPRelation(db *gorm.DB, sieve map[string]interface{}) (*dal.PermAppRelation, error) {
 
 	var result dal.PermAppRelation
