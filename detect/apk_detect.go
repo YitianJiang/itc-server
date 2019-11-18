@@ -715,6 +715,7 @@ func packPermissionListAndroid(permission string) (*PermSlice, error) {
 */
 func taskStatusUpdate(taskId uint, toolId int, detect *dal.DetectStruct, notPassFlag bool, confirmLark int) (string, int) {
 
+	header := fmt.Sprintf("task id: %v", detect.ID)
 	condition := fmt.Sprintf("deleted_at IS NULL and task_id='%v' and tool_id='%v'", taskId, toolId)
 	counts, countsUn := QueryUnConfirmDetectContent(database.DB(), condition)
 
@@ -729,12 +730,12 @@ func taskStatusUpdate(taskId uint, toolId int, detect *dal.DetectStruct, notPass
 			permsInfoDB := (*perms)[i].PermInfos
 			var permList []interface{}
 			if err := json.Unmarshal([]byte(permsInfoDB), &permList); err != nil {
+				logs.Error("%s unmarshal error: %v content: %s", header, err, permsInfoDB)
 				return "该任务的权限存储信息格式出错", 0
 			}
 			for _, m := range permList {
 				permInfo := m.(map[string]interface{})
 				if fmt.Sprint(permInfo["status"]) == "0" {
-					// if permInfo["status"].(float64) == 0 {
 					permFlag = false
 					permCounts++
 				}
@@ -758,17 +759,18 @@ func taskStatusUpdate(taskId uint, toolId int, detect *dal.DetectStruct, notPass
 	if updateFlag {
 		err := dal.UpdateDetectModelNew(*detect)
 		if err != nil {
-			logs.Error("taskId:"+fmt.Sprint(taskId)+",任务确认状态更新失败！%v", err)
-			utils.LarkDingOneInner("fanjuan.xqp", "任务ID："+fmt.Sprint(taskId)+"确认状态更新失败，失败原因："+err.Error())
+			logs.Error("%s update detect task status failed: %v", header, err)
 			return "任务确认状态更新失败！", 0
 		}
 		if err := StatusDeal(*detect, confirmLark); err != nil {
+			logs.Error("%s notify detect task status failed: %v", header, err)
 			return err.Error(), 0
 		}
 	}
 
 	return "", counts + permCounts
 }
+
 func readExactPermAPPRelation(db *gorm.DB, sieve map[string]interface{}) (*dal.PermAppRelation, error) {
 
 	var result dal.PermAppRelation
