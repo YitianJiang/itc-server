@@ -204,7 +204,7 @@ func iOSResultClassify(task *dal.DetectStruct, toolId int, jsonContent *string) 
 		sync <- struct{}{}
 	}()
 	<-sync
-	unRes, err := updateTaskStatusiOS(int(task.ID), toolId, platformiOS, 0)
+	unRes, err := updateTaskStatus(int(task.ID), toolId, platformiOS, 0)
 	if err != nil {
 		logs.Error("update iOS task status failed: %v", err)
 		return false, warnFlag, 0
@@ -406,7 +406,7 @@ func readDetectContentiOS(db *gorm.DB, sieve map[string]interface{}) ([]dal.IOSN
 }
 
 // //判断是否需要更新total status状态值
-func updateTaskStatusiOS(taskID, toolID interface{}, platform int, confirmLark int) (int, error) {
+func updateTaskStatus(taskID, toolID interface{}, platform int, confirmLark int) (int, error) {
 
 	header := fmt.Sprintf("task id: %v", taskID)
 	var unconfirmed int
