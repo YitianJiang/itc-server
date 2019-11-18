@@ -114,12 +114,7 @@ func autoConfirmAndroidEx(p *confirmParams, tag bool) error {
 				}
 				return
 			}
-			// var notPassFlag = false
-			// if p.Status == ConfirmedFail {
-			// notPassFlag = true
-			// }
 			_, err = updateTaskStatusiOS(p.TaskID, p.ToolID, platformAndorid, 1)
-			// _, err = taskStatusUpdate(p.TaskID, p.ToolID, task, notPassFlag, 1)
 			if err != nil {
 				logs.Error("task id: %v update task status failed: %v", task.ID, err)
 				if task.ID == p.TaskID {
