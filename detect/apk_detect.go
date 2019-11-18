@@ -713,68 +713,121 @@ func packPermissionListAndroid(permission string) (*PermSlice, error) {
 /**
 任务确认状态更新
 */
-func taskStatusUpdate(taskId uint, toolId int, detect *dal.DetectStruct, notPassFlag bool, confirmLark int) (int, error) {
+// func taskStatusUpdate(taskId uint, toolId int, detect *dal.DetectStruct, notPassFlag bool, confirmLark int) (int, error) {
 
-	header := fmt.Sprintf("task id: %v", detect.ID)
-	condition := fmt.Sprintf("deleted_at IS NULL and task_id='%v' and tool_id='%v'", taskId, toolId)
-	counts, countsUn := QueryUnConfirmDetectContent(database.DB(), condition)
+// 	header := fmt.Sprintf("task id: %v", detect.ID)
+// 	condition := fmt.Sprintf("deleted_at IS NULL and task_id='%v' and tool_id='%v'", taskId, toolId)
+// 	counts, countsUn := QueryUnConfirmDetectContent(database.DB(), condition)
 
-	perms, err := readPermAPPRelation(database.DB(), map[string]interface{}{"task_id": taskId})
+// 	perms, err := readPermAPPRelation(database.DB(), map[string]interface{}{"task_id": taskId})
+// 	if err != nil {
+// 		logs.Error("%s read tb_perm_app_relation failed: %v", header, err)
+// 		return 0, err
+// 	}
+// 	var permFlag = true
+// 	var updateFlag = false
+// 	var permCounts = 0
+// 	if perms == nil || len(perms) == 0 {
+// 		logs.Warn("taskId:" + fmt.Sprint(taskId) + ",该任务无权限检测信息！")
+// 	} else {
+// 		for i := range perms {
+// 			permsInfoDB := perms[i].PermInfos
+// 			var permList []interface{}
+// 			if err := json.Unmarshal([]byte(permsInfoDB), &permList); err != nil {
+// 				logs.Error("%s unmarshal error: %v content: %s", header, err, permsInfoDB)
+// 				return 0, err
+// 			}
+// 			for _, m := range permList {
+// 				permInfo := m.(map[string]interface{})
+// 				if fmt.Sprint(permInfo["status"]) == "0" {
+// 					permFlag = false
+// 					permCounts++
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	if counts == 0 && permFlag {
+// 		updateFlag = true
+// 		if countsUn == 0 {
+// 			detect.Status = 1
+// 		} else {
+// 			detect.Status = 2
+// 		}
+// 	}
+// 	if notPassFlag {
+// 		detect.DetectNoPass = countsUn - counts
+// 		updateFlag = true
+// 	}
+// 	if updateFlag {
+// 		err := dal.UpdateDetectModelNew(*detect)
+// 		if err != nil {
+// 			logs.Error("%s update detect task status failed: %v", header, err)
+// 			return 0, err
+// 		}
+// 		if err := StatusDeal(*detect, confirmLark); err != nil {
+// 			logs.Error("%s notify detect task status failed: %v", header, err)
+// 			return 0, err
+// 		}
+// 	}
+
+// 	return counts + permCounts, nil
+// }
+
+func taskDetailAndroid(taskID interface{}, toolID interface{}) (int, int, int, error) {
+
+	unconfirmed := 0
+	pass := 0
+	fail := 0
+	header := fmt.Sprintf("task id: %v", taskID)
+	details, err := readDetectContentDetail(database.DB(), map[string]interface{}{
+		"task_id": taskID, "tool_id": toolID})
+	if err != nil {
+		logs.Error("%s read tb_detect_content_detail failed: %v", header, err)
+		return unconfirmed, pass, fail, err
+	}
+	for i := range details {
+		switch details[i].Status {
+		case ConfirmedPass:
+			pass++
+		case ConfirmedFail:
+			fail++
+		default:
+			unconfirmed++
+		}
+	}
+
+	permissions, err := readPermAPPRelation(database.DB(), map[string]interface{}{
+		"task_id": taskID})
 	if err != nil {
 		logs.Error("%s read tb_perm_app_relation failed: %v", header, err)
-		return 0, err
+		return unconfirmed, pass, fail, err
 	}
-	// perms, _ := dal.QueryPermAppRelation(map[string]interface{}{"task_id": taskId})
-	var permFlag = true
-	var updateFlag = false
-	var permCounts = 0
-	if perms == nil || len(perms) == 0 {
-		logs.Warn("taskId:" + fmt.Sprint(taskId) + ",该任务无权限检测信息！")
-	} else {
-		// for i := 0; i < len(perms); i++ {
-		for i := range perms {
-			permsInfoDB := perms[i].PermInfos
-			var permList []interface{}
-			if err := json.Unmarshal([]byte(permsInfoDB), &permList); err != nil {
-				logs.Error("%s unmarshal error: %v content: %s", header, err, permsInfoDB)
-				return 0, err
+	for i := range permissions {
+		var list []interface{}
+		if err := json.Unmarshal([]byte(permissions[i].PermInfos), &list); err != nil {
+			logs.Error("%s unmarshal error: %v content: %s", header, err, permissions[i].PermInfos)
+			return unconfirmed, pass, fail, err
+		}
+		for j := range list {
+			m, ok := list[j].(map[string]interface{})
+			if !ok {
+				logs.Error("%s cannot assert to map[string]interface{}: %v", header, list[j])
+				return unconfirmed, pass, fail, fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, list[j])
+
 			}
-			for _, m := range permList {
-				permInfo := m.(map[string]interface{})
-				if fmt.Sprint(permInfo["status"]) == "0" {
-					permFlag = false
-					permCounts++
-				}
+			switch fmt.Sprint(m["status"]) {
+			case Pass:
+				pass++
+			case Fail:
+				fail++
+			default:
+				unconfirmed++
 			}
 		}
 	}
 
-	logs.Notice("当前确认情况，字符串和方法剩余：" + fmt.Sprint(counts) + " ,权限是否全部确认：" + fmt.Sprint(permFlag) + "权限剩余数：" + fmt.Sprint(permCounts))
-	if counts == 0 && permFlag {
-		updateFlag = true
-		if countsUn == 0 {
-			detect.Status = 1
-		} else {
-			detect.Status = 2
-		}
-	}
-	if notPassFlag {
-		detect.DetectNoPass = countsUn - counts
-		updateFlag = true
-	}
-	if updateFlag {
-		err := dal.UpdateDetectModelNew(*detect)
-		if err != nil {
-			logs.Error("%s update detect task status failed: %v", header, err)
-			return 0, err
-		}
-		if err := StatusDeal(*detect, confirmLark); err != nil {
-			logs.Error("%s notify detect task status failed: %v", header, err)
-			return 0, err
-		}
-	}
-
-	return counts + permCounts, nil
+	return unconfirmed, pass, fail, nil
 }
 
 func readExactPermAPPRelation(db *gorm.DB, sieve map[string]interface{}) (*dal.PermAppRelation, error) {
@@ -799,19 +852,19 @@ func readPermAPPRelation(db *gorm.DB, sieve map[string]interface{}) ([]dal.PermA
 	return result, nil
 }
 
-/**
-未确认敏感信息数据量查询-----fj
-*/
-func QueryUnConfirmDetectContent(db *gorm.DB, condition string) (int, int) {
+// /**
+// 未确认敏感信息数据量查询-----fj
+// */
+// func QueryUnConfirmDetectContent(db *gorm.DB, condition string) (int, int) {
 
-	var total dal.RecordTotal
-	if err := db.Debug().Table(dal.DetectContentDetail{}.TableName()).Select("sum(case when status = '0' then 1 else 0 end) as total, sum(case when status <> '1' then 1 else 0 end) as total_un").Where(condition).Find(&total).Error; err != nil {
-		logs.Error("Database error: %v", err)
-		return -1, -1
-	}
+// 	var total dal.RecordTotal
+// 	if err := db.Debug().Table(dal.DetectContentDetail{}.TableName()).Select("sum(case when status = '0' then 1 else 0 end) as total, sum(case when status <> '1' then 1 else 0 end) as total_un").Where(condition).Find(&total).Error; err != nil {
+// 		logs.Error("Database error: %v", err)
+// 		return -1, -1
+// 	}
 
-	return int(total.Total), int(total.TotalUn)
-}
+// 	return int(total.Total), int(total.TotalUn)
+// }
 
 /**
 请求错误信息返回统一格式

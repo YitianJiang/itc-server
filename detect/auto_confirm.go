@@ -114,11 +114,12 @@ func autoConfirmAndroidEx(p *confirmParams, tag bool) error {
 				}
 				return
 			}
-			var notPassFlag = false
-			if p.Status == ConfirmedFail {
-				notPassFlag = true
-			}
-			_, err = taskStatusUpdate(p.TaskID, p.ToolID, task, notPassFlag, 1)
+			// var notPassFlag = false
+			// if p.Status == ConfirmedFail {
+			// notPassFlag = true
+			// }
+			_, err = updateTaskStatusiOS(p.TaskID, p.ToolID, platformAndorid, 1)
+			// _, err = taskStatusUpdate(p.TaskID, p.ToolID, task, notPassFlag, 1)
 			if err != nil {
 				logs.Error("task id: %v update task status failed: %v", task.ID, err)
 				if task.ID == p.TaskID {
@@ -306,7 +307,7 @@ func autoConfirmiOS(p *confirmParams) error {
 		logs.Error("update tb_ios_new_detect_content failed: %v", err)
 		return err
 	}
-	if _, err := updateTaskStatusiOS(p.TaskID, p.ToolID, 1); err != nil {
+	if _, err := updateTaskStatusiOS(p.TaskID, p.ToolID, platformiOS, 1); err != nil {
 		logs.Error("update iOS detect task failed: %v", err)
 		return err
 	}

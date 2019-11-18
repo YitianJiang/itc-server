@@ -217,6 +217,8 @@ const (
 	Unconfirmed   = 0
 	ConfirmedPass = 1
 	ConfirmedFail = 2
+	Pass          = "1"
+	Fail          = "2"
 )
 
 func getLatestDetectResult(db *gorm.DB, condition map[string]interface{}) (
