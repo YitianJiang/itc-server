@@ -158,7 +158,7 @@ func autoConfirmAndroidStringMethod(p *confirmParams, sieve map[string]interface
 	record.Confirmer = p.Confirmer
 	record.Remark = p.Remark
 	if err := database.UpdateDBRecord(database.DB(), record); err != nil {
-		logs.Error("update tb_perm_app_relation failed: %v", err)
+		logs.Error("update tb_detect_content_detail failed: %v", err)
 		return false, err
 	}
 
@@ -384,6 +384,76 @@ func autoConfirmCallBack(task *dal.DetectStruct, permissions []string,
 		// TODO
 		switch task.Platform {
 		case platformAndorid:
+			permissions, err := readPermAPPRelation(database.DB(), map[string]interface{}{"task_id": task.ID})
+			if err != nil {
+				logs.Error("%s read tb_perm_app_relation error: %v", header, err)
+				return err
+			}
+			for i := range permissions {
+				var permissionList []interface{}
+				if err := json.Unmarshal([]byte(permissions[i].PermInfos), &permissionList); err != nil {
+					logs.Error("unmarshal error: %v", err)
+					return err
+				}
+				var updated bool
+				for j := range permissionList {
+					t, ok := permissionList[j].(map[string]interface{})
+					if !ok {
+						logs.Error("cannot assert to map[string]interface{}: %v", permissionList[j])
+						return fmt.Errorf("cannot assert to map[string]interface{}: %v", permissionList[j])
+					}
+					if v, ok := m[fmt.Sprint(t["key"])]; ok {
+						t["status"] = v.Status
+						t["confirmer"] = v.Confirmer
+						t["remark"] = v.Remark
+						updated = true
+					}
+				}
+				if updated {
+					data, err := json.Marshal(permissionList)
+					if err != nil {
+						logs.Error("marshal error: %v", err)
+						return err
+					}
+					permissions[i].PermInfos = string(data)
+					if err := database.UpdateDBRecord(database.DB(), &permissions[i]); err != nil {
+						logs.Error("update tb_perm_app_relation failed: %v", err)
+						return err
+					}
+				}
+
+			}
+			details, err := readDetectContentDetail(database.DB(), map[string]interface{}{"task_id": task.ID})
+			if err != nil {
+				logs.Error("%s read tb_detect_content_deatil error: %v", header, err)
+				return err
+			}
+			for i := range details {
+				var updated bool
+				switch details[i].SensiType {
+				case Method:
+					if v, ok := m[details[i].ClassName+delimiter+details[i].KeyInfo]; ok {
+						details[i].Status = v.Status
+						details[i].Confirmer = v.Confirmer
+						details[i].Remark = v.Remark
+						updated = true
+					}
+				case String:
+					if v, ok := m[details[i].KeyInfo]; ok {
+						details[i].Status = v.Status
+						details[i].Confirmer = v.Confirmer
+						details[i].Remark = v.Remark
+						updated = true
+					}
+				default: // Do nothing
+				}
+				if updated {
+					if err := database.UpdateDBRecord(database.DB(), &details[i]); err != nil {
+						logs.Error("update tb_detect_content_detail failed: %v", err)
+						return err
+					}
+				}
+			}
 		case platformiOS:
 			return autoConfirmCallBackiOS(task.ID, m)
 		default:
