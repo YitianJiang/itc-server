@@ -518,14 +518,16 @@ func DeleteGroupTester(c *gin.Context){
 		return
 	}
 	targetOpenId := ""
-	tokenFormservice,err := service.GetTenantAccessToken(_const.BotApiId,_const.BotAppSecret)
-	utils.RecordError("获取TenantAccessToken失败", err)
-	var reqUserToLark UserInfoReqToLark
-	reqUserToLark.Email = body.SendUser + "@bytedance.com"
-	var resUserInfo UserInfoGetFromLark
-	reqResult := PostToLarkGetInfo("POST","https://open.feishu.cn/open-apis/user/v4/email2id","Bearer "+tokenFormservice.TenantAccessToken,&reqUserToLark,&resUserInfo)
-	if reqResult{
-		targetOpenId = resUserInfo.Data.OpenId
+	if body.SendUser != ""{
+		tokenFormservice,err := service.GetTenantAccessToken(_const.BotApiId,_const.BotAppSecret)
+		utils.RecordError("获取TenantAccessToken失败", err)
+		var reqUserToLark UserInfoReqToLark
+		reqUserToLark.Email = body.SendUser + "@bytedance.com"
+		var resUserInfo UserInfoGetFromLark
+		reqResult := PostToLarkGetInfo("POST","https://open.feishu.cn/open-apis/user/v4/email2id","Bearer "+tokenFormservice.TenantAccessToken,&reqUserToLark,&resUserInfo)
+		if reqResult{
+			targetOpenId = resUserInfo.Data.OpenId
+		}
 	}
 	go func(ReqDeleteTesterFromClient){
 		tokenString := ""
