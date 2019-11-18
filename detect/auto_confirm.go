@@ -154,11 +154,6 @@ func autoConfirmAndroidStringMethod(p *confirmParams, sieve map[string]interface
 		return false, err
 	}
 	for i := range records {
-		// if record == nil {
-		// 	// It's ok because the tasks selected contain fail and detecting state.
-		// 	logs.Warn("cannot find any matched record with sieve: %v", sieve)
-		// 	return false, nil
-		// }
 		records[i].Status = p.Status
 		records[i].Confirmer = p.Confirmer
 		records[i].Remark = p.Remark
@@ -167,24 +162,6 @@ func autoConfirmAndroidStringMethod(p *confirmParams, sieve map[string]interface
 			return false, err
 		}
 	}
-
-	// record, err := readExactDetectContentDetail(database.DB(), sieve)
-	// if err != nil {
-	// 	logs.Error("read tb_detect_content_detail failed: %v", err)
-	// 	return false, err
-	// }
-	// if record == nil {
-	// 	// It's ok because the tasks selected contain fail and detecting state.
-	// 	logs.Warn("cannot find any matched record with sieve: %v", sieve)
-	// 	return false, nil
-	// }
-	// record.Status = p.Status
-	// record.Confirmer = p.Confirmer
-	// record.Remark = p.Remark
-	// if err := database.UpdateDBRecord(database.DB(), record); err != nil {
-	// 	logs.Error("update tb_detect_content_detail failed: %v", err)
-	// 	return false, err
-	// }
 
 	return true, nil
 }
