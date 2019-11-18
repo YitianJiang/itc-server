@@ -254,25 +254,25 @@ func DeleteDetectConfig(condition string) error {
 	return nil
 }
 
-/**
-新增权限app对应关系
-*/
-func InsertPermAppRelation(relation PermAppRelation) error {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("connect to db failed,%v", err)
-		return err
-	}
-	defer connection.Close()
-	relation.CreatedAt = time.Now()
-	relation.UpdatedAt = time.Now()
-	db := connection.Table(PermAppRelation{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	if err := db.Create(&relation).Error; err != nil {
-		logs.Error("insert permission-app relationship failed,%v", err)
-		return err
-	}
-	return nil
-}
+// /**
+// 新增权限app对应关系
+// */
+// func InsertPermAppRelation(relation PermAppRelation) error {
+// 	connection, err := database.GetDBConnection()
+// 	if err != nil {
+// 		logs.Error("connect to db failed,%v", err)
+// 		return err
+// 	}
+// 	defer connection.Close()
+// 	relation.CreatedAt = time.Now()
+// 	relation.UpdatedAt = time.Now()
+// 	db := connection.Table(PermAppRelation{}.TableName()).LogMode(_const.DB_LOG_MODE)
+// 	if err := db.Create(&relation).Error; err != nil {
+// 		logs.Error("insert permission-app relationship failed,%v", err)
+// 		return err
+// 	}
+// 	return nil
+// }
 
 /**
 查询权限app关系

@@ -141,6 +141,7 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, toolID in
 			return err
 		}
 	}
+	logs.Notice("%v flag: %v", info.Primary, taskUpdateFlag)
 	//更新任务的权限信息
 	permAppInfos, err := permUpdate(task, info.PermsInAppInfo)
 	if err != nil {
@@ -148,25 +149,32 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, toolID in
 		return err
 	}
 
-	//更新权限-app-task关系表
-	var relationship dal.PermAppRelation
-	relationship.TaskId = int(task.ID)
+	// 更新权限-app-task关系表
+	// var relationship dal.PermAppRelation
+	// relationship.TaskId = int(task.ID)
 	appID, err := strconv.Atoi(task.AppId)
 	if err != nil {
 		logs.Error("%s atoi error: %v", msgHeader, err)
 		return err
 	}
-	relationship.AppId = appID
-	if taskUpdateFlag {
-		relationship.AppVersion = task.AppVersion
-	} else {
-		relationship.AppVersion = ".aab副包+" + info.ApkVersionName
-	}
-	relationship.AppVersion = info.ApkVersionName
-	relationship.SubIndex = index //新增下标兼容.aab结果
-	relationship.PermInfos = permAppInfos
-	if err := dal.InsertPermAppRelation(relationship); err != nil {
-		logs.Error("%s insert permission app relation failed: %v", msgHeader, err)
+	// relationship.AppId = appID
+	// if taskUpdateFlag {
+	// relationship.AppVersion = task.AppVersion
+	// } else {
+	// relationship.AppVersion = ".aab副包+" + info.ApkVersionName
+	// }
+	// relationship.AppVersion = info.ApkVersionName
+	// relationship.SubIndex = index //新增下标兼容.aab结果
+	// relationship.PermInfos = permAppInfos
+	if err := database.InsertDBRecord(database.DB(), &dal.PermAppRelation{
+		TaskId:     int(task.ID),
+		AppId:      appID,
+		AppVersion: info.ApkVersionName,
+		SubIndex:   index,
+		PermInfos:  permAppInfos,
+	}); err != nil {
+		// if err := dal.InsertPermAppRelation(relationship); err != nil {
+		logs.Error("%s insert tb_perm_apprelation failed: %v", msgHeader, err)
 		return err
 	}
 
@@ -178,7 +186,7 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, toolID in
 		ToolId:   toolID,
 		SubIndex: index,
 	}); err != nil {
-		logs.Error("%s insert detect information failed: %v", msgHeader, err)
+		logs.Error("%s insert tb_detect_info_apk failed: %v", msgHeader, err)
 		return err
 	}
 
