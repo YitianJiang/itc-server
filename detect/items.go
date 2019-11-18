@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
@@ -110,12 +111,11 @@ func GetSelfCheckItems(c *gin.Context) {
 	}
 	taskId, bool := c.GetQuery("taskId")
 	if !bool { //检查项管理中返回和appID相关检查项，
-		var ItemList []interface{}
-		appSelfItem_A := dal.QueryAppSelfItem(map[string]interface{}{
+		appSelfItem_A := dal.QueryAppSelfItem(database.DB(), map[string]interface{}{
 			"appId":    appID,
 			"platform": 0,
 		})
-		appSelfItem_O := dal.QueryAppSelfItem(map[string]interface{}{
+		appSelfItem_O := dal.QueryAppSelfItem(database.DB(), map[string]interface{}{
 			"appId":    appID,
 			"platform": 1,
 		})
@@ -151,6 +151,7 @@ func GetSelfCheckItems(c *gin.Context) {
 				iOSItemList = append(iOSItemList, i)
 			}
 		}
+		var ItemList []interface{}
 		//Android和iOS list合并
 		if len(androidItemList) == 0 && len(iOSItemList) == 0 {
 			ItemList = []interface{}{}
@@ -186,7 +187,7 @@ func GetSelfCheckItems(c *gin.Context) {
 	}
 	//查询taskItemList为空
 	if data == nil {
-		appSelf := dal.QueryAppSelfItem(map[string]interface{}{
+		appSelf := dal.QueryAppSelfItem(database.DB(), map[string]interface{}{
 			"appId":    appID,
 			"platform": platform,
 		})

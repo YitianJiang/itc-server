@@ -623,21 +623,15 @@ func InsertAppSelfItem(appItem AppSelfItem) bool {
 }
 
 //查询app对应自查项
-func QueryAppSelfItem(condition map[string]interface{}) *[]AppSelfItem {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return nil
-	}
-	defer connection.Close()
-	db := connection.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	var appSelf []AppSelfItem
-	if err = db.Where(condition).Order("platform", true).Find(&appSelf).Error; err != nil {
-		logs.Error("query self check item failed, %v", err)
-		return nil
-	}
-	return &appSelf
+func QueryAppSelfItem(db *gorm.DB, sieve map[string]interface{}) *[]AppSelfItem {
 
+	var appSelf []AppSelfItem
+	if err := db.Debug().Where(sieve).Order("platform", true).Find(&appSelf).Error; err != nil {
+		logs.Error("database error: %v", err)
+		return nil
+	}
+
+	return &appSelf
 }
 
 //插入taskId自查项
