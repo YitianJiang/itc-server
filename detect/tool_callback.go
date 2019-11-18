@@ -46,12 +46,12 @@ func UpdateDetectTask(c *gin.Context) {
 	var unConfirms int
 	var unSelfCheck int
 	if task.Platform == platformAndorid {
-		var errApk error
-		errApk, unConfirms = ParseResultAndroid(task, &jsonContent, toolID)
-		if errApk != nil {
+		err, unconfirmed := ParseResultAndroid(task, &jsonContent, toolID)
+		if err != nil {
 			logs.Error("%s update apk detect result failed: %v", msgHeader, err)
 			return
 		}
+		unConfirms = unconfirmed
 	}
 	if task.Platform == platformiOS {
 		if err := database.InsertDBRecord(database.DB(), &dal.DetectContent{
