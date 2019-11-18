@@ -370,7 +370,7 @@ func getDetectResult(taskId string, toolId string) *[]dal.DetectQueryStruct {
 		return nil
 	}
 
-	details, err := queryDetectContentDetail(database.DB(), map[string]interface{}{
+	details, err := readDetectContentDetail(database.DB(), map[string]interface{}{
 		"task_id": taskId,
 		"tool_id": toolId})
 	if err != nil {
@@ -477,7 +477,7 @@ func retrieveTaskAPP(db *gorm.DB, sieve map[string]interface{}) (
 func readExactDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (
 	*dal.DetectContentDetail, error) {
 
-	data, err := queryDetectContentDetail(db, sieve)
+	data, err := readDetectContentDetail(db, sieve)
 	if err != nil {
 		logs.Error("database error: %v", err)
 		return nil, err
@@ -493,7 +493,7 @@ func readExactDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (
 /**
 查询apk敏感信息----fj
 */
-func queryDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (
+func readDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (
 	[]dal.DetectContentDetail, error) {
 
 	var result []dal.DetectContentDetail
