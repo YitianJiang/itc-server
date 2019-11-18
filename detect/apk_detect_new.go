@@ -141,10 +141,6 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, toolID in
 			return err
 		}
 	}
-	// detectInfo * dal.DetectInfo
-	// detectInfo.ApkName = info.ApkName
-	// detectInfo.Version = info.ApkVersionName
-	// detectInfo.Channel = info.Channel
 	//更新任务的权限信息
 	permAppInfos, err := permUpdate(task, info.PermsInAppInfo)
 	if err != nil {
@@ -155,7 +151,6 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, toolID in
 	//更新权限-app-task关系表
 	var relationship dal.PermAppRelation
 	relationship.TaskId = int(task.ID)
-	// relationship.TaskId = detectInfo.TaskId
 	appID, err := strconv.Atoi(task.AppId)
 	if err != nil {
 		logs.Error("%s atoi error: %v", msgHeader, err)
@@ -166,10 +161,8 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, toolID in
 		relationship.AppVersion = task.AppVersion
 	} else {
 		relationship.AppVersion = ".aab副包+" + info.ApkVersionName
-		// relationship.AppVersion = ".aab副包+" + detectInfo.Version
 	}
 	relationship.AppVersion = info.ApkVersionName
-	// relationship.AppVersion = detectInfo.Version
 	relationship.SubIndex = index //新增下标兼容.aab结果
 	relationship.PermInfos = permAppInfos
 	if err := dal.InsertPermAppRelation(relationship); err != nil {
@@ -177,7 +170,6 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, toolID in
 		return err
 	}
 
-	// detectInfo.SubIndex = index
 	if err := database.InsertDBRecord(database.DB(), &dal.DetectInfo{
 		TaskId:   int(task.ID),
 		ApkName:  info.ApkName,
@@ -186,7 +178,6 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, toolID in
 		ToolId:   toolID,
 		SubIndex: index,
 	}); err != nil {
-		// if err := dal.InsertDetectInfo(*detectInfo); err != nil {
 		logs.Error("%s insert detect information failed: %v", msgHeader, err)
 		return err
 	}
