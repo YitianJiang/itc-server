@@ -11,6 +11,7 @@ import (
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
 )
@@ -111,11 +112,11 @@ func GetSelfCheckItems(c *gin.Context) {
 	}
 	taskId, bool := c.GetQuery("taskId")
 	if !bool { //检查项管理中返回和appID相关检查项，
-		appSelfItem_A := dal.QueryAppSelfItem(database.DB(), map[string]interface{}{
+		appSelfItem_A := QueryAppSelfItem(database.DB(), map[string]interface{}{
 			"appId":    appID,
 			"platform": 0,
 		})
-		appSelfItem_O := dal.QueryAppSelfItem(database.DB(), map[string]interface{}{
+		appSelfItem_O := QueryAppSelfItem(database.DB(), map[string]interface{}{
 			"appId":    appID,
 			"platform": 1,
 		})
@@ -187,7 +188,7 @@ func GetSelfCheckItems(c *gin.Context) {
 	}
 	//查询taskItemList为空
 	if data == nil {
-		appSelf := dal.QueryAppSelfItem(database.DB(), map[string]interface{}{
+		appSelf := QueryAppSelfItem(database.DB(), map[string]interface{}{
 			"appId":    appID,
 			"platform": platform,
 		})
@@ -270,6 +271,18 @@ func GetSelfCheckItems(c *gin.Context) {
 	if flag && data != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success", data)
 	}
+}
+
+//查询app对应自查项
+func QueryAppSelfItem(db *gorm.DB, sieve map[string]interface{}) *[]dal.AppSelfItem {
+
+	var appSelf []dal.AppSelfItem
+	if err := db.Debug().Where(sieve).Order("platform", true).Find(&appSelf).Error; err != nil {
+		logs.Error("database error: %v", err)
+		return nil
+	}
+
+	return &appSelf
 }
 
 func getGGItem(condition map[string]interface{}) []interface{} {

@@ -622,18 +622,6 @@ func InsertAppSelfItem(appItem AppSelfItem) bool {
 	return true
 }
 
-//查询app对应自查项
-func QueryAppSelfItem(db *gorm.DB, sieve map[string]interface{}) *[]AppSelfItem {
-
-	var appSelf []AppSelfItem
-	if err := db.Debug().Where(sieve).Order("platform", true).Find(&appSelf).Error; err != nil {
-		logs.Error("database error: %v", err)
-		return nil
-	}
-
-	return &appSelf
-}
-
 //插入taskId自查项
 func InsertTaskSelfItem(taskItem TaskSelfItem) bool {
 	connection, err := database.GetDBConnection()
