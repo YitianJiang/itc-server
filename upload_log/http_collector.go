@@ -84,14 +84,14 @@ func Publish(msgInfo map[string]string, timeout time.Duration) error {
 	request.Header.Add("TS", strconv.FormatInt(ts, 10))
 	request.Header.Add("PSM", msgInfo["psm"])
 	request.Header.Add("TOKEN", token)
-	// 设置timeout
 	client := http.Client{Timeout: timeout}
 	resp, err := client.Do(request)
-	defer resp.Body.Close()
 	if err != nil {
 		logs.Error("send http request: %v", err)
 		emitError("send_http_request", "")
 		return err
 	}
+	defer resp.Body.Close()
+
 	return nil
 }

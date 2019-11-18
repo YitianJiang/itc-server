@@ -18,7 +18,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-
 //发送http post请求，其中rbody是一个json串
 func PostJsonHttp(url string, rbody []byte) (int, []byte) {
 	http.DefaultClient.Timeout = 3 * time.Second
@@ -229,69 +228,6 @@ func PostJsonHttp3(rbody []byte, token, url string) (bool, string) {
 	} else {
 		return false, string(body)
 	}
-}
-
-func GetVersionBMInfo(biz, project, version, os_type string) (rd string, qa string) {
-	version_arr := strings.Split(version, ".")
-	//TikTok这类型版本号：122005 无法获取BM信息
-	if len(version_arr) < 3 {
-		return "", ""
-	}
-	new_version := version_arr[0] + "." + version_arr[1] + "." + version_arr[2]
-	client := &http.Client{}
-	requestUrl := "https://rocket.bytedance.net/api/v1/project/versions"
-	reqest, err := http.NewRequest("GET", requestUrl, nil)
-	reqest.Header.Add("token", _const.ROCKETTOKEN)
-	q := reqest.URL.Query()
-	q.Add("project", project)
-	q.Add("biz", biz)
-	q.Add("achieve_type", os_type)
-	q.Add("version_code", new_version)
-	q.Add("nextpage", "1")
-	reqest.URL.RawQuery = q.Encode()
-	resp, _ := client.Do(reqest)
-	if err != nil {
-		logs.Error("获取version info出错！%v", err)
-		return "", ""
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		logs.Error("读取version返回出错！%v", err)
-		return "", ""
-	}
-	m := map[string]interface{}{}
-	json.Unmarshal(body, &m)
-	if m["data"] == nil {
-		logs.Error("读取BM信息出错！")
-		return "", ""
-	}
-	versionInfo := m["data"].(map[string]interface{})["VersionCards"].([]interface{})
-	if len(versionInfo) == 0 {
-		return "", ""
-	}
-	versionParam := versionInfo[0].(map[string]interface{})["Param_ext"].(string)
-	var l []interface{}
-	err = json.Unmarshal([]byte(versionParam), &l)
-	if err != nil {
-		logs.Error(err.Error())
-	}
-	var rd_bm, qa_bm string
-	for _, bm := range l {
-		if bm.(map[string]interface{})["Param_desc"].(string) == "RD BM" || bm.(map[string]interface{})["Param_desc"].(string) == "QA BM" {
-			if bm.(map[string]interface{})["Param_desc"].(string) == "RD BM" {
-				rd_bm = bm.(map[string]interface{})["Value"].(string)
-			} else {
-				qa_bm = bm.(map[string]interface{})["Value"].(string)
-			}
-			if rd_bm != "" && qa_bm != "" {
-				break
-			} else {
-				continue
-			}
-		}
-	}
-	return rd_bm, qa_bm
 }
 
 //lark api get

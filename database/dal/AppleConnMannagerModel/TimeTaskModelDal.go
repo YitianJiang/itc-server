@@ -105,3 +105,20 @@ func QueryExpiredCertRelatedInfo() (*[]ExpiredCertCardInput, bool) {
 	}
 	return &ret, true
 }
+
+func GetAppIdByPushCertId(pushCertId string)(*AppIdType,bool){
+	var appIdTypeObj  AppIdType
+	conn, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("Get DB Connection Failed: ", err)
+		return  &appIdTypeObj,false
+	}
+	defer conn.Close()
+	if err = conn.LogMode(_const.DB_LOG_MODE).Table(AppBundleProfiles{}.TableName()).
+		Where("push_cert_id=?",pushCertId).Find(&appIdTypeObj).
+		Error; err != nil {
+		logs.Error("Query DB Failed:", err)
+		return &appIdTypeObj,false
+	}
+	return &appIdTypeObj,true
+}

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/utils"
 
 	"github.com/gin-gonic/gin"
@@ -64,32 +65,27 @@ func iOSResultClassify(taskId, toolId, appId int, jsonContent string) (bool, boo
 	//获取上次黑名单检测结果
 	var blacklist []interface{}
 	var method []interface{}
-	var lastDetectContent *[]dal.IOSNewDetectContent
-	if lastTaskId >= 0 {
-		lastDetectContent = dal.QueryNewIOSDetectModel(map[string]interface{}{
-			"taskId": lastTaskId,
-		})
+	lastDetectContent, err := dal.QueryNewIOSDetectModel(database.DB(), map[string]interface{}{
+		"taskId": lastTaskId})
+	if err != nil {
+		logs.Warn("read iOS detect content failed: %v", err)
 	}
-	if lastDetectContent == nil || len(*lastDetectContent) == 0 {
-		logs.Error(strconv.Itoa(lastTaskId) + "没有存储在检测结果中！原因可能为：上一次检测任务没有检测结果，检测工具回调出错！")
-	} else {
-		for _, lastDetect := range *lastDetectContent {
-			if lastDetect.DetectType == "blacklist" {
-				b := make(map[string]interface{})
-				err := json.Unmarshal([]byte(lastDetect.DetectContent), &b)
-				if err != nil {
-					logs.Error("Umarshal failed:", err.Error())
-				}
-				blacklist = b["blackList"].([]interface{})
+	for _, lastDetect := range lastDetectContent {
+		if lastDetect.DetectType == "blacklist" {
+			b := make(map[string]interface{})
+			err := json.Unmarshal([]byte(lastDetect.DetectContent), &b)
+			if err != nil {
+				logs.Error("Umarshal failed:", err.Error())
 			}
-			if lastDetect.DetectType == "method" {
-				m := make(map[string]interface{})
-				err := json.Unmarshal([]byte(lastDetect.DetectContent), &m)
-				if err != nil {
-					logs.Error("Umarshal failed:", err.Error())
-				}
-				method = m["method"].([]interface{})
+			blacklist = b["blackList"].([]interface{})
+		}
+		if lastDetect.DetectType == "method" {
+			m := make(map[string]interface{})
+			err := json.Unmarshal([]byte(lastDetect.DetectContent), &m)
+			if err != nil {
+				logs.Error("Umarshal failed:", err.Error())
 			}
+			method = m["method"].([]interface{})
 		}
 	}
 	//黑名单处理
@@ -341,12 +337,12 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 		return
 	}
 	//首先查询新库
-	iosTaskBinaryCheckContent := dal.QueryNewIOSDetectModel(map[string]interface{}{
+	iosTaskBinaryCheckContent, err := dal.QueryNewIOSDetectModel(database.DB(), map[string]interface{}{
 		"taskId": taskId,
 		"toolId": toolId,
 	})
 	//如果数据在新库中查不到就去访问老库
-	if iosTaskBinaryCheckContent == nil || len(*iosTaskBinaryCheckContent) == 0 {
+	if err != nil || len(iosTaskBinaryCheckContent) == 0 {
 		//中间数据处理
 		detect := dal.QueryDetectModelsByMap(map[string]interface{}{
 			"id": taskId,
@@ -366,7 +362,7 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 				return
 			} else {
 				//中间数据处理成功后，重新读取一次新库
-				iosTaskBinaryCheckContent = dal.QueryNewIOSDetectModel(map[string]interface{}{
+				iosTaskBinaryCheckContent, _ = dal.QueryNewIOSDetectModel(database.DB(), map[string]interface{}{
 					"taskId": taskId,
 					"toolId": toolId,
 				})
@@ -395,13 +391,13 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 	}
 	//返回检测结果给前端
 	data := map[string]interface{}{
-		"appName":    (*iosTaskBinaryCheckContent)[0].AppName,
-		"appVersion": (*iosTaskBinaryCheckContent)[0].Version,
-		"bundleId":   (*iosTaskBinaryCheckContent)[0].BundleId,
-		"sdkVersion": (*iosTaskBinaryCheckContent)[0].SdkVersion,
-		"minVersion": (*iosTaskBinaryCheckContent)[0].MinVersion,
+		"appName":    iosTaskBinaryCheckContent[0].AppName,
+		"appVersion": iosTaskBinaryCheckContent[0].Version,
+		"bundleId":   iosTaskBinaryCheckContent[0].BundleId,
+		"sdkVersion": iosTaskBinaryCheckContent[0].SdkVersion,
+		"minVersion": iosTaskBinaryCheckContent[0].MinVersion,
 	}
-	for _, iosContent := range *iosTaskBinaryCheckContent {
+	for _, iosContent := range iosTaskBinaryCheckContent {
 		var m map[string]interface{}
 		err := json.Unmarshal([]byte(iosContent.DetectContent), &m)
 		if err != nil {
@@ -594,18 +590,17 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 		queryKey = "privacy"
 	}
 	//数据库读取检测内容转为map
-	iosDetect := dal.QueryNewIOSDetectModel(map[string]interface{}{
+	iosDetect, err := dal.QueryNewIOSDetectModel(database.DB(), map[string]interface{}{
 		"taskId":      ios.TaskId,
 		"toolId":      ios.ToolId,
 		"detect_type": queryKey,
 	})
-	if iosDetect == nil || len(*iosDetect) == 0 {
+	if err != nil || len(iosDetect) == 0 {
 		logs.Error("查询iOS检测内容数据库出错！！！")
 		return false
 	}
 	var m map[string]interface{}
-	err := json.Unmarshal([]byte((*iosDetect)[0].DetectContent), &m)
-	if err != nil {
+	if err := json.Unmarshal([]byte(iosDetect[0].DetectContent), &m); err != nil {
 		logs.Error("数据库内容转map出错!", err.Error())
 		return false
 	}
@@ -647,9 +642,9 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 	} else {
 		//权限确认历史表中增加一条记录
 		var newHistory dal.PrivacyHistory
-		newHistory.AppId = (*iosDetect)[0].AppId
-		newHistory.AppName = (*iosDetect)[0].AppName
-		newHistory.ConfirmVersion = (*iosDetect)[0].Version
+		newHistory.AppId = iosDetect[0].AppId
+		newHistory.AppName = iosDetect[0].AppName
+		newHistory.ConfirmVersion = iosDetect[0].Version
 		newHistory.Status = ios.Status
 		newHistory.Confirmer = confirmer
 		newHistory.ConfirmReason = ios.Remark
@@ -660,8 +655,8 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 			return false
 		}
 		confirmHistory := dal.QueryPrivacyHistoryModel(map[string]interface{}{
-			"app_id":     (*iosDetect)[0].AppId,
-			"appname":    (*iosDetect)[0].AppName,
+			"app_id":     iosDetect[0].AppId,
+			"appname":    iosDetect[0].AppName,
 			"permission": ios.ConfirmContent,
 			"platform":   1,
 		})
@@ -680,7 +675,7 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 	}
 	//更新后的内容重新转成json存储到数据库
 	confirmedContent, _ := json.Marshal(m)
-	flag := dal.UpdateNewIOSDetectModel((*iosDetect)[0], map[string]interface{}{
+	flag := dal.UpdateNewIOSDetectModel(iosDetect[0], map[string]interface{}{
 		"detect_content": string(confirmedContent),
 	})
 	if !flag {
@@ -706,55 +701,85 @@ func confirmIOSBinaryResult(ios IOSConfirm, confirmer string) bool {
 
 //判断是否需要更新total status状态值
 func changeTotalStatus(taskId, toolId, confirmLark int) (error, int) {
-	var newChangeFlag = true
-	var unConfirmNum = 0
-	var notPassNum = 0 //确认不通过数目
-	iosDetectAll := dal.QueryNewIOSDetectModel(map[string]interface{}{
-		"taskId": taskId,
-		"toolId": toolId,
+
+	header := fmt.Sprintf("task id: %v", taskId)
+	unconfirmed, _, fail, err := taskDetailiOS(taskId, toolId)
+	if err != nil {
+		logs.Error("%s get iOS task detail failed: %v", header, err)
+		return err, unconfirmed
+	}
+	if fail <= 0 && unconfirmed > 0 {
+		return nil, unconfirmed
+	}
+
+	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
+	if err != nil {
+		logs.Error("%s get detect task failed: %v", header, err)
+		return err, unconfirmed
+	}
+	if unconfirmed <= 0 {
+		task.Status = ConfirmedPass
+	}
+	if fail > 0 {
+		task.Status = ConfirmedFail
+		task.DetectNoPass = fail
+	}
+	if err := dal.UpdateDetectModelNew(*task); err != nil {
+		logs.Error("%s update detect task failed: %v", header, err)
+		return err, unconfirmed
+	}
+	StatusDeal(*task, confirmLark) //ci回调和不通过block处理
+
+	return nil, unconfirmed
+}
+
+func taskDetailiOS(taskID interface{}, toolID interface{}) (int, int, int, error) {
+
+	header := fmt.Sprintf("task id: %v", taskID)
+	unconfirmed := 0
+	pass := 0
+	fail := 0
+	content, err := dal.QueryNewIOSDetectModel(database.DB(), map[string]interface{}{
+		"taskId": taskID,
+		"toolId": toolID,
 	})
-	for _, oneDetect := range *iosDetectAll {
-		var im map[string]interface{}
-		err := json.Unmarshal([]byte(oneDetect.DetectContent), &im)
-		if err != nil {
-			logs.Error("确认任务状态时，map信息数据库内容转map出错!", err.Error())
-			return err, unConfirmNum
+	if err != nil {
+		logs.Error("%s read iOS detect content failed: %v", header, err)
+		return unconfirmed, pass, fail, err
+	}
+	for i := range content {
+		var m map[string]interface{}
+		if err := json.Unmarshal([]byte(content[i].DetectContent), &m); err != nil {
+			logs.Error("%s unmarshal error: %v", header, err)
+			return unconfirmed, pass, fail, err
 		}
-		newQueryKey := oneDetect.DetectType
-		if newQueryKey == "blacklist" {
-			newQueryKey = "blackList"
+		keyword := content[i].DetectType
+		if keyword == "blacklist" {
+			keyword = "blackList"
 		}
-		a := im[newQueryKey].([]interface{})
-		for _, oneBlack := range a {
-			needConfirm := oneBlack.(map[string]interface{})
-			if needConfirm["status"].(float64) == 0 {
-				newChangeFlag = false
-				unConfirmNum++
-			} else if needConfirm["status"].(float64) == 2 {
-				notPassNum++
+		list, ok := m[keyword].([]interface{})
+		if !ok {
+			logs.Error("%s cannot assert to []interface{}: %v", header, m[keyword])
+			return unconfirmed, pass, fail, fmt.Errorf("%s cannot assert to []interface{}: %v", header, m[keyword])
+		}
+		for j := range list {
+			t, ok := list[j].(map[string]interface{})
+			if !ok {
+				logs.Error("%s cannot assert to map[string]interface{}: %v", header, list[j])
+				return unconfirmed, pass, fail, fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, list[j])
+			}
+			switch int(t["status"].(float64)) {
+			case ConfirmedPass:
+				pass++
+			case ConfirmedFail:
+				fail++
+			default:
+				unconfirmed++
 			}
 		}
 	}
-	//检测项全部确认，更改任务状态
-	if newChangeFlag {
-		detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-			"id": taskId,
-		})
-		if notPassNum == 0 {
-			(*detect)[0].Status = 1 //1代表全部确认且确认通过
-		} else {
-			(*detect)[0].Status = 2 //2代表全部确认且有确认不通过
-		}
-		(*detect)[0].DetectNoPass = notPassNum //不通过总数
-		err := dal.UpdateDetectModelNew((*detect)[0])
-		if err != nil {
-			logs.Error("更新任务状态失败，任务ID："+strconv.Itoa(taskId)+",错误原因:%v", err)
-			return err, unConfirmNum
-		}
-		StatusDeal((*detect)[0], confirmLark) //ci回调和不通过block处理
-		sameConfirm((*detect)[0])             //相同包检测结果确认
-	}
-	return nil, unConfirmNum
+
+	return unconfirmed, pass, fail, nil
 }
 
 //返回两个bool值，第一个代表是否是middl数据，第二个代表处理是否成功
@@ -877,23 +902,4 @@ func StatusDeal(detect dal.DetectStruct, confirmLark int) error {
 		}()
 	}
 	return nil
-}
-
-func sameConfirm(detect dal.DetectStruct) {
-	//相同appname、appversion和appid任务结果一致确认
-	sameDetect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"app_name":    detect.AppName,
-		"app_version": detect.AppVersion,
-		"platform":    detect.Platform,
-	})
-	if len(*sameDetect) != 1 {
-		for _, same := range *sameDetect {
-			same.SelftNoPass = detect.SelftNoPass
-			same.DetectNoPass = detect.DetectNoPass
-			same.Status = detect.Status
-			same.SelfCheckStatus = detect.SelfCheckStatus
-			dal.UpdateDetectModelNew(same)
-			StatusDeal(same, 0)
-		}
-	}
 }

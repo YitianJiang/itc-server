@@ -12,7 +12,8 @@ import (
 
 func InitRouter(r *ginex.Engine) {
 
-	r.POST("/settings", settings.Refresh)
+	r.POST("/settings", settings.Insert)
+	r.PUT("/settings", settings.Refresh)
 	r.GET("/settings", settings.Show)
 	api := r.GroupEX("/api")
 	//二进制包检测回调接口
@@ -250,7 +251,7 @@ func InitRouter(r *ginex.Engine) {
 	//哭泣，因为DBA下掉了所有的gui操作数据库的功能，固有此变更数据的接口出现
 	operationDBApi := r.Group("/v1/deleteBundleTable")
 	{
-		operationDBApi.POST("deleteBundleIdCap",developerconnmanager.DeleteBundleIdCap)
-		operationDBApi.POST("deleteCertPrivKey",developerconnmanager.DeleteCertPrivKey)
+		operationDBApi.POST("deleteBundleIdCap", developerconnmanager.DeleteBundleIdCap)
+		operationDBApi.POST("deleteCertPrivKey", developerconnmanager.DeleteCertPrivKey)
 	}
 }
