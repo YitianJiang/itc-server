@@ -43,18 +43,16 @@ func UpdateDetectTask(c *gin.Context) {
 
 	jsonContent := c.Request.FormValue("jsonContent")
 	htmlContent := c.Request.FormValue("content")
-	//消息通知条数--检测项+自查项
 	var unConfirms int
 	var unSelfCheck int
 	if task.Platform == platformAndorid {
 		var errApk error
-		errApk, unConfirms = ParseResultAndroid(task, jsonContent, toolID)
+		errApk, unConfirms = ParseResultAndroid(task, &jsonContent, toolID)
 		if errApk != nil {
 			logs.Error("%s update apk detect result failed: %v", msgHeader, err)
 			return
 		}
 	}
-	//ios新检测内容存储
 	if task.Platform == platformiOS {
 		if err := database.InsertDBRecord(database.DB(), &dal.DetectContent{
 			TaskId:      int(task.ID),
