@@ -134,7 +134,7 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, toolID in
 		task.AppName = info.ApkName
 		task.AppVersion = info.ApkVersionName
 		task.InnerVersion = info.Meta.InnerVersion
-		if err := updateDetectTask(database.DB(), task); err != nil {
+		if err := database.UpdateDBRecord(database.DB(), task); err != nil {
 			logs.Error("%s update detect task failed: %v", msgHeader, err)
 			return err
 		}

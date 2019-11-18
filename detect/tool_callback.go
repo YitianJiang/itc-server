@@ -106,16 +106,6 @@ func updateDetectTaskStatus(db *gorm.DB, task *dal.DetectStruct) error {
 	return nil
 }
 
-func updateDetectTask(db *gorm.DB, task *dal.DetectStruct) error {
-
-	if err := db.Debug().Model(task).Updates(task).Error; err != nil {
-		logs.Error("database error: %v", err)
-		return err
-	}
-
-	return nil
-}
-
 func notifyDeteckTaskResult(task *dal.DetectStruct, msgHeader *string, unConfirms int, unSelfCheck int) {
 
 	var err error
@@ -125,7 +115,7 @@ func notifyDeteckTaskResult(task *dal.DetectStruct, msgHeader *string, unConfirm
 		return
 	}
 
-	message := "你好，包检测完成。\n应用名称：%s\n版本号：%s"
+	message := "你好，二进制包检测完成。\n应用名称：%s\n版本号：%s"
 	message = fmt.Sprintf(message, task.AppName, task.AppVersion)
 	var os string
 	switch task.Platform {
