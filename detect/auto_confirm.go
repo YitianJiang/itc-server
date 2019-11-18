@@ -383,7 +383,14 @@ func autoConfirmCallBack(task *dal.DetectStruct, permissions []string,
 	if !freshman {
 		switch task.Platform {
 		case platformAndorid:
-			return autoConfirmCallBackAndroid(task.ID, m)
+			if err := autoConfirmCallBackAndroidPermission(task.ID, m); err != nil {
+				logs.Error("%s auto confirm Android permission failed: %v", header, err)
+				return err
+			}
+			if err := autoConfirmCallBackAndroidMethodAndString(task.ID, m); err != nil {
+				logs.Error("%s auto confirm Android method and string failed: %v", header, err)
+				return err
+			}
 		case platformiOS:
 			return autoConfirmCallBackiOS(task.ID, m)
 		default:
@@ -395,7 +402,7 @@ func autoConfirmCallBack(task *dal.DetectStruct, permissions []string,
 	return nil
 }
 
-func autoConfirmCallBackAndroid(taskID interface{}, m map[string]*Attention) error {
+func autoConfirmCallBackAndroidPermission(taskID interface{}, m map[string]*Attention) error {
 
 	header := fmt.Sprintf("task id: %v", taskID)
 	permissions, err := readPermAPPRelation(database.DB(), map[string]interface{}{"task_id": taskID})
@@ -406,15 +413,15 @@ func autoConfirmCallBackAndroid(taskID interface{}, m map[string]*Attention) err
 	for i := range permissions {
 		var permissionList []interface{}
 		if err := json.Unmarshal([]byte(permissions[i].PermInfos), &permissionList); err != nil {
-			logs.Error("unmarshal error: %v", err)
+			logs.Error("%s unmarshal error: %v", header, err)
 			return err
 		}
 		var updated bool
 		for j := range permissionList {
 			t, ok := permissionList[j].(map[string]interface{})
 			if !ok {
-				logs.Error("cannot assert to map[string]interface{}: %v", permissionList[j])
-				return fmt.Errorf("cannot assert to map[string]interface{}: %v", permissionList[j])
+				logs.Error("%s cannot assert to map[string]interface{}: %v", header, permissionList[j])
+				return fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, permissionList[j])
 			}
 			if v, ok := m[fmt.Sprint(t["key"])]; ok {
 				t["status"] = v.Status
@@ -426,17 +433,23 @@ func autoConfirmCallBackAndroid(taskID interface{}, m map[string]*Attention) err
 		if updated {
 			data, err := json.Marshal(permissionList)
 			if err != nil {
-				logs.Error("marshal error: %v", err)
+				logs.Error("%s marshal error: %v", header, err)
 				return err
 			}
 			permissions[i].PermInfos = string(data)
 			if err := database.UpdateDBRecord(database.DB(), &permissions[i]); err != nil {
-				logs.Error("update tb_perm_app_relation failed: %v", err)
+				logs.Error("%s update tb_perm_app_relation failed: %v", header, err)
 				return err
 			}
 		}
-
 	}
+
+	return nil
+}
+
+func autoConfirmCallBackAndroidMethodAndString(taskID interface{}, m map[string]*Attention) error {
+
+	header := fmt.Sprintf("task id: %v", taskID)
 	details, err := readDetectContentDetail(database.DB(), map[string]interface{}{"task_id": taskID})
 	if err != nil {
 		logs.Error("%s read tb_detect_content_deatil error: %v", header, err)
@@ -463,7 +476,7 @@ func autoConfirmCallBackAndroid(taskID interface{}, m map[string]*Attention) err
 		}
 		if updated {
 			if err := database.UpdateDBRecord(database.DB(), &details[i]); err != nil {
-				logs.Error("update tb_detect_content_detail failed: %v", err)
+				logs.Error("%s update tb_detect_content_detail failed: %v", header, err)
 				return err
 			}
 		}
@@ -495,17 +508,15 @@ func autoConfirmCallBackiOS(taskID interface{}, m map[string]*Attention) error {
 				return fmt.Errorf("%s cannot assert to []interface{}: %v", header, t["privacy"])
 			}
 			for j := range list {
-				v, ok := list[j].(map[string]interface{})
+				u, ok := list[j].(map[string]interface{})
 				if !ok {
 					logs.Error("%s cannot assert to map[string]interface{}: %v", header, list[j])
 					return fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, list[j])
 				}
-				key := fmt.Sprint(v["permission"])
-				if _, ok := m[key]; ok {
-					logs.Notice("permission: %v", m[v["permission"].(string)])
-					v["status"] = m[key].Status
-					v["confirmer"] = m[key].Confirmer
-					v["confirmReason"] = m[key].Remark
+				if v, ok := m[fmt.Sprint(u["permission"])]; ok {
+					u["status"] = v.Status
+					u["confirmer"] = v.Confirmer
+					u["confirmReason"] = v.Remark
 				}
 			}
 		case "method":
@@ -515,17 +526,15 @@ func autoConfirmCallBackiOS(taskID interface{}, m map[string]*Attention) error {
 				return fmt.Errorf("%s cannot assert to []interface{}: %v", header, t["method"])
 			}
 			for j := range list {
-				v, ok := list[j].(map[string]interface{})
+				u, ok := list[j].(map[string]interface{})
 				if !ok {
 					logs.Error("%s cannot assert to map[string]interface{}: %v", header, list[j])
 					return fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, list[j])
 				}
-				key := fmt.Sprintf("%v%v%v", v["content"], delimiter, v["name"])
-				if _, ok := m[key]; ok {
-					logs.Notice("permission: %v", m[v["content"].(string)+delimiter+v["name"].(string)])
-					v["status"] = m[key].Status
-					v["confirmer"] = m[key].Confirmer
-					v["remark"] = m[key].Remark
+				if v, ok := m[fmt.Sprintf("%v%v%v", u["content"], delimiter, u["name"])]; ok {
+					u["status"] = v.Status
+					u["confirmer"] = v.Confirmer
+					u["remark"] = v.Remark
 				}
 			}
 		case "blacklist":
@@ -535,17 +544,15 @@ func autoConfirmCallBackiOS(taskID interface{}, m map[string]*Attention) error {
 				return fmt.Errorf("%s cannot assert to []interface{}: %v", header, t["blackList"])
 			}
 			for j := range list {
-				v, ok := list[j].(map[string]interface{})
+				u, ok := list[j].(map[string]interface{})
 				if !ok {
 					logs.Error("%s cannot assert to map[string]interface{}: %v", header, list[j])
 					return fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, list[j])
 				}
-				key := fmt.Sprint(v["name"])
-				if _, ok := m[key]; ok {
-					logs.Notice("permission: %v", m[v["name"].(string)])
-					v["status"] = m[key].Status
-					v["confirmer"] = m[key].Confirmer
-					v["remark"] = m[key].Remark
+				if v, ok := m[fmt.Sprint(u["name"])]; ok {
+					u["status"] = v.Status
+					u["confirmer"] = v.Confirmer
+					u["remark"] = v.Remark
 				}
 			}
 		}
