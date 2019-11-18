@@ -118,11 +118,11 @@ func autoConfirmAndroidEx(p *confirmParams, tag bool) error {
 			if p.Status == ConfirmedFail {
 				notPassFlag = true
 			}
-			updateInfo, _ := taskStatusUpdate(p.TaskID, p.ToolID, task, notPassFlag, 1)
-			if updateInfo != "" {
-				logs.Error("task id: %v update task status failed: %v", task.ID, updateInfo)
+			_, err = taskStatusUpdate(p.TaskID, p.ToolID, task, notPassFlag, 1)
+			if err != nil {
+				logs.Error("task id: %v update task status failed: %v", task.ID, err)
 				if task.ID == p.TaskID {
-					sync <- fmt.Errorf("update task status failed: %v", updateInfo)
+					sync <- fmt.Errorf("update task status failed: %v", err)
 				}
 				return
 			}

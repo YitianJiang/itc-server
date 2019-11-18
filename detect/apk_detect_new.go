@@ -104,10 +104,10 @@ func ParseResultAndroid(task *dal.DetectStruct, resultJson *string, toolID int) 
 	<-sync
 
 	//任务状态更新----该app无需要特别确认的敏感方法、字符串或权限
-	errTaskUpdate, unConfirms := taskStatusUpdate(task.ID, toolID, task, false, 0)
-	if errTaskUpdate != "" {
-		logs.Error("%s update task status failed", msgHeader)
-		return fmt.Errorf(errTaskUpdate), 0
+	unConfirms, err := taskStatusUpdate(task.ID, toolID, task, false, 0)
+	if err != nil {
+		logs.Error("%s update task status failed: %v", msgHeader, err)
+		return err, 0
 	}
 	return nil, unConfirms
 }

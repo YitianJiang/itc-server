@@ -713,25 +713,31 @@ func packPermissionListAndroid(permission string) (*PermSlice, error) {
 /**
 任务确认状态更新
 */
-func taskStatusUpdate(taskId uint, toolId int, detect *dal.DetectStruct, notPassFlag bool, confirmLark int) (string, int) {
+func taskStatusUpdate(taskId uint, toolId int, detect *dal.DetectStruct, notPassFlag bool, confirmLark int) (int, error) {
 
 	header := fmt.Sprintf("task id: %v", detect.ID)
 	condition := fmt.Sprintf("deleted_at IS NULL and task_id='%v' and tool_id='%v'", taskId, toolId)
 	counts, countsUn := QueryUnConfirmDetectContent(database.DB(), condition)
 
-	perms, _ := dal.QueryPermAppRelation(map[string]interface{}{"task_id": taskId})
+	perms, err := readPermAPPRelation(database.DB(), map[string]interface{}{"task_id": taskId})
+	if err != nil {
+		logs.Error("%s read tb_perm_app_relation failed: %v", header, err)
+		return 0, err
+	}
+	// perms, _ := dal.QueryPermAppRelation(map[string]interface{}{"task_id": taskId})
 	var permFlag = true
 	var updateFlag = false
 	var permCounts = 0
-	if perms == nil || len(*perms) == 0 {
+	if perms == nil || len(perms) == 0 {
 		logs.Warn("taskId:" + fmt.Sprint(taskId) + ",该任务无权限检测信息！")
 	} else {
-		for i := 0; i < len(*perms); i++ {
-			permsInfoDB := (*perms)[i].PermInfos
+		// for i := 0; i < len(perms); i++ {
+		for i := range perms {
+			permsInfoDB := perms[i].PermInfos
 			var permList []interface{}
 			if err := json.Unmarshal([]byte(permsInfoDB), &permList); err != nil {
 				logs.Error("%s unmarshal error: %v content: %s", header, err, permsInfoDB)
-				return "该任务的权限存储信息格式出错", 0
+				return 0, err
 			}
 			for _, m := range permList {
 				permInfo := m.(map[string]interface{})
@@ -760,15 +766,15 @@ func taskStatusUpdate(taskId uint, toolId int, detect *dal.DetectStruct, notPass
 		err := dal.UpdateDetectModelNew(*detect)
 		if err != nil {
 			logs.Error("%s update detect task status failed: %v", header, err)
-			return "任务确认状态更新失败！", 0
+			return 0, err
 		}
 		if err := StatusDeal(*detect, confirmLark); err != nil {
 			logs.Error("%s notify detect task status failed: %v", header, err)
-			return err.Error(), 0
+			return 0, err
 		}
 	}
 
-	return "", counts + permCounts
+	return counts + permCounts, nil
 }
 
 func readExactPermAPPRelation(db *gorm.DB, sieve map[string]interface{}) (*dal.PermAppRelation, error) {
