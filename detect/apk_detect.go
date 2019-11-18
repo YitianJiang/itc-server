@@ -688,16 +688,14 @@ func packPermissionListAndroid(permission string) (*PermSlice, error) {
 		permOut.Id = uint(v) + 1
 		permOut.Priority = int(permMap["priority"].(float64))
 		permOut.RiskLevel = fmt.Sprint(permMap["priority"])
-		permOut.Status = int(permMap["status"].(float64))
-		permOut.Key = permMap["key"].(string)
+		status, _ := strconv.Atoi(fmt.Sprint(permMap["status"]))
+		permOut.Status = status
+		permOut.Key = fmt.Sprint(permMap["key"])
 		permOut.PermId = int(permMap["perm_id"].(float64))
-		permOut.Desc = permMap["ability"].(string)
-		permOut.OtherVersion = permMap["first_version"].(string)
-		permOut.Status = int(permMap["status"].(float64))
-		// if the assert failed, the variable will be set to the default value.
-		permOut.Confirmer, _ = permMap["confirmer"].(string)
-		permOut.Remark, _ = permMap["remark"].(string)
-
+		permOut.Desc = fmt.Sprint(permMap["ability"])
+		// permOut.OtherVersion = permMap["first_version"].(string)
+		permOut.Confirmer = fmt.Sprint(permMap["confirmer"])
+		permOut.Remark = fmt.Sprint(permMap["remark"])
 		if permOut.Status == 0 {
 			result = append(result, permOut)
 		} else {
@@ -735,7 +733,8 @@ func taskStatusUpdate(taskId uint, toolId int, detect *dal.DetectStruct, notPass
 			}
 			for _, m := range permList {
 				permInfo := m.(map[string]interface{})
-				if permInfo["status"].(float64) == 0 {
+				if fmt.Sprint(permInfo["status"]) == "0" {
+					// if permInfo["status"].(float64) == 0 {
 					permFlag = false
 					permCounts++
 				}
