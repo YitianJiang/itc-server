@@ -126,17 +126,9 @@ func ParseResultAndroid(task *dal.DetectStruct, resultJson *string, toolID int) 
 appInfo解析，并写入数据库,此处包含权限的处理-------fj
 新增了index下标，兼容.aab结果中新增sub_index，默认为0
 */
-func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index ...int) error {
+func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index int) error {
 
 	msgHeader := fmt.Sprintf("task id: %v", task.ID)
-
-	//数组结果排序标识处理，默认为0
-	var realIndex int
-	if len(index) == 0 {
-		realIndex = 0
-	} else {
-		realIndex = index[0]
-	}
 
 	//判断appInfo信息是否为主要信息，只有主要信息--primary为1才会修改任务的appName和Version,或者primary为nil---只有一个信息
 	var taskUpdateFlag = false
@@ -176,7 +168,7 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 		relationship.AppVersion = ".aab副包+" + detectInfo.Version
 	}
 	relationship.AppVersion = detectInfo.Version
-	relationship.SubIndex = realIndex //新增下标兼容.aab结果
+	relationship.SubIndex = index //新增下标兼容.aab结果
 	relationship.PermInfos = permAppInfos
 	if err := dal.InsertPermAppRelation(relationship); err != nil {
 		logs.Error("%s insert permission app relation failed: %v", msgHeader, err)
@@ -186,7 +178,7 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 	//插入appInfo信息到apk表
 	perStr := "" //旧版权限信息
 	detectInfo.Permissions = perStr
-	detectInfo.SubIndex = realIndex
+	detectInfo.SubIndex = index
 	if err := dal.InsertDetectInfo(*detectInfo); err != nil {
 		logs.Error("%s insert detect information failed: %v", msgHeader, err)
 		return err
