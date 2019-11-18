@@ -116,42 +116,42 @@ func GetSelfCheckItems(c *gin.Context) {
 			"appId":    appID,
 			"platform": 0,
 		})
-		appSelfItem_O := readSelfcheckItem(database.DB(), map[string]interface{}{
-			"appId":    appID,
-			"platform": 1,
-		})
 		var androidItemList []interface{}
 		if appSelfItem_A == nil || len(*appSelfItem_A) == 0 {
 			androidItemList = getGGItem(map[string]interface{}{
 				"is_gg":    1,
 				"platform": 0,
 			})
-		} else {
-			androidMap := make(map[string]interface{})
-			if err := json.Unmarshal([]byte((*appSelfItem_A)[0].SelfItems), &androidMap); err != nil {
-				utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("unmarshal error: %v content: %v", err, (*appSelfItem_A)[0].SelfItems))
-				return
-			}
-			for _, i := range androidMap["item"].([]interface{}) {
-				androidItemList = append(androidItemList, i)
-			}
 		}
+		androidMap := make(map[string]interface{})
+		if err := json.Unmarshal([]byte((*appSelfItem_A)[0].SelfItems), &androidMap); err != nil {
+			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("unmarshal error: %v content: %v", err, (*appSelfItem_A)[0].SelfItems))
+			return
+		}
+		for _, i := range androidMap["item"].([]interface{}) {
+			androidItemList = append(androidItemList, i)
+		}
+
+		appSelfItem_O := readSelfcheckItem(database.DB(), map[string]interface{}{
+			"appId":    appID,
+			"platform": 1,
+		})
 		var iOSItemList []interface{}
 		if appSelfItem_O == nil || len(*appSelfItem_O) == 0 {
 			iOSItemList = getGGItem(map[string]interface{}{
 				"is_gg":    1,
 				"platform": 1,
 			})
-		} else {
-			iosMap := make(map[string]interface{})
-			if err := json.Unmarshal([]byte((*appSelfItem_O)[0].SelfItems), &iosMap); err != nil {
-				utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("unmarshal error: %v content: %v", err, (*appSelfItem_O)[0].SelfItems))
-				return
-			}
-			for _, i := range iosMap["item"].([]interface{}) {
-				iOSItemList = append(iOSItemList, i)
-			}
 		}
+		iosMap := make(map[string]interface{})
+		if err := json.Unmarshal([]byte((*appSelfItem_O)[0].SelfItems), &iosMap); err != nil {
+			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("unmarshal error: %v content: %v", err, (*appSelfItem_O)[0].SelfItems))
+			return
+		}
+		for _, i := range iosMap["item"].([]interface{}) {
+			iOSItemList = append(iOSItemList, i)
+		}
+
 		var ItemList []interface{}
 		//Android和iOS list合并
 		if len(androidItemList) == 0 && len(iOSItemList) == 0 {
