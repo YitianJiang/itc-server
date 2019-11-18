@@ -45,17 +45,6 @@ func ParseResultAndroid(task *dal.DetectStruct, resultJson *string, toolID int) 
 			return err, 0
 		}
 		permissions = append(permissions, result.Result[i].AppInfo.PermsInAppInfo...)
-		//获取敏感方法和字符串的确认信息methodInfo,strInfos，为信息初始化做准备
-		// methodInfo, strInfos, _, err := getIgnoredInfo_2(task.AppId, task.Platform)
-		// if err != nil {
-		// logs.Warn("%s Failed to retrieve negligible information about APP ID: %v, Platform: %v", msgHeader, task.AppId, task.Platform)
-		// }
-		// if methodInfo == nil {
-		// logs.Warn("%s There are no negligible methods", msgHeader)
-		// }
-		// if strInfos == nil {
-		// logs.Warn("%s There are no negligible strings", msgHeader)
-		// }
 
 		//敏感method解析----先外层去重
 		mRepeat := make(map[string]int)
@@ -72,12 +61,6 @@ func ParseResultAndroid(task *dal.DetectStruct, resultJson *string, toolID int) 
 		for _, newMethod := range newMethods {
 			var detailContent dal.DetectContentDetail
 			var keystr = newMethod.ClassName + "." + newMethod.MethodName
-			// if v, ok := methodInfo[keystr]; ok {
-			// info := v.(map[string]interface{})
-			// if info["status"].(int) == 1 {
-			// detailContent.Status = info["status"].(int)
-			// }
-			// }
 			var extraInfo dal.DetailExtraInfo
 			if v, ok := (*apiMap)[keystr]; ok {
 				info := v.(map[string]int)
@@ -104,7 +87,7 @@ func ParseResultAndroid(task *dal.DetectStruct, resultJson *string, toolID int) 
 			detailContent.TaskId = int(task.ID)
 			detailContent.ToolId = toolID
 			detailContent.SubIndex = i
-			allStrs = append(allStrs, *StrAnalysis(strInfo, &detailContent /*, strInfos*/))
+			allStrs = append(allStrs, *StrAnalysis(strInfo, &detailContent))
 			sensitiveMethods = append(sensitiveStrings, detailContent.KeyInfo)
 		}
 		if err := dal.InsertDetectDetailBatch(&allStrs); err != nil {
@@ -192,11 +175,6 @@ func permUpdate(task *dal.DetectStruct, permissions []string) (string, error) {
 	msgHeader := fmt.Sprintf("task id: %v", task.ID)
 
 	var larkPerms string //lark消息通知的权限内容
-	// var first_history []dal.PermHistory
-	//获取app的权限操作历史map
-	// impMap := getAPPPermissionHistory(task.AppId)
-	//判断是否属于初次引入
-	// var fhflag bool
 	//权限去重map
 	permRepeatMap := make(map[string]int)
 	//更新任务的权限信息
@@ -246,7 +224,6 @@ func permUpdate(task *dal.DetectStruct, permissions []string) (string, error) {
 				// The permission will not be inserted into the official ITC configures.
 				permInfo["perm_id"] = -1
 			}
-			// fhflag = true
 			larkPerms += "权限名为：" + pers + "\n"
 			permInfo["key"] = pers
 			permInfo["ability"] = ""
@@ -263,43 +240,13 @@ func permUpdate(task *dal.DetectStruct, permissions []string) (string, error) {
 			permInfo["priority"] = (*queryResult)[0].Priority
 			permInfo["state"] = 1
 			permInfo["status"] = 0
-
-			//更新确认信息
-			// if v, ok := impMap[int((*queryResult)[0].ID)]; !ok {
-			// permInfo["status"] = 0
-			// permInfo["first_version"] = task.AppVersion
-			// fhflag = true
-			// } else {
-			// iMap := v.(map[string]interface{})
 			// permInfo["status"] = iMap["status"].(int)
-			// permInfo["first_version"] = iMap["version"].(string)
-			// }
 		}
 		permInfo["confirmer"] = ""
 		permInfo["remark"] = ""
-		//若是初次引入,写入引入信息
-		// if fhflag {
-		// 	var hist dal.PermHistory
-		// 	hist.Status = 0
-		// 	appId, _ := strconv.Atoi(task.AppId)
-		// 	hist.AppId = appId
-		// 	hist.AppVersion = task.AppVersion
-		// 	hist.PermId = permInfo["perm_id"].(int)
-		// 	hist.Confirmer = task.Creator
-		// 	hist.Remarks = "包检测引入该权限"
-		// 	hist.TaskId = int(task.ID)
-		// 	first_history = append(first_history, hist)
-		// }
 		permInfos = append(permInfos, permInfo)
 	}
 	bytePerms, _ := json.Marshal(permInfos)
-	// //若存在初次引入权限，批量写入引入信息
-	// if len(first_history) > 0 {
-	// 	if err := BatchInsertPermHistory(&first_history); err != nil {
-	// 		logs.Error("%s insert permission history failed: %v", msgHeader, err)
-	// 		return "", err
-	// 	}
-	// }
 	//lark通知创建人完善权限信息-----只发一条消息
 	if larkPerms != "" {
 		message := "你好，安卓二进制静态包检测出未知权限，请去权限配置页面完善权限信息,需要完善的权限信息有：\n"
@@ -372,7 +319,6 @@ func getAPPPermissionHistory(appID interface{}) map[int]interface{} {
 */
 func MethodAnalysis(method dal.MethodInfo, detail *dal.DetectContentDetail, extraInfo dal.DetailExtraInfo) *dal.DetectContentDetail {
 	detail.SensiType = 1
-	//detail.Status = 0
 
 	detail.KeyInfo = method.MethodName
 	detail.DescInfo = method.Desc
@@ -412,36 +358,14 @@ func MethodRmRepeat_2(callInfo []dal.CallLocInfo) string {
 /**
 批量str解析---------fj
 */
-func StrAnalysis(str dal.StrInfo, detail *dal.DetectContentDetail /*, strInfos map[string]interface{}*/) *dal.DetectContentDetail {
+func StrAnalysis(str dal.StrInfo, detail *dal.DetectContentDetail) *dal.DetectContentDetail {
 	detail.SensiType = 2
 
 	var key string
-	// key := ""
-	//判断str是否进行状态转变
-	// key2 := ""
-	//通过或不通过的状态表示，true为1，false为2
-	// var passFlag = true
 	for i := range str.Keys {
-		// for _, ks := range str.Keys {
-		// if v, ok := strInfos[ks]; !ok {
-		// 	key2 += ks
-		// } else {
-		// 	info := v.(map[string]interface{})
-		// 	if info["status"].(int) == 2 && passFlag {
-		// 		passFlag = false
-		// 	}
-		// }
-		// key += ks + ";"
 		key += str.Keys[i] + ";"
 	}
 	detail.KeyInfo = key
-	// if key2 == "" {
-	// 	if passFlag {
-	// 		detail.Status = 1
-	// 	}
-	// } else {
-	// 	detail.Status = 0
-	// }
 	detail.DescInfo = str.Desc
 	//增加敏感字符串的gp标识
 	if str.Flag != 0 {
@@ -455,7 +379,6 @@ func StrAnalysis(str dal.StrInfo, detail *dal.DetectContentDetail /*, strInfos m
 	call_location := StrRmRepeat_2(callInfo)
 	detail.CallLoc = call_location
 	return detail
-
 }
 
 /**
