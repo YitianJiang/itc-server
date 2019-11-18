@@ -13,19 +13,19 @@ import (
 )
 
 type DeleteBundleIdReqModel struct {
-	BundleId           string		`json:"bundle_id"      binding:"required"`
-	CapName            string 	    `json:"cap_name"       binding:"required"`
+	BundleId           string		`json:"bundle_id"      					binding:"required"`
+	CapName            string 	    `json:"cap_name"       					binding:"required"`
 }
 
 type DBItemFromBundleId struct {
 	gorm.Model
-	BundleId           string 	    `gorm:"column:bundle_id"                 json:"bundle_id"	   `
-	InAppPurchase      string       `gorm:"column:IN_APP_PURCHASE"           json:"IN_APP_PURCHASE"`
+	BundleId           string 	    `gorm:"column:bundle_id"                json:"bundle_id"`
+	InAppPurchase      string       `gorm:"column:IN_APP_PURCHASE"          json:"IN_APP_PURCHASE"`
 }
 
 type DeleteCertPrivReqModel struct {
-	CertId    		   string	    `json:"cert_id"        binding:"required"`
-	ColumnName		   string		`json:"colum_name"     binding:"required"`
+	CertId    		   string	    `json:"cert_id"        					binding:"required"`
+	ColumnName		   string		`json:"colum_name"     					binding:"required"`
 }
 
 func queryAppAccountCert(tableName string,queryData map[string]interface{}) {
