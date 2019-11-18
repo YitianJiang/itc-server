@@ -612,21 +612,27 @@ func DeleteGroupTester(c *gin.Context){
 func SendMessageToMe(content *string,userEmail string) {
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(_const.BotApiId,_const.BotAppSecret)
-	openIds := []string{"ou_b392d8a6bdcac11e0a7401233cba38ce"}
+	openId := "ou_b392d8a6bdcac11e0a7401233cba38ce"
+	contentText := form.SendMessageForm{}
+	msgType := "text"
+	contentText.Content.Text = content
+	contentText.MsgType = &msgType
 	if userEmail != ""{
+		tokenFormservice,err := service.GetTenantAccessToken(_const.BotApiId,_const.BotAppSecret)
+		utils.RecordError("获取TenantAccessToken失败", err)
 		var reqUserToLark UserInfoReqToLark
 		reqUserToLark.Email = userEmail+"@bytedance.com"
 		var resUserInfo UserInfoGetFromLark
-		reqResult := PostToLarkGetInfo("POST","https://open.feishu.cn/open-apis/user/v4/email2id","Bearer "+botService.TenantAccessToken.Token,&reqUserToLark,&resUserInfo)
+		reqResult := PostToLarkGetInfo("POST","https://open.feishu.cn/open-apis/user/v4/email2id","Bearer "+tokenFormservice.TenantAccessToken,&reqUserToLark,&resUserInfo)
 		if reqResult{
-			openIds = append(openIds,resUserInfo.Data.OpenId)
+			contentText.OpenID = &resUserInfo.Data.OpenId
+			_, errorSendInfo := botService.SendMessage(contentText)
+			if errorSendInfo != nil {
+				utils.RecordError("bot发送消息错误", errorSendInfo)
+			}
 		}
 	}
-	contentText := form.SendMessageForm{}
-	msgType := "text"
-	contentText.OpenIds = openIds
-	contentText.MsgType = &msgType
-	contentText.Content.Text = content
+	contentText.OpenID = &openId
 	_, errorSendInfo := botService.SendMessage(contentText)
 	if errorSendInfo != nil {
 		utils.RecordError("bot发送消息错误", errorSendInfo)
