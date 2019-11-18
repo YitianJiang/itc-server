@@ -36,8 +36,7 @@ func ParseResultAndroid(task *dal.DetectStruct, resultJson *string, toolID int) 
 
 	// Handle the basic information and permission of apk and aab package.
 	for i := range result.Result {
-		if err := AppInfoAnalysis_2(task, result.Result[i].AppInfo,
-			&dal.DetectInfo{TaskId: int(task.ID), ToolId: toolID}, i); err != nil {
+		if err := AppInfoAnalysis_2(task, result.Result[i].AppInfo, toolID, i); err != nil {
 			logs.Error("%s analysis app information failed: %v", msgHeader, err)
 			return err, 0
 		}
@@ -126,13 +125,13 @@ func ParseResultAndroid(task *dal.DetectStruct, resultJson *string, toolID int) 
 appInfo解析，并写入数据库,此处包含权限的处理-------fj
 新增了index下标，兼容.aab结果中新增sub_index，默认为0
 */
-func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInfo *dal.DetectInfo, index int) error {
+func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, toolID int, index int) error {
 
 	msgHeader := fmt.Sprintf("task id: %v", task.ID)
 
 	//判断appInfo信息是否为主要信息，只有主要信息--primary为1才会修改任务的appName和Version,或者primary为nil---只有一个信息
 	var taskUpdateFlag = false
-	if info.Primary == nil || info.Primary.(float64) == 1 {
+	if info.Primary == nil || fmt.Sprint(info.Primary) == "1" {
 		taskUpdateFlag = true
 		task.AppName = info.ApkName
 		task.AppVersion = info.ApkVersionName
@@ -142,10 +141,10 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 			return err
 		}
 	}
-
-	detectInfo.ApkName = info.ApkName
-	detectInfo.Version = info.ApkVersionName
-	detectInfo.Channel = info.Channel
+	// detectInfo * dal.DetectInfo
+	// detectInfo.ApkName = info.ApkName
+	// detectInfo.Version = info.ApkVersionName
+	// detectInfo.Channel = info.Channel
 	//更新任务的权限信息
 	permAppInfos, err := permUpdate(task, info.PermsInAppInfo)
 	if err != nil {
@@ -155,7 +154,8 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 
 	//更新权限-app-task关系表
 	var relationship dal.PermAppRelation
-	relationship.TaskId = detectInfo.TaskId
+	relationship.TaskId = int(task.ID)
+	// relationship.TaskId = detectInfo.TaskId
 	appID, err := strconv.Atoi(task.AppId)
 	if err != nil {
 		logs.Error("%s atoi error: %v", msgHeader, err)
@@ -165,9 +165,11 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 	if taskUpdateFlag {
 		relationship.AppVersion = task.AppVersion
 	} else {
-		relationship.AppVersion = ".aab副包+" + detectInfo.Version
+		relationship.AppVersion = ".aab副包+" + info.ApkVersionName
+		// relationship.AppVersion = ".aab副包+" + detectInfo.Version
 	}
-	relationship.AppVersion = detectInfo.Version
+	relationship.AppVersion = info.ApkVersionName
+	// relationship.AppVersion = detectInfo.Version
 	relationship.SubIndex = index //新增下标兼容.aab结果
 	relationship.PermInfos = permAppInfos
 	if err := dal.InsertPermAppRelation(relationship); err != nil {
@@ -175,11 +177,16 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, detectInf
 		return err
 	}
 
-	//插入appInfo信息到apk表
-	perStr := "" //旧版权限信息
-	detectInfo.Permissions = perStr
-	detectInfo.SubIndex = index
-	if err := dal.InsertDetectInfo(*detectInfo); err != nil {
+	// detectInfo.SubIndex = index
+	if err := database.InsertDBRecord(database.DB(), &dal.DetectInfo{
+		TaskId:   int(task.ID),
+		ApkName:  info.ApkName,
+		Version:  info.ApkVersionName,
+		Channel:  info.Channel,
+		ToolId:   toolID,
+		SubIndex: index,
+	}); err != nil {
+		// if err := dal.InsertDetectInfo(*detectInfo); err != nil {
 		logs.Error("%s insert detect information failed: %v", msgHeader, err)
 		return err
 	}
