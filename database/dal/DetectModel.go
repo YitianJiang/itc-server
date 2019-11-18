@@ -472,30 +472,6 @@ func UpdateOldApkDetectDetailLevel(ids *[]string, levels *[]string, configIds *[
 }
 
 /**
-检测信息insert-----fj
-*/
-func InsertDetectInfo(info DetectInfo) error {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
-		return nil
-	}
-	defer connection.Close()
-
-	db := connection.Table(DetectInfo{}.TableName()).LogMode(_const.DB_LOG_MODE)
-
-	info.CreatedAt = time.Now()
-	info.UpdatedAt = time.Now()
-
-	if err1 := db.Create(&info).Error; err1 != nil {
-		logs.Error("数据库新增检测信息失败,%v", err1)
-		return err1
-	}
-	return nil
-
-}
-
-/**
 敏感信息详情insert------fj
 */
 func InsertDetectDetail(detail DetectContentDetail) error {
