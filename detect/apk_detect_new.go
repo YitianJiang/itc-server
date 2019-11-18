@@ -148,24 +148,11 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, toolID in
 		logs.Error("%s update permission failed: %v", msgHeader, err)
 		return err
 	}
-
-	// 更新权限-app-task关系表
-	// var relationship dal.PermAppRelation
-	// relationship.TaskId = int(task.ID)
 	appID, err := strconv.Atoi(task.AppId)
 	if err != nil {
 		logs.Error("%s atoi error: %v", msgHeader, err)
 		return err
 	}
-	// relationship.AppId = appID
-	// if taskUpdateFlag {
-	// relationship.AppVersion = task.AppVersion
-	// } else {
-	// relationship.AppVersion = ".aab副包+" + info.ApkVersionName
-	// }
-	// relationship.AppVersion = info.ApkVersionName
-	// relationship.SubIndex = index //新增下标兼容.aab结果
-	// relationship.PermInfos = permAppInfos
 	if err := database.InsertDBRecord(database.DB(), &dal.PermAppRelation{
 		TaskId:     int(task.ID),
 		AppId:      appID,
@@ -173,7 +160,6 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, toolID in
 		SubIndex:   index,
 		PermInfos:  permAppInfos,
 	}); err != nil {
-		// if err := dal.InsertPermAppRelation(relationship); err != nil {
 		logs.Error("%s insert tb_perm_apprelation failed: %v", msgHeader, err)
 		return err
 	}
