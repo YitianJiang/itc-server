@@ -103,7 +103,7 @@ func AddDetectItem(c *gin.Context) {
  */
 func GetSelfCheckItems(c *gin.Context) {
 
-	appIdParam, ok := c.GetQuery("appId")
+	appID, ok := c.GetQuery("appId")
 	if !ok {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, "miss appId")
 		return
@@ -112,11 +112,11 @@ func GetSelfCheckItems(c *gin.Context) {
 	if !bool { //检查项管理中返回和appID相关检查项，
 		var ItemList []interface{}
 		appSelfItem_A := dal.QueryAppSelfItem(map[string]interface{}{
-			"appId":    appIdParam,
+			"appId":    appID,
 			"platform": 0,
 		})
 		appSelfItem_O := dal.QueryAppSelfItem(map[string]interface{}{
-			"appId":    appIdParam,
+			"appId":    appID,
 			"platform": 1,
 		})
 		var androidItemList []interface{}
@@ -187,7 +187,7 @@ func GetSelfCheckItems(c *gin.Context) {
 	//查询taskItemList为空
 	if data == nil {
 		appSelf := dal.QueryAppSelfItem(map[string]interface{}{
-			"appId":    appIdParam,
+			"appId":    appID,
 			"platform": platform,
 		})
 		var taskSelf []interface{} //task的自查项
@@ -205,7 +205,7 @@ func GetSelfCheckItems(c *gin.Context) {
 			//插入appItem
 			var appGGSelf dal.AppSelfItem
 			appGGSelf.Platform = platform
-			appGGSelf.AppId, _ = strconv.Atoi(appIdParam)
+			appGGSelf.AppId, _ = strconv.Atoi(appID)
 			ggJson, _ := json.Marshal(map[string]interface{}{
 				"item": ggList,
 			})
@@ -260,11 +260,6 @@ func GetSelfCheckItems(c *gin.Context) {
 		isInsert := dal.InsertTaskSelfItem(taskSelfItem)
 		if !isInsert {
 			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("insert self-check failed"))
-			// c.JSON(http.StatusOK, gin.H{
-			// 	"message":   "Task自查项插入数据库失败",
-			// 	"errorCode": -1,
-			// 	"data":      []interface{}{},
-			// })
 			return
 		}
 		utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success", taskSelf)
