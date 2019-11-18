@@ -130,9 +130,7 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, toolID in
 	msgHeader := fmt.Sprintf("task id: %v", task.ID)
 
 	//判断appInfo信息是否为主要信息，只有主要信息--primary为1才会修改任务的appName和Version,或者primary为nil---只有一个信息
-	var taskUpdateFlag = false
 	if info.Primary == nil || fmt.Sprint(info.Primary) == "1" {
-		taskUpdateFlag = true
 		task.AppName = info.ApkName
 		task.AppVersion = info.ApkVersionName
 		task.InnerVersion = info.Meta.InnerVersion
@@ -141,7 +139,6 @@ func AppInfoAnalysis_2(task *dal.DetectStruct, info dal.AppInfoStruct, toolID in
 			return err
 		}
 	}
-	logs.Notice("%v flag: %v", info.Primary, taskUpdateFlag)
 	//更新任务的权限信息
 	permAppInfos, err := permUpdate(task, info.PermsInAppInfo)
 	if err != nil {
