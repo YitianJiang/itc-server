@@ -90,10 +90,13 @@ func autoConfirmAndroidEx(p *confirmParams, tag bool) error {
 		go func(task *dal.DetectStruct) {
 			sieve := make(map[string]interface{})
 			sieve["task_id"] = task.ID
-			sieve["sub_index"] = p.Index
 			var updated bool
 			var err error
 			if tag {
+				// Permission should be confirmed in each package
+				// even they are same because it's very sensitive,
+				// but method and list don't have to.
+				sieve["sub_index"] = p.Index
 				updated, err = autoConfirmAndroidPermission(p, sieve)
 			} else {
 				updated, err = autoConfirmAndroidStringMethod(p, sieve)
@@ -144,23 +147,44 @@ func autoConfirmAndroidStringMethod(p *confirmParams, sieve map[string]interface
 		sieve["class_name"] = p.Item.Name[:k]
 		sieve["key_info"] = p.Item.Name[k+1:]
 	}
-	record, err := readExactDetectContentDetail(database.DB(), sieve)
+
+	records, err := readDetectContentDetail(database.DB(), sieve)
 	if err != nil {
 		logs.Error("read tb_detect_content_detail failed: %v", err)
 		return false, err
 	}
-	if record == nil {
-		// It's ok because the tasks selected contain fail and detecting state.
-		logs.Warn("cannot find any matched record with sieve: %v", sieve)
-		return false, nil
+	for i := range records {
+		// if record == nil {
+		// 	// It's ok because the tasks selected contain fail and detecting state.
+		// 	logs.Warn("cannot find any matched record with sieve: %v", sieve)
+		// 	return false, nil
+		// }
+		records[i].Status = p.Status
+		records[i].Confirmer = p.Confirmer
+		records[i].Remark = p.Remark
+		if err := database.UpdateDBRecord(database.DB(), &records[i]); err != nil {
+			logs.Error("update tb_detect_content_detail failed: %v", err)
+			return false, err
+		}
 	}
-	record.Status = p.Status
-	record.Confirmer = p.Confirmer
-	record.Remark = p.Remark
-	if err := database.UpdateDBRecord(database.DB(), record); err != nil {
-		logs.Error("update tb_detect_content_detail failed: %v", err)
-		return false, err
-	}
+
+	// record, err := readExactDetectContentDetail(database.DB(), sieve)
+	// if err != nil {
+	// 	logs.Error("read tb_detect_content_detail failed: %v", err)
+	// 	return false, err
+	// }
+	// if record == nil {
+	// 	// It's ok because the tasks selected contain fail and detecting state.
+	// 	logs.Warn("cannot find any matched record with sieve: %v", sieve)
+	// 	return false, nil
+	// }
+	// record.Status = p.Status
+	// record.Confirmer = p.Confirmer
+	// record.Remark = p.Remark
+	// if err := database.UpdateDBRecord(database.DB(), record); err != nil {
+	// 	logs.Error("update tb_detect_content_detail failed: %v", err)
+	// 	return false, err
+	// }
 
 	return true, nil
 }
