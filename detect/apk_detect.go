@@ -780,22 +780,6 @@ func readExactPermAPPRelation(db *gorm.DB, sieve map[string]interface{}) (*dal.P
 	return &result, nil
 }
 
-// func getLastestPermAPPRelation(db *gorm.DB, sieve map[string]interface{}) (*dal.PermAppRelation, error) {
-
-// 	data, err := readPermAPPRelation(db, sieve)
-// 	if err != nil {
-// 		logs.Error("read tb_perm_app_relation failed: %v", err)
-// 		return nil, err
-// 	}
-
-// 	if len(data) <= 0 {
-// 		return nil, nil
-// 	}
-
-// 	// The default order is created_at asc, so return the final element.
-// 	return &data[len(data)-1], nil
-// }
-
 func readPermAPPRelation(db *gorm.DB, sieve map[string]interface{}) ([]dal.PermAppRelation, error) {
 
 	var result []dal.PermAppRelation
