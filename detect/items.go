@@ -259,16 +259,17 @@ func GetSelfCheckItems(c *gin.Context) {
 		taskSelfItem.TaskId = task_id
 		isInsert := dal.InsertTaskSelfItem(taskSelfItem)
 		if !isInsert {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "Task自查项插入数据库失败",
-				"errorCode": -1,
-				"data":      []interface{}{},
-			})
-			return
-		} else {
-			utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success", taskSelf)
+			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("insert self-check failed"))
+			// c.JSON(http.StatusOK, gin.H{
+			// 	"message":   "Task自查项插入数据库失败",
+			// 	"errorCode": -1,
+			// 	"data":      []interface{}{},
+			// })
 			return
 		}
+		utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success", taskSelf)
+		return
+
 	}
 	if flag && data != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success", data)
