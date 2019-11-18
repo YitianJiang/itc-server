@@ -105,12 +105,6 @@ func GetSelfCheckItems(c *gin.Context) {
 
 	appIdParam, ok := c.GetQuery("appId")
 	if !ok {
-		// logs.Error("缺少appId参数！")
-		// c.JSON(http.StatusOK, gin.H{
-		// 	"message":   "缺少appId参数！",
-		// 	"errorCode": -1,
-		// 	"data":      "缺少appId参数！",
-		// })
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, "miss appId")
 		return
 	}
@@ -135,12 +129,6 @@ func GetSelfCheckItems(c *gin.Context) {
 			androidMap := make(map[string]interface{})
 			if err := json.Unmarshal([]byte((*appSelfItem_A)[0].SelfItems), &androidMap); err != nil {
 				utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("unmarshal error: %v content: %v", err, (*appSelfItem_A)[0].SelfItems))
-				// logs.Error(err.Error())
-				// c.JSON(http.StatusOK, gin.H{
-				// "message":   "解析json出错！",
-				// "errorCode": -1,
-				// "data":      []interface{}{},
-				// })
 				return
 			}
 			for _, i := range androidMap["item"].([]interface{}) {
@@ -157,12 +145,6 @@ func GetSelfCheckItems(c *gin.Context) {
 			iosMap := make(map[string]interface{})
 			if err := json.Unmarshal([]byte((*appSelfItem_O)[0].SelfItems), &iosMap); err != nil {
 				utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("unmarshal error: %v content: %v", err, (*appSelfItem_O)[0].SelfItems))
-				// logs.Error(err.Error())
-				// c.JSON(http.StatusOK, gin.H{
-				// 	"message":   "解析json出错！",
-				// 	"errorCode": -1,
-				// 	"data":      []interface{}{},
-				// })
 				return
 			}
 			for _, i := range iosMap["item"].([]interface{}) {
@@ -185,11 +167,6 @@ func GetSelfCheckItems(c *gin.Context) {
 			}
 		}
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, "success", ItemList)
-		// c.JSON(http.StatusOK, gin.H{
-		// 	"message":   "success！",
-		// 	"errorCode": 0,
-		// 	"data":      ItemList,
-		// })
 		return
 	}
 	//任务管理中展示自查项
@@ -205,11 +182,6 @@ func GetSelfCheckItems(c *gin.Context) {
 	//查询出错
 	if !flag {
 		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("get self-check items failed"))
-		// c.JSON(http.StatusOK, gin.H{
-		// 	"message":   "查询Task自查项失败！",
-		// 	"errorCode": -1,
-		// 	"data":      []interface{}{},
-		// })
 		return
 	}
 	//查询taskItemList为空
@@ -226,11 +198,6 @@ func GetSelfCheckItems(c *gin.Context) {
 				"platform": platform,
 			})
 			if len(ggList) == 0 { //公共检查项为空
-				// c.JSON(http.StatusOK, gin.H{
-				// 	"message":   "success,该APP没有自查项！",
-				// 	"errorCode": 0,
-				// 	"data":      []interface{}{},
-				// })
 				utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
 				return
 			}
@@ -285,12 +252,6 @@ func GetSelfCheckItems(c *gin.Context) {
 		})
 		if err != nil {
 			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("marshal error: %v", err))
-			// logs.Error(err.Error())
-			// c.JSON(http.StatusOK, gin.H{
-			// 	"message":   "map json转换出错！",
-			// 	"errorCode": -1,
-			// 	"data":      []interface{}{},
-			// })
 			return
 		}
 		var taskSelfItem dal.TaskSelfItem
@@ -306,21 +267,11 @@ func GetSelfCheckItems(c *gin.Context) {
 			return
 		} else {
 			utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success", taskSelf)
-			// c.JSON(http.StatusOK, gin.H{
-			// 	"message":   "success！",
-			// 	"errorCode": 0,
-			// 	"data":      taskSelf,
-			// })
 			return
 		}
 	}
 	if flag && data != nil {
 		utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success", data)
-		// c.JSON(http.StatusOK, gin.H{
-		// 	"message":   "success！",
-		// 	"errorCode": 0,
-		// 	"data":      data,
-		// })
 	}
 }
 
