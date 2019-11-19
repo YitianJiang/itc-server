@@ -3,9 +3,12 @@ package detect
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 )
 
@@ -154,4 +157,91 @@ func taskDetailiOS(taskID interface{}, toolID interface{}) (int, int, int, error
 	}
 
 	return unconfirmed, pass, fail, nil
+}
+
+//全部确认完成后处理
+//confirmLark 0:检测完成diff时，1：确认检测结果，2：确认自查结果
+func StatusDeal(detect dal.DetectStruct, confirmLark int) error {
+	//ci回调
+	if detect.Status == 1 && (detect.Platform == 0 || detect.SelfCheckStatus == 1) {
+		if err := CICallBack(&detect); err != nil {
+			logs.Error("回调ci出错！", err.Error())
+			return err
+		}
+	}
+	if detect.Status != 0 && (detect.Platform == 0 || detect.SelfCheckStatus != 0) {
+		//diff时调用，不用发冗余消息提醒
+		if confirmLark == 0 {
+			return nil
+		}
+		//结果通知
+		go func() {
+			selfNoPass := detect.SelftNoPass
+			detectNoPass := detect.DetectNoPass
+			message := "你好，" + detect.AppName + " " + detect.AppVersion
+			if detect.Platform == 0 {
+				message += " Android包"
+			} else {
+				message += " iOS包"
+			}
+			message += "  已经确认完毕！"
+			url := "http://rocket.bytedance.net/rocket/itc/task?biz=" + detect.AppId + "&showItcDetail=1&itcTaskId=" + strconv.Itoa(int(detect.ID))
+			lark_people := detect.ToLarker
+			peoples := strings.Replace(lark_people, "，", ",", -1)
+			lark_people_arr := strings.Split(peoples, ",")
+			for _, p := range lark_people_arr {
+				utils.LarkConfirmResult(strings.TrimSpace(p), message, url, detectNoPass, selfNoPass, false)
+			}
+			lark_group := detect.ToGroup
+			groups := strings.Replace(lark_group, "，", ",", -1)
+			lark_group_arr := strings.Split(groups, ",")
+			for _, g := range lark_group_arr {
+				utils.LarkConfirmResult(strings.TrimSpace(g), message, url, detectNoPass, selfNoPass, true)
+			}
+		}()
+	}
+	return nil
+}
+
+func CICallBack(task *dal.DetectStruct) error {
+	if task.Platform == 1 && (task.SelfCheckStatus != 1 || task.Status != 1) {
+		logs.Info("不满足callback条件")
+		return nil
+	}
+	var t dal.ExtraStruct
+	//兼容旧信息---无extra_info字段
+	if task.ExtraInfo == "" {
+		return nil
+	}
+	err := json.Unmarshal([]byte(task.ExtraInfo), &t)
+	if err != nil {
+		logs.Error("任务附加信息存储格式错误，任务ID：" + fmt.Sprint(task.ID))
+		utils.LarkDingOneInner("fanjuan.xqp", "任务附加信息存储格式错误，任务ID："+fmt.Sprint(task.ID))
+		return err
+	}
+	//无回调地址（页面上传），不需要进行回调
+	if t.CallBackAddr == "" {
+		return nil
+	}
+	urlInfos := strings.Split(t.CallBackAddr, "?")
+	workflow_id := ""
+	job_id := ""
+	if len(urlInfos) > 1 {
+		queryInfos := getUrlInfo(urlInfos[1])
+		if v, ok := queryInfos["workflow_id"]; ok {
+			workflow_id = v
+		}
+		if v, ok := queryInfos["job_id"]; ok {
+			job_id = v
+		}
+	}
+
+	//回调CI接口，发送post请求
+	data := make(map[string]string)
+	data["workflow_id"] = workflow_id
+	data["job_id"] = job_id
+	data["statsu"] = "2"
+	data["task_id"] = fmt.Sprint(task.ID)
+	url := urlInfos[0]
+	return PostInfos(url, data)
 }

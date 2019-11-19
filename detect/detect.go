@@ -553,49 +553,6 @@ func Alram(c *gin.Context) {
 	})
 }
 
-func CICallBack(task *dal.DetectStruct) error {
-	if task.Platform == 1 && (task.SelfCheckStatus != 1 || task.Status != 1) {
-		logs.Info("不满足callback条件")
-		return nil
-	}
-	var t dal.ExtraStruct
-	//兼容旧信息---无extra_info字段
-	if task.ExtraInfo == "" {
-		return nil
-	}
-	err := json.Unmarshal([]byte(task.ExtraInfo), &t)
-	if err != nil {
-		logs.Error("任务附加信息存储格式错误，任务ID：" + fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("fanjuan.xqp", "任务附加信息存储格式错误，任务ID："+fmt.Sprint(task.ID))
-		return err
-	}
-	//无回调地址（页面上传），不需要进行回调
-	if t.CallBackAddr == "" {
-		return nil
-	}
-	urlInfos := strings.Split(t.CallBackAddr, "?")
-	workflow_id := ""
-	job_id := ""
-	if len(urlInfos) > 1 {
-		queryInfos := getUrlInfo(urlInfos[1])
-		if v, ok := queryInfos["workflow_id"]; ok {
-			workflow_id = v
-		}
-		if v, ok := queryInfos["job_id"]; ok {
-			job_id = v
-		}
-	}
-
-	//回调CI接口，发送post请求
-	data := make(map[string]string)
-	data["workflow_id"] = workflow_id
-	data["job_id"] = job_id
-	data["statsu"] = "2"
-	data["task_id"] = fmt.Sprint(task.ID)
-	url := urlInfos[0]
-	return PostInfos(url, data)
-}
-
 /**
 预审发送post信息
 */
