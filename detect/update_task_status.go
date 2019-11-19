@@ -3,11 +3,11 @@ package detect
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
+	"code.byted.org/clientQA/itc-server/settings"
 	"code.byted.org/clientQA/itc-server/utils"
 	"code.byted.org/gopkg/logs"
 )
@@ -159,15 +159,12 @@ func taskDetailiOS(taskID interface{}, toolID interface{}) (int, int, int, error
 	return unconfirmed, pass, fail, nil
 }
 
-//全部确认完成后处理
 //confirmLark 0:检测完成diff时，1：确认检测结果，2：确认自查结果
 func StatusDeal(task *dal.DetectStruct, confirmLark int) error {
-	//ci回调
-	if task.Status == 1 && (task.Platform == 0 || task.SelfCheckStatus == 1) {
-		if err := callbackCI(task); err != nil {
-			logs.Error("回调ci出错！", err.Error())
-			return err
-		}
+
+	if err := callbackCI(task); err != nil {
+		logs.Error("task id: %v callback CI failed: %v", task.ID, err)
+		return err
 	}
 	if task.Status != 0 && (task.Platform == 0 || task.SelfCheckStatus != 0) {
 		//diff时调用，不用发冗余消息提醒
@@ -176,8 +173,6 @@ func StatusDeal(task *dal.DetectStruct, confirmLark int) error {
 		}
 		//结果通知
 		go func() {
-			selfNoPass := task.SelftNoPass
-			detectNoPass := task.DetectNoPass
 			message := "你好，" + task.AppName + " " + task.AppVersion
 			if task.Platform == 0 {
 				message += " Android包"
@@ -185,21 +180,18 @@ func StatusDeal(task *dal.DetectStruct, confirmLark int) error {
 				message += " iOS包"
 			}
 			message += "  已经确认完毕！"
-			url := "http://rocket.bytedance.net/rocket/itc/task?biz=" + task.AppId + "&showItcDetail=1&itcTaskId=" + strconv.Itoa(int(task.ID))
-			lark_people := task.ToLarker
-			peoples := strings.Replace(lark_people, "，", ",", -1)
-			lark_people_arr := strings.Split(peoples, ",")
-			for _, p := range lark_people_arr {
-				utils.LarkConfirmResult(strings.TrimSpace(p), message, url, detectNoPass, selfNoPass, false)
+			url := fmt.Sprintf(settings.Get().Detect.TaskURL, task.AppId, task.ID)
+			peoples := strings.Replace(task.ToLarker, "，", ",", -1)
+			for _, p := range strings.Split(peoples, ",") {
+				utils.LarkConfirmResult(strings.TrimSpace(p), message, url, task.DetectNoPass, task.SelftNoPass, false)
 			}
-			lark_group := task.ToGroup
-			groups := strings.Replace(lark_group, "，", ",", -1)
-			lark_group_arr := strings.Split(groups, ",")
-			for _, g := range lark_group_arr {
-				utils.LarkConfirmResult(strings.TrimSpace(g), message, url, detectNoPass, selfNoPass, true)
+			groups := strings.Replace(task.ToGroup, "，", ",", -1)
+			for _, g := range strings.Split(groups, ",") {
+				utils.LarkConfirmResult(strings.TrimSpace(g), message, url, task.DetectNoPass, task.SelftNoPass, true)
 			}
 		}()
 	}
+
 	return nil
 }
 
