@@ -204,31 +204,32 @@ func StatusDeal(task *dal.DetectStruct, confirmLark int) error {
 }
 
 func callbackCI(task *dal.DetectStruct) error {
-	if task.Platform == 1 && (task.SelfCheckStatus != 1 || task.Status != 1) {
-		logs.Info("不满足callback条件")
-		return nil
+
+	if (task.Platform == platformAndorid && (task.Status == ConfirmedPass || task.Status == ConfirmedFail)) ||
+		(task.Platform == platformiOS && (task.Status == ConfirmedFail || (task.Status == ConfirmedPass && task.SelfCheckStatus == ConfirmedPass))) {
+		if task.ExtraInfo == "" {
+			return nil
+		}
+		var t dal.ExtraStruct
+		if err := json.Unmarshal([]byte(task.ExtraInfo), &t); err != nil {
+			logs.Error("task id: %v unmarshal error: %v", task.ID, err)
+			return err
+		}
+		if t.CallBackAddr == "" {
+			return nil
+		}
+		urlInfos := strings.Split(t.CallBackAddr, "?")
+		if len(urlInfos) < 2 {
+			return nil
+		}
+		m := getCallbackParam(urlInfos[1])
+		m["statsu"] = "2"
+		m["task_id"] = fmt.Sprint(task.ID)
+
+		return PostInfos(urlInfos[0], m)
 	}
-	//兼容旧信息---无extra_info字段
-	if task.ExtraInfo == "" {
-		return nil
-	}
-	var t dal.ExtraStruct
-	if err := json.Unmarshal([]byte(task.ExtraInfo), &t); err != nil {
-		logs.Error("task id: %v unmarshal error: %v", task.ID, err)
-		return err
-	}
-	//无回调地址（页面上传），不需要进行回调
-	if t.CallBackAddr == "" {
-		return nil
-	}
-	urlInfos := strings.Split(t.CallBackAddr, "?")
-	if len(urlInfos) < 2 {
-		return nil
-	}
-	m := getCallbackParam(urlInfos[1])
-	m["statsu"] = "2"
-	m["task_id"] = fmt.Sprint(task.ID)
-	return PostInfos(urlInfos[0], m)
+
+	return nil
 }
 
 func getCallbackParam(url string) map[string]string {
