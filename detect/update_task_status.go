@@ -222,26 +222,32 @@ func callbackCI(task *dal.DetectStruct) error {
 		return nil
 	}
 	urlInfos := strings.Split(t.CallBackAddr, "?")
-	workflow_id := ""
-	job_id := ""
-	if len(urlInfos) > 1 {
-		queryInfos := getUrlInfo(urlInfos[1])
-		if v, ok := queryInfos["workflow_id"]; ok {
-			workflow_id = v
-		}
-		if v, ok := queryInfos["job_id"]; ok {
-			job_id = v
-		}
+	if len(urlInfos) < 2 {
+		return nil
 	}
+	m := getUrlInfo(urlInfos[1])
+	m["statsu"] = "2"
+	m["task_id"] = fmt.Sprint(task.ID)
+	// workflow_id := ""
+	// job_id := ""
+	// if len(urlInfos) > 1 {
+	// 	queryInfos := getUrlInfo(urlInfos[1])
+	// 	if v, ok := queryInfos["workflow_id"]; ok {
+	// 		workflow_id = v
+	// 	}
+	// 	if v, ok := queryInfos["job_id"]; ok {
+	// 		job_id = v
+	// 	}
+	// }
 
-	//回调CI接口，发送post请求
-	data := make(map[string]string)
-	data["workflow_id"] = workflow_id
-	data["job_id"] = job_id
-	data["statsu"] = "2"
-	data["task_id"] = fmt.Sprint(task.ID)
-	url := urlInfos[0]
-	return PostInfos(url, data)
+	// //回调CI接口，发送post请求
+	// data := make(map[string]string)
+	// data["workflow_id"] = workflow_id
+	// data["job_id"] = job_id
+	// data["statsu"] = "2"
+	// data["task_id"] = fmt.Sprint(task.ID)
+	return PostInfos(urlInfos[0], m)
+	// return PostInfos(url, data)
 }
 
 /**
