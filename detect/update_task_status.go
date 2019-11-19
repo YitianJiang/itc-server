@@ -225,23 +225,21 @@ func callbackCI(task *dal.DetectStruct) error {
 	if len(urlInfos) < 2 {
 		return nil
 	}
-	m := getUrlInfo(urlInfos[1])
+	m := getCallbackParam(urlInfos[1])
 	m["statsu"] = "2"
 	m["task_id"] = fmt.Sprint(task.ID)
 	return PostInfos(urlInfos[0], m)
 }
 
-/**
-获取URL信息
-*/
-func getUrlInfo(url string) map[string]string {
-	infos := strings.Split(url, "&")
+func getCallbackParam(url string) map[string]string {
+
 	result := make(map[string]string)
-	for _, info := range infos {
-		keyValues := strings.Split(info, "=")
-		if len(keyValues) > 1 {
-			result[keyValues[0]] = keyValues[1]
+	for _, info := range strings.Split(url, "&") {
+		keyValue := strings.Split(info, "=")
+		if len(keyValue) > 1 {
+			result[keyValue[0]] = keyValue[1]
 		}
 	}
+
 	return result
 }
