@@ -30,11 +30,12 @@ type VersionDiff struct {
 // Attention contains the simplified information of each permission,
 // sensitive method, sensitive string (or something else in the future).
 type Attention struct {
-	Type        string    `json:"type"`
-	Status      int       `json:"status"` // 0: unconfirmed 1: pass 2: fail
-	ConfirmedAt time.Time `json:"confirmed_at"`
-	Confirmer   string    `json:"confirmer"`
-	Remark      string    `json:"remark"`
+	Type          string    `json:"type"`
+	OriginVersion string    `json:"origin_version"`
+	Status        int       `json:"status"` // 0: unconfirmed 1: pass 2: fail
+	ConfirmedAt   time.Time `json:"confirmed_at"`
+	Confirmer     string    `json:"confirmer"`
+	Remark        string    `json:"remark"`
 }
 
 // TableName returns the table name of bind with the struct.

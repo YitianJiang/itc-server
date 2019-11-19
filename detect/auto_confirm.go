@@ -622,6 +622,10 @@ func firstTime(appID string, platform int, version string, items []Item) (
 
 	m := make(map[string]*Attention)
 	createVersionRecord(m, items)
+	// Initialize the origin version since this is freshman.
+	for _, v := range m {
+		v.OriginVersion = version
+	}
 
 	previous, err := previousVersion(appID, platform, version)
 	if err != nil {
@@ -665,6 +669,12 @@ func notfirstTime(record *VersionDiff, items []Item) (map[string]*Attention, err
 	originLen := len(m)
 	createVersionRecord(m, items)
 	if len(m) > originLen {
+		// Update the origin version for the new items.
+		for _, v := range m {
+			if v.OriginVersion == "" {
+				v.OriginVersion = record.Version
+			}
+		}
 		// Something new was added into the version.
 		attention, err := json.Marshal(&m)
 		if err != nil {
