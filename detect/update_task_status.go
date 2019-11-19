@@ -208,15 +208,13 @@ func callbackCI(task *dal.DetectStruct) error {
 		logs.Info("不满足callback条件")
 		return nil
 	}
-	var t dal.ExtraStruct
 	//兼容旧信息---无extra_info字段
 	if task.ExtraInfo == "" {
 		return nil
 	}
-	err := json.Unmarshal([]byte(task.ExtraInfo), &t)
-	if err != nil {
-		logs.Error("任务附加信息存储格式错误，任务ID：" + fmt.Sprint(task.ID))
-		utils.LarkDingOneInner("fanjuan.xqp", "任务附加信息存储格式错误，任务ID："+fmt.Sprint(task.ID))
+	var t dal.ExtraStruct
+	if err := json.Unmarshal([]byte(task.ExtraInfo), &t); err != nil {
+		logs.Error("task id: %v unmarshal error: %v", task.ID, err)
 		return err
 	}
 	//无回调地址（页面上传），不需要进行回调
@@ -244,4 +242,19 @@ func callbackCI(task *dal.DetectStruct) error {
 	data["task_id"] = fmt.Sprint(task.ID)
 	url := urlInfos[0]
 	return PostInfos(url, data)
+}
+
+/**
+获取URL信息
+*/
+func getUrlInfo(url string) map[string]string {
+	infos := strings.Split(url, "&")
+	result := make(map[string]string)
+	for _, info := range infos {
+		keyValues := strings.Split(info, "=")
+		if len(keyValues) > 1 {
+			result[keyValues[0]] = keyValues[1]
+		}
+	}
+	return result
 }

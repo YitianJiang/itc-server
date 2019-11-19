@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	_const "code.byted.org/clientQA/itc-server/const"
@@ -598,19 +597,4 @@ func PostInfos(url string, data map[string]string) error {
 		logs.Info("taskId :"+taskId+",CI detect url's response: %+v", data)
 	}
 	return nil
-}
-
-/**
-获取URL信息
-*/
-func getUrlInfo(url string) map[string]string {
-	infos := strings.Split(url, "&")
-	result := make(map[string]string)
-	for _, info := range infos {
-		keyValues := strings.Split(info, "=")
-		if len(keyValues) > 1 {
-			result[keyValues[0]] = keyValues[1]
-		}
-	}
-	return result
 }
