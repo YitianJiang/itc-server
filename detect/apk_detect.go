@@ -701,7 +701,6 @@ func packPermissionListAndroid(permission string, m map[string]*Attention) (*Per
 		permOut.Key = fmt.Sprint(permMap["key"])
 		permOut.PermId = int(permMap["perm_id"].(float64))
 		permOut.Desc = fmt.Sprint(permMap["ability"])
-		// permOut.OtherVersion = permMap["first_version"].(string)
 		permOut.OtherVersion = m[permOut.Key].OriginVersion
 		permOut.Confirmer = fmt.Sprint(permMap["confirmer"])
 		permOut.Remark = fmt.Sprint(permMap["remark"])

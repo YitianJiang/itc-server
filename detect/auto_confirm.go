@@ -346,12 +346,6 @@ func preAutoConfirm(appID string, platform int, version string,
 	m[item.Name].Status = status
 	m[item.Name].Confirmer = who
 	m[item.Name].Remark = remark
-	//  = &Attention{
-	// 	Type:        *item.Type,
-	// 	Status:      status,
-	// 	ConfirmedAt: time.Now(),
-	// 	Confirmer:   who,
-	// 	Remark:      remark}
 	attention, err := json.Marshal(&m)
 	if err != nil {
 		logs.Error("marshal error: %v", err)
