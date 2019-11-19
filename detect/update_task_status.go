@@ -162,16 +162,16 @@ func taskDetailiOS(taskID interface{}, toolID interface{}) (int, int, int, error
 //confirmLark 0:检测完成diff时，1：确认检测结果，2：确认自查结果
 func StatusDeal(task *dal.DetectStruct, confirmLark int) error {
 
-	if err := callbackCI(task); err != nil {
-		logs.Error("task id: %v callback CI failed: %v", task.ID, err)
-		return err
-	}
-	if task.Status != 0 && (task.Platform == 0 || task.SelfCheckStatus != 0) {
-		//diff时调用，不用发冗余消息提醒
-		if confirmLark == 0 {
+	if (task.Platform == platformAndorid && (task.Status == ConfirmedPass || task.Status == ConfirmedFail)) ||
+		(task.Platform == platformiOS && (task.Status == ConfirmedFail || (task.Status == ConfirmedPass && task.SelfCheckStatus == ConfirmedPass))) {
+		if err := callbackCI(task); err != nil {
+			logs.Error("task id: %v callback CI failed: %v", task.ID, err)
+			return err
+		}
+
+		if confirmLark == 0 { //diff时调用，不用发冗余消息提醒
 			return nil
 		}
-		//结果通知
 		go func() {
 			message := "你好，" + task.AppName + " " + task.AppVersion
 			if task.Platform == 0 {
@@ -197,31 +197,26 @@ func StatusDeal(task *dal.DetectStruct, confirmLark int) error {
 
 func callbackCI(task *dal.DetectStruct) error {
 
-	if (task.Platform == platformAndorid && (task.Status == ConfirmedPass || task.Status == ConfirmedFail)) ||
-		(task.Platform == platformiOS && (task.Status == ConfirmedFail || (task.Status == ConfirmedPass && task.SelfCheckStatus == ConfirmedPass))) {
-		if task.ExtraInfo == "" {
-			return nil
-		}
-		var t dal.ExtraStruct
-		if err := json.Unmarshal([]byte(task.ExtraInfo), &t); err != nil {
-			logs.Error("task id: %v unmarshal error: %v", task.ID, err)
-			return err
-		}
-		if t.CallBackAddr == "" {
-			return nil
-		}
-		urlInfos := strings.Split(t.CallBackAddr, "?")
-		if len(urlInfos) < 2 {
-			return nil
-		}
-		m := getCallbackParam(urlInfos[1])
-		m["statsu"] = "2"
-		m["task_id"] = fmt.Sprint(task.ID)
-
-		return PostInfos(urlInfos[0], m)
+	if task.ExtraInfo == "" {
+		return nil
 	}
+	var t dal.ExtraStruct
+	if err := json.Unmarshal([]byte(task.ExtraInfo), &t); err != nil {
+		logs.Error("task id: %v unmarshal error: %v", task.ID, err)
+		return err
+	}
+	if t.CallBackAddr == "" {
+		return nil
+	}
+	urlInfos := strings.Split(t.CallBackAddr, "?")
+	if len(urlInfos) < 2 {
+		return nil
+	}
+	m := getCallbackParam(urlInfos[1])
+	m["statsu"] = "2"
+	m["task_id"] = fmt.Sprint(task.ID)
 
-	return nil
+	return PostInfos(urlInfos[0], m)
 }
 
 func getCallbackParam(url string) map[string]string {
