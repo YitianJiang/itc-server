@@ -253,5 +253,6 @@ func InitRouter(r *ginex.Engine) {
 	{
 		operationDBApi.POST("deleteBundleIdCap", developerconnmanager.DeleteBundleIdCap)
 		operationDBApi.POST("deleteCertPrivKey", developerconnmanager.DeleteCertPrivKey)
+		operationDBApi.POST("insertCertInfoTest",developerconnmanager.InsertCertInfoTest)
 	}
 }

@@ -28,6 +28,19 @@ type DeleteCertPrivReqModel struct {
 	ColumnName		   string		`json:"colum_name"     					binding:"required"`
 }
 
+type InsertCertInfoReqModel struct {
+	AccountName        string		`json:"account_name"        			binding:"required"`
+	TeamId			   string		`json:"team_id"        					binding:"required"`
+	CertName		   string		`json:"cert_name"        				binding:"required"`
+	PrivKeyUrl		   string       `json:"priv_key_url"        			binding:"required"`
+	CsrFileUrl		   string       `json:"csr_file_url"        			binding:"required"`
+	CertId    		   string	    `json:"cert_id"        					binding:"required"`
+	CertExpireDate	   string		`json:"cert_expire_date"        		binding:"required"`
+	CertType		   string       `json:"cert_type"        		        binding:"required"`
+	CertDownloadUrl	   string		`json:"cert_download_url"        		binding:"required"`
+}
+
+
 func queryAppAccountCert(tableName string,queryData map[string]interface{}) {
 	conn, err := database.GetDBConnection()
 	if err != nil {
@@ -106,4 +119,32 @@ func DeleteCertPrivKey(c *gin.Context){
 		})
 		return
 	}
+}
+
+func InsertCertInfoTest(c *gin.Context){
+	logs.Info("删除指定的Cert表中的列")
+	var body InsertCertInfoReqModel
+	err := c.ShouldBindJSON(&body)
+	utils.RecordError("参数绑定失败", err)
+	if err != nil {
+		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
+		return
+	}
+	var insertObj devconnmanager.CertInfo
+	insertObj.AccountName = body.AccountName
+	insertObj.TeamId = body.TeamId
+	insertObj.CertName = body.CertName
+	insertObj.PrivKeyUrl = body.PrivKeyUrl
+	insertObj.CsrFileUrl = body.CsrFileUrl
+	insertObj.CertId = body.CertId
+	insertObj.CertExpireDate = body.CertExpireDate
+	insertObj.CertType = body.CertType
+	insertObj.CertDownloadUrl = body.CertDownloadUrl
+	dbResult := devconnmanager.InsertCertInfo(&insertObj)
+	if !dbResult {
+		utils.AssembleJsonResponse(c, http.StatusInternalServerError, "往数据库中插入证书信息失败", body)
+		return
+	}
+	utils.AssembleJsonResponse(c, _const.SUCCESS, "插入成功", body)
+	return
 }
