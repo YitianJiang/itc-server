@@ -164,7 +164,7 @@ func taskDetailiOS(taskID interface{}, toolID interface{}) (int, int, int, error
 func StatusDeal(detect dal.DetectStruct, confirmLark int) error {
 	//ci回调
 	if detect.Status == 1 && (detect.Platform == 0 || detect.SelfCheckStatus == 1) {
-		if err := CICallBack(&detect); err != nil {
+		if err := callbackCI(&detect); err != nil {
 			logs.Error("回调ci出错！", err.Error())
 			return err
 		}
@@ -203,7 +203,7 @@ func StatusDeal(detect dal.DetectStruct, confirmLark int) error {
 	return nil
 }
 
-func CICallBack(task *dal.DetectStruct) error {
+func callbackCI(task *dal.DetectStruct) error {
 	if task.Platform == 1 && (task.SelfCheckStatus != 1 || task.Status != 1) {
 		logs.Info("不满足callback条件")
 		return nil
