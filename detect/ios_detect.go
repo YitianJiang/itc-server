@@ -81,6 +81,7 @@ func iOSResultClassify(task *dal.DetectStruct, toolId int, jsonContent *string) 
 				continue //黑名单内容为空，跳过
 			}
 			blackMap["name"] = k
+			blackMap["origin_version"] = task.AppVersion
 			blackMap["content"] = v
 			blackMap["status"] = 0
 			blackMap["confirmer"] = ""
@@ -130,6 +131,7 @@ func iOSResultClassify(task *dal.DetectStruct, toolId int, jsonContent *string) 
 			susClass := temMethod.(map[string]interface{})["class_name"].(string)
 			methodMap["name"] = susApi
 			methodMap["content"] = susClass
+			methodMap["origin_version"] = task.AppVersion
 			methodMap["status"] = 0
 			methodMap["confirmer"] = ""
 			methodMap["remark"] = ""
@@ -169,8 +171,8 @@ func iOSResultClassify(task *dal.DetectStruct, toolId int, jsonContent *string) 
 			} else {
 				privacyMap["priority"] = 3
 			}
+			privacyMap["origin_version"] = task.AppVersion
 			privacyMap["confirmer"] = ""
-			privacyMap["confirmVersion"] = ""
 			privacyMap["confirmReason"] = ""
 			privacyMap["status"] = 0
 			permissions = append(permissions, e)

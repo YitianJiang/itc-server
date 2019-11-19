@@ -286,7 +286,6 @@ func autoConfirmiOS(p *confirmParams) error {
 				t["status"] = p.Status
 				t["confirmer"] = p.Confirmer
 				t["confirmReason"] = p.Remark
-				t["confirmVersion"] = p.APPVersion
 			}
 		}
 	default:
@@ -339,13 +338,20 @@ func preAutoConfirm(appID string, platform int, version string,
 			logs.Error("unmarshal error: %v", err)
 			return false, err
 		}
+	} else {
+		m[item.Name].Type = *item.Type
+		m[item.Name].OriginVersion = version
 	}
-	m[item.Name] = &Attention{
-		Type:        *item.Type,
-		Status:      status,
-		ConfirmedAt: time.Now(),
-		Confirmer:   who,
-		Remark:      remark}
+	m[item.Name].ConfirmedAt = time.Now()
+	m[item.Name].Status = status
+	m[item.Name].Confirmer = who
+	m[item.Name].Remark = remark
+	//  = &Attention{
+	// 	Type:        *item.Type,
+	// 	Status:      status,
+	// 	ConfirmedAt: time.Now(),
+	// 	Confirmer:   who,
+	// 	Remark:      remark}
 	attention, err := json.Marshal(&m)
 	if err != nil {
 		logs.Error("marshal error: %v", err)
@@ -366,6 +372,7 @@ func preAutoConfirm(appID string, platform int, version string,
 		logs.Error("insert version record failed: %v", err)
 		return false, err
 	}
+
 	return true, nil
 }
 
@@ -511,6 +518,7 @@ func autoConfirmCallBackiOS(taskID interface{}, m map[string]*Attention) error {
 					return fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, list[j])
 				}
 				if v, ok := m[fmt.Sprint(u["permission"])]; ok {
+					u["origin_version"] = v.OriginVersion
 					u["status"] = v.Status
 					u["confirmer"] = v.Confirmer
 					u["confirmReason"] = v.Remark
@@ -529,6 +537,7 @@ func autoConfirmCallBackiOS(taskID interface{}, m map[string]*Attention) error {
 					return fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, list[j])
 				}
 				if v, ok := m[fmt.Sprintf("%v%v%v", u["content"], delimiter, u["name"])]; ok {
+					u["origin_version"] = v.OriginVersion
 					u["status"] = v.Status
 					u["confirmer"] = v.Confirmer
 					u["remark"] = v.Remark
@@ -547,6 +556,7 @@ func autoConfirmCallBackiOS(taskID interface{}, m map[string]*Attention) error {
 					return fmt.Errorf("%s cannot assert to map[string]interface{}: %v", header, list[j])
 				}
 				if v, ok := m[fmt.Sprint(u["name"])]; ok {
+					u["origin_version"] = v.OriginVersion
 					u["status"] = v.Status
 					u["confirmer"] = v.Confirmer
 					u["remark"] = v.Remark
@@ -623,8 +633,8 @@ func firstTime(appID string, platform int, version string, items []Item) (
 	m := make(map[string]*Attention)
 	createVersionRecord(m, items)
 	// Initialize the origin version since this is freshman.
-	for _, v := range m {
-		v.OriginVersion = version
+	for key := range m {
+		m[key].OriginVersion = version
 	}
 
 	previous, err := previousVersion(appID, platform, version)
@@ -634,8 +644,9 @@ func firstTime(appID string, platform int, version string, items []Item) (
 	}
 
 	if previous != nil {
+		logs.Notice("current version: %v previous version: %v", version, previous.Version)
 		if err := autoConfirmWithPreviousVersion(m, previous); err != nil {
-			logs.Error("uto confirm with previous version failed: %v", err)
+			logs.Error("auto confirm with previous version failed: %v", err)
 			return nil, false, err
 		}
 	}
@@ -780,16 +791,18 @@ func autoConfirmWithPreviousVersion(current map[string]*Attention,
 	// Unmarshal unmarshals the JSON into the value pointed at by the pointer.
 	// If the pointer is nil, Unmarshal allocates a new value for it to point to.
 	previous := make(map[string]*Attention)
+	logs.Notice("content: %s", prev.Attention)
 	if err := json.Unmarshal([]byte(prev.Attention), &previous); err != nil {
 		logs.Error("unmarshal error: %v", err)
 		return err
 	}
 
 	for k := range current {
-		if _, ok := previous[k]; ok {
+		if v, ok := previous[k]; ok {
 			// It shows up in previous version!
+			current[k].OriginVersion = v.OriginVersion
 			if previous[k].Status != Unconfirmed {
-				current[k] = previous[k]
+				current[k] = v
 			}
 		}
 	}

@@ -420,6 +420,14 @@ func getDetectResult(taskId string, toolId string) *[]dal.DetectQueryStruct {
 	finalResult := []dal.DetectQueryStruct{firstResult}
 	finalResult = append(finalResult, midResult...)
 
+	records, err := readAPPAttention(database.DB(), map[string]interface{}{
+		"app_id": task.AppId, "platform": task.Platform, "version": task.AppVersion})
+	m := make(map[string]*Attention)
+	if err := json.Unmarshal([]byte(records[0].Attention), &m); err != nil {
+		logs.Error("%s unmarshal error: %v", header, err)
+		return nil
+	}
+
 	//任务检测结果组输出重组
 	for i := 0; i < len(finalResult); i++ {
 		details := detailMap[finalResult[i].Index]
@@ -432,7 +440,7 @@ func getDetectResult(taskId string, toolId string) *[]dal.DetectQueryStruct {
 		finalResult[i].SStrs_new = strs_un
 
 		if hasPermListFlag { //权限结果重组
-			permissionsP, err := packPermissionListAndroid(permsMap[finalResult[i].Index].PermInfos)
+			permissionsP, err := packPermissionListAndroid(permsMap[finalResult[i].Index].PermInfos, m)
 			if err != nil {
 				logs.Error("%s construct permission list failed: %v", header, err)
 				return nil
@@ -673,7 +681,7 @@ func methodRiskLevelUpdate(ids *[]string, levels *[]string, configIds *[]dal.Det
 /**
 权限结果输出解析
 */
-func packPermissionListAndroid(permission string) (*PermSlice, error) {
+func packPermissionListAndroid(permission string, m map[string]*Attention) (*PermSlice, error) {
 	var permissionList []interface{}
 	if err := json.Unmarshal([]byte(permission), &permissionList); err != nil {
 		logs.Error("unmarshal error: %v content: %v", err, permission)
@@ -694,6 +702,7 @@ func packPermissionListAndroid(permission string) (*PermSlice, error) {
 		permOut.PermId = int(permMap["perm_id"].(float64))
 		permOut.Desc = fmt.Sprint(permMap["ability"])
 		// permOut.OtherVersion = permMap["first_version"].(string)
+		permOut.OtherVersion = m[permOut.Key].OriginVersion
 		permOut.Confirmer = fmt.Sprint(permMap["confirmer"])
 		permOut.Remark = fmt.Sprint(permMap["remark"])
 		if permOut.Status == 0 {
