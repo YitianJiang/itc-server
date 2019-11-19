@@ -50,7 +50,7 @@ func updateTaskStatus(taskID, toolID interface{}, platform int, confirmLark int)
 		logs.Error("%s update detect task failed: %v", header, err)
 		return unconfirmed, err
 	}
-	StatusDeal(*task, confirmLark) //ci回调和不通过block处理
+	StatusDeal(task, confirmLark) //ci回调和不通过block处理
 
 	return unconfirmed, nil
 }
@@ -161,10 +161,10 @@ func taskDetailiOS(taskID interface{}, toolID interface{}) (int, int, int, error
 
 //全部确认完成后处理
 //confirmLark 0:检测完成diff时，1：确认检测结果，2：确认自查结果
-func StatusDeal(task dal.DetectStruct, confirmLark int) error {
+func StatusDeal(task *dal.DetectStruct, confirmLark int) error {
 	//ci回调
 	if task.Status == 1 && (task.Platform == 0 || task.SelfCheckStatus == 1) {
-		if err := callbackCI(&task); err != nil {
+		if err := callbackCI(task); err != nil {
 			logs.Error("回调ci出错！", err.Error())
 			return err
 		}
