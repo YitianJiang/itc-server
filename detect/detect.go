@@ -657,13 +657,3 @@ func getUrlInfo(url string) map[string]string {
 	}
 	return result
 }
-
-/**
-自测Ci回调接口
-*/
-func CICallBackTest(c *gin.Context) {
-	param, _ := ioutil.ReadAll(c.Request.Body)
-	var t map[string]interface{}
-	json.Unmarshal(param, &t)
-	logs.Notice("CI回调返回信息，%v", t)
-}
