@@ -747,7 +747,7 @@ func transformVersion(s string) string {
 
 	var result string
 	for _, v := range strings.Split(strings.TrimSpace(t), " ") {
-		result += addLeadingZero(v, 10)
+		result += addLeadingZero(v, 5)
 	}
 
 	return result
