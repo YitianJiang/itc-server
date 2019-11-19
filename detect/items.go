@@ -354,7 +354,7 @@ func ConfirmSelfCheckItems(c *gin.Context) {
 		return
 	}
 	if detect != nil && detect.Status != 0 && detect.SelfCheckStatus != 0 {
-		StatusDeal(detect, 2)
+		handleTaskStatus(detect, 2)
 		// TODO: auto update self item?
 	}
 

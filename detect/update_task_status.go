@@ -50,7 +50,7 @@ func updateTaskStatus(taskID, toolID interface{}, platform int, confirmLark int)
 		logs.Error("%s update detect task failed: %v", header, err)
 		return unconfirmed, err
 	}
-	StatusDeal(task, confirmLark) //ci回调和不通过block处理
+	handleTaskStatus(task, confirmLark) //ci回调和不通过block处理
 
 	return unconfirmed, nil
 }
@@ -159,8 +159,7 @@ func taskDetailiOS(taskID interface{}, toolID interface{}) (int, int, int, error
 	return unconfirmed, pass, fail, nil
 }
 
-//confirmLark 0:检测完成diff时，1：确认检测结果，2：确认自查结果
-func StatusDeal(task *dal.DetectStruct, confirmLark int) error {
+func handleTaskStatus(task *dal.DetectStruct, confirmLark int) error {
 
 	if (task.Platform == platformAndorid && (task.Status == ConfirmedPass || task.Status == ConfirmedFail)) ||
 		(task.Platform == platformiOS && (task.Status == ConfirmedFail || (task.Status == ConfirmedPass && task.SelfCheckStatus == ConfirmedPass))) {
@@ -169,7 +168,7 @@ func StatusDeal(task *dal.DetectStruct, confirmLark int) error {
 			return err
 		}
 
-		if confirmLark == 0 { //diff时调用，不用发冗余消息提醒
+		if confirmLark == 0 { // 0:检测完成diff时调用，不用发冗余消息提醒 1：确认检测结果 2：确认自查结果
 			return nil
 		}
 		go func() {
