@@ -161,38 +161,38 @@ func taskDetailiOS(taskID interface{}, toolID interface{}) (int, int, int, error
 
 //全部确认完成后处理
 //confirmLark 0:检测完成diff时，1：确认检测结果，2：确认自查结果
-func StatusDeal(detect dal.DetectStruct, confirmLark int) error {
+func StatusDeal(task dal.DetectStruct, confirmLark int) error {
 	//ci回调
-	if detect.Status == 1 && (detect.Platform == 0 || detect.SelfCheckStatus == 1) {
-		if err := callbackCI(&detect); err != nil {
+	if task.Status == 1 && (task.Platform == 0 || task.SelfCheckStatus == 1) {
+		if err := callbackCI(&task); err != nil {
 			logs.Error("回调ci出错！", err.Error())
 			return err
 		}
 	}
-	if detect.Status != 0 && (detect.Platform == 0 || detect.SelfCheckStatus != 0) {
+	if task.Status != 0 && (task.Platform == 0 || task.SelfCheckStatus != 0) {
 		//diff时调用，不用发冗余消息提醒
 		if confirmLark == 0 {
 			return nil
 		}
 		//结果通知
 		go func() {
-			selfNoPass := detect.SelftNoPass
-			detectNoPass := detect.DetectNoPass
-			message := "你好，" + detect.AppName + " " + detect.AppVersion
-			if detect.Platform == 0 {
+			selfNoPass := task.SelftNoPass
+			detectNoPass := task.DetectNoPass
+			message := "你好，" + task.AppName + " " + task.AppVersion
+			if task.Platform == 0 {
 				message += " Android包"
 			} else {
 				message += " iOS包"
 			}
 			message += "  已经确认完毕！"
-			url := "http://rocket.bytedance.net/rocket/itc/task?biz=" + detect.AppId + "&showItcDetail=1&itcTaskId=" + strconv.Itoa(int(detect.ID))
-			lark_people := detect.ToLarker
+			url := "http://rocket.bytedance.net/rocket/itc/task?biz=" + task.AppId + "&showItcDetail=1&itcTaskId=" + strconv.Itoa(int(task.ID))
+			lark_people := task.ToLarker
 			peoples := strings.Replace(lark_people, "，", ",", -1)
 			lark_people_arr := strings.Split(peoples, ",")
 			for _, p := range lark_people_arr {
 				utils.LarkConfirmResult(strings.TrimSpace(p), message, url, detectNoPass, selfNoPass, false)
 			}
-			lark_group := detect.ToGroup
+			lark_group := task.ToGroup
 			groups := strings.Replace(lark_group, "，", ",", -1)
 			lark_group_arr := strings.Split(groups, ",")
 			for _, g := range lark_group_arr {
