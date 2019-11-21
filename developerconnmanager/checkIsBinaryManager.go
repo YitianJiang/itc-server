@@ -12,12 +12,13 @@ import (
 	"code.byted.org/clientQA/itc-server/utils"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 )
 
 type CheckInBinaryStatus struct {
 	OperateUser   string             `json:"operate_user"    binding:"required"`
 	AppId		  string			 `json:"app_id"			 binding:"required"`
-	RepoId		  string			 `json:"repo_id"	     binding:"required"`
+	RepoId		  int			     `json:"repo_id"	     binding:"required"`
 	RepoName      string			 `json:"repo_name"       binding:"required"`
 	Version       string 	         `json:"version"         binding:"required"`
 	BuildResult   int                `json:"build_result"    binding:"required"`
@@ -74,9 +75,10 @@ func CheckIsBinary(c *gin.Context)  {
 		utils.RecordError("bot发送消息错误", err)
 		contentText := form.SendMessageForm{}
 		msgType := "text"
+		repoId := strconv.Itoa(body.RepoId)
 		content := fmt.Sprintf("%s库的%s版本二进制失败了，主干分支问题请第一时间跟进<at user_id=\"%s\">test</at>，" +
 			"组件链接如下: http://mobile.bytedance.net/components/%s?appId=%s&repoId=%s&appType=1&tabKey=upgrade",body.RepoName,body.Version,
-			larkUserId.Data.UserId,body.RepoName,body.AppId,body.RepoId)
+			larkUserId.Data.UserId,body.RepoName,body.AppId,repoId)
 		contentText.OpenChatID = &chatId
 		contentText.MsgType = &msgType
 		contentText.Content.Text = &content
