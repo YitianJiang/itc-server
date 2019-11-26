@@ -213,4 +213,4 @@ var TestFlightAppIdAnd = map[string]map[string]string{
 }
 
 const DATE_FORMAT = "2006-01-02"
-const DETECT_URL_PRO = "10.95.15.163:9527"
+const DETECT_URL_PRO = "10.95.44.244:9527"
