@@ -29,6 +29,11 @@ import (
 )
 
 const (
+	platformAndorid = 0
+	platformiOS     = 1
+)
+
+const (
 	DETECT_URL_DEV = "10.2.209.202:9527"
 	//test----fj
 	Local_URL_PRO = "10.1.220.99:9527"
