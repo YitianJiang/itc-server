@@ -88,7 +88,7 @@ func ParseResultAndroid(task *dal.DetectStruct, resultJson *string, toolID int) 
 			detailContent.ToolId = toolID
 			detailContent.SubIndex = i
 			allStrs = append(allStrs, *StrAnalysis(strInfo, &detailContent))
-			sensitiveMethods = append(sensitiveStrings, detailContent.KeyInfo)
+			sensitiveStrings = append(sensitiveStrings, detailContent.KeyInfo)
 		}
 		if err := dal.InsertDetectDetailBatch(&allStrs); err != nil {
 			logs.Error("%s insert detect detail failed: %v", msgHeader, err)
