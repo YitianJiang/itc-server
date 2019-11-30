@@ -162,6 +162,7 @@ func importOldData() error {
 				}
 			}
 		}
+		logs.Notice(">>>>> PERMISSION\n%v", m)
 		autoImport(fmt.Sprint(permissions[i].AppId), 0, permissions[i].AppVersion, m)
 	}
 
@@ -262,14 +263,16 @@ func autoImport(appID string, platform int, version string, m map[string]*Attent
 			return err
 		}
 
-		for k := range t {
-			if v, ok := m[k]; ok {
+		for k, v := range m {
+			if _, ok := t[k]; ok {
 				if t[k].Status != 1 && v.Status == 1 {
 					t[k].Status = v.Status
 					t[k].ConfirmedAt = v.ConfirmedAt
 					t[k].Confirmer = v.Confirmer
 					t[k].Remark = v.Remark
 				}
+			} else {
+				t[k] = v
 			}
 		}
 		// Something new was added into the version.
