@@ -28,6 +28,20 @@ func ImportOldData(c *gin.Context) {
 
 func importOldData() error {
 
+	if err := importOldDataAndroid(); err != nil {
+		logs.Error("import old data for android failed: %v", err)
+		return err
+	}
+	if err := importOldDataiOS(); err != nil {
+		logs.Error("import old data for iOS failed: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func importOldDataAndroid() error {
+
 	db, err := database.GetDBConnection()
 	if err != nil {
 		logs.Error("connect to DB failed: %v", err)
@@ -288,5 +302,10 @@ func autoImport(appID string, platform int, version string, m map[string]*Attent
 		}
 	}
 
+	return nil
+}
+
+func importOldDataiOS() error {
+	// TODO
 	return nil
 }
