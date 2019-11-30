@@ -30,7 +30,7 @@ const toolIDAndroid = 6
 // 	}
 
 // 	return nil
-}
+// }
 
 // // Confirm binary package detect task.
 // func autoConfirmTask(p *confirmParams) error {
