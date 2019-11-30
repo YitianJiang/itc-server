@@ -28,10 +28,10 @@ func ImportOldData(c *gin.Context) {
 
 func importOldData() error {
 
-	if err := importOldDataAndroid(); err != nil {
-		logs.Error("import old data for android failed: %v", err)
-		return err
-	}
+	// if err := importOldDataAndroid(); err != nil {
+	// 	logs.Error("import old data for android failed: %v", err)
+	// 	return err
+	// }
 	if err := importOldDataiOS(); err != nil {
 		logs.Error("import old data for iOS failed: %v", err)
 		return err
@@ -306,6 +306,166 @@ func autoImport(appID string, platform int, version string, m map[string]*Attent
 }
 
 func importOldDataiOS() error {
-	// TODO
+	db, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("connect to DB failed: %v", err)
+		return err
+	}
+	defer db.Close()
+	// tasks, err := getDetectTask(db, nil)
+	// if err != nil {
+	// logs.Error("get tb_binary_detect failed: %v", err)
+	// return err
+	// }
+	// for k := range tasks {
+	// header := fmt.Sprintf("task id: %v", tasks[k].ID)
+	// content, err := getiOSDetectContent(database.DB(), map[string]interface{}{
+	content, err := getiOSDetectContent(database.DB(), nil)
+	// "taskId": tasks[k].ID})
+	if err != nil {
+		logs.Error("read iOS detect content failed: %v", err)
+		return err
+	}
+	for i := range content {
+		if content[i].DetectContent == "" {
+			continue
+		}
+		m := make(map[string]*Attention)
+		fmt.Printf("%v\t%v\t%v\n", fmt.Sprint(content[i].AppId), 1, content[i].Version)
+		t := make(map[string]interface{})
+		if err := json.Unmarshal([]byte(content[i].DetectContent), &t); err != nil {
+			logs.Error("unmarshal error: %v", err)
+			return err
+		}
+		switch content[i].DetectType {
+		case "privacy":
+			list, ok := t["privacy"].([]interface{})
+			if !ok {
+				logs.Error("cannot assert to []interface{}: %v", t["privacy"])
+				return fmt.Errorf("cannot assert to []interface{}: %v", t["privacy"])
+			}
+			for j := range list {
+				u, ok := list[j].(map[string]interface{})
+				if !ok {
+					logs.Error("cannot assert to map[string]interface{}: %v", list[j])
+					return fmt.Errorf("cannot assert to map[string]interface{}: %v", list[j])
+				}
+				fmt.Printf("%v\t%v\t%v\t%v\t%v\t%v\n", u["permission"], "权限", u["status"], content[i].UpdatedAt, u["confirmer"], u["confirmReason"])
+				if fmt.Sprint(u["status"]) == "1" && fmt.Sprint(u["confirmer"]) != "" && fmt.Sprint(u["confirmReason"]) != "" {
+					m[fmt.Sprint(u["permission"])] = &Attention{
+						Type:          "权限",
+						OriginVersion: content[i].Version,
+						Status:        1,
+						ConfirmedAt:   content[i].UpdatedAt,
+						Confirmer:     fmt.Sprint(u["confirmer"]),
+						Remark:        fmt.Sprint(u["confirmReason"]),
+					}
+				} else {
+					m[fmt.Sprint(u["permission"])] = &Attention{
+						Type:          "权限",
+						OriginVersion: content[i].Version,
+						Status:        0,
+					}
+				}
+			}
+		case "method":
+			list, ok := t["method"].([]interface{})
+			if !ok {
+				logs.Error("cannot assert to []interface{}: %v", t["method"])
+				return fmt.Errorf("cannot assert to []interface{}: %v", t["method"])
+			}
+			for j := range list {
+				u, ok := list[j].(map[string]interface{})
+				if !ok {
+					logs.Error("cannot assert to map[string]interface{}: %v", list[j])
+					return fmt.Errorf("cannot assert to map[string]interface{}: %v", list[j])
+				}
+				fmt.Printf("%v\t%v\t%v\t%v\t%v\t%v\n", fmt.Sprintf("%v%v%v", u["content"], delimiter, u["name"]), "敏感方法", u["status"], content[i].UpdatedAt, u["confirmer"], u["remark"])
+				if fmt.Sprint(u["status"]) == "1" && fmt.Sprint(u["confirmer"]) != "" && fmt.Sprint(u["remark"]) != "" {
+					m[fmt.Sprintf("%v%v%v", u["content"], delimiter, u["name"])] = &Attention{
+						Type:          "敏感方法",
+						OriginVersion: content[i].Version,
+						Status:        1,
+						ConfirmedAt:   content[i].UpdatedAt,
+						Confirmer:     fmt.Sprint(u["confirmer"]),
+						Remark:        fmt.Sprint(u["confirmReason"]),
+					}
+				} else {
+					m[fmt.Sprintf("%v%v%v", u["content"], delimiter, u["name"])] = &Attention{
+						Type:          "敏感方法",
+						OriginVersion: content[i].Version,
+						Status:        0,
+					}
+				}
+				// if v, ok := m[fmt.Sprintf("%v%v%v", u["content"], delimiter, u["name"])]; ok {
+				// 	u["origin_version"] = v.OriginVersion
+				// 	u["status"] = v.Status
+				// 	u["confirmer"] = v.Confirmer
+				// 	u["remark"] = v.Remark
+				// }
+			}
+		case "blacklist":
+			list, ok := t["blackList"].([]interface{})
+			if !ok {
+				logs.Error("cannot assert to []interface{}: %v", t["blackList"])
+				return fmt.Errorf("cannot assert to []interface{}: %v", t["blackList"])
+			}
+			for j := range list {
+				u, ok := list[j].(map[string]interface{})
+				if !ok {
+					logs.Error("cannot assert to map[string]interface{}: %v", list[j])
+					return fmt.Errorf("cannot assert to map[string]interface{}: %v", list[j])
+				}
+				// if v, ok := m[fmt.Sprint(u["name"])]; ok {
+				// 	u["origin_version"] = v.OriginVersion
+				// 	u["status"] = v.Status
+				// 	u["confirmer"] = v.Confirmer
+				// 	u["remark"] = v.Remark
+				// }
+				fmt.Printf("%v\t%v\t%v\t%v\t%v\t%v\n", u["name"], "敏感词汇", u["status"], content[i].UpdatedAt, u["confirmer"], u["remark"])
+				if fmt.Sprint(u["status"]) == "1" && fmt.Sprint(u["confirmer"]) != "" && fmt.Sprint(u["remark"]) != "" {
+					m[fmt.Sprint(u["name"])] = &Attention{
+						Type:          "敏感词汇",
+						OriginVersion: content[i].Version,
+						Status:        1,
+						ConfirmedAt:   content[i].UpdatedAt,
+						Confirmer:     fmt.Sprint(u["confirmer"]),
+						Remark:        fmt.Sprint(u["confirmReason"]),
+					}
+				} else {
+					m[fmt.Sprint(u["name"])] = &Attention{
+						Type:          "敏感词汇",
+						OriginVersion: content[i].Version,
+						Status:        0,
+					}
+				}
+			}
+		}
+		// data, err := json.Marshal(&t)
+		// if err != nil {
+		// 	logs.Error("%s unmarshal error: %v", header, err)
+		// 	return err
+		// }
+		// content[i].DetectContent = string(data)
+		// if err := database.UpdateDBRecord(database.DB(), &content[i]); err != nil {
+		// 	logs.Error("%s update tb_ios_new_detect_content: %v", header, err)
+		// 	return err
+		// }
+		// }
+		autoImport(fmt.Sprint(content[i].AppId), 1, content[i].Version, m)
+	}
+
 	return nil
+}
+
+func getiOSDetectContent(db *gorm.DB, sieve map[string]interface{}) (
+	[]dal.IOSNewDetectContent, error) {
+
+	var contents []dal.IOSNewDetectContent
+	if err := db.Where(sieve).Find(&contents).Error; err != nil {
+		logs.Error("database error: %v", err)
+		return nil, err
+	}
+
+	return contents, nil
 }
