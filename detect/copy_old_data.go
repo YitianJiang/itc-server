@@ -28,10 +28,10 @@ func ImportOldData(c *gin.Context) {
 
 func importOldData() error {
 
-	// if err := importOldDataAndroid(); err != nil {
-	// 	logs.Error("import old data for android failed: %v", err)
-	// 	return err
-	// }
+	if err := importOldDataAndroid(); err != nil {
+		logs.Error("import old data for android failed: %v", err)
+		return err
+	}
 	if err := importOldDataiOS(); err != nil {
 		logs.Error("import old data for iOS failed: %v", err)
 		return err
@@ -312,14 +312,6 @@ func importOldDataiOS() error {
 		return err
 	}
 	defer db.Close()
-	// tasks, err := getDetectTask(db, nil)
-	// if err != nil {
-	// logs.Error("get tb_binary_detect failed: %v", err)
-	// return err
-	// }
-	// for k := range tasks {
-	// header := fmt.Sprintf("task id: %v", tasks[k].ID)
-	// content, err := getiOSDetectContent(database.DB(), map[string]interface{}{
 	content, err := getiOSDetectContent(database.DB(), nil)
 	// "taskId": tasks[k].ID})
 	if err != nil {
@@ -397,12 +389,6 @@ func importOldDataiOS() error {
 						Status:        0,
 					}
 				}
-				// if v, ok := m[fmt.Sprintf("%v%v%v", u["content"], delimiter, u["name"])]; ok {
-				// 	u["origin_version"] = v.OriginVersion
-				// 	u["status"] = v.Status
-				// 	u["confirmer"] = v.Confirmer
-				// 	u["remark"] = v.Remark
-				// }
 			}
 		case "blacklist":
 			list, ok := t["blackList"].([]interface{})
@@ -416,12 +402,6 @@ func importOldDataiOS() error {
 					logs.Error("cannot assert to map[string]interface{}: %v", list[j])
 					return fmt.Errorf("cannot assert to map[string]interface{}: %v", list[j])
 				}
-				// if v, ok := m[fmt.Sprint(u["name"])]; ok {
-				// 	u["origin_version"] = v.OriginVersion
-				// 	u["status"] = v.Status
-				// 	u["confirmer"] = v.Confirmer
-				// 	u["remark"] = v.Remark
-				// }
 				fmt.Printf("%v\t%v\t%v\t%v\t%v\t%v\n", u["name"], "敏感词汇", u["status"], content[i].UpdatedAt, u["confirmer"], u["remark"])
 				if fmt.Sprint(u["status"]) == "1" && fmt.Sprint(u["confirmer"]) != "" && fmt.Sprint(u["remark"]) != "" {
 					m[fmt.Sprint(u["name"])] = &Attention{
@@ -441,17 +421,6 @@ func importOldDataiOS() error {
 				}
 			}
 		}
-		// data, err := json.Marshal(&t)
-		// if err != nil {
-		// 	logs.Error("%s unmarshal error: %v", header, err)
-		// 	return err
-		// }
-		// content[i].DetectContent = string(data)
-		// if err := database.UpdateDBRecord(database.DB(), &content[i]); err != nil {
-		// 	logs.Error("%s update tb_ios_new_detect_content: %v", header, err)
-		// 	return err
-		// }
-		// }
 		autoImport(fmt.Sprint(content[i].AppId), 1, content[i].Version, m)
 	}
 
