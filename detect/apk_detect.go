@@ -423,9 +423,11 @@ func getDetectResult(taskId string, toolId string) *[]dal.DetectQueryStruct {
 	records, err := readAPPAttention(database.DB(), map[string]interface{}{
 		"app_id": task.AppId, "platform": task.Platform, "version": task.AppVersion})
 	m := make(map[string]*Attention)
-	if err := json.Unmarshal([]byte(records[0].Attention), &m); err != nil {
-		logs.Error("%s unmarshal error: %v", header, err)
-		return nil
+	if len(records) > 0 {
+		if err := json.Unmarshal([]byte(records[0].Attention), &m); err != nil {
+			logs.Error("%s unmarshal error: %v", header, err)
+			return nil
+		}
 	}
 
 	//任务检测结果组输出重组
@@ -701,7 +703,9 @@ func packPermissionListAndroid(permission string, m map[string]*Attention) (*Per
 		permOut.Key = fmt.Sprint(permMap["key"])
 		permOut.PermId = int(permMap["perm_id"].(float64))
 		permOut.Desc = fmt.Sprint(permMap["ability"])
-		permOut.OtherVersion = m[permOut.Key].OriginVersion
+		if m != nil {
+			permOut.OtherVersion = m[permOut.Key].OriginVersion
+		}
 		permOut.Confirmer = fmt.Sprint(permMap["confirmer"])
 		permOut.Remark = fmt.Sprint(permMap["remark"])
 		if permOut.Status == 0 {
