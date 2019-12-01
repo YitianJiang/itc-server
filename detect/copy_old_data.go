@@ -12,10 +12,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ImportOldData copy confirmed items from history.
-func ImportOldData(c *gin.Context) {
+// ImportOldDataAndroid copy confirmed items from history.
+func ImportOldDataAndroid(c *gin.Context) {
 
-	if err := importOldData(); err != nil {
+	if err := importOldDataAndroid(); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"message": fmt.Sprintf("import old data failed: %v", err),
 			"code":    -1})
@@ -26,18 +26,18 @@ func ImportOldData(c *gin.Context) {
 		"code":    0})
 }
 
-func importOldData() error {
-
-	// if err := importOldDataAndroid(); err != nil {
-	// 	logs.Error("import old data for android failed: %v", err)
-	// 	return err
-	// }
+// ImportOldDataiOS copy confirmed items from history.
+func ImportOldDataiOS(c *gin.Context) {
 	if err := importOldDataiOS(); err != nil {
 		logs.Error("import old data for iOS failed: %v", err)
-		return err
+		c.JSON(http.StatusOK, gin.H{
+			"message": fmt.Sprintf("import old data failed: %v", err),
+			"code":    -1})
+		return
 	}
-
-	return nil
+	c.JSON(http.StatusOK, gin.H{
+		"message": "success",
+		"code":    0})
 }
 
 func importOldDataAndroid() error {
