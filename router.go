@@ -12,6 +12,9 @@ import (
 
 func InitRouter(r *ginex.Engine) {
 
+	r.POST("/import-old-data-android", detect.ImportOldDataAndroid) // TEMP
+	r.POST("/import-old-data-ios", detect.ImportOldDataiOS)         // TEMP
+
 	r.POST("/settings", settings.Insert)
 	r.PUT("/settings", settings.Refresh)
 	r.GET("/settings", settings.Show)
@@ -253,5 +256,6 @@ func InitRouter(r *ginex.Engine) {
 	{
 		operationDBApi.POST("deleteBundleIdCap", developerconnmanager.DeleteBundleIdCap)
 		operationDBApi.POST("deleteCertPrivKey", developerconnmanager.DeleteCertPrivKey)
+		operationDBApi.POST("insertCertInfoTest", developerconnmanager.InsertCertInfoTest)
 	}
 }

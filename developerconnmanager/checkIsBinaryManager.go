@@ -12,10 +12,13 @@ import (
 	"code.byted.org/clientQA/itc-server/utils"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 )
 
 type CheckInBinaryStatus struct {
 	OperateUser   string             `json:"operate_user"    binding:"required"`
+	AppId		  int			     `json:"app_id"			 binding:"required"`
+	RepoId		  int			     `json:"repo_id"	     binding:"required"`
 	RepoName      string			 `json:"repo_name"       binding:"required"`
 	Version       string 	         `json:"version"         binding:"required"`
 	BuildResult   int                `json:"build_result"    binding:"required"`
@@ -66,12 +69,17 @@ func CheckIsBinary(c *gin.Context)  {
 			return
 		}
 		chatId := "oc_d96be0fa3736fbfa1364bc57f329eeef"
+		//chatId := "oc_6524b9b1d771ecca33a0dac3df185fd7"
 		openIds := []string{larkUserId.Data.OpenId}
 		_, err = botService.InviteUser2Chat(chatId,openIds)
 		utils.RecordError("bot发送消息错误", err)
 		contentText := form.SendMessageForm{}
 		msgType := "text"
-		content := fmt.Sprintf("%s库的%s版本二进制失败了，主干分支问题请第一时间跟进<at user_id=\"%s\">test</at>",body.RepoName,body.Version,larkUserId.Data.UserId)
+		repoId := strconv.Itoa(body.RepoId)
+		AppId := strconv.Itoa(body.AppId)
+		content := fmt.Sprintf("%s库的%s版本二进制失败了，主干分支问题请第一时间跟进<at user_id=\"%s\">test</at>，" +
+			"组件链接如下: http://mobile.bytedance.net/components/%s?appId=%s&repoId=%s&appType=1&tabKey=upgrade",body.RepoName,body.Version,
+			larkUserId.Data.UserId,body.RepoName,AppId,repoId)
 		contentText.OpenChatID = &chatId
 		contentText.MsgType = &msgType
 		contentText.Content.Text = &content

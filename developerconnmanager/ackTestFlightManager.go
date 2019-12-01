@@ -166,6 +166,7 @@ type ReqDeleteTesterFromClient struct {
 	GroupId                   string					`json:"group_id"                binding:"required"`
 	NumClear				  int						`json:"num_clear"`
 	LogSend                   bool                      `json:"log_send"`
+	SendUser                  string					`json:"send_user"`
 }
 //请求咱们的itc服务的body，要清理指定Group中的Tester *************End*************
 
@@ -516,6 +517,18 @@ func DeleteGroupTester(c *gin.Context){
 		utils.AssembleJsonResponse(c, http.StatusBadRequest, "请求参数绑定失败", "failed")
 		return
 	}
+	targetOpenId := ""
+	if body.SendUser != ""{
+		tokenFormservice,err := service.GetTenantAccessToken(_const.BotApiId,_const.BotAppSecret)
+		utils.RecordError("获取TenantAccessToken失败", err)
+		var reqUserToLark UserInfoReqToLark
+		reqUserToLark.Email = body.SendUser + "@bytedance.com"
+		var resUserInfo UserInfoGetFromLark
+		reqResult := PostToLarkGetInfo("POST","https://open.feishu.cn/open-apis/user/v4/email2id","Bearer "+tokenFormservice.TenantAccessToken,&reqUserToLark,&resUserInfo)
+		if reqResult{
+			targetOpenId = resUserInfo.Data.OpenId
+		}
+	}
 	go func(ReqDeleteTesterFromClient){
 		tokenString := ""
 		//appAppleId := ""
@@ -532,7 +545,7 @@ func DeleteGroupTester(c *gin.Context){
 			} else {
 				textLog := "客户端发送了未知的app id，不在后端维护的const map中"
 				logs.Info(textLog)
-				SendMessageToMe(&textLog)
+				SendMessageToMe(&textLog,targetOpenId)
 				return
 			}
 			urlReq := _const.CreateTFGroupUrl + "/" + body.GroupId + "/betaTesters?limit=100"
@@ -541,7 +554,7 @@ func DeleteGroupTester(c *gin.Context){
 			if !reqResult{
 				textLog := fmt.Sprintf("访问苹果的人员列表失败，当前成功删除了%d人",successNum)
 				logs.Error(textLog)
-				SendMessageToMe(&textLog)
+				SendMessageToMe(&textLog,targetOpenId)
 				return
 			}
 			topLev := ( i + 1 ) * 100
@@ -580,20 +593,20 @@ func DeleteGroupTester(c *gin.Context){
 					logs.Info("即将进行第%d次获取Tester循环，现在等待60秒",loopNum)
 					if body.LogSend {
 						textLog := fmt.Sprintf("即将进行第%d次获取Tester循环，现在等待60秒，当前删除了%d人", loopNum, successNum)
-						SendMessageToMe(&textLog)
+						SendMessageToMe(&textLog,targetOpenId)
 					}
 					time.Sleep(61 * time.Second)
 					goto LOOP
 				}else {
 					textLog := fmt.Sprintf("删除TF Tester完毕，当前成功删除了%d人",successNum)
-					SendMessageToMe(&textLog)
+					SendMessageToMe(&textLog,targetOpenId)
 					return
 				}
 			}
 			logs.Info("即将进行第%d次获取Tester循环，现在等待60秒",loopNum)
 			if body.LogSend {
 				textLog := fmt.Sprintf("即将进行第%d次获取Tester循环，现在等待60秒，当前删除了%d人", loopNum, successNum)
-				SendMessageToMe(&textLog)
+				SendMessageToMe(&textLog,targetOpenId)
 			}
 			time.Sleep(61 * time.Second)
 		}
@@ -608,16 +621,23 @@ func DeleteGroupTester(c *gin.Context){
 	return
 }
 
-func SendMessageToMe(content *string) {
+func SendMessageToMe(content *string,targetOpenId string) {
 	botService := service.BotService{}
 	botService.SetAppIdAndAppSecret(_const.BotApiId,_const.BotAppSecret)
 	contentText := form.SendMessageForm{}
 	msgType := "text"
-	openId := "ou_b392d8a6bdcac11e0a7401233cba38ce"
-
-	contentText.OpenID = &openId
-	contentText.MsgType = &msgType
 	contentText.Content.Text = content
+	contentText.MsgType = &msgType
+	if targetOpenId != ""{
+		contentText.OpenID = &targetOpenId
+		_, errorSendInfo := botService.SendMessage(contentText)
+		if errorSendInfo != nil {
+			utils.RecordError("bot发送消息错误", errorSendInfo)
+		}
+
+	}
+	openId := "ou_b392d8a6bdcac11e0a7401233cba38ce"
+	contentText.OpenID = &openId
 	_, errorSendInfo := botService.SendMessage(contentText)
 	if errorSendInfo != nil {
 		utils.RecordError("bot发送消息错误", errorSendInfo)
