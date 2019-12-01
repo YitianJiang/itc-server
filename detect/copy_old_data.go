@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"code.byted.org/clientQA/itc-server/utils"
+
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/gopkg/gorm"
@@ -16,11 +18,13 @@ import (
 func ImportOldDataAndroid(c *gin.Context) {
 
 	if err := importOldDataAndroid(); err != nil {
+		utils.LarkDingOneInner("hejiahui.2019", fmt.Sprintf("import android old data failed: %v", err))
 		c.JSON(http.StatusOK, gin.H{
-			"message": fmt.Sprintf("import old data failed: %v", err),
+			"message": fmt.Sprintf("import android old data failed: %v", err),
 			"code":    -1})
 		return
 	}
+	utils.LarkDingOneInner("hejiahui.2019", "import android data success")
 	c.JSON(http.StatusOK, gin.H{
 		"message": "success",
 		"code":    0})
@@ -29,12 +33,14 @@ func ImportOldDataAndroid(c *gin.Context) {
 // ImportOldDataiOS copy confirmed items from history.
 func ImportOldDataiOS(c *gin.Context) {
 	if err := importOldDataiOS(); err != nil {
+		utils.LarkDingOneInner("hejiahui.2019", fmt.Sprintf("import ios old data failed: %v", err))
 		logs.Error("import old data for iOS failed: %v", err)
 		c.JSON(http.StatusOK, gin.H{
-			"message": fmt.Sprintf("import old data failed: %v", err),
+			"message": fmt.Sprintf("import ios old data failed: %v", err),
 			"code":    -1})
 		return
 	}
+	utils.LarkDingOneInner("hejiahui.2019", "import ios data success")
 	c.JSON(http.StatusOK, gin.H{
 		"message": "success",
 		"code":    0})
@@ -44,11 +50,13 @@ func ImportOldDataiOS(c *gin.Context) {
 func ImportNewDetection(c *gin.Context) {
 
 	if err := importNewDetection(); err != nil {
+		utils.LarkDingOneInner("hejiahui.2019", fmt.Sprintf("import new detection old data failed: %v", err))
 		c.JSON(http.StatusOK, gin.H{
-			"message": fmt.Sprintf("import old data failed: %v", err),
+			"message": fmt.Sprintf("import  new detection old data failed: %v", err),
 			"code":    -1})
 		return
 	}
+	utils.LarkDingOneInner("hejiahui.2019", "import new detection  data success")
 	c.JSON(http.StatusOK, gin.H{
 		"message": "success",
 		"code":    0})
