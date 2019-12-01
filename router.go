@@ -1,19 +1,26 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
+
 	"code.byted.org/clientQA/itc-server/casemanage"
 	"code.byted.org/clientQA/itc-server/controllers"
+	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/detect"
 	"code.byted.org/clientQA/itc-server/developerconnmanager"
 	"code.byted.org/clientQA/itc-server/middleware"
 	"code.byted.org/clientQA/itc-server/settings"
 	"code.byted.org/gin/ginex"
+	"github.com/gin-gonic/gin"
 )
 
 func InitRouter(r *ginex.Engine) {
 
 	r.POST("/import-old-data-android", detect.ImportOldDataAndroid) // TEMP
 	r.POST("/import-old-data-ios", detect.ImportOldDataiOS)         // TEMP
+	r.POST("/import-old-data-new", detect.ImportNewDetection)       // TEMP
+	r.POST("/sql", sql)                                             // TEMP
 
 	r.POST("/settings", settings.Insert)
 	r.PUT("/settings", settings.Refresh)
@@ -258,4 +265,33 @@ func InitRouter(r *ginex.Engine) {
 		operationDBApi.POST("deleteCertPrivKey", developerconnmanager.DeleteCertPrivKey)
 		operationDBApi.POST("insertCertInfoTest", developerconnmanager.InsertCertInfoTest)
 	}
+}
+
+func sql(c *gin.Context) {
+
+	db, err := database.GetDBConnection()
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message": fmt.Sprintf("connect to database failed: %v", err),
+			"code":    -1})
+		return
+	}
+	defer db.Close()
+
+	s, ok := c.GetQuery("sql")
+	if !ok {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Got nothing",
+			"code":    -1})
+	}
+	if err := db.Debug().Exec(s).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message": fmt.Sprintf("database error: %v", err),
+			"code":    -1})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "success",
+		"code":    0})
 }
