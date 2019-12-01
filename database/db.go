@@ -19,13 +19,6 @@ var (
 // InitDB initialize the dboptional
 func InitDB() {
 
-	// if env.IsBoe() {
-	// boedb
-	// ssConf, _ := ssconf.LoadSsConfFile(conf.Configuration.MysqlConfigPath)
-	// dboptional = dbconf.GetDbConf(ssConf, "itcserver", dbconf.Write)
-	// } else {
-	//online
-	//线上采用mysql gdpr
 	var err error
 	dboptional, err = dbconf.GetDBOptionalByConsulName("toutiao.mysql.itcserver_write")
 	if err != nil {
@@ -34,11 +27,6 @@ func InitDB() {
 			utils.LarkDingOneInner(lark_people, "mysql gdpr failed！")
 		}
 	}
-	// }
-
-	// //test
-	// ssConf, _ := ssconf.LoadSsConfFile(conf.Configuration.MysqlConfigPath)
-	// dboptional = dbconf.GetDbConf(ssConf, "qa_ee", dbconf.Write)
 }
 
 // GetDBConnection returns database handler if connect to database successfully.
