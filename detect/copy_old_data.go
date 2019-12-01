@@ -338,14 +338,14 @@ func importOldDataiOS() error {
 		case "privacy":
 			list, ok := t["privacy"].([]interface{})
 			if !ok {
-				logs.Error("cannot assert to []interface{}: %v", t["privacy"])
-				return fmt.Errorf("cannot assert to []interface{}: %v", t["privacy"])
+				logs.Error("cannot assert to []interface{}: %v id: %v", t["privacy"], content[i].ID)
+				return fmt.Errorf("cannot assert to []interface{}: %v id: %v", t["privacy"], content[i].ID)
 			}
 			for j := range list {
 				u, ok := list[j].(map[string]interface{})
 				if !ok {
-					logs.Error("cannot assert to map[string]interface{}: %v", list[j])
-					return fmt.Errorf("cannot assert to map[string]interface{}: %v", list[j])
+					logs.Error("cannot assert to map[string]interface{}: %v id: %v", list[j], content[i].ID)
+					return fmt.Errorf("cannot assert to map[string]interface{}: %v id: %v", list[j], content[i].ID)
 				}
 				fmt.Printf("%v\t%v\t%v\t%v\t%v\t%v\n", u["permission"], "权限", u["status"], content[i].UpdatedAt, u["confirmer"], u["confirmReason"])
 				if fmt.Sprint(u["status"]) == "1" && fmt.Sprint(u["confirmer"]) != "" && fmt.Sprint(u["confirmReason"]) != "" {
@@ -368,14 +368,14 @@ func importOldDataiOS() error {
 		case "method":
 			list, ok := t["method"].([]interface{})
 			if !ok {
-				logs.Error("cannot assert to []interface{}: %v", t["method"])
-				return fmt.Errorf("cannot assert to []interface{}: %v", t["method"])
+				logs.Error("cannot assert to []interface{}: %v id: %v", t["method"], content[i].ID)
+				return fmt.Errorf("cannot assert to []interface{}: %v id: %v", t["method"], content[i].ID)
 			}
 			for j := range list {
 				u, ok := list[j].(map[string]interface{})
 				if !ok {
-					logs.Error("cannot assert to map[string]interface{}: %v", list[j])
-					return fmt.Errorf("cannot assert to map[string]interface{}: %v", list[j])
+					logs.Error("cannot assert to map[string]interface{}: %v id: %v", list[j], content[i].ID)
+					return fmt.Errorf("cannot assert to map[string]interface{}: %v id: %v", list[j], content[i].ID)
 				}
 				fmt.Printf("%v\t%v\t%v\t%v\t%v\t%v\n", fmt.Sprintf("%v%v%v", u["content"], delimiter, u["name"]), "敏感方法", u["status"], content[i].UpdatedAt, u["confirmer"], u["remark"])
 				if fmt.Sprint(u["status"]) == "1" && fmt.Sprint(u["confirmer"]) != "" && fmt.Sprint(u["remark"]) != "" {
@@ -398,8 +398,8 @@ func importOldDataiOS() error {
 		case "blacklist":
 			list, ok := t["blackList"].([]interface{})
 			if !ok {
-				logs.Error("cannot assert to []interface{}: %v", t["blackList"])
-				return fmt.Errorf("cannot assert to []interface{}: %v", t["blackList"])
+				logs.Error("cannot assert to []interface{}: %v id: %v", t["blackList"], content[i].ID)
+				return fmt.Errorf("cannot assert to []interface{}: %v id: %v", t["blackList"], content[i].ID)
 			}
 			for j := range list {
 				u, ok := list[j].(map[string]interface{})
