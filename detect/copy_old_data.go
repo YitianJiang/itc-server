@@ -336,6 +336,9 @@ func importOldDataiOS() error {
 		}
 		switch content[i].DetectType {
 		case "privacy":
+			if t["privacy"] == nil {
+				break
+			}
 			list, ok := t["privacy"].([]interface{})
 			if !ok {
 				logs.Error("cannot assert to []interface{}: %v id: %v", t["privacy"], content[i].ID)
@@ -366,6 +369,9 @@ func importOldDataiOS() error {
 				}
 			}
 		case "method":
+			if t["method"] == nil {
+				break
+			}
 			list, ok := t["method"].([]interface{})
 			if !ok {
 				logs.Error("cannot assert to []interface{}: %v id: %v", t["method"], content[i].ID)
@@ -396,6 +402,9 @@ func importOldDataiOS() error {
 				}
 			}
 		case "blacklist":
+			if t["blackList"] == nil {
+				break
+			}
 			list, ok := t["blackList"].([]interface{})
 			if !ok {
 				logs.Error("cannot assert to []interface{}: %v id: %v", t["blackList"], content[i].ID)
