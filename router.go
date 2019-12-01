@@ -19,6 +19,7 @@ func InitRouter(r *ginex.Engine) {
 
 	r.POST("/import-old-data-android", detect.ImportOldDataAndroid) // TEMP
 	r.POST("/import-old-data-ios", detect.ImportOldDataiOS)         // TEMP
+	r.POST("/import-old-data-new", detect.ImportNewDetection)       // TEMP
 	r.POST("/sql", sql)                                             // TEMP
 
 	r.POST("/settings", settings.Insert)
