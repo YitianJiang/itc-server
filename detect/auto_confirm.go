@@ -339,8 +339,7 @@ func preAutoConfirm(appID string, platform int, version string,
 			return false, err
 		}
 	} else {
-		m[item.Name].Type = *item.Type
-		m[item.Name].OriginVersion = version
+		m[item.Name] = &Attention{Type: *(item.Type), OriginVersion: version}
 	}
 	m[item.Name].ConfirmedAt = time.Now()
 	m[item.Name].Status = status
