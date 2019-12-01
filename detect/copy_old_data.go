@@ -12,10 +12,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ImportOldData copy confirmed items from history.
-func ImportOldData(c *gin.Context) {
+// ImportOldDataAndroid copy confirmed items from history.
+func ImportOldDataAndroid(c *gin.Context) {
 
-	if err := importOldData(); err != nil {
+	if err := importOldDataAndroid(); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"message": fmt.Sprintf("import old data failed: %v", err),
 			"code":    -1})
@@ -26,18 +26,18 @@ func ImportOldData(c *gin.Context) {
 		"code":    0})
 }
 
-func importOldData() error {
-
-	// if err := importOldDataAndroid(); err != nil {
-	// 	logs.Error("import old data for android failed: %v", err)
-	// 	return err
-	// }
+// ImportOldDataiOS copy confirmed items from history.
+func ImportOldDataiOS(c *gin.Context) {
 	if err := importOldDataiOS(); err != nil {
 		logs.Error("import old data for iOS failed: %v", err)
-		return err
+		c.JSON(http.StatusOK, gin.H{
+			"message": fmt.Sprintf("import old data failed: %v", err),
+			"code":    -1})
+		return
 	}
-
-	return nil
+	c.JSON(http.StatusOK, gin.H{
+		"message": "success",
+		"code":    0})
 }
 
 func importOldDataAndroid() error {
@@ -336,6 +336,9 @@ func importOldDataiOS() error {
 		}
 		switch content[i].DetectType {
 		case "privacy":
+			if t["privacy"] == nil {
+				break
+			}
 			list, ok := t["privacy"].([]interface{})
 			if !ok {
 				logs.Error("cannot assert to []interface{}: %v id: %v", t["privacy"], content[i].ID)
@@ -366,6 +369,9 @@ func importOldDataiOS() error {
 				}
 			}
 		case "method":
+			if t["method"] == nil {
+				break
+			}
 			list, ok := t["method"].([]interface{})
 			if !ok {
 				logs.Error("cannot assert to []interface{}: %v id: %v", t["method"], content[i].ID)
@@ -396,6 +402,9 @@ func importOldDataiOS() error {
 				}
 			}
 		case "blacklist":
+			if t["blackList"] == nil {
+				break
+			}
 			list, ok := t["blackList"].([]interface{})
 			if !ok {
 				logs.Error("cannot assert to []interface{}: %v id: %v", t["blackList"], content[i].ID)
