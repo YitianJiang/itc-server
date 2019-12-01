@@ -28,10 +28,10 @@ func ImportOldData(c *gin.Context) {
 
 func importOldData() error {
 
-	if err := importOldDataAndroid(); err != nil {
-		logs.Error("import old data for android failed: %v", err)
-		return err
-	}
+	// if err := importOldDataAndroid(); err != nil {
+	// 	logs.Error("import old data for android failed: %v", err)
+	// 	return err
+	// }
 	if err := importOldDataiOS(); err != nil {
 		logs.Error("import old data for iOS failed: %v", err)
 		return err
