@@ -338,7 +338,8 @@ func preAutoConfirm(appID string, platform int, version string,
 			logs.Error("unmarshal error: %v", err)
 			return false, err
 		}
-	} else {
+	}
+	if m[item.Name] == nil {
 		m[item.Name] = &Attention{Type: *(item.Type), OriginVersion: version}
 	}
 	m[item.Name].ConfirmedAt = time.Now()
