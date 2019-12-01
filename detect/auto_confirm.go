@@ -734,7 +734,7 @@ func previousVersion(appID interface{}, platform interface{}, version string) (*
 	var closest int64 = -1
 	var result *VersionDiff
 	for k := range m {
-		if k > current {
+		if k >= current {
 			continue
 		}
 		if k > closest {
@@ -782,7 +782,7 @@ func autoConfirmWithPreviousVersion(current map[string]*Attention,
 	// Unmarshal unmarshals the JSON into the value pointed at by the pointer.
 	// If the pointer is nil, Unmarshal allocates a new value for it to point to.
 	previous := make(map[string]*Attention)
-	logs.Notice("content: %s", prev.Attention)
+	logs.Notice("previous: %v", prev.Version)
 	if err := json.Unmarshal([]byte(prev.Attention), &previous); err != nil {
 		logs.Error("unmarshal error: %v", err)
 		return err

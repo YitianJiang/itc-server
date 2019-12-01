@@ -277,7 +277,7 @@ func autoImport(appID string, platform int, version string, m map[string]*Attent
 			return err
 		}
 
-		var updated bool
+		// var updated bool
 		for k, v := range m {
 			if _, ok := t[k]; ok {
 				if t[k].Status != 1 && v.Status == 1 {
@@ -285,26 +285,39 @@ func autoImport(appID string, platform int, version string, m map[string]*Attent
 					t[k].ConfirmedAt = v.ConfirmedAt
 					t[k].Confirmer = v.Confirmer
 					t[k].Remark = v.Remark
-					updated = true
+					// updated = true
 				}
 			} else {
 				t[k] = v
-				updated = true
+				// updated = true
 			}
 		}
-		if updated {
-			// Something new was added into the version.
-			attention, err := json.Marshal(&t)
-			if err != nil {
-				logs.Error("marshal error: %v", err)
-				return err
-			}
-			records[0].Attention = string(attention)
-			if err := database.UpdateDBRecord(database.DB(), records[0]); err != nil {
-				logs.Error("update version attetion failed: %v", err)
+		previous, err := previousVersion(appID, platform, version)
+		if err != nil {
+			logs.Error("get previous version failed: %v", err)
+			return err
+		}
+
+		if previous != nil {
+			logs.Notice("current version: %v previous version: %v", version, previous.Version)
+			if err := autoConfirmWithPreviousVersion(t, previous); err != nil {
+				logs.Error("auto confirm with previous version failed: %v", err)
 				return err
 			}
 		}
+		// if updated {
+		// Something new was added into the version.
+		attention, err := json.Marshal(&t)
+		if err != nil {
+			logs.Error("marshal error: %v", err)
+			return err
+		}
+		records[0].Attention = string(attention)
+		if err := database.UpdateDBRecord(database.DB(), records[0]); err != nil {
+			logs.Error("update version attetion failed: %v", err)
+			return err
+		}
+		// }
 	}
 
 	return nil
