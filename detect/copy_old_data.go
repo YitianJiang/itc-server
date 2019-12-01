@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"code.byted.org/clientQA/itc-server/utils"
+
 	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/gopkg/gorm"
@@ -16,11 +18,13 @@ import (
 func ImportOldDataAndroid(c *gin.Context) {
 
 	if err := importOldDataAndroid(); err != nil {
+		utils.LarkDingOneInner("hejiahui.2019", fmt.Sprintf("import android old data failed: %v", err))
 		c.JSON(http.StatusOK, gin.H{
-			"message": fmt.Sprintf("import old data failed: %v", err),
+			"message": fmt.Sprintf("import android old data failed: %v", err),
 			"code":    -1})
 		return
 	}
+	utils.LarkDingOneInner("hejiahui.2019", "import android data success")
 	c.JSON(http.StatusOK, gin.H{
 		"message": "success",
 		"code":    0})
@@ -29,12 +33,30 @@ func ImportOldDataAndroid(c *gin.Context) {
 // ImportOldDataiOS copy confirmed items from history.
 func ImportOldDataiOS(c *gin.Context) {
 	if err := importOldDataiOS(); err != nil {
+		utils.LarkDingOneInner("hejiahui.2019", fmt.Sprintf("import ios old data failed: %v", err))
 		logs.Error("import old data for iOS failed: %v", err)
 		c.JSON(http.StatusOK, gin.H{
-			"message": fmt.Sprintf("import old data failed: %v", err),
+			"message": fmt.Sprintf("import ios old data failed: %v", err),
 			"code":    -1})
 		return
 	}
+	utils.LarkDingOneInner("hejiahui.2019", "import ios data success")
+	c.JSON(http.StatusOK, gin.H{
+		"message": "success",
+		"code":    0})
+}
+
+// ImportNewDetection copy confirmed items from history.
+func ImportNewDetection(c *gin.Context) {
+
+	if err := importNewDetection(); err != nil {
+		utils.LarkDingOneInner("hejiahui.2019", fmt.Sprintf("import new detection old data failed: %v", err))
+		c.JSON(http.StatusOK, gin.H{
+			"message": fmt.Sprintf("import  new detection old data failed: %v", err),
+			"code":    -1})
+		return
+	}
+	utils.LarkDingOneInner("hejiahui.2019", "import new detection  data success")
 	c.JSON(http.StatusOK, gin.H{
 		"message": "success",
 		"code":    0})
@@ -277,7 +299,7 @@ func autoImport(appID string, platform int, version string, m map[string]*Attent
 			return err
 		}
 
-		var updated bool
+		// var updated bool
 		for k, v := range m {
 			if _, ok := t[k]; ok {
 				if t[k].Status != 1 && v.Status == 1 {
@@ -285,26 +307,39 @@ func autoImport(appID string, platform int, version string, m map[string]*Attent
 					t[k].ConfirmedAt = v.ConfirmedAt
 					t[k].Confirmer = v.Confirmer
 					t[k].Remark = v.Remark
-					updated = true
+					// updated = true
 				}
 			} else {
 				t[k] = v
-				updated = true
+				// updated = true
 			}
 		}
-		if updated {
-			// Something new was added into the version.
-			attention, err := json.Marshal(&t)
-			if err != nil {
-				logs.Error("marshal error: %v", err)
-				return err
-			}
-			records[0].Attention = string(attention)
-			if err := database.UpdateDBRecord(database.DB(), records[0]); err != nil {
-				logs.Error("update version attetion failed: %v", err)
+		previous, err := previousVersion(appID, platform, version)
+		if err != nil {
+			logs.Error("get previous version failed: %v", err)
+			return err
+		}
+
+		if previous != nil {
+			logs.Notice("current version: %v previous version: %v", version, previous.Version)
+			if err := autoConfirmWithPreviousVersion(t, previous); err != nil {
+				logs.Error("auto confirm with previous version failed: %v", err)
 				return err
 			}
 		}
+		// if updated {
+		// Something new was added into the version.
+		attention, err := json.Marshal(&t)
+		if err != nil {
+			logs.Error("marshal error: %v", err)
+			return err
+		}
+		records[0].Attention = string(attention)
+		if err := database.UpdateDBRecord(database.DB(), records[0]); err != nil {
+			logs.Error("update version attetion failed: %v", err)
+			return err
+		}
+		// }
 	}
 
 	return nil
@@ -445,6 +480,55 @@ func getiOSDetectContent(db *gorm.DB, sieve map[string]interface{}) (
 	[]dal.IOSNewDetectContent, error) {
 
 	var contents []dal.IOSNewDetectContent
+	if err := db.Where(sieve).Find(&contents).Error; err != nil {
+		logs.Error("database error: %v", err)
+		return nil, err
+	}
+
+	return contents, nil
+}
+
+func importNewDetection() error {
+	db, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("connect to DB failed: %v", err)
+		return err
+	}
+	defer db.Close()
+	content, err := getNewDetection(database.DB(), nil)
+	if err != nil {
+		logs.Error("read new_detection failed: %v", err)
+		return err
+	}
+
+	for i := range content {
+		if content[i].APPID == "" || content[i].APPVersion == "" || content[i].Platform == "" ||
+			content[i].Key == "" {
+			continue
+		}
+		m := make(map[string]*Attention)
+		m[content[i].Key] = &Attention{
+			Type:          content[i].Type,
+			OriginVersion: content[i].APPVersion,
+		}
+		if content[i].Confirmed && content[i].Confirmer != "" && content[i].Remark != "" {
+			m[content[i].Key].Status = 1
+			m[content[i].Key].ConfirmedAt = content[i].UpdatedAt
+			m[content[i].Key].Confirmer = content[i].Confirmer
+			m[content[i].Key].Remark = content[i].Remark
+		} else {
+			m[content[i].Key].Status = 0
+		}
+		autoImport(content[i].APPID, 0, content[i].APPVersion, m)
+	}
+
+	return nil
+}
+
+func getNewDetection(db *gorm.DB, sieve map[string]interface{}) (
+	[]NewDetection, error) {
+
+	var contents []NewDetection
 	if err := db.Where(sieve).Find(&contents).Error; err != nil {
 		logs.Error("database error: %v", err)
 		return nil, err
