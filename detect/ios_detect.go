@@ -135,7 +135,7 @@ func iOSResultClassify(task *dal.DetectStruct, toolId int, jsonContent *string) 
 			methodMap["status"] = 0
 			methodMap["confirmer"] = ""
 			methodMap["remark"] = ""
-			sensitiveMethods = append(sensitiveMethods, susClass+delimiter+susClass)
+			sensitiveMethods = append(sensitiveMethods, susClass+delimiter+susApi)
 			methodList = append(methodList, methodMap)
 		}
 		methodContentValue, err := json.Marshal(map[string]interface{}{
