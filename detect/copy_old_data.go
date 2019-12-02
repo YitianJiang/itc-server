@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
+	"strconv"
 
 	"code.byted.org/clientQA/itc-server/utils"
 
@@ -535,4 +537,110 @@ func getNewDetection(db *gorm.DB, sieve map[string]interface{}) (
 	}
 
 	return contents, nil
+}
+
+// UpdateByPass will cicle all version.
+func UpdateByPass(c *gin.Context) {
+	if err := updateByPass(); err != nil {
+		utils.LarkDingOneInner("hejiahui.2019", fmt.Sprintf("import circle old data failed: %v", err))
+		c.JSON(http.StatusOK, gin.H{
+			"message": fmt.Sprintf("import circle old data failed: %v", err),
+			"code":    -1})
+		return
+	}
+	utils.LarkDingOneInner("hejiahui.2019", "import circle data success")
+	c.JSON(http.StatusOK, gin.H{
+		"message": "success",
+		"code":    0})
+}
+
+func updateByPass() error {
+
+	db, err := database.GetDBConnection()
+	if err != nil {
+		logs.Error("connect to DB failed: %v", err)
+		return err
+	}
+	defer db.Close()
+
+	type APP struct {
+		ID string `gorm:"column:app_id"`
+	}
+	var apps []APP
+	if err := db.Debug().Raw("select app_id from version_diff_history group by app_id").Scan(&apps).Error; err != nil {
+		logs.Error("database error: %v", err)
+		return err
+	}
+
+	for i := range apps {
+		if err := updatePerAPP(db, apps[i].ID, "0"); err != nil {
+			logs.Error("update (id: %v platform: %v) failed: %v", apps[i].ID, "0", err)
+			return err
+		}
+		if err := updatePerAPP(db, apps[i].ID, "1"); err != nil {
+			logs.Error("update (id: %v platform: %v) failed: %v", apps[i].ID, "1", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func updatePerAPP(db *gorm.DB, appID string, platform string) error {
+
+	records, err := readAPPAttention(db, map[string]interface{}{
+		"app_id": appID, "platform": platform})
+	if err != nil {
+		logs.Error("database error: %v", err)
+		return err
+	}
+	if len(records) <= 0 {
+		return nil
+	}
+
+	var versions []int64
+	m := make(map[int64]*VersionDiff)
+	for i := range records {
+		fmt.Printf("id: %v platform: %v version: %v\n", appID, platform, records[i].Version)
+		// TODO
+		code, err := strconv.ParseInt(transformVersion(records[i].Version), 10, 64)
+		if err != nil {
+			logs.Warn("parse version (%v) error: %v", records[i].Version, err)
+			continue
+		}
+		m[code] = &records[i]
+		versions = append(versions, code)
+	}
+
+	// Sort the versions
+	sort.Slice(versions, func(i, j int) bool { return versions[i] < versions[j] })
+
+	logs.Notice("Sorted: ")
+	for i := range versions {
+		logs.Notice("%v\t", versions[i])
+	}
+
+	for i := 1; i < len(versions); i++ {
+		current := make(map[string]*Attention)
+		if err := json.Unmarshal([]byte(m[versions[i]].Attention), &current); err != nil {
+			logs.Error("unmarshal error: %v", err)
+			return err
+		}
+		if err := autoConfirmWithPreviousVersion(current, m[versions[i-1]]); err != nil {
+			logs.Error("auto confirm with previous version failed: %v", err)
+			return err
+		}
+
+		attention, err := json.Marshal(&current)
+		if err != nil {
+			logs.Error("marshal error: %v", err)
+			return err
+		}
+		m[versions[i]].Attention = string(attention)
+		if err := database.UpdateDBRecord(database.DB(), m[versions[i]]); err != nil {
+			logs.Error("update version attetion failed: %v", err)
+			return err
+		}
+	}
+
+	return nil
 }
