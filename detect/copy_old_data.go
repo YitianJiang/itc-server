@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"time"
 
 	"code.byted.org/clientQA/itc-server/utils"
 
@@ -104,14 +105,24 @@ func importOldDataAndroid() error {
 				continue
 			}
 			fmt.Printf("%v\t%v\t%v\t%v\t%v\t%v\n", name, _type, details[j].Status, details[j].UpdatedAt, details[j].Confirmer, details[j].Remark)
-			if details[j].Status == 1 && details[j].Confirmer != "" && details[j].Remark != "" {
-				m[name] = &Attention{
-					Type:          _type,
-					OriginVersion: tasks[i].AppVersion,
-					Status:        details[j].Status,
-					ConfirmedAt:   details[j].UpdatedAt,
-					Confirmer:     details[j].Confirmer,
-					Remark:        details[j].Remark}
+			if details[j].Status == 1 && details[j].Confirmer != "" {
+				if details[j].Remark != "" {
+					m[name] = &Attention{
+						Type:          _type,
+						OriginVersion: tasks[i].AppVersion,
+						Status:        details[j].Status,
+						ConfirmedAt:   details[j].UpdatedAt,
+						Confirmer:     details[j].Confirmer,
+						Remark:        details[j].Remark}
+				} else {
+					m[name] = &Attention{
+						Type:          _type,
+						OriginVersion: tasks[i].AppVersion,
+						Status:        details[j].Status,
+						ConfirmedAt:   details[j].UpdatedAt,
+						Confirmer:     details[j].Confirmer,
+						Remark:        "自动确认"}
+				}
 			} else {
 				m[name] = &Attention{
 					Type:          _type,
@@ -157,13 +168,14 @@ func importOldDataAndroid() error {
 							"perm_id":     list[j]["perm_id"],
 							"app_id":      permissions[i].AppId,
 							"app_version": permissions[i].AppVersion,
+							"status":      1,
 						})
 						if err != nil {
 							logs.Error("get tb_perm_history failed: %v", err)
 							return err
 						}
 						if len(historys) > 0 {
-							if historys[0].Status == 1 && historys[0].Confirmer != "" && historys[0].Remarks != "" {
+							if historys[0].Confirmer != "" && historys[0].Remarks != "" {
 								m[fmt.Sprint(list[j]["key"])] = &Attention{
 									Type:          "权限",
 									OriginVersion: permissions[i].AppVersion,
@@ -172,11 +184,25 @@ func importOldDataAndroid() error {
 									Confirmer:     historys[0].Confirmer,
 									Remark:        historys[0].Remarks,
 								}
-							} else {
+							}
+							if historys[0].Confirmer != "" && historys[0].Remarks == "" {
 								m[fmt.Sprint(list[j]["key"])] = &Attention{
 									Type:          "权限",
 									OriginVersion: permissions[i].AppVersion,
-									Status:        0,
+									Status:        1,
+									ConfirmedAt:   historys[0].UpdatedAt,
+									Confirmer:     historys[0].Confirmer,
+									Remark:        "自动确认",
+								}
+							}
+							if historys[0].Confirmer == "" && historys[0].Remarks != "" {
+								m[fmt.Sprint(list[j]["key"])] = &Attention{
+									Type:          "权限",
+									OriginVersion: permissions[i].AppVersion,
+									Status:        1,
+									ConfirmedAt:   historys[0].UpdatedAt,
+									Confirmer:     "预审平台",
+									Remark:        historys[0].Remarks,
 								}
 							}
 							fmt.Printf("%v\t%v\t%v\t%v\t%v\t%v\n", list[j]["key"], "权限", v, historys[0].UpdatedAt, historys[0].Confirmer, historys[0].Remarks)
@@ -186,7 +212,10 @@ func importOldDataAndroid() error {
 							m[fmt.Sprint(list[j]["key"])] = &Attention{
 								Type:          "权限",
 								OriginVersion: permissions[i].AppVersion,
-								Status:        0,
+								Status:        1,
+								ConfirmedAt:   time.Now(),
+								Confirmer:     "预审平台",
+								Remark:        "自动确认",
 							}
 						}
 					}
@@ -197,6 +226,12 @@ func importOldDataAndroid() error {
 						OriginVersion: permissions[i].AppVersion,
 						Status:        0,
 					}
+				}
+			} else {
+				m[fmt.Sprint(list[j]["key"])] = &Attention{
+					Type:          "权限",
+					OriginVersion: permissions[i].AppVersion,
+					Status:        0,
 				}
 			}
 		}
@@ -303,12 +338,12 @@ func autoImport(appID string, platform int, version string, m map[string]*Attent
 
 		// var updated bool
 		for k, v := range m {
-			if _, ok := t[k]; ok {
+			if u, ok := t[k]; ok {
 				if t[k].Status != 1 && v.Status == 1 {
-					t[k].Status = v.Status
-					t[k].ConfirmedAt = v.ConfirmedAt
-					t[k].Confirmer = v.Confirmer
-					t[k].Remark = v.Remark
+					u.Status = v.Status
+					u.ConfirmedAt = v.ConfirmedAt
+					u.Confirmer = v.Confirmer
+					u.Remark = v.Remark
 					// updated = true
 				}
 			} else {
