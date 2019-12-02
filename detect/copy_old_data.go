@@ -614,10 +614,11 @@ func updatePerAPP(db *gorm.DB, appID string, platform string) error {
 	// Sort the versions
 	sort.Slice(versions, func(i, j int) bool { return versions[i] < versions[j] })
 
-	logs.Notice("Sorted: ")
+	msg := "Sorted: "
 	for i := range versions {
-		logs.Notice("%v\t", versions[i])
+		msg += fmt.Sprint(versions[i])
 	}
+	logs.Notice("%v", msg)
 
 	for i := 1; i < len(versions); i++ {
 		current := make(map[string]*Attention)
