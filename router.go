@@ -27,7 +27,7 @@ func InitRouter(r *ginex.Engine) {
 	r.GET("/settings", settings.Show)
 	api := r.GroupEX("/api")
 	//二进制包检测回调接口
-	r.POST("/updateDetectInfos", detect.UpdateDetectInfos)
+	r.POST("/updateDetectInfos", detect.UpdateDetectTask)
 	r.POST("/updateOtherDetectInfos", detect.UpdateOtherDetectInfos)
 
 	//获取鉴权接口
@@ -90,7 +90,7 @@ func InitRouter(r *ginex.Engine) {
 		//确认二进制包检测信息
 		api.POST("/detect/confirmResult", detect.ConfirmBinaryResult)
 		//确认apk二进制包检测信息
-		api.POST("/detect/confirmApkResult", detect.ConfirmApkBinaryResultv_5)
+		api.POST("/detect/confirmApkResult", detect.ConfirmAndroid)
 		//根据platform获取配置的问题类型
 		api.GET("/config/queryProblemConfigs", detect.QueryProblemConfigs)
 		//增加配置项
@@ -120,7 +120,7 @@ func InitRouter(r *ginex.Engine) {
 		//获取iOS当前任务的二进制工具检测内容
 		api.GET("/task/queryIOSBinaryContent", detect.QueryIOSTaskBinaryCheckContent)
 		//确认iOS二进制检测信息
-		api.POST("/detect/confirmIOSResult", detect.ConfirmIOSBinaryResult)
+		api.POST("/detect/confirmIOSResult", detect.ConfirmiOS)
 		//查询权限确认历史
 		api.POST("detect/queryIgnoreHistory", detect.QueryIgnoredHistory)
 		//新增权限

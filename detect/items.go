@@ -8,8 +8,10 @@ import (
 	"strconv"
 	"strings"
 
+	"code.byted.org/clientQA/itc-server/database"
 	"code.byted.org/clientQA/itc-server/database/dal"
 	"code.byted.org/clientQA/itc-server/utils"
+	"code.byted.org/gopkg/gorm"
 	"code.byted.org/gopkg/logs"
 	"github.com/gin-gonic/gin"
 )
@@ -103,26 +105,16 @@ func AddDetectItem(c *gin.Context) {
  */
 func GetSelfCheckItems(c *gin.Context) {
 
-	appIdParam, ok := c.GetQuery("appId")
+	appID, ok := c.GetQuery("appId")
 	if !ok {
-		logs.Error("缺少appId参数！")
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "缺少appId参数！",
-			"errorCode": -1,
-			"data":      "缺少appId参数！",
-		})
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, "miss appId")
 		return
 	}
 	taskId, bool := c.GetQuery("taskId")
 	if !bool { //检查项管理中返回和appID相关检查项，
-		var ItemList []interface{}
-		appSelfItem_A := dal.QueryAppSelfItem(map[string]interface{}{
-			"appId":    appIdParam,
+		appSelfItem_A := readSelfcheckItem(database.DB(), map[string]interface{}{
+			"appId":    appID,
 			"platform": 0,
-		})
-		appSelfItem_O := dal.QueryAppSelfItem(map[string]interface{}{
-			"appId":    appIdParam,
-			"platform": 1,
 		})
 		var androidItemList []interface{}
 		if appSelfItem_A == nil || len(*appSelfItem_A) == 0 {
@@ -130,42 +122,37 @@ func GetSelfCheckItems(c *gin.Context) {
 				"is_gg":    1,
 				"platform": 0,
 			})
-		} else {
-			androidMap := make(map[string]interface{})
-			if err := json.Unmarshal([]byte((*appSelfItem_A)[0].SelfItems), &androidMap); err != nil {
-				logs.Error(err.Error())
-				c.JSON(http.StatusOK, gin.H{
-					"message":   "解析json出错！",
-					"errorCode": -1,
-					"data":      []interface{}{},
-				})
-				return
-			}
-			for _, i := range androidMap["item"].([]interface{}) {
-				androidItemList = append(androidItemList, i)
-			}
 		}
+		androidMap := make(map[string]interface{})
+		if err := json.Unmarshal([]byte((*appSelfItem_A)[0].SelfItems), &androidMap); err != nil {
+			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("unmarshal error: %v content: %v", err, (*appSelfItem_A)[0].SelfItems))
+			return
+		}
+		for _, i := range androidMap["item"].([]interface{}) {
+			androidItemList = append(androidItemList, i)
+		}
+
+		appSelfItem_O := readSelfcheckItem(database.DB(), map[string]interface{}{
+			"appId":    appID,
+			"platform": 1,
+		})
 		var iOSItemList []interface{}
 		if appSelfItem_O == nil || len(*appSelfItem_O) == 0 {
 			iOSItemList = getGGItem(map[string]interface{}{
 				"is_gg":    1,
 				"platform": 1,
 			})
-		} else {
-			iosMap := make(map[string]interface{})
-			if err := json.Unmarshal([]byte((*appSelfItem_O)[0].SelfItems), &iosMap); err != nil {
-				logs.Error(err.Error())
-				c.JSON(http.StatusOK, gin.H{
-					"message":   "解析json出错！",
-					"errorCode": -1,
-					"data":      []interface{}{},
-				})
-				return
-			}
-			for _, i := range iosMap["item"].([]interface{}) {
-				iOSItemList = append(iOSItemList, i)
-			}
 		}
+		iosMap := make(map[string]interface{})
+		if err := json.Unmarshal([]byte((*appSelfItem_O)[0].SelfItems), &iosMap); err != nil {
+			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("unmarshal error: %v content: %v", err, (*appSelfItem_O)[0].SelfItems))
+			return
+		}
+		for _, i := range iosMap["item"].([]interface{}) {
+			iOSItemList = append(iOSItemList, i)
+		}
+
+		var ItemList []interface{}
 		//Android和iOS list合并
 		if len(androidItemList) == 0 && len(iOSItemList) == 0 {
 			ItemList = []interface{}{}
@@ -181,11 +168,7 @@ func GetSelfCheckItems(c *gin.Context) {
 				ItemList = append(ItemList, o)
 			}
 		}
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "success！",
-			"errorCode": 0,
-			"data":      ItemList,
-		})
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, "success", ItemList)
 		return
 	}
 	//任务管理中展示自查项
@@ -200,17 +183,13 @@ func GetSelfCheckItems(c *gin.Context) {
 	flag, data := dal.QueryTaskSelfItemList(task_id)
 	//查询出错
 	if !flag {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "查询Task自查项失败！",
-			"errorCode": -1,
-			"data":      []interface{}{},
-		})
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("get self-check items failed"))
 		return
 	}
 	//查询taskItemList为空
 	if data == nil {
-		appSelf := dal.QueryAppSelfItem(map[string]interface{}{
-			"appId":    appIdParam,
+		appSelf := readSelfcheckItem(database.DB(), map[string]interface{}{
+			"appId":    appID,
 			"platform": platform,
 		})
 		var taskSelf []interface{} //task的自查项
@@ -221,18 +200,14 @@ func GetSelfCheckItems(c *gin.Context) {
 				"platform": platform,
 			})
 			if len(ggList) == 0 { //公共检查项为空
-				c.JSON(http.StatusOK, gin.H{
-					"message":   "success,该APP没有自查项！",
-					"errorCode": 0,
-					"data":      []interface{}{},
-				})
+				utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")
 				return
 			}
 			taskSelf = ggList //公共项不为空
 			//插入appItem
 			var appGGSelf dal.AppSelfItem
 			appGGSelf.Platform = platform
-			appGGSelf.AppId, _ = strconv.Atoi(appIdParam)
+			appGGSelf.AppId, _ = strconv.Atoi(appID)
 			ggJson, _ := json.Marshal(map[string]interface{}{
 				"item": ggList,
 			})
@@ -278,12 +253,7 @@ func GetSelfCheckItems(c *gin.Context) {
 			"item": taskSelf,
 		})
 		if err != nil {
-			logs.Error(err.Error())
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "map json转换出错！",
-				"errorCode": -1,
-				"data":      []interface{}{},
-			})
+			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("marshal error: %v", err))
 			return
 		}
 		var taskSelfItem dal.TaskSelfItem
@@ -291,28 +261,28 @@ func GetSelfCheckItems(c *gin.Context) {
 		taskSelfItem.TaskId = task_id
 		isInsert := dal.InsertTaskSelfItem(taskSelfItem)
 		if !isInsert {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "Task自查项插入数据库失败",
-				"errorCode": -1,
-				"data":      []interface{}{},
-			})
-			return
-		} else {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "success！",
-				"errorCode": 0,
-				"data":      taskSelf,
-			})
+			utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("insert self-check failed"))
 			return
 		}
+		utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success", taskSelf)
+		return
+
 	}
 	if flag && data != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "success！",
-			"errorCode": 0,
-			"data":      data,
-		})
+		utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success", data)
 	}
+}
+
+//查询app对应自查项
+func readSelfcheckItem(db *gorm.DB, sieve map[string]interface{}) *[]dal.AppSelfItem {
+
+	var appSelf []dal.AppSelfItem
+	if err := db.Debug().Where(sieve).Order("platform", true).Find(&appSelf).Error; err != nil {
+		logs.Error("database error: %v", err)
+		return nil
+	}
+
+	return &appSelf
 }
 
 func getGGItem(condition map[string]interface{}) []interface{} {
@@ -384,8 +354,7 @@ func ConfirmSelfCheckItems(c *gin.Context) {
 		return
 	}
 	if detect != nil && detect.Status != 0 && detect.SelfCheckStatus != 0 {
-		StatusDeal(*detect, 2)
-		// TODO: auto update self item?
+		handleTaskStatus(detect, 2)
 	}
 
 	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success")

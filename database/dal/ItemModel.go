@@ -622,24 +622,6 @@ func InsertAppSelfItem(appItem AppSelfItem) bool {
 	return true
 }
 
-//查询app对应自查项
-func QueryAppSelfItem(condition map[string]interface{}) *[]AppSelfItem {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return nil
-	}
-	defer connection.Close()
-	db := connection.Table(AppSelfItem{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	var appSelf []AppSelfItem
-	if err = db.Where(condition).Order("platform", true).Find(&appSelf).Error; err != nil {
-		logs.Error("query self check item failed, %v", err)
-		return nil
-	}
-	return &appSelf
-
-}
-
 //插入taskId自查项
 func InsertTaskSelfItem(taskItem TaskSelfItem) bool {
 	connection, err := database.GetDBConnection()

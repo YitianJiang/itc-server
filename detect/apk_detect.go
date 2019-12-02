@@ -17,6 +17,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const logHeader = "[task id %v]"
+
 //权限排序
 type PermSlice []dal.Permissions
 
@@ -47,7 +49,7 @@ func (a MethodSlice) Less(i, j int) bool { // 重写 Less() 方法， 从大到�
 获取权限的确认历史信息------fj
 */
 
-func GetIgnoredPermission(appId int) map[int]interface{} {
+func GetIgnoredPermission(appId interface{}) map[int]interface{} {
 	result := make(map[int]interface{})
 	queryResult, err := dal.QueryPermHistory(map[string]interface{}{
 		"app_id": appId,
@@ -92,35 +94,6 @@ func GetPermList() map[int]interface{} {
 			}
 		}
 	}
-	return result
-}
-
-/**
-获取权限引入历史
-*/
-func getAPPPermissionHistory(appID int) map[int]interface{} {
-
-	history, err := dal.QueryPermHistory(map[string]interface{}{"app_id": appID})
-	if err != nil || history == nil || len(*history) == 0 {
-		logs.Error("Cannot find any permission about app id: %v", appID)
-		return nil
-	}
-
-	result := make(map[int]interface{})
-	for _, infoP := range *history {
-		_, ok := result[infoP.PermId]
-		if !ok {
-			result[infoP.PermId] = map[string]interface{}{
-				"version": infoP.AppVersion,
-				"status":  infoP.Status}
-		} else if ok && infoP.Status == 0 {
-			// TODO
-			v := result[infoP.PermId].(map[string]interface{})
-			v["version"] = infoP.AppVersion
-			result[infoP.PermId] = v
-		}
-	}
-
 	return result
 }
 
@@ -339,11 +312,11 @@ func QueryIgnoredHistory(c *gin.Context) {
 安卓获取检测任务详情---数组形式
 */
 func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
+
 	taskID, taskExist := c.GetQuery("taskId")
 	toolID, toolExist := c.GetQuery("toolId")
 	if !taskExist || !toolExist {
-		logs.Error("Miss taskId or toolId")
-		errorReturn(c, "Miss taskId or toolId")
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, "miss task id or tool id")
 		return
 	}
 
@@ -353,18 +326,13 @@ func QueryTaskApkBinaryCheckContentWithIgnorance_3(c *gin.Context) {
 		return
 	}
 
-	result := getDetectResult(c, taskID, toolID)
+	result := getDetectResult(taskID, toolID)
 	if result == nil {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("Failed to get binary detect result about task id: %v", taskID))
+		utils.ReturnMsg(c, http.StatusOK, utils.FAILURE, fmt.Sprintf("get binary detect result (task id: %v) failed", taskID))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message":   "success",
-		"errorCode": SUCCESS,
-		"data":      result})
-
-	logs.Debug("Get task ID %v binary detect result success", taskID)
+	utils.ReturnMsg(c, http.StatusOK, utils.SUCCESS, "success", result)
 	return
 }
 
@@ -380,50 +348,37 @@ func getExactDetectTask(db *gorm.DB, sieve map[string]interface{}) (
 	return &task, nil
 }
 
-func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.DetectQueryStruct {
+func getDetectResult(taskId string, toolId string) *[]dal.DetectQueryStruct {
 
-	db, err := database.GetDBConnection()
+	header := fmt.Sprintf(logHeader, taskId)
+	task, err := getExactDetectTask(database.DB(), map[string]interface{}{"id": taskId})
 	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
+		logs.Error("%s get detect task failed: %v", header, err)
 		return nil
-	}
-	defer db.Close()
-
-	task, err := getExactDetectTask(db, map[string]interface{}{"id": taskId})
-	if err != nil {
-		logs.Error("Task id: %v Failed to get the task information", taskId)
-		return nil
-	}
-
-	//查询增量信息
-	methodIgs, strIgs, _, errIg := getIgnoredInfo_2(task.AppId, task.Platform)
-	if errIg != nil {
-		// It's acceptable if failed to get the  negligible information.
-		logs.Warn("Task id: %v Failed to retrieve negligible information", taskId)
 	}
 
 	//查询基础信息和敏感信息
-	contents, err := retrieveTaskAPP(db, map[string]interface{}{
+	contents, err := retrieveTaskAPP(database.DB(), map[string]interface{}{
 		"task_id": taskId,
 		"tool_id": toolId})
 	if err != nil {
-		logs.Error("Task id: %v Failed to retrieve APK information", taskId)
+		logs.Error("%s read app information failed: %v", header, err)
 		return nil
 	}
-	if len(*contents) <= 0 {
-		logs.Error("Task id: %v Cannot find any matched APK information", taskId)
+	if len(contents) <= 0 {
+		logs.Error("%s cannot find any matched app information", header)
 		return nil
 	}
 
-	details, err := queryDetectContentDetail(db, map[string]interface{}{
+	details, err := readDetectContentDetail(database.DB(), map[string]interface{}{
 		"task_id": taskId,
 		"tool_id": toolId})
 	if err != nil {
-		logs.Error("Task id: %v Failed to retrieve detect content detail", taskId)
+		logs.Error("%s read tb_detect_content_detail failed: %v", header, err)
 		return nil
 	}
-	if len(*details) <= 0 {
-		logs.Error("Task id: %v Cannot find any matched detect content detail", taskId)
+	if len(details) <= 0 {
+		logs.Error("%s cannot find any matched detect content detail", header)
 		return nil
 	}
 
@@ -432,24 +387,16 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 	permsMap := make(map[int]dal.PermAppRelation)
 	var midResult []dal.DetectQueryStruct
 	var firstResult dal.DetectQueryStruct //主要包检测结果
-	for num, content := range *contents {
+	for num, content := range contents {
 		var queryResult dal.DetectQueryStruct
 		queryResult.Channel = content.Channel
 		queryResult.ApkName = content.ApkName
 		queryResult.Version = content.Version
-
-		permission := ""
-		//增量的时候，此处一般为""
-		perms := strings.Split(content.Permissions, ";")
-		for _, perm := range perms[0:(len(perms) - 1)] {
-			permission += perm + "\n"
-		}
-		queryResult.Permissions = permission
 		queryResult.Index = num + 1
-		detailListIndex := make([]dal.DetectContentDetail, 0)
-		for i := 0; i < len(*details); i++ {
-			if (*details)[i].SubIndex == num {
-				detailListIndex = append(detailListIndex, (*details)[i])
+		var detailListIndex []dal.DetectContentDetail
+		for i := 0; i < len(details); i++ {
+			if details[i].SubIndex == num {
+				detailListIndex = append(detailListIndex, details[i])
 			}
 		}
 		detailMap[num+1] = detailListIndex
@@ -470,44 +417,38 @@ func getDetectResult(c *gin.Context, taskId string, toolId string) *[]dal.Detect
 			midResult = append(midResult, queryResult)
 		}
 	}
-	finalResult := make([]dal.DetectQueryStruct, 0)
-	finalResult = append(finalResult, firstResult)
+	finalResult := []dal.DetectQueryStruct{firstResult}
 	finalResult = append(finalResult, midResult...)
 
-	appID, err := strconv.Atoi(task.AppId)
-	if err != nil {
-		logs.Error("Task id: %v atoi error: %v", taskId, err)
-		return nil
+	records, err := readAPPAttention(database.DB(), map[string]interface{}{
+		"app_id": task.AppId, "platform": task.Platform, "version": task.AppVersion})
+	var m map[string]*Attention
+	if len(records) > 0 {
+		if err := json.Unmarshal([]byte(records[0].Attention), &m); err != nil {
+			logs.Error("%s unmarshal error: %v", header, err)
+			return nil
+		}
 	}
-	perIgs := GetIgnoredPermission(appID)
+
 	//任务检测结果组输出重组
-	allPermList := GetPermList()
 	for i := 0; i < len(finalResult); i++ {
 		details := detailMap[finalResult[i].Index]
-		permissions := make([]dal.Permissions, 0)
-
 		//获取敏感信息输出结果
-		methods_un, strs_un := GetDetectDetailOutInfo(details, c, methodIgs, strIgs)
+		methods_un, strs_un := GetDetectDetailOutInfo(details)
 		if methods_un == nil && strs_un == nil {
 			return nil
 		}
 		finalResult[i].SMethods = methods_un
-		finalResult[i].SStrs = make([]dal.SStr, 0)
 		finalResult[i].SStrs_new = strs_un
 
-		//权限结果重组
-		if hasPermListFlag {
-			thePerm := permsMap[finalResult[i].Index]
-			permissionsP, errP := GetTaskPermissions_2(thePerm, perIgs, allPermList)
-			if errP != nil || permissionsP == nil || len(*permissionsP) == 0 {
-				finalResult[i].Permissions_2 = permissions
-			} else {
-				finalResult[i].Permissions_2 = (*permissionsP)
+		if hasPermListFlag { //权限结果重组
+			permissionsP, err := packPermissionListAndroid(permsMap[finalResult[i].Index].PermInfos, m)
+			if err != nil {
+				logs.Error("%s construct permission list failed: %v", header, err)
+				return nil
 			}
-		} else {
-			finalResult[i].Permissions_2 = permissions
+			finalResult[i].Permissions_2 = (*permissionsP)
 		}
-
 	}
 
 	return &finalResult
@@ -532,37 +473,53 @@ func getPermAPPReltion(taskID string) (*[]dal.PermAppRelation, bool) {
 */
 // retrieveTaskAPP returns the information of APP in the binary detect task.
 func retrieveTaskAPP(db *gorm.DB, sieve map[string]interface{}) (
-	*[]dal.DetectInfo, error) {
+	[]dal.DetectInfo, error) {
 
 	var detectInfo []dal.DetectInfo
 	if err := db.Debug().Where(sieve).Find(&detectInfo).Error; err != nil {
-		logs.Error("Database error: %v", err)
+		logs.Error("database error: %v", err)
 		return nil, err
 	}
 
-	return &detectInfo, nil
+	return detectInfo, nil
+}
+
+func readExactDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (
+	*dal.DetectContentDetail, error) {
+
+	data, err := readDetectContentDetail(db, sieve)
+	if err != nil {
+		logs.Error("database error: %v", err)
+		return nil, err
+	}
+
+	if len(data) <= 0 {
+		return nil, nil
+	}
+
+	return &data[0], nil
 }
 
 /**
 查询apk敏感信息----fj
 */
-func queryDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (
-	*[]dal.DetectContentDetail, error) {
+func readDetectContentDetail(db *gorm.DB, sieve map[string]interface{}) (
+	[]dal.DetectContentDetail, error) {
 
 	var result []dal.DetectContentDetail
 	if err := db.Debug().Where(sieve).Order("status ASC").
 		Find(&result).Error; err != nil {
-		logs.Error("Database error: %v", err)
+		logs.Error("database error: %v", err)
 		return nil, err
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 /**
 敏感方法和字符串的结果输出解析---新版
 */
-func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, methodIgs map[string]interface{}, strIgs map[string]interface{}) ([]dal.SMethod, []dal.SStr) {
+func GetDetectDetailOutInfo(details []dal.DetectContentDetail) ([]dal.SMethod, []dal.SStr) {
 	methods_un := make(MethodSlice, 0)
 	methods_con := make(MethodSlice, 0)
 	strs_un := make([]dal.SStr, 0)
@@ -616,25 +573,12 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, m
 				}
 				updateConfigIds = append(updateConfigIds, t)
 			}
-			if methodIgs != nil {
-				if v, ok := methodIgs[detail.ClassName+"."+detail.KeyInfo]; ok {
-					info := v.(map[string]interface{})
-					if info["status"] != 0 && method.Status != 0 {
-						method.Status = info["status"].(int)
-						method.Confirmer = info["confirmer"].(string)
-						method.Remark = info["remarks"].(string)
-						method.OtherVersion = info["version"].(string)
-					}
-				}
-			}
 			callLocs := strings.Split(detail.CallLoc, ";")
 			callLoc := make([]dal.MethodCallJson, 0)
 			for _, call_loc := range callLocs[0:(len(callLocs) - 1)] {
 				var call_loc_json dal.MethodCallJson
-				err := json.Unmarshal([]byte(call_loc), &call_loc_json)
-				if err != nil {
+				if err := json.Unmarshal([]byte(call_loc), &call_loc_json); err != nil {
 					logs.Error("taskId:"+fmt.Sprint(detail.TaskId)+",callLoc数据不符合要求，%v===========%s", err, call_loc)
-					errorReturn(c, "callLoc数据不符合要求")
 					return nil, nil
 				}
 				callLoc = append(callLoc, call_loc_json)
@@ -646,35 +590,18 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, m
 				methods_con = append(methods_con, method)
 			}
 		} else if detail.SensiType == 2 { //敏感字符串
-			keys2 := make(map[string]int)
-			//var keys3 = detail.KeyInfo
 			var str dal.SStr
 			str.Status = detail.Status
 			confirmInfos := make([]dal.ConfirmInfo, 0)
 			keys := strings.Split(detail.KeyInfo, ";")
-			keys3 := ""
+
 			for _, keyInfo := range keys[0 : len(keys)-1] {
-				var confirmInfo dal.ConfirmInfo
-				if v, ok := strIgs[keyInfo]; ok && str.Status != 0 {
-					info := v.(map[string]interface{})
-					if info["status"] != 0 {
-						keys2[keyInfo] = 1
-						confirmInfo.Key = keyInfo
-						confirmInfo.Status = info["status"].(int)
-						confirmInfo.Remark = info["remarks"].(string)
-						confirmInfo.Status = info["status"].(int)
-						confirmInfo.Confirmer = info["confirmer"].(string)
-						confirmInfo.OtherVersion = info["version"].(string)
-						confirmInfos = append(confirmInfos, confirmInfo)
-					}
-				} else {
-					keys3 += keyInfo + ";"
-					confirmInfo.Key = keyInfo
-					confirmInfos = append(confirmInfos, confirmInfo)
-				}
-			}
-			if keys3 == "" {
-				str.Status = 1
+
+				confirmInfos = append(confirmInfos, dal.ConfirmInfo{
+					Key:       keyInfo,
+					Status:    detail.Status,
+					Confirmer: detail.Confirmer,
+					Remark:    detail.Remark})
 			}
 			str.Keys = detail.KeyInfo
 			str.Remark = detail.Remark
@@ -697,10 +624,8 @@ func GetDetectDetailOutInfo(details []dal.DetectContentDetail, c *gin.Context, m
 			callLoc := make([]dal.StrCallJson, 0)
 			for _, call_loc := range callLocs[0:(len(callLocs) - 1)] {
 				var callLoc_json dal.StrCallJson
-				err := json.Unmarshal([]byte(call_loc), &callLoc_json)
-				if err != nil {
+				if err := json.Unmarshal([]byte(call_loc), &callLoc_json); err != nil {
 					logs.Error("taskId:"+fmt.Sprint(detail.TaskId)+",callLoc数据不符合要求，%v========%s", err, call_loc)
-					errorReturn(c, "callLoc数据不符合要求")
 					return nil, nil
 				}
 				callLoc = append(callLoc, callLoc_json)
@@ -758,41 +683,37 @@ func methodRiskLevelUpdate(ids *[]string, levels *[]string, configIds *[]dal.Det
 /**
 权限结果输出解析
 */
-func GetTaskPermissions_2(info dal.PermAppRelation, perIgs map[int]interface{}, allPermList map[int]interface{}) (*PermSlice, error) {
-	var infos []interface{}
-	if err := json.Unmarshal([]byte(info.PermInfos), &infos); err != nil {
-		logs.Error("Task id: %v Unmarshal error: %v content: %v", info.TaskId, err, info.PermInfos)
+func packPermissionListAndroid(permission string, m map[string]*Attention) (*PermSlice, error) {
+	var permissionList []interface{}
+	if err := json.Unmarshal([]byte(permission), &permissionList); err != nil {
+		logs.Error("unmarshal error: %v content: %v", err, permission)
 		return nil, err
 	}
 
 	var result PermSlice
 	var reulst_con PermSlice
-	for v, permInfo := range infos {
-		var permOut dal.Permissions
+	for v, permInfo := range permissionList {
 		permMap := permInfo.(map[string]interface{})
-		//更新权限信息
-		permMap["priority"] = int(permMap["priority"].(float64))
-		if v, ok := allPermList[int(permMap["perm_id"].(float64))]; ok {
-			info := v.(map[string]interface{})
-			permMap["priority"] = info["priority"].(int)
-			permMap["ability"] = info["ability"].(string)
-		}
+		var permOut dal.Permissions
 		permOut.Id = uint(v) + 1
-		permOut.Priority = permMap["priority"].(int)
+		permOut.Priority = int(permMap["priority"].(float64))
 		permOut.RiskLevel = fmt.Sprint(permMap["priority"])
-		permOut.Status = int(permMap["status"].(float64))
-		permOut.Key = permMap["key"].(string)
+		status, _ := strconv.Atoi(fmt.Sprint(permMap["status"]))
+		permOut.Status = status
+		permOut.Key = fmt.Sprint(permMap["key"])
 		permOut.PermId = int(permMap["perm_id"].(float64))
-		permOut.Desc = permMap["ability"].(string)
-		permOut.OtherVersion = permMap["first_version"].(string)
-
-		if v, ok := perIgs[int(permMap["perm_id"].(float64))]; ok && permOut.Status != 0 {
-			perm := v.(map[string]interface{})
-			permOut.Status = perm["status"].(int)
-			permOut.Remark = perm["remarks"].(string)
-			permOut.Confirmer = perm["confirmer"].(string)
+		permOut.Desc = fmt.Sprint(permMap["ability"])
+		if m != nil {
+			logs.Notice(">>>>> %v", permOut.Key)
+			if v, ok := m[permOut.Key]; ok {
+				logs.Notice(">>>>> %v", *v)
+				permOut.OtherVersion = v.OriginVersion
+			} else {
+				logs.Notice(">>>>> Not found")
+			}
 		}
-
+		permOut.Confirmer = fmt.Sprint(permMap["confirmer"])
+		permOut.Remark = fmt.Sprint(permMap["remark"])
 		if permOut.Status == 0 {
 			result = append(result, permOut)
 		} else {
@@ -807,264 +728,26 @@ func GetTaskPermissions_2(info dal.PermAppRelation, perIgs map[int]interface{}, 
 	return &result, nil
 }
 
-/**
-安卓确认检测结果----兼容.aab结果
-*/
-func ConfirmApkBinaryResultv_5(c *gin.Context) {
-	param, _ := ioutil.ReadAll(c.Request.Body)
-	var t dal.PostConfirm
-	if err := json.Unmarshal(param, &t); err != nil {
-		ReturnMsg(c, FAILURE, fmt.Sprintf("Unmarshal error: %v", err))
-		return
-	}
-	//获取确认人信息
-	username, _ := c.Get("username")
-	usernameStr := username.(string)
+func readExactPermAPPRelation(db *gorm.DB, sieve map[string]interface{}) (*dal.PermAppRelation, error) {
 
-	//获取任务信息
-	detect := dal.QueryDetectModelsByMap(map[string]interface{}{
-		"id": t.TaskId,
-	})
-
-	//获取该任务的权限信息
-	perms, errPerm := dal.QueryPermAppRelation(map[string]interface{}{
-		"task_id": t.TaskId,
-	})
-
-	//是否更新任务表中detect_no_pass字段的标志
-	var notPassFlag = false
-	if t.Status == 2 {
-		notPassFlag = true
+	var result dal.PermAppRelation
+	if err := db.Debug().Where(sieve).Last(&result).Error; err != nil {
+		logs.Error("database error: %v", err)
+		return nil, err
 	}
 
-	db, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return
-	}
-	defer db.Close()
-
-	if t.Type == 0 { //敏感方法和字符串确认
-		detailInfo, err := queryDetectContentDetail(db,
-			map[string]interface{}{"id": t.Id})
-		if err != nil || detailInfo == nil || len(*detailInfo) == 0 {
-			logs.Error("taskId:"+fmt.Sprint(t.TaskId)+",不存在该检测结果，ID：%d", t.Id)
-			errorReturn(c, "不存在该检测结果")
-			return
-		}
-		if detect == nil || len(*detect) == 0 {
-			logs.Error("未查询到该taskid对应的检测任务，%v", t.TaskId)
-			errorReturn(c, "未查询到该taskid对应的检测任务")
-			return
-		}
-
-		var data map[string]string
-		data = make(map[string]string)
-		data["id"] = strconv.Itoa(t.Id)
-		data["confirmer"] = usernameStr
-		data["remark"] = t.Remark
-		data["status"] = strconv.Itoa(t.Status)
-		flag := dal.ConfirmApkBinaryResultNew(data)
-		if !flag {
-			logs.Error("taskId:" + fmt.Sprint(t.TaskId) + ",二进制检测内容确认失败")
-			errorReturn(c, "二进制检测内容确认失败")
-			return
-		}
-
-		//增量忽略结果录入
-		if t.Status != 0 {
-			senType := (*detailInfo)[0].SensiType
-			if senType == 1 { //敏感方法
-				keyInfo := (*detailInfo)[0].ClassName + "." + (*detailInfo)[0].KeyInfo
-				//结果写入
-				if err := createIgnoreInfo(c, &t, &(*detect)[0], usernameStr, keyInfo, 1); err != nil {
-					return
-				}
-			} else { //敏感字符串
-				keys := strings.Split((*detailInfo)[0].KeyInfo, ";")
-				var strIgnoreList []dal.IgnoreInfoStruct
-				for _, key := range keys[0 : len(keys)-1] {
-					//结果写入
-					strIgnoreList = append(strIgnoreList, *createIgnoreInfoBatch(&t, &(*detect)[0], usernameStr, key, 2))
-				}
-				if err := dal.InsertIgnoredInfoBatch(&strIgnoreList); err != nil {
-					errorReturn(c, "增量信息更新失败！")
-					return
-				}
-			}
-		}
-	} else {
-		if errPerm != nil || perms == nil || len(*perms) == 0 {
-			logs.Error("taskId:" + fmt.Sprint(t.TaskId) + ",未查询到该任务的检测信息")
-			errorReturn(c, "未查询到该任务的检测信息")
-			return
-		}
-		if t.Index > len(*perms) {
-			logs.Error("权限结果数组下标越界")
-			errorReturn(c, "权限结果数组下标越界")
-			return
-		}
-		permsInfoDB := (*perms)[t.Index-1].PermInfos
-		var permList []interface{}
-		if err := json.Unmarshal([]byte(permsInfoDB), &permList); err != nil {
-			logs.Error("taskId:" + fmt.Sprint(t.TaskId) + ",该任务的权限存储信息格式出错")
-			errorReturn(c, "该任务的权限存储信息格式出错")
-			return
-		}
-		//增加数组越界维护
-		if t.Id > len(permList) {
-			logs.Error("权限ID越界")
-			errorReturn(c, "权限ID越界")
-			return
-		}
-		permMap := permList[t.Id-1].(map[string]interface{})
-		permMap["status"] = t.Status
-
-		permId := int(permMap["perm_id"].(float64))
-		newPerms, _ := json.Marshal(permList)
-		(*perms)[t.Index-1].PermInfos = string(newPerms)
-		if err := dal.UpdataPermAppRelation(&(*perms)[t.Index-1]); err != nil {
-			logs.Error("taskId:" + fmt.Sprint(t.TaskId) + ",更新任务权限确认情况失败")
-			errorReturn(c, "更新任务权限确认情况失败")
-			return
-		}
-		//写入操作历史
-		var history dal.PermHistory
-		history.Status = t.Status
-		history.AppVersion = (*perms)[t.Index-1].AppVersion
-		history.AppId = (*perms)[t.Index-1].AppId
-		history.PermId = permId
-		history.Remarks = t.Remark
-		history.Confirmer = usernameStr
-		history.TaskId = t.TaskId
-		if err := dal.InsertPermOperationHistory(history); err != nil {
-			logs.Error("taskId:" + fmt.Sprint(t.TaskId) + ",权限操作历史写入失败！")
-			errorReturn(c, "权限操作历史写入失败！")
-			return
-		}
-	}
-
-	//任务状态更新
-	updateInfo, _ := taskStatusUpdate(t.TaskId, t.ToolId, &(*detect)[0], notPassFlag, 1)
-	if updateInfo != "" {
-		errorReturn(c, updateInfo)
-	}
-	logs.Info("confirm success +id :%d", t.Id)
-	c.JSON(http.StatusOK, gin.H{
-		"message":   "success",
-		"errorCode": 0,
-		"data":      "success",
-	})
-	return
+	return &result, nil
 }
 
-/**
-任务确认状态更新
-*/
-func taskStatusUpdate(taskId int, toolId int, detect *dal.DetectStruct, notPassFlag bool, confirmLark int) (string, int) {
+func readPermAPPRelation(db *gorm.DB, sieve map[string]interface{}) ([]dal.PermAppRelation, error) {
 
-	condition := "deleted_at IS NULL and task_id='" + strconv.Itoa(taskId) + "' and tool_id='" + strconv.Itoa(toolId) + "'"
-	counts, countsUn := QueryUnConfirmDetectContent(database.DB(), condition)
-
-	perms, _ := dal.QueryPermAppRelation(map[string]interface{}{"task_id": taskId})
-	var permFlag = true
-	var updateFlag = false
-	var permCounts = 0
-	if perms == nil || len(*perms) == 0 {
-		logs.Warn("taskId:" + fmt.Sprint(taskId) + ",该任务无权限检测信息！")
-	} else {
-		for i := 0; i < len(*perms); i++ {
-			permsInfoDB := (*perms)[i].PermInfos
-			var permList []interface{}
-			if err := json.Unmarshal([]byte(permsInfoDB), &permList); err != nil {
-				return "该任务的权限存储信息格式出错", 0
-			}
-			for _, m := range permList {
-				permInfo := m.(map[string]interface{})
-				if permInfo["status"].(float64) == 0 {
-					permFlag = false
-					permCounts++
-				}
-			}
-		}
+	var result []dal.PermAppRelation
+	if err := db.Debug().Where(sieve).Find(&result).Error; err != nil {
+		logs.Error("database error: %v", err)
+		return nil, err
 	}
 
-	logs.Notice("当前确认情况，字符串和方法剩余：" + fmt.Sprint(counts) + " ,权限是否全部确认：" + fmt.Sprint(permFlag) + "权限剩余数：" + fmt.Sprint(permCounts))
-	if counts == 0 && permFlag {
-		updateFlag = true
-		if countsUn == 0 {
-			detect.Status = 1
-		} else {
-			detect.Status = 2
-		}
-	}
-	if notPassFlag {
-		detect.DetectNoPass = countsUn - counts
-		updateFlag = true
-	}
-	if updateFlag {
-		err := dal.UpdateDetectModelNew(*detect)
-		if err != nil {
-			logs.Error("taskId:"+fmt.Sprint(taskId)+",任务确认状态更新失败！%v", err)
-			utils.LarkDingOneInner("fanjuan.xqp", "任务ID："+fmt.Sprint(taskId)+"确认状态更新失败，失败原因："+err.Error())
-			return "任务确认状态更新失败！", 0
-		}
-		if err := StatusDeal(*detect, confirmLark); err != nil {
-			return err.Error(), 0
-		}
-	}
-
-	return "", counts + permCounts
-}
-
-/**
-未确认敏感信息数据量查询-----fj
-*/
-func QueryUnConfirmDetectContent(db *gorm.DB, condition string) (int, int) {
-
-	var total dal.RecordTotal
-	if err := db.Debug().Table(dal.DetectContentDetail{}.TableName()).Select("sum(case when status = '0' then 1 else 0 end) as total, sum(case when status <> '1' then 1 else 0 end) as total_un").Where(condition).Find(&total).Error; err != nil {
-		logs.Error("Database error: %v", err)
-		return -1, -1
-	}
-
-	return int(total.Total), int(total.TotalUn)
-}
-
-/**
-新增敏感字符or敏感方法确认历史
-*/
-func createIgnoreInfo(c *gin.Context, t *dal.PostConfirm, detect *dal.DetectStruct, usernameStr string, key string, senType int) error {
-	var igInfo dal.IgnoreInfoStruct
-	igInfo.Platform = detect.Platform
-	igInfo.AppId, _ = strconv.Atoi(detect.AppId)
-	igInfo.SensiType = senType
-	igInfo.KeysInfo = key
-	igInfo.Confirmer = usernameStr
-	igInfo.Remarks = t.Remark
-	igInfo.Version = detect.AppVersion
-	igInfo.Status = t.Status
-	igInfo.TaskId = t.TaskId
-	err := dal.InsertIgnoredInfo(igInfo)
-	if err != nil {
-		errorReturn(c, "增量信息更新失败！")
-		return err
-	}
-	return nil
-}
-
-func createIgnoreInfoBatch(t *dal.PostConfirm, detect *dal.DetectStruct, usernameStr string, key string, senType int) *dal.IgnoreInfoStruct {
-	var igInfo dal.IgnoreInfoStruct
-	igInfo.Platform = detect.Platform
-	igInfo.AppId, _ = strconv.Atoi(detect.AppId)
-	igInfo.SensiType = senType
-	igInfo.KeysInfo = key
-	igInfo.Confirmer = usernameStr
-	igInfo.Remarks = t.Remark
-	igInfo.Version = detect.AppVersion
-	igInfo.Status = t.Status
-	igInfo.TaskId = t.TaskId
-	return &igInfo
+	return result, nil
 }
 
 /**

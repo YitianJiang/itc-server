@@ -21,6 +21,7 @@ type DetectStruct struct {
 	Platform        int     `gorm:"column:platform"               json:"platform"`
 	AppName         string  `gorm:"column:app_name"               json:"appName"`
 	AppVersion      string  `gorm:"column:app_version"            json:"appVersion"`
+	InnerVersion    string  `gorm:"column:inner_version"          json:"inner_version"`
 	AppId           string  `gorm:"column:app_id"                 json:"appId"`
 	CheckContent    string  `gorm:"column:check_content"          json:"checkContent"`
 	SelfCheckStatus int     `gorm:"column:self_check_status"      json:"selfCheckStatus"` //0-自查未完成；1-自查完成
@@ -197,7 +198,7 @@ type Permissions struct {
 type PostConfirm struct {
 	TaskId int    `json:"taskId"`
 	Id     int    `json:"id"`
-	Status int    `json:"status"`
+	Status int    `json:"status"  biding:"required"`
 	Remark string `json:"remark"`
 	ToolId int    `json:"toolId"`
 	Type   int    `json:"type"`
@@ -271,49 +272,6 @@ func (IOSNewDetectContent) TableName() string {
 }
 func (PrivacyHistory) TableName() string {
 	return "tb_privacy_history"
-}
-
-//insert data
-func InsertDetectModel(detectModel DetectStruct) uint {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return 0
-	}
-	defer connection.Close()
-	db := connection.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	if err := db.Create(&detectModel).Error; err != nil {
-		return 0
-	}
-	return detectModel.ID
-}
-
-//update data
-func UpdateDetectModel(detectModel DetectStruct, content DetectContent) error {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return err
-	}
-	defer connection.Close()
-	db := connection.Begin()
-	taskId := detectModel.ID
-	condition := "id=" + fmt.Sprint(taskId)
-	if err := db.Table(DetectStruct{}.TableName()).LogMode(_const.DB_LOG_MODE).
-		Where(condition).Update(&detectModel).Error; err != nil {
-		logs.Error("update binary check failed, %v", err)
-		db.Rollback()
-		return err
-	}
-	//insert detect content
-	if err := db.Table(DetectContent{}.TableName()).LogMode(_const.DB_LOG_MODE).
-		Create(&content).Error; err != nil {
-		logs.Error("insert binary check content failed, %v", err)
-		db.Rollback()
-		return err
-	}
-	db.Commit()
-	return nil
 }
 
 //update data-----fj
@@ -488,39 +446,6 @@ func ConfirmBinaryResult(data map[string]string) bool {
 	return true
 }
 
-/**
-确认安卓二进制结果----------fj
-*/
-func ConfirmApkBinaryResultNew(data map[string]string) bool {
-	id := data["id"]
-	//toolId := data["tool_id"]
-	confirmer := data["confirmer"]
-	remark := data["remark"]
-	statusInt, _ := strconv.Atoi(data["status"])
-	//statusInt, _ := strconv.Atoi(status)
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
-		return false
-	}
-	defer connection.Close()
-	db := connection.Table(DetectContentDetail{}.TableName()).LogMode(_const.DB_LOG_MODE)
-	condition := "id=" + id
-	if err := db.Where(condition).
-		Update(map[string]interface{}{
-			"status":     statusInt,
-			"confirmer":  confirmer,
-			"remark":     remark,
-			"updated_at": time.Now(),
-		}).Error; err != nil {
-		logs.Error("update db tb_detect_content failed: %v", err)
-		//db.Rollback()
-		return false
-	}
-	//db.Commit()
-	return true
-}
-
 func UpdateOldApkDetectDetailLevel(ids *[]string, levels *[]string, configIds *[]DetailExtraInfo) error {
 	connection, err := database.GetDBConnection()
 	if err != nil {
@@ -544,30 +469,6 @@ func UpdateOldApkDetectDetailLevel(ids *[]string, levels *[]string, configIds *[
 	}
 	db.Commit()
 	return nil
-}
-
-/**
-检测信息insert-----fj
-*/
-func InsertDetectInfo(info DetectInfo) error {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to Db failed: %v", err)
-		return nil
-	}
-	defer connection.Close()
-
-	db := connection.Table(DetectInfo{}.TableName()).LogMode(_const.DB_LOG_MODE)
-
-	info.CreatedAt = time.Now()
-	info.UpdatedAt = time.Now()
-
-	if err1 := db.Create(&info).Error; err1 != nil {
-		logs.Error("数据库新增检测信息失败,%v", err1)
-		return err1
-	}
-	return nil
-
 }
 
 /**
@@ -722,22 +623,6 @@ func InsertNewIOSDetect(black, method, privacy IOSNewDetectContent) bool {
 	return true
 }
 
-//insert tb_ios_detect_permission
-func CreatePrivacyHistoryModel(permission PrivacyHistory) error {
-	connection, err := database.GetDBConnection()
-	if err != nil {
-		logs.Error("Connect to DB failed: %v", err)
-		return err
-	}
-	defer connection.Close()
-	//insert detect content
-	if err := connection.Table(PrivacyHistory{}.TableName()).LogMode(_const.DB_LOG_MODE).Create(&permission).Error; err != nil {
-		logs.Error("插入权限确认信息出错！, %v", err)
-		return err
-	}
-	return nil
-}
-
 //query tb_ios_privacy_history
 func QueryPrivacyHistoryModel(condition map[string]interface{}) *[]PrivacyHistory {
 	connection, err := database.GetDBConnection()
@@ -814,7 +699,10 @@ type AppInfoStruct struct {
 	ApkVersionCode string      `json:"apk_version_code"`
 	Channel        string      `json:"channel"`
 	Primary        interface{} `json:"primary"`
-	PermsInAppInfo []string    `json:"permissions"`
+	Meta           struct {
+		InnerVersion string `json:"UPDATE_VERSION_CODE"`
+	} `json:"metas"`
+	PermsInAppInfo []string `json:"permissions"`
 }
 
 //敏感方法json结构

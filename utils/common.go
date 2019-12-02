@@ -48,7 +48,7 @@ func SendHTTPRequest(method string, url string, params map[string]string, header
 	// Construct HTTP handler
 	req, err := http.NewRequest(method, url, bytes.NewBuffer([]byte(data)))
 	if err != nil {
-		logs.Error("Construct HTTP request failed in SendHTTPRequest: %v", err)
+		logs.Error("construct HTTP request failed: %v", err)
 		return nil, err
 	}
 
@@ -69,7 +69,7 @@ func SendHTTPRequest(method string, url string, params map[string]string, header
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		logs.Error("Send HTTP request failed in SendHTTPRequest: %v", err)
+		logs.Error("send HTTP request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -77,7 +77,7 @@ func SendHTTPRequest(method string, url string, params map[string]string, header
 	// Read HTTP response
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logs.Error("Read content from HTTP response failed in SendHTTPRequest: %v", err)
+		logs.Error("read content from HTTP response failed: %v", err)
 		return nil, err
 	}
 	logs.Debug("%s", body)

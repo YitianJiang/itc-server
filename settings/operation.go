@@ -12,6 +12,12 @@ import (
 type Settings struct {
 	NightWatchman string `json:"night_watchman"`
 
+	Detect struct {
+		TaskURL         string `json:"task_url"`
+		ToolURL         string `json:"tool_url"`
+		ToolCallbackURL string `json:"tool_callback_url"`
+	} `json:"detect"`
+
 	UploadNewDetection struct {
 		APPID             string            `json:"app_id"              binding:"required"`
 		APPSecret         string            `json:"app_secret"          binding:"required"`
@@ -86,6 +92,5 @@ func Store(db *gorm.DB, s ...*Settings) (err error) {
 
 // Get returns the global handler of settings.
 func Get() *Settings {
-
 	return settings
 }
