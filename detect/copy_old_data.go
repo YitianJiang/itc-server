@@ -594,6 +594,7 @@ func updatePerAPP(db *gorm.DB, appID string, platform string) error {
 		return err
 	}
 	if len(records) <= 0 {
+		logs.Notice("(id: %v platform: %v) not found", appID, platform)
 		return nil
 	}
 
