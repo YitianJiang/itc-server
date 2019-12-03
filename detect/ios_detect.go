@@ -317,6 +317,9 @@ func QueryIOSTaskBinaryCheckContent(c *gin.Context) {
 			return
 		}
 		for k, v := range m {
+			if v == nil {
+				continue
+			}
 			var highRisk []interface{}
 			var middleRisk []interface{}
 			var lowRisk []interface{}
